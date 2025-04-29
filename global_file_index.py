@@ -6,20 +6,21 @@ from instrument_noise import instrument_noise_AET_wdm_m
 
 global_max_Nt = 4096
 
-full_galactic_params_filename = 'LDC/LDC2_sangria_training_v2.h5'
-master_gb_filename = "Galaxy/gb8_full_abbrev_snr="+str(7)+"_Nf="+str(wc.Nf)+"_Nt="+str(global_max_Nt)+"_dt="+str(wc.dt)+".hdf5"
+full_galactic_params_filename = 'Galaxies/Galaxy1/galaxy_binaries.hdf5'
+#full_galactic_params_filename = 'LDC/LDC2_sangria_training_v2.h5'
+master_gb_filename = "Galaxies/Galaxy1/gb8_full_abbrev_snr="+str(7)+"_Nf="+str(wc.Nf)+"_Nt="+str(global_max_Nt)+"_dt="+str(wc.dt)+".hdf5"
 
 n_par_gb = 8
 labels_gb = ['Amplitude','EclipticLatitude','EclipticLongitude','Frequency','FrequencyDerivative','Inclination','InitialPhase','Polarization']
 
 def get_common_noise_filename(snr_thresh,Nf=wc.Nf,Nt=global_max_Nt,dt=wc.dt):
-    return 'Galaxy/gb8_full_abbrev_snr='+str(snr_thresh)+'_Nf='+str(wc.Nf)+'_Nt='+str(global_max_Nt)+'_dt='+str(wc.dt)+'.hdf5'
+    return 'Galaxies/Galaxy1/gb8_full_abbrev_snr='+str(snr_thresh)+'_Nf='+str(wc.Nf)+'_Nt='+str(global_max_Nt)+'_dt='+str(wc.dt)+'.hdf5'
 
 def get_init_filename(snr_thresh,Nf=wc.Nf,Nt=wc.Nt,dt=wc.dt):
-    return 'Galaxy/gb8_full_abbrev_snr='+str(snr_thresh)+'_Nf='+str(wc.Nf)+'_Nt='+str(wc.Nt)+'_dt='+str(wc.dt)+'.hdf5'
+    return 'Galaxies/Galaxy1/gb8_full_abbrev_snr='+str(snr_thresh)+'_Nf='+str(wc.Nf)+'_Nt='+str(wc.Nt)+'_dt='+str(wc.dt)+'.hdf5'
 
 def get_processed_gb_filename(const_only,snr_thresh,nt_min=0,nt_max=wc.Nt,Nf=wc.Nf,Nt=wc.Nt,smooth_lengtht=0,smooth_lengthf=6,dt=wc.dt):
-    return "Galaxy/gb8_processed_smoothf="+str(smooth_lengthf)+'smootht='+str(smooth_lengtht)+'snr'+str(snr_thresh)+"_Nf="+str(Nf)+"_Nt="+str(Nt)+"_dt="+str(dt)+"const="+str(const_only)+"nt_min="+str(nt_min)+"nt_max="+str(nt_max)+".hdf5"
+    return "Galaxies/Galaxy1/gb8_processed_smoothf="+str(smooth_lengthf)+'smootht='+str(smooth_lengtht)+'snr'+str(snr_thresh)+"_Nf="+str(Nf)+"_Nt="+str(Nt)+"_dt="+str(dt)+"const="+str(const_only)+"nt_min="+str(nt_min)+"nt_max="+str(nt_max)+".hdf5"
 
 def get_noise_common(snr_thresh,Nf=wc.Nf,Nt=global_max_Nt,dt=wc.dt):
     filename_gb_common = get_common_noise_filename(snr_thresh,Nf=Nf,Nt=Nt,dt=dt)
@@ -35,21 +36,21 @@ def get_full_galactic_params(fmin=0.00001,fmax=0.1,use_dgb=True,use_igb=True,use
     hf_in = h5py.File(filename,'r')
     #dgb is detached galactic binaries, igb is interacting galactic binaries, vgb is verification
     if use_dgb:
-        freqs_dgb = hf_in['sky']['dgb']['cat']['Frequency']
+        freqs_dgb = np.asarray(hf_in['sky']['dgb']['cat']['Frequency'])
         mask_dgb = (freqs_dgb>fmin)&(freqs_dgb<fmax)
         n_dgb = np.sum(mask_dgb)
     else:
         n_dgb = 0
 
     if use_igb:
-        freqs_igb = hf_in['sky']['igb']['cat']['Frequency']
+        freqs_igb = np.asarray(hf_in['sky']['igb']['cat']['Frequency'])
         mask_igb = (freqs_igb>fmin)&(freqs_igb<fmax)
         n_igb = np.sum(mask_igb)
     else:
         n_igb = 0
 
     if use_vgb:
-        freqs_vgb = hf_in['sky']['vgb']['cat']['Frequency']
+        freqs_vgb = np.asarray(hf_in['sky']['vgb']['cat']['Frequency'])
         mask_vgb = (freqs_vgb>fmin)&(freqs_vgb<fmax)
         n_vgb = np.sum(mask_vgb)
     else:

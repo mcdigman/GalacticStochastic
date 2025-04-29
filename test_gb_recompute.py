@@ -55,8 +55,8 @@ if __name__=='__main__':
         nt_max = nt_min+2*512
         print(nt_min,nt_max,wc.Nt,wc.Nf,const_only)
 
-        params_gb,n_dgb,n_igb,n_vgb,n_tot = gfi.get_full_galactic_params(fmin=1.e-4)
-        params_gb = params_gb[:100000]
+        params_gb,n_dgb,n_igb,n_vgb,n_tot = gfi.get_full_galactic_params()
+        params_gb = params_gb
 
         snr_thresh = 7
 
@@ -442,7 +442,7 @@ if __name__=='__main__':
 
         do_hf_SAET = False
         if do_hf_SAET:
-            filename_out = "Galaxy/gb75_SAET_evolve_smoothf="+str(smooth_lengthf)+'smootht='+str(smooth_lengtht)+'snr'+str(snr_thresh)+"_Nf="+str(wc.Nf)+"_Nt="+str(wc.Nt)+"_dt="+str(wc.dt)+"const="+str(const_only)+"nt_min="+str(nt_min)+"nt_max="+str(nt_max)+".hdf5"
+            filename_out = "Galaxies/Galaxy1/gb75_SAET_evolve_smoothf="+str(smooth_lengthf)+'smootht='+str(smooth_lengtht)+'snr'+str(snr_thresh)+"_Nf="+str(wc.Nf)+"_Nt="+str(wc.Nt)+"_dt="+str(wc.dt)+"const="+str(const_only)+"nt_min="+str(nt_min)+"nt_max="+str(nt_max)+".hdf5"
             hf_out = h5py.File(filename_out,'w')
             hf_out.create_group('SAET')
             hf_out['SAET'].create_dataset('SAE_tots',data=SAE_tots,compression='gzip')
@@ -450,7 +450,7 @@ if __name__=='__main__':
 
         do_hf_realization = False
         if do_hf_realization:
-            filename_out = "Galaxy/gb75_realization_evolve_smoothf="+str(smooth_lengthf)+'smootht='+str(smooth_lengtht)+'snr'+str(snr_thresh)+"_Nf="+str(wc.Nf)+"_Nt="+str(wc.Nt)+"_dt="+str(wc.dt)+"const="+str(const_only)+"nt_min="+str(nt_min)+"nt_max="+str(nt_max)+".hdf5"
+            filename_out = "Galaxies/Galaxy1/gb75_realization_evolve_smoothf="+str(smooth_lengthf)+'smootht='+str(smooth_lengtht)+'snr'+str(snr_thresh)+"_Nf="+str(wc.Nf)+"_Nt="+str(wc.Nt)+"_dt="+str(wc.dt)+"const="+str(const_only)+"nt_min="+str(nt_min)+"nt_max="+str(nt_max)+".hdf5"
             hf_out = h5py.File(filename_out,'w')
             hf_out.create_group('SAET')
             hf_out['SAET'].create_dataset('data_realization',data=(galactic_bg_res.reshape(wc.Nt,wc.Nf,wc.NC)+noise_realization),compression='gzip')

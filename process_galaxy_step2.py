@@ -12,7 +12,7 @@ from instrument_noise import DiagonalStationaryDenseInstrumentNoiseModel,instrum
 import global_file_index as gfi
 
 if __name__=='__main__':
-    params_gb,n_dgb,n_igb,n_vgb,n_tot = gfi.get_full_galactic_params(fmin=1.e-4)
+    params_gb,n_dgb,n_igb,n_vgb,n_tot = gfi.get_full_galactic_params()
 
     params0 = params_gb[0].copy()
     fwt = BinaryTimeWaveformAmpFreqD(params0.copy(),0,wc.Nt)
@@ -32,7 +32,7 @@ if __name__=='__main__':
     noise_realization = noise_realization_common[:wc.Nt,:,:].copy()
 
     galactic_bg = np.zeros((wc.Nt*wc.Nf,wc.NC))
-    n_bin_use = min(100000, n_tot)
+    n_bin_use = n_tot
 
     n_iterations = 2
     SAET_tot = np.zeros((n_iterations+1,wc.Nt,wc.Nf,wc.NC))
