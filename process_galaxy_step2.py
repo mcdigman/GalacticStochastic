@@ -4,7 +4,7 @@ from time import perf_counter
 import numpy as np
 import h5py
 
-from binary_search_subs import BinaryWaveletAmpFreqDT
+from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 from ra_waveform_time import BinaryTimeWaveformAmpFreqD
 from wdm_const import wdm_const as wc
 from wdm_const import lisa_const as lc
@@ -16,7 +16,6 @@ if __name__=='__main__':
     params_gb, n_dgb, n_igb, n_vgb, n_tot = gfi.get_full_galactic_params()
 
     params0 = params_gb[0].copy()
-    fwt = BinaryTimeWaveformAmpFreqD(params0.copy(), 0, wc.Nt, lc, wc, False, 0)
 
     snr_thresh = 7
     snr_min = 7
@@ -161,51 +160,4 @@ if __name__=='__main__':
         res[mask] = np.nan
         import matplotlib.pyplot as plt
         plt.imshow(np.rot90(res), aspect='auto')
-        plt.show()
-
-    plot_realization_im = False
-    if plot_realization_im:
-        import matplotlib.pyplot as plt
-        mask = (galactic_bg_full==0.)
-        res = np.zeros_like(galactic_bg_full)
-        res[~mask] = np.log10(np.abs(galactic_bg_full[~mask]))
-        plt.imshow(np.rot90(res[:, :, 0][:, 1:200]), aspect='auto')
-        plt.ylabel('frequency')
-        plt.xlabel('time')
-        plt.show()
-
-
-    do_hist_plots = False
-    if do_hist_plots:
-        import matplotlib.pyplot as plt
-        plt.hist(np.log10(params_gb[:, 0]), 100)
-        plt.xlabel('log10(Amplitude)')
-        plt.show()
-
-        plt.hist(np.cos(params_gb[:, 1]), 100)
-        plt.xlabel('cos(EclipticLatitude)')
-        plt.show()
-
-        plt.hist(params_gb[:, 2], 100)
-        plt.xlabel('EclipticLongitude')
-        plt.show()
-
-        plt.hist(np.log10(params_gb[:, 3]), 100)
-        plt.xlabel('log10(Frequency)')
-        plt.show()
-
-        plt.hist(np.log10(np.abs(params_gb[:, 4])), 100)
-        plt.xlabel('log10(abs(FrequencyDerivative))')
-        plt.show()
-
-        plt.hist(np.cos(params_gb[:, 5]), 100)
-        plt.xlabel('cosi')
-        plt.show()
-
-        plt.hist(params_gb[:, 6], 100)
-        plt.xlabel('InitialPhase')
-        plt.show()
-
-        plt.hist(params_gb[:, 7], 100)
-        plt.xlabel('Polarization')
         plt.show()

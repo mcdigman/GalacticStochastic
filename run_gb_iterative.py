@@ -1,4 +1,4 @@
-"""scratch to test processing of galactic background"""
+"""run iterative processing of galactic background"""
 
 from time import perf_counter
 
@@ -7,7 +7,7 @@ import h5py
 
 import scipy.stats
 
-from binary_search_subs import BinaryWaveletAmpFreqDT
+from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 from instrument_noise import instrument_noise_AET_wdm_m, DiagonalNonstationaryDenseInstrumentNoiseModel
 
 from galactic_fit_helpers import get_SAET_cyclostationary_mean
@@ -481,8 +481,8 @@ plt.show()
 res_mask = (SAET_tot_cur[:, :, 0]-SAET_m[:, 0]).mean(axis=0)>0.1*SAET_m[:, 0]
 unit_normal_battery((galactic_bg_res.reshape(wc.Nt, wc.Nf, wc.NC)[nt_min:nt_max, res_mask, 0:2]/np.sqrt(SAET_tot_cur[nt_min:nt_max, res_mask, 0:2]-SAET_m[res_mask, 0:2])).flatten(), A2_cut=10., sig_thresh=10.)
 
-plt.imshow(np.rot90(galactic_bg_res.reshape(wc.Nt, wc.Nf, wc.NC)[:, res_mask, 0]**2/(SAET_tot_cur[:, res_mask, 0]-SAET_m[res_mask, 0])), aspect='auto')
-plt.show()
+#plt.imshow(np.rot90(galactic_bg_res.reshape(wc.Nt, wc.Nf, wc.NC)[:, res_mask, 0]**2/(SAET_tot_cur[:, res_mask, 0]-SAET_m[res_mask, 0])), aspect='auto')
+#plt.show()
 
 fig = plt.figure(figsize=(5.4, 3.5))
 ax = fig.subplots(1)
