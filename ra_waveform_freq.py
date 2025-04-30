@@ -150,7 +150,7 @@ def RAantenna_inplace(RRs, IIs, cosi, psi, phi, costh, ts, FFs, nf_low, NTs, kdo
         dcross[2, 0] = dcross[0, 2]
 
         for i in range(0, 3):
-            fprs[i] = -((dplus[i, (i+1)%3]*cosps+dcross[i, (i+1)%3]*sinps)*TR[i, (i+1)%3]-(dplus[i, (i+2)%3]*cosps+dcross[i, (i+2)%3]*sinps)*TR[i, (i+2)%3])/2
+            fprs[i] = -((dplus[i, (i+1) %3]*cosps+dcross[i, (i+1)%3]*sinps)*TR[i, (i+1)%3]-(dplus[i, (i+2)%3]*cosps+dcross[i, (i+2)%3]*sinps)*TR[i, (i+2)%3])/2
             fcrs[i] = -((-dplus[i, (i+1)%3]*sinps+dcross[i, (i+1)%3]*cosps)*TR[i, (i+1)%3]-(-dplus[i, (i+2)%3]*sinps+dcross[i, (i+2)%3]*cosps)*TR[i, (i+2)%3])/2
             fpis[i] = -((dplus[i, (i+1)%3]*cosps+dcross[i, (i+1)%3]*sinps)*TI[i, (i+1)%3]-(dplus[i, (i+2)%3]*cosps+dcross[i, (i+2)%3]*sinps)*TI[i, (i+2)%3])/2
             fcis[i] = -((-dplus[i, (i+1)%3]*sinps+dcross[i, (i+1)%3]*cosps)*TI[i, (i+1)%3]-(-dplus[i, (i+2)%3]*sinps+dcross[i, (i+2)%3]*cosps)*TI[i, (i+2)%3])/2

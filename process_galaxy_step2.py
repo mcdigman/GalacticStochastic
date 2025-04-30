@@ -5,22 +5,28 @@ import numpy as np
 import h5py
 
 from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
-from ra_waveform_time import BinaryTimeWaveformAmpFreqD
-from wdm_const import wdm_const as wc
-from wdm_const import lisa_const as lc
 import global_const as gc
 from instrument_noise import DiagonalStationaryDenseInstrumentNoiseModel, instrument_noise_AET_wdm_m, DiagonalNonstationaryDenseInstrumentNoiseModel
 import global_file_index as gfi
 
 if __name__=='__main__':
-    params_gb, n_dgb, n_igb, n_vgb, n_tot = gfi.get_full_galactic_params()
+    galaxy_file = 'galaxy_binaries.hdf5'
+    galaxy_dir = 'Galaxies/Galaxy1/'
+
+    params_gb, n_dgb, n_igb, n_vgb, n_tot = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
 
     params0 = params_gb[0].copy()
 
     snr_thresh = 7
     snr_min = 7
 
-    galactic_bg_const_in, noise_realization_common, snrs_tot_in = gfi.load_master_galactic_file(snr_thresh, wc)
+    Nf = 2048
+    Nt = 4096
+    dt = 30.0750732421875
+
+    galactic_bg_const_in, noise_realization_common, snrs_tot_in, wc, lc = gfi.load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, Nf, Nt, dt)
+
+
     const_suppress_in = snrs_tot_in<snr_min
 
     waveT_ini = BinaryWaveletAmpFreqDT(params0.copy(), wc, lc)
@@ -105,7 +111,7 @@ if __name__=='__main__':
 
     do_hf_write = True
     if do_hf_write:
-        filename_out = gfi.get_init_filename(snr_thresh, wc)
+        filename_out = gfi.get_init_filename(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
         hf_out = h5py.File(filename_out, 'w')
         hf_out.create_group('SAET')
         hf_out['SAET'].create_dataset('galactic_bg_const', data=galactic_bg_const, compression='gzip')
@@ -121,8 +127,16 @@ if __name__=='__main__':
         hf_out['SAET'].create_dataset('n_bin_use', data=n_bin_use)
         hf_out['SAET'].create_dataset('SAET_m', data=SAET_m)
         hf_out['SAET'].create_dataset('snrs_tot', data=snrs_tot[0], compression='gzip')
-        hf_out['SAET'].create_dataset('source_gb_file', data=gfi.full_galactic_params_filename)
-        hf_out['SAET'].create_dataset('master_gb_file', data=gfi.get_master_filename(snr_thresh, wc))
+        hf_out['SAET'].create_dataset('source_gb_file', data=gfi.get_galaxy_filename(galaxy_file, galaxy_dir))
+        hf_out['SAET'].create_dataset('preliminary_gb_file', data=gfi.get_preliminary_filename(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt))
+
+        hf_out.create_group('wc')
+        for key in wc._fields:
+            hf_out['wc'].create_dataset(key, data=getattr(wc, key))
+
+        hf_out.create_group('lc')
+        for key in lc._fields:
+            hf_out['lc'].create_dataset(key, data=getattr(lc, key))
 
         hf_out.close()
 

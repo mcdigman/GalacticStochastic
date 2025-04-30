@@ -15,6 +15,7 @@ from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 #    import numpy.random as random
 #import numpy.random as random
 
+
 def instrument_noise1(f, lc):
     #Power spectral density of the detector noise and transfer frequency
     SAE = np.zeros(f.size)
@@ -69,6 +70,7 @@ def instrument_noise_AET_wdm_m(lc, wc):
     SAET_m = instrument_noise_AET_wdm_loop(phif, lc, wc)
     return SAET_m
 
+
 #@njit()
 def instrument_noise_AET_wdm_loop(phif, lc, wc):
     """helper to get the instrument noise for wdm"""
@@ -95,7 +97,6 @@ def instrument_noise_AET_wdm_loop(phif, lc, wc):
         SAET_M[m] = np.dot(phif2, SAET_long[m*half_Nt:(m+2)*half_Nt])
 
     return SAET_M
-
 
 
 #@jitclass([('prune', nb.b1), ('SAET', nb.float64[:, :, :]), ('inv_SAET', nb.float64[:, :, :]), ('inv_chol_SAET', nb.float64[:, :, :]), ('chol_SAET', nb.float64[:, :, :])])
@@ -127,6 +128,7 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel:
         for j in range(0, self.wc.Nt):
             noise_res[j, :, :] = normal(0., 1., (self.wc.Nf, self.wc.NC))*self.chol_SAET[j, :, :]
         return noise_res
+
 
     def get_sparse_snrs(self, NUs, lists_pixels, wavelet_data, nt_min=0, nt_max=-1):
         """get snr of waveform in each channel"""
@@ -180,6 +182,7 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
             self.inv_chol_mean_SAE[0] = 0.
             #currently not right size for pruning
 
+
     def generate_dense_noise(self):
         """generate random noise for full matrix"""
         noise_res = np.zeros((self.wc.Nt, self.wc.Nf, self.wc.NC))
@@ -187,11 +190,13 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
             noise_res[j, :, :] = normal(0., 1., (self.wc.Nf, self.wc.NC))*self.chol_SAET[j, :, :]
         return noise_res
 
+
     def get_sparse_snrs(self, NUs, lists_pixels, wavelet_data, nt_min=0, nt_max=-1):
         """get snr of waveform in each channel"""
         if nt_max == -1:
             nt_max = self.wc.Nt
         return get_sparse_snr_helper(NUs, lists_pixels, wavelet_data, nt_min, nt_max, self.wc, self.inv_chol_SAET)
+
 
 @njit()
 def get_sparse_snr_helper(NUs, lists_pixels, wavelet_data, nt_min, nt_max, wc, inv_chol_SAET):

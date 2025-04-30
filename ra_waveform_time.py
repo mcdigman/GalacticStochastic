@@ -87,6 +87,7 @@ class BinaryTimeWaveformAmpFreqD():
         RAantenna_inplace(self.RRs, self.IIs, cosi, psi, phi, costh, self.TTs, self.FTs, 0, self.NT, self.kdotx, self.lc) #TODO fix F_min and nf_range
         ExtractAmpPhase_inplace(self.AET_AmpTs, self.AET_PPTs, self.AET_FTs, self.AET_FTds, self.AmpTs, self.PPTs, self.FTs, self.FTds, self.RRs, self.IIs, self.dRRs, self.dIIs, self.NT, self.lc, self.wc)
 
+
 @njit(fastmath=True)
 def ExtractAmpPhase_inplace(AET_Amps, AET_Phases, AET_FTs, AET_FTds, AA, PP, FT, FTd, RRs, IIs, dRRs, dIIs, NT, lc, wc):
     """get the amplitude and phase for LISA"""
@@ -143,6 +144,7 @@ def ExtractAmpPhase_inplace(AET_Amps, AET_Phases, AET_FTs, AET_FTds, AA, PP, FT,
         FTd_shift = FTd[n]
         for itrc in range(0, wc.NC):
             AET_FTds[itrc, n] = (AET_FTs[itrc, n+1]-AET_FTs[itrc, n-1]+FT_shift)/(2*wc.DT)+FTd_shift
+
 
 #TODO check factor of 2pi
 @njit()

@@ -15,10 +15,6 @@ import global_file_index as gfi
 
 import global_const as gc
 
-from wdm_const import wdm_const as wc
-from wdm_const import lisa_const as lc
-
-TobsYEAR = wc.Tobs/gc.SECSYEAR
 
 def unit_normal_battery(signal, mult=1., sig_thresh=5., A2_cut=2.28):
     """battery of tests for checking if signal is unit normal white noise"""
@@ -35,8 +31,8 @@ def unit_normal_battery(signal, mult=1., sig_thresh=5., A2_cut=2.28):
     std_wave = np.std(sig_adjust)
     std_std_wave = np.std(sig_adjust)*np.sqrt(2/n_sig)
     #check mean and variance
-    assert np.abs(mean_wave)/std_wave<sig_thresh
-    assert np.abs(std_wave-1.)/std_std_wave<sig_thresh
+    assert np.abs(mean_wave)/std_wave < sig_thresh
+    assert np.abs(std_wave-1.)/std_std_wave < sig_thresh
 
     #anderson darling test statistic assuming true mean and variance are unknown
     sig_sort = np.sort((sig_adjust-mean_wave)/std_wave)
@@ -44,20 +40,35 @@ def unit_normal_battery(signal, mult=1., sig_thresh=5., A2_cut=2.28):
     A2 = -n_sig-1/n_sig*np.sum((2*np.arange(1, n_sig+1)-1)*np.log(phis)+(2*(n_sig-np.arange(1, n_sig+1))+1)*np.log(1-phis))
     A2Star = A2*(1+4/n_sig-25/n_sig**2)
     print(A2Star, A2_cut)
-    assert A2Star<A2_cut #should be less than cutoff value
+    assert A2Star < A2_cut #should be less than cutoff value
 
     return A2Star
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
+
+    galaxy_file = 'galaxy_binaries.hdf5'
+    galaxy_dir = 'Galaxies/Galaxy1/'
+
+    snr_thresh = 7
+
+    Nf = 2048
+    Nt = 4096
+    dt = 30.0750732421875
+
+
+    filename_gb_init, snr_min_got, galactic_bg_const_in, noise_realization_got, smooth_lengthf_got, smooth_lengtht_got, n_iterations_got, snr_tots_in, SAET_m, wc, lc = gfi.load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt)
+
+    TobsYEAR = wc.Tobs/gc.SECSYEAR
+
     for itrm in range(0, 1):
         const_only = False
         nt_min = 256*6
         nt_max = nt_min+2*512
         print(nt_min, nt_max, wc.Nt, wc.Nf, const_only)
 
-        params_gb, n_dgb, n_igb, n_vgb, n_tot = gfi.get_full_galactic_params()
+        params_gb, n_dgb, n_igb, n_vgb, n_tot = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
 
-        snr_thresh = 7
 
         smooth_lengthf = 6
         smooth_lengtht = 0
@@ -86,20 +97,19 @@ if __name__=='__main__':
         const_converge_change_thresh = 3
 
         common_noise = True
-        filename_gb_common, noise_realization_common = gfi.get_noise_common(snr_thresh, wc)
+        filename_gb_common, noise_realization_common = gfi.get_noise_common(galaxy_dir, snr_thresh, wc, lc)
         if common_noise:
             #get a common noise realization so results at different lengths are comparable
-            assert wc.Nt<=noise_realization_common.shape[0]
+            assert wc.Nt <= noise_realization_common.shape[0]
 
-        filename_gb_init, snr_min_got, galactic_bg_const_in, noise_realization_got, smooth_lengthf_got, smooth_lengtht_got, n_iterations_got, snr_tots_in, SAET_m = gfi.load_init_galactic_file(snr_thresh, lc, wc)
         SAET_m_alt = np.zeros((wc.Nf, wc.NC))
         for itrc in range(0, 3):
             SAET_m_alt[:, itrc] = (noise_realization_common[:, :, itrc]**2).mean(axis=0)
         #first element isn't validated so don't necessarily expect it to be correct
         assert np.allclose(SAET_m[1:], SAET_m_alt[1:], atol=1.e-80, rtol=4.e-1)
 
-        SAET_m = instrument_noise_AET_wdm_m(lc, wc)
-        assert np.allclose(SAET_m[1:], SAET_m_alt[1:], atol=1.e-80, rtol=4.e-1)
+        SAET_m_alt2 = instrument_noise_AET_wdm_m(lc, wc)
+        assert np.allclose(SAET_m[1:], SAET_m_alt2[1:], atol=1.e-80, rtol=4.e-1)
 
         #check input SAET makes sense with noise realization
 
@@ -124,7 +134,7 @@ if __name__=='__main__':
         #iteration to switch to fitting spectrum fully
 
         #TODO eliminate if vgb included
-        const_suppress_in = (snr_tots_in<snr_min_got)|(params_gb[:, 3]>=(wc.Nf-1)*wc.DF)
+        const_suppress_in = (snr_tots_in < snr_min_got) | (params_gb[:, 3] >= (wc.Nf-1)*wc.DF)
         argbinmap = np.argwhere(~const_suppress_in).flatten()
         const_suppress = const_suppress_in[argbinmap]
         params_gb = params_gb[argbinmap]
@@ -158,7 +168,7 @@ if __name__=='__main__':
 
         SAET_tot_base = np.zeros((wc.Nt, wc.Nf, wc.NC))
         SAET_tot_base[:] = SAET_m
-        if idx_SAE_save[itr_save]==0:
+        if idx_SAE_save[itr_save] == 0:
             SAE_tots[0] = SAET_tot_cur[:, :, :2]
             itr_save += 1
         SAET_tot_base = np.min([SAET_tot_base, SAET_tot_cur], axis=0)
@@ -201,7 +211,7 @@ if __name__=='__main__':
             t0n = perf_counter()
             #do the finishing step for itrn=0 to set everything at the end of the loop as it should be
 
-            suppressed = var_suppress[itrn]|const_suppress2[itrn]|const_suppress
+            suppressed = var_suppress[itrn] | const_suppress2[itrn] | const_suppress
 
             idxbs = np.argwhere(~suppressed).flatten()
             for itrb in idxbs:
@@ -212,7 +222,7 @@ if __name__=='__main__':
                     if not const_converged:
                         snrs_base[itrn, itrb] = noise_AET_dense_base.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp, nt_min, nt_max)
                         snrs_tot_base[itrn, itrb] = np.linalg.norm(snrs_base[itrn, itrb])
-                        thresh_base = (snrs_tot_base[itrn, itrb]<snr_min)
+                        thresh_base = (snrs_tot_base[itrn, itrb] < snr_min)
                     else:
                         snrs_base[itrn, itrb] = snrs_base[itrn-1, itrb]
                         snrs_tot_base[itrn, itrb] = snrs_tot_base[itrn-1, itrb]
@@ -221,7 +231,7 @@ if __name__=='__main__':
                     if not var_converged:
                         snrs[itrn, itrb] = noise_AET_dense.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp, nt_min, nt_max)
                         snrs_tot[itrn, itrb] = np.linalg.norm(snrs[itrn, itrb])
-                        thresh_var = snrs_tot[itrn, itrb]>=snr_autosuppress
+                        thresh_var = snrs_tot[itrn, itrb] >= snr_autosuppress
                     else:
                         snrs[itrn, itrb] = snrs[itrn-1, itrb]
                         snrs_tot[itrn, itrb] = snrs_tot[itrn-1, itrb]
@@ -235,7 +245,7 @@ if __name__=='__main__':
                         var_suppress_loc = False
                         const_suppress_loc = False
                     elif thresh_var:
-                        if snrs_tot[itrn, itrb]>snrs_tot_base[itrn, itrb]:
+                        if snrs_tot[itrn, itrb] > snrs_tot_base[itrn, itrb]:
                             #handle case where snr ordering is wrong to prevent oscillation
                             var_suppress_loc = False
                         else:
@@ -258,7 +268,7 @@ if __name__=='__main__':
                         for itrc in range(0, 2):
                             galactic_bg_suppress[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
                     elif not var_suppress_loc and const_suppress_loc:
-                        if itrn==1:
+                        if itrn == 1:
                             const_suppress2[itrn, itrb] = False
                             const_suppress[itrb] = True
                             for itrc in range(0, 2):
@@ -280,8 +290,8 @@ if __name__=='__main__':
                 snrs_tot[itrn, suppressed] = snrs_tot[itrn-1, suppressed]
                 snrs[itrn, suppressed] = snrs[itrn-1, suppressed]
 
-            if itrn==1:
-                assert np.all(galactic_bg_const==0.)
+            if itrn == 1:
+                assert np.all(galactic_bg_const == 0.)
                 galactic_full_signal[:] = galactic_bg_const_base+galactic_bg_const+galactic_bg+galactic_bg_suppress
                 snr_min = 0.999*snr_thresh#/np.sqrt(1+(snr_thresh/(2*smooth_lengthf+1))**2) #choose value to ensure almost nothing gets suppressed as constant because of its own power alone
             else:
@@ -295,15 +305,15 @@ if __name__=='__main__':
                 galactic_bg_res = galactic_bg+galactic_bg_const+galactic_bg_const_base
                 n_var_suppressed_new = var_suppress[itrn].sum()
 
-                if itrn>1 and (force_converge or (np.all(var_suppress[itrn]==var_suppress[itrn-1]) or np.all(var_suppress[itrn]==var_suppress[itrn-2]) or np.all(var_suppress[itrn]==var_suppress[itrn-3]))):
-                    assert n_var_suppressed == n_var_suppressed_new or force_converge or np.all(var_suppress[itrn]==var_suppress[itrn-2]) or np.all(var_suppress[itrn]==var_suppress[itrn-3])
+                if itrn > 1 and (force_converge or (np.all(var_suppress[itrn] == var_suppress[itrn-1]) or np.all(var_suppress[itrn] == var_suppress[itrn-2]) or np.all(var_suppress[itrn] == var_suppress[itrn-3]))):
+                    assert n_var_suppressed == n_var_suppressed_new or force_converge or np.all(var_suppress[itrn] == var_suppress[itrn-2]) or np.all(var_suppress[itrn] == var_suppress[itrn-3])
                     if switch_next:
                         print('subtraction converged at '+str(itrn))
                         var_converged = True
                         switch_next = False
                         const_converged = True
                     else:
-                        if (np.all(var_suppress[itrn]==var_suppress[itrn-2]) or np.all(var_suppress[itrn]==var_suppress[itrn-3])) and not np.all(var_suppress[itrn]==var_suppress[itrn-1]):
+                        if (np.all(var_suppress[itrn] == var_suppress[itrn-2]) or np.all(var_suppress[itrn] == var_suppress[itrn-3])) and not np.all(var_suppress[itrn] == var_suppress[itrn-1]):
                             print('cycling detected at '+str(itrn)+', doing final check iteration aborting')
                             force_converge = True
                         print('subtraction predicted initial converged at '+str(itrn)+' next iteration will be check iteration')
@@ -312,7 +322,7 @@ if __name__=='__main__':
                 else:
                     switch_next = False
 
-                    if itrn<n_cyclo_switch:
+                    if itrn < n_cyclo_switch:
                         #TODO check this is being used appropriately
                         print('here')
                         SAET_tot_cur, _, _ = get_SAET_cyclostationary_mean(galactic_bg_res, SAET_m, wc, smooth_lengthf_cur, filter_periods=False, period_list=period_list1)
@@ -324,12 +334,12 @@ if __name__=='__main__':
             else:
                 switch_next = False
 
-            if itr_save<idx_SAE_save.size and itrn == idx_SAE_save[itr_save]:
+            if itr_save < idx_SAE_save.size and itrn == idx_SAE_save[itr_save]:
                 SAE_tots[itr_save] = SAET_tot_cur[:, :, :2]
                 itr_save += 1
 
             if not const_converged or switch_next:
-                if itrn<n_const_force:
+                if itrn < n_const_force:
                     SAET_tot_base, _, _ = get_SAET_cyclostationary_mean(galactic_bg_const+galactic_bg_const_base, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
                 else:
                     SAET_tot_base, _, _ = get_SAET_cyclostationary_mean(galactic_bg_const+galactic_bg_const_base, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
@@ -337,7 +347,7 @@ if __name__=='__main__':
                     #need to disable adaption of constant here because after this point the convergence isn't guaranteed to be monotonic
                     print('disabled constant adaptation at '+str(itrn))
 
-                #make sure this will always predict >=snrs to the actual spectrum in use
+                #make sure this will always predict >= snrs to the actual spectrum in use
                 SAET_tot_base = np.min([SAET_tot_base, SAET_tot_cur], axis=0)
                 noise_AET_dense_base = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_base, wc, prune=True)
 
@@ -346,7 +356,7 @@ if __name__=='__main__':
                     print('overriding constant convergence to check background model')
                     const_converged = False
                     switchf_next = False
-                elif n_const_suppressed_new - n_const_suppressed<0:
+                elif n_const_suppressed_new - n_const_suppressed < 0:
                     if var_converged:
                         switch_next = True
                         var_converged = False
@@ -354,7 +364,7 @@ if __name__=='__main__':
                     const_converged = False
                     print('addition removed values at '+str(itrn)+', repeating check iteration')
 
-                elif itrn!=1 and np.abs(n_const_suppressed_new - n_const_suppressed) < const_converge_change_thresh:
+                elif itrn != 1 and np.abs(n_const_suppressed_new - n_const_suppressed) < const_converge_change_thresh:
                     if switchf_next:
                         const_converged = True
                         switchf_next = False
@@ -387,7 +397,7 @@ if __name__=='__main__':
             parseval_sup[itrn] = np.sum((galactic_bg_suppress).reshape((wc.Nt, wc.Nf, wc.NC))[:, 1:, 0:2]**2/SAET_m[1:, 0:2])
 
             t2n = perf_counter()
-            print('made bg %3d in time %7.3fs fit time %7.3fs'%(itrn, t1n-t0n, t2n-t1n))
+            print('made bg %3d in time %7.3fs fit time %7.3fs' % (itrn, t1n-t0n, t2n-t1n))
 
 
             #give absorbing constants a relative advantage on early iterations
@@ -432,10 +442,18 @@ if __name__=='__main__':
             hf_out['SAET'].create_dataset('var_suppress', data=var_suppress[n_full_converged], compression='gzip')
             hf_out['SAET'].create_dataset('SAEf', data=SAE_fin, compression='gzip')
 
-            hf_out['SAET'].create_dataset('source_gb_file', data=gfi.full_galactic_params_filename)
-            hf_out['SAET'].create_dataset('master_gb_file', data=gfi.get_master_filename(snr_thresh, wc))
+            hf_out['SAET'].create_dataset('source_gb_file', data=gfi.get_galaxy_filename(galaxy_file, galaxy_dir))
+            hf_out['SAET'].create_dataset('preliminary_gb_file', data=gfi.get_preliminary_filename(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt))
             hf_out['SAET'].create_dataset('init_gb_file', data=filename_gb_init)
             hf_out['SAET'].create_dataset('common_gb_noise_file', data=filename_gb_common)
+
+            hf_out.create_group('wc')
+            for key in wc._fields:
+                hf_out['wc'].create_dataset(key, data=getattr(wc, key))
+
+            hf_out.create_group('lc')
+            for key in lc._fields:
+                hf_out['lc'].create_dataset(key, data=getattr(lc, key))
 
             hf_out.close()
 
@@ -445,6 +463,14 @@ if __name__=='__main__':
             hf_out = h5py.File(filename_out, 'w')
             hf_out.create_group('SAET')
             hf_out['SAET'].create_dataset('SAE_tots', data=SAE_tots, compression='gzip')
+
+            hf_out.create_group('wc')
+            for key in wc._fields:
+                hf_out['wc'].create_dataset(key, data=getattr(wc, key))
+
+            hf_out.create_group('lc')
+            for key in lc._fields:
+                hf_out['lc'].create_dataset(key, data=getattr(lc, key))
             hf_out.close()
 
         do_hf_realization = False
@@ -453,48 +479,63 @@ if __name__=='__main__':
             hf_out = h5py.File(filename_out, 'w')
             hf_out.create_group('SAET')
             hf_out['SAET'].create_dataset('data_realization', data=(galactic_bg_res.reshape(wc.Nt, wc.Nf, wc.NC)+noise_realization), compression='gzip')
+
+            hf_out.create_group('wc')
+            for key in wc._fields:
+                hf_out['wc'].create_dataset(key, data=getattr(wc, key))
+
+            hf_out.create_group('lc')
+            for key in lc._fields:
+                hf_out['lc'].create_dataset(key, data=getattr(lc, key))
             hf_out.close()
 
         tf = perf_counter()
-        print('loop time = %.3es'%(tf-ti))
+        print('loop time = %.3es' % (tf-ti))
 
 
-    plot_noise_spectrum_evolve = True
-    if plot_noise_spectrum_evolve:
-        import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
-spec_shift = np.mean((galactic_bg_res.reshape(wc.Nt, wc.Nf, wc.NC)+noise_realization)[:, :, 0:2]**2, axis=0)
-SAET_m_shift = SAET_m
-print(spec_shift[766]/SAET_m_shift[766, 0])
-plt.loglog(np.arange(1, wc.Nf)*wc.DF, SAET_m_shift[1:, 0])
-plt.loglog(np.arange(1, wc.Nf)*wc.DF, np.mean(SAE_tots[0:, :, 1:, 0], axis=1).T)
-plt.ylim(2.e-44, 8.e-41)
-plt.xlim(1.e-4, 1.e-2)
-plt.xlabel('f (Hz)')
-plt.show()
+do_plot_SAET_m = False
+if do_plot_SAET_m:
+    spec_shift = np.mean((galactic_bg_res.reshape(wc.Nt, wc.Nf, wc.NC)+noise_realization)[:, :, 0:2]**2, axis=0)
+    SAET_m_shift = SAET_m
+    print(spec_shift[766]/SAET_m_shift[766, 0])
+    plt.loglog(np.arange(1, wc.Nf)*wc.DF, SAET_m_shift[1:, 0])
+    plt.loglog(np.arange(1, wc.Nf)*wc.DF, np.mean(SAE_tots[0:, :, 1:, 0], axis=1).T)
+    plt.ylim(2.e-44, 8.e-41)
+    plt.xlim(1.e-4, 1.e-2)
+    plt.xlabel('f (Hz)')
+    plt.show()
 
-plt.plot(parseval_const[1:itrn+1]/parseval_tot[1:itrn+1])
-plt.plot(parseval_bg[1:itrn+1]/parseval_tot[1:itrn+1])
-plt.plot(parseval_sup[1:itrn+1]/parseval_tot[1:itrn+1])
-plt.show()
 
-res_mask = (SAET_tot_cur[:, :, 0]-SAET_m[:, 0]).mean(axis=0)>0.1*SAET_m[:, 0]
+do_parseval_plot = False
+if do_parseval_plot:
+    plt.plot(parseval_const[1:itrn+1]/parseval_tot[1:itrn+1])
+    plt.plot(parseval_bg[1:itrn+1]/parseval_tot[1:itrn+1])
+    plt.plot(parseval_sup[1:itrn+1]/parseval_tot[1:itrn+1])
+    plt.show()
+
+
+plot_noise_spectrum_evolve = True
+if plot_noise_spectrum_evolve:
+    SAET_m_shift = SAET_m
+    fig = plt.figure(figsize=(5.4, 3.5))
+    ax = fig.subplots(1)
+    fig.subplots_adjust(wspace=0., hspace=0., left=0.13, top=0.99, right=0.99, bottom=0.12)
+    ax.loglog(np.arange(1, wc.Nf)*wc.DF, (galactic_full_signal.reshape((wc.Nt, wc.Nf, wc.NC))[:, 1:, 0:2]**2).mean(axis=0).mean(axis=1)+SAET_m[1:, 0], 'k', alpha=0.3, zorder=-90)
+    ax.loglog(np.arange(1, wc.Nf)*wc.DF, np.mean(SAE_tots[[1, 2, 3, 4], :, 1:, 0], axis=1).T, '--', alpha=0.7)
+    ax.loglog(np.arange(1, wc.Nf)*wc.DF, np.mean(SAET_tot_cur[:, 1:, 0:2], axis=0).mean(axis=1).T)
+    ax.loglog(np.arange(1, wc.Nf)*wc.DF, SAET_m_shift[1:, 0], 'k--', zorder=-100)
+    ax.tick_params(axis='both', direction='in', which='both', top=True, right=True)
+    plt.legend(['initial', '1', '2', '3', '4', '5', '6', 'final'])
+    plt.ylim([2.e-44, 4.e-43])
+    plt.xlim([3.e-4, 6.e-3])
+    plt.xlabel('f (Hz)')
+    plt.ylabel(r"$\langle S^{AE}_{m} \rangle$")
+    plt.show()
+
+res_mask = (SAET_tot_cur[:, :, 0]-SAET_m[:, 0]).mean(axis=0) > 0.1*SAET_m[:, 0]
 unit_normal_battery((galactic_bg_res.reshape(wc.Nt, wc.Nf, wc.NC)[nt_min:nt_max, res_mask, 0:2]/np.sqrt(SAET_tot_cur[nt_min:nt_max, res_mask, 0:2]-SAET_m[res_mask, 0:2])).flatten(), A2_cut=10., sig_thresh=10.)
 
 #plt.imshow(np.rot90(galactic_bg_res.reshape(wc.Nt, wc.Nf, wc.NC)[:, res_mask, 0]**2/(SAET_tot_cur[:, res_mask, 0]-SAET_m[res_mask, 0])), aspect='auto')
 #plt.show()
-
-fig = plt.figure(figsize=(5.4, 3.5))
-ax = fig.subplots(1)
-fig.subplots_adjust(wspace=0., hspace=0., left=0.13, top=0.99, right=0.99, bottom=0.12)
-ax.loglog(np.arange(1, wc.Nf)*wc.DF, (galactic_full_signal.reshape((wc.Nt, wc.Nf, wc.NC))[:, 1:, 0:2]**2).mean(axis=0).mean(axis=1)+SAET_m[1:, 0], 'k', alpha=0.3, zorder=-90)
-ax.loglog(np.arange(1, wc.Nf)*wc.DF, np.mean(SAE_tots[[1, 2, 3, 4], :, 1:, 0], axis=1).T, '--', alpha=0.7)
-ax.loglog(np.arange(1, wc.Nf)*wc.DF, np.mean(SAET_tot_cur[:, 1:, 0:2], axis=0).mean(axis=1).T)
-ax.loglog(np.arange(1, wc.Nf)*wc.DF, SAET_m_shift[1:, 0], 'k--', zorder=-100)
-ax.tick_params(axis='both', direction='in', which='both', top=True, right=True)
-plt.legend(['initial', '1', '2', '3', '4', '5', '6', 'final'])
-plt.ylim([2.e-44, 4.e-43])
-plt.xlim([3.e-4, 6.e-3])
-plt.xlabel('f (Hz)')
-plt.ylabel(r"$\langle S^{AE}_{m} \rangle$")
-plt.show()
