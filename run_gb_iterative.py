@@ -48,7 +48,7 @@ def unit_normal_battery(signal, mult=1., sig_thresh=5., A2_cut=2.28):
 if __name__ == '__main__':
 
     galaxy_file = 'galaxy_binaries.hdf5'
-    galaxy_dir = 'Galaxies/Galaxy1/'
+    galaxy_dir = 'Galaxies/Galaxy2/'
 
     snr_thresh = 7
 
