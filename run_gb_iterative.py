@@ -62,7 +62,7 @@ if __name__ == '__main__':
     TobsYEAR = wc.Tobs/gc.SECSYEAR
 
     for itrm in range(0, 1):
-        const_only = False
+        const_only = True
         nt_min = 256*6
         nt_max = nt_min+2*512
         print(nt_min, nt_max, wc.Nt, wc.Nf, const_only)
@@ -415,7 +415,7 @@ if __name__ == '__main__':
 
         do_hf_out = True
         if do_hf_out:
-            filename_out = gfi.get_processed_gb_filename(const_only, snr_thresh, wc, nt_min=nt_min, nt_max=nt_max, smooth_lengtht=smooth_lengtht, smooth_lengthf=smooth_lengthf)
+            filename_out = gfi.get_processed_gb_filename(galaxy_dir, const_only, snr_thresh, wc, nt_min=nt_min, nt_max=nt_max, smooth_lengtht=smooth_lengtht, smooth_lengthf=smooth_lengthf)
             hf_out = h5py.File(filename_out, 'w')
             hf_out.create_group('SAET')
             hf_out['SAET'].create_dataset('galactic_bg_const', data=galactic_bg_const+galactic_bg_const_base, compression='gzip')
