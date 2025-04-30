@@ -1,17 +1,16 @@
-"""scratch to test processing of galactic background"""
+"""process fits to galactic background"""
+
 from numba import njit,prange
 import numpy as np
-from time import perf_counter
+
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.optimize import least_squares,dual_annealing,differential_evolution
 import scipy.ndimage
 
 import WDMWaveletTransforms.fft_funcs as fft
 
-from wdm_const import wdm_const as wc
 import global_const as gc
 
-TobsYEAR = wc.Tobs/gc.SECSYEAR
 
 def SAE_gal_model(f,log10A,log10f2,log10f1,log10fknee,alpha):
     """model from arXiv:2103.14598 for galactic binary confusion noise amplitude"""
@@ -22,13 +21,14 @@ def SAE_gal_model_alt(f,A,alpha,beta,kappa,gamma,fknee):
     return A*f**(7/3)*np.exp(-f**alpha+beta*f*np.sin(kappa*f))*(1+np.tanh(gamma*(fknee-f)))
 
 
-def log10_SAE_gal_model(f,A,f2,a1,b1,ak,bk,alpha):
+def log10_SAE_gal_model(f,A,f2,a1,b1,ak,bk,alpha, wc):
     """model from arXiv:2103.14598 for galactic binary confusion noise amplitude"""
+    TobsYEAR = wc.Tobs/gc.SECSYEAR
     f1 = 10**(a1*np.log10(TobsYEAR)+b1)
     fknee = 10**(ak*np.log10(TobsYEAR)+bk)
     return np.log10(A)-np.log10(2)+-7/3*np.log10(f)-(f/f1)**alpha/np.log(10)+np.log10((1+np.tanh((fknee-f)/f2)))
 
-def gen_wave_sum(noise_AET_dense,waveT_ini,n_bin_use,params_gb,force_suppress,nt_min,nt_max,snr_thresh,get_snrs=True):
+def gen_wave_sum(noise_AET_dense,waveT_ini,n_bin_use,params_gb,force_suppress,nt_min,nt_max,snr_thresh,wc, get_snrs=True):
     #do the finishing step for itrn=0 to set everything at the end of the loop as it should be
     snrs_tot = np.zeros(n_bin_use)
     snrs = np.zeros((n_bin_use,wc.NC))
@@ -55,7 +55,7 @@ def gen_wave_sum(noise_AET_dense,waveT_ini,n_bin_use,params_gb,force_suppress,nt
 
     return galactic_bg,snrs,snrs_tot,var_suppress
 
-def snr_suppress_consistency_check(noise_AET_dense,waveT_ini,n_bin_use,params_gb,force_suppress,nt_min,nt_max,snr_thresh):
+def snr_suppress_consistency_check(noise_AET_dense,waveT_ini,n_bin_use,params_gb,force_suppress,nt_min,nt_max,snr_thresh, wc):
     #do the finishing step for itrn=0 to set everything at the end of the loop as it should be
     snrs_tot = np.zeros(n_bin_use)
     snrs = np.zeros((n_bin_use,wc.NC))
@@ -76,7 +76,7 @@ def snr_suppress_consistency_check(noise_AET_dense,waveT_ini,n_bin_use,params_gb
     return snrs,snrs_tot,var_suppress
 
 
-def filter_periods_fft(r_got1,Nt_loc,period_list):
+def filter_periods_fft(r_got1,Nt_loc,period_list,wc):
     ts = np.arange(0,Nt_loc)*wc.DT
     wts = 2*np.pi/gc.SECSYEAR*ts
     r_fft1 = np.zeros((wc.Nt,wc.NC))
@@ -94,7 +94,9 @@ def filter_periods_fft(r_got1,Nt_loc,period_list):
     return r_fft1
 
 
-def get_SAET_cyclostationary_mean(galactic_bg,SAET_m,smooth_lengthf=4,filter_periods=False,period_list=None,Nt_loc = wc.Nt):
+def get_SAET_cyclostationary_mean(galactic_bg,SAET_m,wc,smooth_lengthf=4,filter_periods=False,period_list=None,Nt_loc=-1):
+    if Nt_loc == -1:
+        Nt_loc = wc.Nt
     SAET_pure_in = (galactic_bg.reshape((wc.Nt,wc.Nf,wc.NC)))**2
     SAET_pure_mean = np.mean(SAET_pure_in,axis=0)
     if not filter_periods:
@@ -111,7 +113,7 @@ def get_SAET_cyclostationary_mean(galactic_bg,SAET_m,smooth_lengthf=4,filter_per
             period_list = np.arange(1,np.int64(gc.SECSYEAR//wc.DT)//2+1)
 
 
-        r_fft1 = filter_periods_fft(r_got1,Nt_loc,period_list)
+        r_fft1 = filter_periods_fft(r_got1,Nt_loc,period_list, wc)
 
         rec_use = r_fft1
 
@@ -144,7 +146,7 @@ def get_SAET_cyclostationary_mean(galactic_bg,SAET_m,smooth_lengthf=4,filter_per
 
     return SAET_res,rec_use,SAET_pures_smooth2
 
-def fit_gb_spectrum_evolve(SAET_goals,fs,fs_report,nt_ranges,offset):
+def fit_gb_spectrum_evolve(SAET_goals,fs,fs_report,nt_ranges,offset, wc):
     a1 = -0.25#-0.15
     b1 = -2.70#-0.37
     ak = -0.27#-2.72
@@ -212,7 +214,9 @@ def fit_gb_spectrum_evolve(SAET_goals,fs,fs_report,nt_ranges,offset):
 
     return SAE_base_res,res
 
-def fit_gb_spectrum_pure(SAET_goal,fs,fs_report,nt_range=wc.Nt,same_spectra=False):
+def fit_gb_spectrum_pure(SAET_goal,fs,fs_report,wc, nt_range=-1,same_spectra=False):
+    if nt_range == -1:
+        nt_range = wc.Nt
     a1 = -2.0873951428e-1#-0.15
     b1 = -2.6083913865e0#-0.37
     ak = -2.7979471707e-1#-2.72
@@ -275,7 +279,9 @@ def fit_gb_spectrum_pure(SAET_goal,fs,fs_report,nt_range=wc.Nt,same_spectra=Fals
 
 
 @njit()
-def get_SAET_smooth(galactic_bg_res,SAET_m,noise_realization,smooth_lengthf,smooth_lengtht,Nt_loc=wc.Nt):
+def get_SAET_smooth(galactic_bg_res,SAET_m,noise_realization,smooth_lengthf,smooth_lengtht,wc,Nt_loc=-1):
+    if Nt_loc == -1:
+        Nt_loc = wc.Nt
     #skipping actually smoothing T right now because we don't use it
     galactic_bg_full = galactic_bg_res.reshape(Nt_loc,wc.Nf,wc.NC)#+noise_realization
 

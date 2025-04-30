@@ -10,6 +10,7 @@ import h5py
 from binary_search_subs import BinaryWaveletAmpFreqDT
 from ra_waveform_time import BinaryTimeWaveformAmpFreqD
 from wdm_const import wdm_const as wc
+from wdm_const import lisa_const as lc
 import global_const as gc
 from instrument_noise import DiagonalStationaryDenseInstrumentNoiseModel,instrument_noise_AET_wdm_m,DiagonalNonstationaryDenseInstrumentNoiseModel
 
@@ -19,13 +20,13 @@ if __name__=='__main__':
     params_gb,n_dgb,n_igb,n_vgb,n_tot = gfi.get_full_galactic_params()
 
     params0 = params_gb[0].copy()
-    fwt = BinaryTimeWaveformAmpFreqD(params0.copy(),0,wc.Nt)
+    fwt = BinaryTimeWaveformAmpFreqD(params0.copy(), 0, wc.Nt, lc, wc, False, 0)
 
-    waveT_ini = BinaryWaveletAmpFreqDT(params0.copy())
+    waveT_ini = BinaryWaveletAmpFreqDT(params0.copy(), wc, lc)
     listT_temp,waveT_temp,NUTs_temp = waveT_ini.get_unsorted_coeffs()
 
-    SAET_m = instrument_noise_AET_wdm_m()
-    noise_AET_dense_pure = DiagonalStationaryDenseInstrumentNoiseModel(SAET_m,prune=False)
+    SAET_m = instrument_noise_AET_wdm_m(lc, wc)
+    noise_AET_dense_pure = DiagonalStationaryDenseInstrumentNoiseModel(SAET_m, wc, prune=False)
 
     noise_realization = noise_AET_dense_pure.generate_dense_noise()
 
@@ -52,7 +53,7 @@ if __name__=='__main__':
     ti = perf_counter()
     for itrn in range(0,n_iterations):
         galactic_bg = np.zeros((wc.Nt*wc.Nf,wc.NC))
-        noise_AET_dense = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot[itrn],prune=False)
+        noise_AET_dense = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot[itrn], wc, prune=False)
         t0n = perf_counter()
 
         for itrb in range(0,n_bin_use):
@@ -105,7 +106,7 @@ if __name__=='__main__':
 
     do_hf_write = True
     if do_hf_write:
-        filename_out = gfi.master_gb_filename
+        filename_out = gfi.get_master_filename(snr_thresh, wc)
         hf_out = h5py.File(filename_out,'w')
         hf_out.create_group('SAET')
         hf_out['SAET'].create_dataset('galactic_bg_const',data=galactic_bg_const,compression='gzip')

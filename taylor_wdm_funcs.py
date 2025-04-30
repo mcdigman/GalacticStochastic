@@ -2,11 +2,8 @@
 from numba import njit
 import numpy as np
 
-from wdm_const import wdm_const as wc
-from mcmc_params import evcTs,evsTs,NfsamT
-
 @njit(fastmath=True)
-def wavemaket_multi_inplace(waveTs,Tlists,Phases,fas,fdas,Amps,NC,nt_range,force_nulls=False):
+def wavemaket_multi_inplace(waveTs,Tlists,Phases,fas,fdas,Amps,NC,nt_range,wc, evcTs, evsTs, NfsamT, force_nulls=False):
     """compute the actual wavelets using taylor time method"""
 
     #indicates this pixel not used

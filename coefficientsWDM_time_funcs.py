@@ -8,7 +8,6 @@ import scipy.fft as spf
 
 from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 
-from wdm_const import wdm_const as wc
 
 
 def wavelet(m, N, nrm, dom, DOM, Nf, dt, nx=4.):
@@ -29,7 +28,7 @@ def wavelet(m, N, nrm, dom, DOM, Nf, dt, nx=4.):
 
 
 @njit(parallel=True)
-def get_ev_t_full(wave):
+def get_ev_t_full(wave, wc):
     """helper function to take advantage of jit compiler in t calculation"""
     fd = wc.dfd*np.arange(-wc.Nfd_negative, wc.Nfd-wc.Nfd_negative)  # set f-dot increments
     Nfsam = ((wc.BW+np.abs(fd)*wc.Tw)/wc.df).astype(np.int64)
