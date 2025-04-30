@@ -1,6 +1,8 @@
 """wavelet transform constants"""
-import numpy as np
+
 from collections import namedtuple
+
+import numpy as np
 
 Nf = 2048 # frequency layers
 Nt = 512*8
@@ -60,12 +62,10 @@ dfd = DF/Tw*dfdot
 NC = 3
 
 
-WDMWaveletConstants = namedtuple('WDMWaveletConstants', ['Nf','Nt','dt','mult','Nsf','Nfd','dfdot','Nfd_negative','Nst','Tobs','NC','DF','DT','nx','dfd','df','BW','Tw','K','A','B','dom','DOM','insDOM'])
+WDMWaveletConstants = namedtuple('WDMWaveletConstants', ['Nf', 'Nt', 'dt', 'mult', 'Nsf', 'Nfd', 'dfdot', 'Nfd_negative', 'Nst', 'Tobs', 'NC', 'DF', 'DT', 'nx', 'dfd', 'df', 'BW', 'Tw', 'K', 'A', 'B', 'dom', 'DOM', 'insDOM'])
 
-wdm_const = WDMWaveletConstants(Nf,Nt,dt,mult,Nsf,Nfd,dfdot,Nfd_negative,Nst,Tobs,NC,DF,DT,nx,dfd,df,BW,Tw,K,A,B,dom,DOM,insDOM)
+wdm_const = WDMWaveletConstants(Nf, Nt, dt, mult, Nsf, Nfd, dfdot, Nfd_negative, Nst, Tobs, NC, DF, DT, nx, dfd, df, BW, Tw, K, A, B, dom, DOM, insDOM)
 
-LISAConstants = namedtuple('LISAConstants', ['Larm','Sps','Sacc','kappa0','lambda0','fstr','ec','fm'])
+LISAConstants = namedtuple('LISAConstants', ['Larm', 'Sps', 'Sacc', 'kappa0', 'lambda0', 'fstr', 'ec', 'fm'])
 
-lisa_const = LISAConstants(Larm,Sps,Sacc,kappa0,lambda0,fstr,ec,fm)
-
-
+lisa_const = LISAConstants(Larm, Sps, Sacc, kappa0, lambda0, fstr, ec, fm)

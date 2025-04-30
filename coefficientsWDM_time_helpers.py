@@ -10,11 +10,10 @@ from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 
 from coefficientsWDM_time_funcs import wavelet, get_ev_t_full
 
-from wdm_const import wdm_const as wc
 import global_const as gc
 
 
-def get_evTs(check_cache=True, hf_out=False):
+def get_evTs(wc, check_cache=True, hf_out=False):
     """helper to get the ev matrices"""
     t0 = time()
 
@@ -91,10 +90,9 @@ def get_evTs(check_cache=True, hf_out=False):
         # DOM/PI, except for the first and last which have width
         # half that
 
-        # evcs_alt,evss_alt = get_ev_t_full(ts,fd,Nfsam,wave,1)
         t1 = time()
         print("loop start time ", t1-t0, "s")
-        evcs, evss = get_ev_t_full(wave)
+        evcs, evss = get_ev_t_full(wave, wc)
         tf = time()
         print("got full evcs in %f s" % (tf-t1))
         t1 = time()

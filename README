@@ -1,0 +1,4 @@
+To generate a galaxy specified in an hdf5 file,
+
+python process_galaxy_preliminary.py
+python run_gb_iterative.py

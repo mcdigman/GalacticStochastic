@@ -3,13 +3,11 @@
 import numpy as np
 from numba import njit, prange
 
-from wdm_const import wdm_const as wc
-from wdm_const import lisa_const as lc
 import global_const as gc
 
 
 @njit(fastmath=True)
-def RAantenna_inplace(RRs, IIs, cosi, psi, phi, costh, ts, FFs, nf_low, NTs, kdotx):
+def RAantenna_inplace(RRs, IIs, cosi, psi, phi, costh, ts, FFs, nf_low, NTs, kdotx, lc):
     """get the waveform for LISA given polarization angle, spacecraft, tensor basis and Fs, channel order AET"""
     kv, eplus, ecross = get_tensor_basis(phi, costh)
 
@@ -151,11 +149,11 @@ def RAantenna_inplace(RRs, IIs, cosi, psi, phi, costh, ts, FFs, nf_low, NTs, kdo
         dplus[2, 0] = dplus[0, 2]
         dcross[2, 0] = dcross[0, 2]
 
-        for i in range(0,3):
-            fprs[i] = -((dplus[i,(i+1)%3]*cosps+dcross[i,(i+1)%3]*sinps)*TR[i,(i+1)%3]-(dplus[i,(i+2)%3]*cosps+dcross[i,(i+2)%3]*sinps)*TR[i,(i+2)%3])/2
-            fcrs[i] = -((-dplus[i,(i+1)%3]*sinps+dcross[i,(i+1)%3]*cosps)*TR[i,(i+1)%3]-(-dplus[i,(i+2)%3]*sinps+dcross[i,(i+2)%3]*cosps)*TR[i,(i+2)%3])/2
-            fpis[i] = -((dplus[i,(i+1)%3]*cosps+dcross[i,(i+1)%3]*sinps)*TI[i,(i+1)%3]-(dplus[i,(i+2)%3]*cosps+dcross[i,(i+2)%3]*sinps)*TI[i,(i+2)%3])/2
-            fcis[i] = -((-dplus[i,(i+1)%3]*sinps+dcross[i,(i+1)%3]*cosps)*TI[i,(i+1)%3]-(-dplus[i,(i+2)%3]*sinps+dcross[i,(i+2)%3]*cosps)*TI[i,(i+2)%3])/2
+        for i in range(0, 3):
+            fprs[i] = -((dplus[i, (i+1) %3]*cosps+dcross[i, (i+1)%3]*sinps)*TR[i, (i+1)%3]-(dplus[i, (i+2)%3]*cosps+dcross[i, (i+2)%3]*sinps)*TR[i, (i+2)%3])/2
+            fcrs[i] = -((-dplus[i, (i+1)%3]*sinps+dcross[i, (i+1)%3]*cosps)*TR[i, (i+1)%3]-(-dplus[i, (i+2)%3]*sinps+dcross[i, (i+2)%3]*cosps)*TR[i, (i+2)%3])/2
+            fpis[i] = -((dplus[i, (i+1)%3]*cosps+dcross[i, (i+1)%3]*sinps)*TI[i, (i+1)%3]-(dplus[i, (i+2)%3]*cosps+dcross[i, (i+2)%3]*sinps)*TI[i, (i+2)%3])/2
+            fcis[i] = -((-dplus[i, (i+1)%3]*sinps+dcross[i, (i+1)%3]*cosps)*TI[i, (i+1)%3]-(-dplus[i, (i+2)%3]*sinps+dcross[i, (i+2)%3]*cosps)*TI[i, (i+2)%3])/2
 
         FpRs[0] = (2*fprs[0]-fprs[1]-fprs[2])/3.*Aplus
         FcRs[0] = (2*fcrs[0]-fcrs[1]-fcrs[2])/3.*Across
@@ -175,13 +173,13 @@ def RAantenna_inplace(RRs, IIs, cosi, psi, phi, costh, ts, FFs, nf_low, NTs, kdo
         FpIs[2] = (fpis[0]+fpis[1]+fpis[2])/3.*Aplus
         FcIs[2] = (fcis[0]+fcis[1]+fcis[2])/3.*Across
 
-        for itrc in range(0,3):
-            RRs[itrc,n] = FpRs[itrc] - FcIs[itrc]
-            IIs[itrc,n] = FcRs[itrc] + FpIs[itrc]
+        for itrc in range(0, 3):
+            RRs[itrc, n] = FpRs[itrc] - FcIs[itrc]
+            IIs[itrc, n] = FcRs[itrc] + FpIs[itrc]
 
 
 @njit()
-def get_tensor_basis(phi,costh):
+def get_tensor_basis(phi, costh):
     """get tensor basis"""
     #Calculate cos and sin of sky position, inclination, polarization
     sinth = np.sqrt(1.0-costh**2)
@@ -204,35 +202,35 @@ def get_tensor_basis(phi,costh):
     v[1] =  -costh*sinph
     v[2] = sinth
 
-    eplus = np.zeros((3,3))
-    ecross = np.zeros((3,3))
+    eplus = np.zeros((3, 3))
+    ecross = np.zeros((3, 3))
 
-    for i in range(0,3):
-        for j in range(0,3):
-            eplus[i,j]  = u[i]*u[j] - v[i]*v[j]
-            ecross[i,j] = u[i]*v[j] + v[i]*u[j]
-    return kv,eplus,ecross
+    for i in range(0, 3):
+        for j in range(0, 3):
+            eplus[i, j]  = u[i]*u[j] - v[i]*v[j]
+            ecross[i, j] = u[i]*v[j] + v[i]*u[j]
+    return kv, eplus, ecross
 
 
 @njit()
-def get_xis_inplace(kv,ts,xas,yas,zas,xis):
+def get_xis_inplace(kv, ts, xas, yas, zas, xis, lc):
     """get time adjusted to guiding center for tensor basis"""
     kdotx = (xas*kv[0]+yas*kv[1]+zas*kv[2])*lc.Larm/gc.CLIGHT
     xis[:] = ts-kdotx
 
 
 @njit()
-def spacecraft_vec(ts):
+def spacecraft_vec(ts, lc):
     """calculate the spacecraft positions as a function of time, with Larm scaling pulled out"""
-    xs = np.zeros((3,ts.size))
-    ys = np.zeros((3,ts.size))
-    zs = np.zeros((3,ts.size))
+    xs = np.zeros((3, ts.size))
+    ys = np.zeros((3, ts.size))
+    zs = np.zeros((3, ts.size))
     alpha = 2*np.pi*lc.fm*ts+lc.kappa0
 
     sa = np.sin(alpha)
     ca = np.cos(alpha)
 
-    for i in range(0,3):
+    for i in range(0, 3):
         beta = i*2/3*np.pi+lc.lambda0
         sb = np.sin(beta)
         cb = np.cos(beta)
