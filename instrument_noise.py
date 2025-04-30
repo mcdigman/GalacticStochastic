@@ -269,16 +269,28 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
 
     def get_sparse_snrs(self, NUs, lists_pixels, wavelet_data, nt_min=0, nt_max=-1):
         """
-        get snr of waveform in each channel
+        get snr of waveform in each TDI channel. parameters usually come from
+        BinaryWaveletAmpFreqDT.get_unsorted_coeffs() from 
+        wavelet_detector_waveforms.
         
         Parameters
         ----------
-        NUs
-        lists_pixels
-        wavelet_data
+        NUs : numpy.ndarray 
+            number of wavelet coefficients used in sparse representation
+            shape: number of TDI channels
+        lists_pixels : numpy.ndarray
+            stores the index of x,y coordinates of the pixels that
+            shape: (NC, ____) number of TDI channels x total possible wavelet basis
+        wavelet_data : numpy.ndarray
+            stores the value of the pixels specified by lists_pixels
+            shape: (NC, ____) 
         nt_min : int, default=0
         nt_max : int, default=-1
         
+        Returns
+        -------
+        snr : numpy.ndarray
+            an array of shape (NC) which is the S/N for each TDI channel.
         """
         if nt_max == -1:
             nt_max = self.wc.Nt
@@ -297,8 +309,9 @@ def get_sparse_snr_helper(NUs, lists_pixels, wavelet_data, nt_min, nt_max, wc, i
     wavelet_data
     nt_min
     nt_max
-    wc
-    inv_chol_SAET
+    wc : namedtuple
+        constants for WDM wavelet basis also from wdm_const.py
+    inv_chol_SAET : 
     
 
     Returns
