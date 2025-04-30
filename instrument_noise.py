@@ -58,8 +58,23 @@ def instrument_noise_AET(f, lc, wc):
 
 #@njit()
 def instrument_noise_AET_wdm_m(lc, wc):
-    """get the instrument noise curve as a function of frequency for the wdm wavelet decomposition
-    if prune=True, cut the 1st and last values, which may not bet calculated correctly"""
+    """
+    get the instrument noise curve as a function of frequency for the wdm 
+    wavelet decomposition 
+
+    Parameters
+    ----------
+    lc : namedtuple
+        constants for LISA constellation specified in wdm_const.py
+    wc : namedtuple
+        constants for WDM wavelet basis also from wdm_const.py
+
+    Returns
+    -------
+    SAET_m : numpy.ndarray (Nf x NC)
+        array of the instrument noise curve for each TDI channel
+        array shape is (freq. layers x number of TDI channels)
+    """
 
     #TODO why no plus 1?
     ls = np.arange(-wc.Nt//2, wc.Nt//2)
