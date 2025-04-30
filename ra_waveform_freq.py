@@ -7,14 +7,17 @@ import global_const as gc
 
 
 @njit(fastmath=True)
-def RAantenna_inplace(RRs, IIs, cosi, psi, phi, costh, ts, FFs, nf_low, NTs, kdotx, lc):
+def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_low, NTs, kdotx, lc):
     """get the waveform for LISA given polarization angle, spacecraft, tensor basis and Fs, channel order AET"""
+    RRs = spacecraft_channels.RR
+    IIs = spacecraft_channels.II
+
     kv, eplus, ecross = get_tensor_basis(phi, costh)
 
     dplus  = np.zeros((3, 3))
     dcross = np.zeros((3, 3))
 
-    TR  = np.zeros((3, 3))
+    TR = np.zeros((3, 3))
     TI = np.zeros((3, 3))
 
     x = np.zeros(3)
@@ -56,7 +59,7 @@ def RAantenna_inplace(RRs, IIs, cosi, psi, phi, costh, ts, FFs, nf_low, NTs, kdo
     Aplus = (1.+cosi**2)/2
     Across = -cosi
 
-    #Main Loop
+    # Main Loop
     for n in prange(0, NTs):
         # Barycenter time
         # pull out Larm scaling
@@ -73,13 +76,10 @@ def RAantenna_inplace(RRs, IIs, cosi, psi, phi, costh, ts, FFs, nf_low, NTs, kdo
         ya = (y[0]+y[1]+y[2])/3
         za = (z[0]+z[1]+z[2])/3
         kdotx[n] = (lc.Larm/gc.CLIGHT)*(xa*kv[0]+ya*kv[1]+za*kv[2])
-        #xa = xas[n]
-        #ya = yas[n]
-        #za = zas[n]
 
         fr = 1/(2*lc.fstr)*FFs[n+nf_low]
 
-        #Unit separation vector from spacecraft i to j
+        # Unit separation vector from spacecraft i to j
         r12[0] = x[1]-x[0]
         r12[1] = y[1]-y[0]
         r12[2] = z[1]-z[0]
@@ -111,28 +111,27 @@ def RAantenna_inplace(RRs, IIs, cosi, psi, phi, costh, ts, FFs, nf_low, NTs, kdo
             kdg[1] += kv[k]*r20[k]
             kdg[2] += kv[k]*r30[k]
 
-
         for i in range(0, 2):
             for j in range(i+1, 3):
                 q1 = fr*(1.-kdr[i, j])
                 q2 = fr*(1.+kdr[i, j])
                 q3 = -fr*(3.+kdr[i, j]-2*kdg[i])
-                q4 = -fr*(1.+kdr[i, j]-2*kdg[i]) #TODO missing 1/sqrt(3) on kdg?
+                q4 = -fr*(1.+kdr[i, j]-2*kdg[i])  # TODO missing 1/sqrt(3) on kdg?
                 q5 = -fr*(3.-kdr[i, j]-2*kdg[j])
-                q6 = -fr*(1.-kdr[i, j]-2*kdg[j]) #TODO missing 1/sqrt(3) on kdg?
+                q6 = -fr*(1.-kdr[i, j]-2*kdg[j])  # TODO missing 1/sqrt(3) on kdg?
                 sincq1 = np.sin(q1)/q1/2
                 sincq2 = np.sin(q2)/q2/2
-                #Real part of T from eq B9 in PhysRevD.101.124008
+                # Real part of T from eq B9 in PhysRevD.101.124008
                 TR[i, j] = sincq1*np.cos(q3)+sincq2*np.cos(q4)   # goes to 1 when f/fstar small
-                #imaginary part of T
+                # imaginary part of T
                 TI[i, j] = sincq1*np.sin(q3)+sincq2*np.sin(q4)   # goes to 0 when f/fstar small
-                #save ops computing other triangle simultaneously
+                # save ops computing other triangle simultaneously
                 TR[j, i] = sincq2*np.cos(q5)+sincq1*np.cos(q6)   # goes to 1 when f/fstar small
                 TI[j, i] = sincq2*np.sin(q5)+sincq1*np.sin(q6)   # goes to 0 when f/fstar small
 
         dplus[:] = 0.
         dcross[:] = 0.
-        #Convenient quantities d+ & dx
+        # Convenient quantities d+ & dx
         for i in range(0, 3):
             for j in range(0, 3):
                 dplus[0, 1]  += r12[i]*r12[j]*eplus[i, j]
@@ -150,10 +149,22 @@ def RAantenna_inplace(RRs, IIs, cosi, psi, phi, costh, ts, FFs, nf_low, NTs, kdo
         dcross[2, 0] = dcross[0, 2]
 
         for i in range(0, 3):
-            fprs[i] = -((dplus[i, (i+1) %3]*cosps+dcross[i, (i+1)%3]*sinps)*TR[i, (i+1)%3]-(dplus[i, (i+2)%3]*cosps+dcross[i, (i+2)%3]*sinps)*TR[i, (i+2)%3])/2
-            fcrs[i] = -((-dplus[i, (i+1)%3]*sinps+dcross[i, (i+1)%3]*cosps)*TR[i, (i+1)%3]-(-dplus[i, (i+2)%3]*sinps+dcross[i, (i+2)%3]*cosps)*TR[i, (i+2)%3])/2
-            fpis[i] = -((dplus[i, (i+1)%3]*cosps+dcross[i, (i+1)%3]*sinps)*TI[i, (i+1)%3]-(dplus[i, (i+2)%3]*cosps+dcross[i, (i+2)%3]*sinps)*TI[i, (i+2)%3])/2
-            fcis[i] = -((-dplus[i, (i+1)%3]*sinps+dcross[i, (i+1)%3]*cosps)*TI[i, (i+1)%3]-(-dplus[i, (i+2)%3]*sinps+dcross[i, (i+2)%3]*cosps)*TI[i, (i+2)%3])/2
+            fprs[i] = -(
+                        + (dplus[i, (i+1) % 3]*cosps + dcross[i, (i+1) % 3]*sinps)*TR[i, (i+1) % 3]
+                        - (dplus[i, (i+2) % 3]*cosps + dcross[i, (i+2) % 3]*sinps)*TR[i, (i+2) % 3]
+                       )/2
+            fcrs[i] = -(
+                        + (-dplus[i, (i+1) % 3]*sinps + dcross[i, (i+1) % 3]*cosps)*TR[i, (i+1) % 3]
+                        - (-dplus[i, (i+2) % 3]*sinps + dcross[i, (i+2) % 3]*cosps)*TR[i, (i+2) % 3]
+                       )/2
+            fpis[i] = -(
+                        + (dplus[i, (i+1) % 3]*cosps + dcross[i, (i+1) % 3]*sinps)*TI[i, (i+1) % 3]
+                        - (dplus[i, (i+2) % 3]*cosps + dcross[i, (i+2) % 3]*sinps)*TI[i, (i+2) % 3]
+                       )/2
+            fcis[i] = -(
+                        + (-dplus[i, (i+1) % 3]*sinps + dcross[i, (i+1) % 3]*cosps)*TI[i, (i+1) % 3]
+                        - (-dplus[i, (i+2) % 3]*sinps + dcross[i, (i+2) % 3]*cosps)*TI[i, (i+2) % 3]
+                       )/2
 
         FpRs[0] = (2*fprs[0]-fprs[1]-fprs[2])/3.*Aplus
         FcRs[0] = (2*fcrs[0]-fcrs[1]-fcrs[2])/3.*Across
@@ -181,7 +192,7 @@ def RAantenna_inplace(RRs, IIs, cosi, psi, phi, costh, ts, FFs, nf_low, NTs, kdo
 @njit()
 def get_tensor_basis(phi, costh):
     """get tensor basis"""
-    #Calculate cos and sin of sky position, inclination, polarization
+    # Calculate cos and sin of sky position, inclination, polarization
     sinth = np.sqrt(1.0-costh**2)
     cosph = np.cos(phi)
     sinph = np.sin(phi)

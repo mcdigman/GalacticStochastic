@@ -1,4 +1,7 @@
 """subroutines for running lisa code"""
+
+from collections import namedtuple
+
 import numpy as np
 from numba import njit
 
@@ -6,8 +9,11 @@ from ra_waveform_freq import RAantenna_inplace, spacecraft_vec, get_xis_inplace,
 
 from algebra_tools import gradient_homog_2d_inplace
 
+StationaryWaveformTime = namedtuple('StationaryWaveformTime', ['T', 'PT', 'FT', 'FTd', 'AT'])
+SpacecraftChannels = namedtuple('SpacecraftChannels', ['T', 'RR', 'II', 'dRR', 'dII'])
 
-#TODO do consistency checks
+
+# TODO do consistency checks
 class BinaryTimeWaveformAmpFreqD():
     """class to store a binary waveform in time domain and update for search
         assuming input binary format based on amplitude, frequency, and frequency derivative"""
@@ -22,7 +28,7 @@ class BinaryTimeWaveformAmpFreqD():
         self.lc = lc
         self.wc = wc
 
-        #TODO ensure this handles padding self consistently
+        # TODO ensure this handles padding self consistently
         self.nt_low = self.NT_min
         self.nt_high = self.NT_max
 
@@ -30,15 +36,19 @@ class BinaryTimeWaveformAmpFreqD():
 
         self.TTs = self.wc.DT*np.arange(self.nt_low, self.nt_high)
 
-        self.AmpTs = np.zeros(self.NT)
-        self.PPTs = np.zeros(self.NT)
-        self.FTs = np.zeros(self.NT)
-        self.FTds = np.zeros(self.NT)
+        AmpTs = np.zeros(self.NT)
+        PPTs = np.zeros(self.NT)
+        FTs = np.zeros(self.NT)
+        FTds = np.zeros(self.NT)
 
-        self.dRRs = np.zeros((self.wc.NC, self.NT))
-        self.dIIs = np.zeros((self.wc.NC, self.NT))
-        self.RRs = np.zeros((self.wc.NC, self.NT))
-        self.IIs = np.zeros((self.wc.NC, self.NT))
+        self.waveform = StationaryWaveformTime(self.TTs, PPTs, FTs, FTds, AmpTs)
+
+        RRs = np.zeros((self.wc.NC, self.NT))
+        IIs = np.zeros((self.wc.NC, self.NT))
+        dRRs = np.zeros((self.wc.NC, self.NT))
+        dIIs = np.zeros((self.wc.NC, self.NT))
+
+        self.spacecraft_channels = SpacecraftChannels(self.TTs, RRs, IIs, dRRs, dIIs)
 
         self.xas = np.zeros(self.NT)
         self.yas = np.zeros(self.NT)
@@ -48,50 +58,65 @@ class BinaryTimeWaveformAmpFreqD():
 
         _, _, _, self.xas[:], self.yas[:], self.zas[:] = spacecraft_vec(self.TTs, self.lc)
 
-        #self.kdotx = np.zeros(self.NT)
+        AET_AmpTs = np.zeros((self.wc.NC, self.NT))
+        AET_PPTs = np.zeros((self.wc.NC, self.NT))
+        AET_FTs = np.zeros((self.wc.NC, self.NT))
+        AET_FTds = np.zeros((self.wc.NC, self.NT))
 
-        self.AET_AmpTs = np.zeros((self.wc.NC, self.NT))
-        self.AET_PPTs = np.zeros((self.wc.NC, self.NT))
-        self.AET_FTs = np.zeros((self.wc.NC, self.NT))
-        self.AET_FTds = np.zeros((self.wc.NC, self.NT))
+        self.AET_waveform = StationaryWaveformTime(self.TTs, AET_PPTs, AET_FTs, AET_FTds, AET_AmpTs)
 
         self.update_params(params)
 
     def update_params(self, params):
         self.params = params
         self.update_intrinsic()
-        #TODO add update_bounds if appropriate
         self.update_extrinsic()
 
     def update_intrinsic(self):
         """get amplitude and phase for taylorT3"""
         amp = self.params[0]
-        costh = np.cos(np.pi/2 - self.params[1]) #TODO check
+        costh = np.cos(np.pi/2 - self.params[1])  # TODO check
         phi = self.params[2]
         freq0 = self.params[3]
         freqD = self.params[4]
         phi0 = self.params[6] + np.pi
 
-        kv, _, _ = get_tensor_basis(phi, costh) #TODO check intrinsic extrinsic separation here
+        kv, _, _ = get_tensor_basis(phi, costh)  # TODO check intrinsic extrinsic separation here
         get_xis_inplace(kv, self.TTs, self.xas, self.yas, self.zas, self.xis, self.lc)
 
-        AmpFreqDeriv_inplace(self.AmpTs, self.PPTs, self.FTs, self.FTds, amp, phi0, freq0, freqD, self.xis, self.TTs.size)
+        AmpFreqDeriv_inplace(self.waveform, amp, phi0, freq0, freqD, self.xis)
 
     def update_extrinsic(self):
-        #Calculate cos and sin of sky position, inclination, polarization
+        # Calculate cos and sin of sky position, inclination, polarization
         costh = np.cos(np.pi/2-self.params[1])
         phi = self.params[2]
         cosi = np.cos(self.params[5])
         psi = self.params[7]
 
-        RAantenna_inplace(self.RRs, self.IIs, cosi, psi, phi, costh, self.TTs, self.FTs, 0, self.NT, self.kdotx, self.lc) #TODO fix F_min and nf_range
-        ExtractAmpPhase_inplace(self.AET_AmpTs, self.AET_PPTs, self.AET_FTs, self.AET_FTds, self.AmpTs, self.PPTs, self.FTs, self.FTds, self.RRs, self.IIs, self.dRRs, self.dIIs, self.NT, self.lc, self.wc)
+        # TODO fix F_min and nf_range
+        RAantenna_inplace(self.spacecraft_channels, cosi, psi, phi, costh, self.TTs, self.waveform.FT, 0, self.NT, self.kdotx, self.lc)
+        ExtractAmpPhase_inplace(self.spacecraft_channels, self.AET_waveform, self.waveform, self.NT, self.lc, self.wc)
 
 
 @njit(fastmath=True)
-def ExtractAmpPhase_inplace(AET_Amps, AET_Phases, AET_FTs, AET_FTds, AA, PP, FT, FTd, RRs, IIs, dRRs, dIIs, NT, lc, wc):
+def ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, NT, lc, wc):
     """get the amplitude and phase for LISA"""
-    #TODO check absolute phase aligns with Extrinsic_inplace
+    AA = waveform.AT
+    PP = waveform.PT
+    FT = waveform.FT
+    FTd = waveform.FTd
+
+    AET_Amps = AET_waveform.AT
+    AET_Phases = AET_waveform.PT
+    AET_FTs = AET_waveform.FT
+    AET_FTds = AET_waveform.FTd
+
+    RRs = spacecraft_channels.RR
+    IIs = spacecraft_channels.II
+    dRRs = spacecraft_channels.dRR
+    dIIs = spacecraft_channels.dII
+
+    # TODO check absolute phase aligns with Extrinsic_inplace
     polds = np.zeros(wc.NC)
     js = np.zeros(wc.NC)
 
@@ -101,7 +126,7 @@ def ExtractAmpPhase_inplace(AET_Amps, AET_Phases, AET_FTs, AET_FTds, AA, PP, FT,
     n = 0
     for itrc in range(0, wc.NC):
         polds[itrc] = np.arctan2(IIs[itrc, n], RRs[itrc, n])
-        if polds[itrc]<0.:
+        if polds[itrc] < 0.:
             polds[itrc] += 2*np.pi
     for n in range(0, NT):
         fonfs = FT[n]/lc.fstr
@@ -113,19 +138,18 @@ def ExtractAmpPhase_inplace(AET_Amps, AET_Phases, AET_FTs, AET_FTds, AA, PP, FT,
             RR = RRs[itrc, n]
             II = IIs[itrc, n]
 
-            if RR==0. and II==0.:
-                #TODO is this the correct way to handle both ps being 0?
+            if RR == 0. and II == 0.:
+                # TODO is this the correct way to handle both ps being 0?
                 p = 0.
                 AET_FTs[itrc, n] = FT[n]
             else:
                 p = np.arctan2(II, RR)
                 AET_FTs[itrc, n] = FT[n]-(II*dRRs[itrc, n]-RR*dIIs[itrc, n])/(RR**2+II**2)/(2*np.pi)
 
-
-            if p<0.:
+            if p < 0.:
                 p += 2*np.pi
 
-            #TODO implement integral tracking of js
+            # TODO implement integral tracking of js
             if p-polds[itrc] > 6.:
                 js[itrc] -= 2*np.pi
             if polds[itrc]-p > 6.:
@@ -133,7 +157,7 @@ def ExtractAmpPhase_inplace(AET_Amps, AET_Phases, AET_FTs, AET_FTds, AA, PP, FT,
             polds[itrc] = p
 
             AET_Amps[itrc, n] = Ampx*np.sqrt(RR**2+II**2)
-            AET_Phases[itrc, n] = Phase+p+js[itrc]#+2*np.pi*kdotx[n]*FT[n]
+            AET_Phases[itrc, n] = Phase+p+js[itrc]  # +2*np.pi*kdotx[n]*FT[n]
 
     for itrc in range(0, wc.NC):
         AET_FTds[itrc, 0] = (AET_FTs[itrc, 1]-AET_FTs[itrc, 0]-FT[1]+FT[0])/wc.DT+FTd[0]
@@ -146,10 +170,16 @@ def ExtractAmpPhase_inplace(AET_Amps, AET_Phases, AET_FTs, AET_FTds, AA, PP, FT,
             AET_FTds[itrc, n] = (AET_FTs[itrc, n+1]-AET_FTs[itrc, n-1]+FT_shift)/(2*wc.DT)+FTd_shift
 
 
-#TODO check factor of 2pi
+# TODO check factor of 2pi
 @njit()
-def AmpFreqDeriv_inplace(AS, PS, FS, FDS, Amp, phi0, FI, FD0, TS, NT):
+def AmpFreqDeriv_inplace(waveform, Amp, phi0, FI, FD0, TS):
     """Get time domain waveform to lowest order, simple constant fdot"""
+    AS = waveform.AT
+    PS = waveform.PT
+    FS = waveform.FT
+    FDS = waveform.FTd
+
+    NT = TS.size
     #  compute the intrinsic frequency, phase and amplitude
     for n in range(0, NT):
         t = TS[n]
