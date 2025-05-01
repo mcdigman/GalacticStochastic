@@ -129,7 +129,7 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel:
         SAET : numpy.ndarray
             array of instrument noise curve for each TDI curve - usually output 
             from instrument_noise_AET_wdm_m 
-            shape: (Nf x NC) freq layers x number of TDI channels
+            shape: (Nf x NC)=(freq layers x number of TDI channels)
         wc : namedtuple
             constants for WDM wavelet basis also from wdm_const.py
         prune : bool
@@ -269,7 +269,7 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
 
     def get_sparse_snrs(self, NUs, lists_pixels, wavelet_data, nt_min=0, nt_max=-1):
         """
-        get snr of waveform in each TDI channel. parameters usually come from
+        get s/n of waveform in each TDI channel. parameters usually come from
         BinaryWaveletAmpFreqDT.get_unsorted_coeffs() from 
         wavelet_detector_waveforms.
         
@@ -280,11 +280,15 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
             shape: number of TDI channels
         lists_pixels : numpy.ndarray
             stores the index of x,y coordinates of the pixels that
-            shape: (NC, ____) number of TDI channels x total possible wavelet basis
+            shape: (NC, ____) number of TDI channels x total possible wavelet 
+            basis. Total possible wavelet basis is specified in 
+            wavelet_detector_waveforms.py
         wavelet_data : numpy.ndarray
-            stores the value of the pixels specified by lists_pixels
-            shape: (NC, ____) 
-        nt_min : int, default=0
+            stores the value of the pixels specified by lists_pixels. 
+            Shape is the same as lists_pixels: shape: (NC, ____) 
+        nt_min : int, default=0 
+            time pixels that are start/end of slice for evaluating. 
+            Used for selecting a subset of time pixels
         nt_max : int, default=-1
         
         Returns
@@ -304,7 +308,9 @@ def get_sparse_snr_helper(NUs, lists_pixels, wavelet_data, nt_min, nt_max, wc, i
 
     Parameters
     ----------
-    NUs
+    NUs : numpy.ndarray 
+        number of wavelet coefficients used in sparse representation
+        shape: number of TDI channels
     lists_pixels
     wavelet_data
     nt_min
