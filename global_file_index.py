@@ -27,10 +27,10 @@ def get_galaxy_filename(galaxy_file, galaxy_dir):
     return galaxy_dir + galaxy_file
 
 
-def get_processed_gb_filename(const_only, snr_thresh, wc, nt_min=0, nt_max=-1, smooth_lengtht=0, smooth_lengthf=6):
+def get_processed_gb_filename(galaxy_dir, const_only, snr_thresh, wc, nt_min=0, nt_max=-1, smooth_lengtht=0, smooth_lengthf=6):
     if nt_max == -1:
         nt_max = wc.Nt
-    return "Galaxies/Galaxy1/gb8_processed_smoothf="+str(smooth_lengthf)+'smootht='+str(smooth_lengtht)+'snr'+str(snr_thresh)+"_Nf="+str(wc.Nf)+"_Nt="+str(wc.Nt)+"_dt="+str(wc.dt)+"const="+str(const_only)+"nt_min="+str(nt_min)+"nt_max="+str(nt_max)+".hdf5"
+    return galaxy_dir + "gb8_processed_smoothf="+str(smooth_lengthf)+'smootht='+str(smooth_lengtht)+'snr'+str(snr_thresh)+"_Nf="+str(wc.Nf)+"_Nt="+str(wc.Nt)+"_dt="+str(wc.dt)+"const="+str(const_only)+"nt_min="+str(nt_min)+"nt_max="+str(nt_max)+".hdf5"
 
 
 def get_noise_common(galaxy_dir, snr_thresh, wc, lc):
@@ -151,3 +151,41 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
     hf_in.close()
 
     return filename_gb_init, snr_min_got, galactic_bg_const_in, noise_realization_got, smooth_lengthf_got, smooth_lengtht_got, n_iterations_got, snr_tots_in, SAET_m, wc, lc
+
+def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, smooth_lengtht, smooth_lengthf, const_only):
+    filename_in = get_processed_gb_filename(galaxy_dir, const_only, snr_thresh, wc, nt_min=nt_min, nt_max=nt_max, smooth_lengtht=smooth_lengtht, smooth_lengthf=smooth_lengthf)
+    hf_in = h5py.File(filename_in,'r')
+
+
+    #check given parameters match expectations
+    snr_thresh_got = hf_in['SAET']['snr_thresh'][()]
+
+    wc2 = wdm_const.WDMWaveletConstants(**{key:hf_in['wc'][key][()] for key in hf_in['wc'].keys()})
+    lc2 = wdm_const.LISAConstants(**{key:hf_in['lc'][key][()] for key in hf_in['lc'].keys()})
+
+    assert wc2 == wc
+    assert lc2 == lc
+    assert snr_thresh == snr_thresh_got
+
+    galactic_bg_const = np.asarray(hf_in['SAET']['galactic_bg_const'])
+    galactic_bg = np.asarray(hf_in['SAET']['galactic_bg'])
+
+    SAET_m = np.asarray(hf_in['SAET']['SAET_m'])
+
+    SAETf_got = np.zeros((wc.Nt,wc.Nf,wc.NC))
+    #SAET_switch_got = np.zeros((wc.Nt,wc.Nf,wc.NC))
+    SAET1_got = np.zeros((wc.Nt,wc.Nf,wc.NC))
+
+    SAETf_got[:,:,:2] = np.asarray(hf_in['SAET']['SAEf'])
+    #SAET_switch_got[:,:,:2] = np.asarray(hf_in['SAET']['SAE_switch'])
+    #SAET1_got[:,:,:2] = np.asarray(hf_in['SAET']['SAE1'])
+
+    SAETf_got[:,:,2] = SAET_m[:,2]
+    #SAET_switch_got[:,:,2] = SAET_m[:,2]
+    SAET1_got[:,:,2] = SAET_m[:,2]
+
+    argbinmap = np.asarray(hf_in['SAET']['argbinmap'])
+
+    hf_in.close()
+
+    return argbinmap, (galactic_bg_const+galactic_bg).reshape((wc.Nt,wc.Nf,wc.NC))

@@ -57,7 +57,11 @@ class BinaryWaveletAmpFreqDT():
 
         #TODO should trap exception if NMF_use is too small
         if self.NMT_use>0:
-            NUTs_new = wavemaket_multi_inplace(self.waveT, self.Tlists, self.fwt.AET_PPTs[:, self.n_pad_T:self.n_pad_T+self.wc.Nt], self.fwt.AET_FTs[:, self.n_pad_T:self.n_pad_T+self.wc.Nt], self.fwt.AET_FTds[:, self.n_pad_T:self.n_pad_T+self.wc.Nt], self.fwt.AET_AmpTs[:, self.n_pad_T:self.n_pad_T+self.wc.Nt], self.wc.NC, self.wc.Nt, self.wc, self.evcTs, self.evsTs, self.NfsamT, force_nulls=False)
+            AET_AmpTs = self.fwt.AET_waveform.AT
+            AET_PPTs = self.fwt.AET_waveform.PT
+            AET_FTs = self.fwt.AET_waveform.FT
+            AET_FTds = self.fwt.AET_waveform.FTd
+            NUTs_new = wavemaket_multi_inplace(self.waveT, self.Tlists, AET_PPTs[:, self.n_pad_T:self.n_pad_T+self.wc.Nt], AET_FTs[:, self.n_pad_T:self.n_pad_T+self.wc.Nt], AET_FTds[:, self.n_pad_T:self.n_pad_T+self.wc.Nt], AET_AmpTs[:, self.n_pad_T:self.n_pad_T+self.wc.Nt], self.wc.NC, self.wc.Nt, self.wc, self.evcTs, self.evsTs, self.NfsamT, force_nulls=False)
             for itrc in range(0, self.wc.NC):
                 if NUTs_new[itrc]<self.NUTs[itrc]:
                     self.waveT[itrc, NUTs_new[itrc]:self.NUTs[itrc]] = 0.
