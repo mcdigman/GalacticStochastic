@@ -2,6 +2,8 @@
 
 from time import perf_counter
 
+import configparser
+
 import numpy as np
 
 from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
@@ -16,8 +18,11 @@ from iterative_fit_helpers import IterationConfig, unit_normal_battery, sustain_
 
 if __name__ == '__main__':
 
-    galaxy_file = 'galaxy_binaries.hdf5'
-    galaxy_dir = 'Galaxies/Galaxy4/'
+    config = configparser.ConfigParser()
+    config.read('default_parameters.ini')
+
+    galaxy_file = config['files']['galaxy_file']
+    galaxy_dir = config['files']['galaxy_dir']
 
     snr_thresh = 7
 
@@ -26,7 +31,7 @@ if __name__ == '__main__':
     galactic_bg_const_in, noise_realization_got, snr_tots_in, SAET_m, wc, lc, ic_preliminary = gfi.load_init_galactic_file(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
 
     for itrm in range(1):
-        const_only = True
+        const_only = False
         nt_min = 256*6
         nt_max = nt_min+2*512
         print(nt_min, nt_max, wc.Nt, wc.Nf, const_only)

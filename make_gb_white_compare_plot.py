@@ -75,7 +75,7 @@ if __name__ == '__main__':
     smooth_lengthf = 6
     smooth_lengtht = 0
 
-    _, noise_realization = gfi.get_noise_common(galaxy_dir, snr_thresh, wc, lc)
+    noise_realization = gfi.get_noise_common(galaxy_dir, snr_thresh, wc, lc)
 
     #TODO _var should _cyclo and _const should also be changed to deconflict names
     _, galactic_bg_var = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, False)
