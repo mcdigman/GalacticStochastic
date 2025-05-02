@@ -12,15 +12,15 @@ labels_gb = ['Amplitude', 'EclipticLatitude', 'EclipticLongitude', 'Frequency', 
 
 
 def get_common_noise_filename(galaxy_dir, snr_thresh, wc):
-    return galaxy_dir + 'gb8_full_abbrev_snr='+str(snr_thresh)+'_Nf='+str(wc.Nf)+'_Nt='+str(wc.Nt)+'_dt=%.2f.hdf5' % wc.dt
+    return galaxy_dir + ('gb8_full_abbrev_snr=%.2f' % snr_thresh)+'_Nf='+str(wc.Nf)+'_Nt='+str(wc.Nt)+'_dt=%.2f.hdf5' % wc.dt
 
 
 def get_init_filename(galaxy_dir, snr_thresh, Nf, Nt, dt):
-    return galaxy_dir + 'gb8_full_abbrev_snr='+str(snr_thresh)+'_Nf='+str(Nf)+'_Nt='+str(Nt)+'_dt=%.2f.hdf5' % dt
+    return galaxy_dir + ('gb8_full_abbrev_snr=%.2f' % snr_thresh) +'_Nf='+str(Nf)+'_Nt='+str(Nt)+'_dt=%.2f.hdf5' % dt
 
 
 def get_preliminary_filename(galaxy_dir, snr_thresh, Nf, Nt, dt):
-    return galaxy_dir + "gb8_full_abbrev_snr="+str(snr_thresh)+"_Nf="+str(Nf)+"_Nt="+str(Nt)+"_dt=%.2f.hdf5" % dt
+    return galaxy_dir + ('gb8_full_abbrev_snr=%.2f' % snr_thresh) +"_Nf="+str(Nf)+"_Nt="+str(Nt)+"_dt=%.2f.hdf5" % dt
 
 
 def get_galaxy_filename(galaxy_file, galaxy_dir):
@@ -30,7 +30,7 @@ def get_galaxy_filename(galaxy_file, galaxy_dir):
 def get_processed_gb_filename(galaxy_dir, const_only, snr_thresh, wc, nt_min=0, nt_max=-1, smooth_lengtht=0, smooth_lengthf=6):
     if nt_max == -1:
         nt_max = wc.Nt
-    return galaxy_dir + "gb8_processed_smoothf="+str(smooth_lengthf)+'smootht='+str(smooth_lengtht)+'snr'+str(snr_thresh)+"_Nf="+str(wc.Nf)+"_Nt="+str(wc.Nt)+"_dt="+str(wc.dt)+"const="+str(const_only)+"nt_min="+str(nt_min)+"nt_max="+str(nt_max)+".hdf5"
+    return galaxy_dir + "gb8_processed_smoothf="+str(smooth_lengthf)+'smootht='+str(smooth_lengtht)+('snr=%.2f' % snr_thresh)+"_Nf="+str(wc.Nf)+"_Nt="+str(wc.Nt)+"_dt="+str(wc.dt)+"const="+str(const_only)+"nt_min="+str(nt_min)+"nt_max="+str(nt_max)+".hdf5"
 
 
 def get_noise_common(galaxy_dir, snr_thresh, wc, lc):
@@ -189,3 +189,117 @@ def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, smoot
     hf_in.close()
 
     return argbinmap, (galactic_bg_const+galactic_bg).reshape((wc.Nt,wc.Nf,wc.NC))
+
+
+def store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_bg_const, noise_realization, n_bin_use, SAET_m, snrs_tot):
+    Nf = wc.Nf
+    Nt = wc.Nt
+    dt = wc.dt
+    filename_out = get_preliminary_filename(galaxy_dir, ic.snr_thresh, Nf, Nt, dt)
+    hf_out = h5py.File(filename_out, 'w')
+    hf_out.create_group('SAET')
+    hf_out['SAET'].create_dataset('galactic_bg_const', data=galactic_bg_const, compression='gzip')
+    hf_out['SAET'].create_dataset('noise_realization', data=noise_realization, compression='gzip')
+    hf_out['SAET'].create_dataset('smooth_lengthf', data=ic.smooth_lengthf)
+    hf_out['SAET'].create_dataset('smooth_lengtht', data=ic.smooth_lengtht)
+    hf_out['SAET'].create_dataset('snr_thresh', data=ic.snr_thresh)
+    hf_out['SAET'].create_dataset('snr_min', data=ic.snr_min)
+    hf_out['SAET'].create_dataset('Nt', data=wc.Nt)
+    hf_out['SAET'].create_dataset('Nf', data=wc.Nf)
+    hf_out['SAET'].create_dataset('dt', data=wc.dt)
+    hf_out['SAET'].create_dataset('n_iterations', data=ic.n_iterations)
+    hf_out['SAET'].create_dataset('n_bin_use', data=n_bin_use)
+    hf_out['SAET'].create_dataset('SAET_m', data=SAET_m)
+    hf_out['SAET'].create_dataset('snrs_tot', data=snrs_tot[0], compression='gzip')
+    hf_out['SAET'].create_dataset('source_gb_file', data=get_galaxy_filename(galaxy_file, galaxy_dir))
+    # TODO I think the stored preliminary filename needs to handle second calls to this differently
+    hf_out['SAET'].create_dataset('preliminary_gb_file', data=get_preliminary_filename(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt))
+
+    hf_out.create_group('preliminary_ic')
+    for key in ic._fields:
+        hf_out['preliminary_ic'].create_dataset(key, data=getattr(ic, key))
+
+    hf_out.create_group('wc')
+    for key in wc._fields:
+        hf_out['wc'].create_dataset(key, data=getattr(wc, key))
+
+    hf_out.create_group('lc')
+    for key in lc._fields:
+        hf_out['lc'].create_dataset(key, data=getattr(lc, key))
+
+    hf_out.close()
+
+def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, snr_thresh, snr_min, nt_min, nt_max, smooth_lengtht, smooth_lengthf, galactic_bg_const, galactic_bg_const_base, galactic_bg_suppress, galactic_bg, period_list1, n_iterations, n_bin_use, SAET_m, SAE_fin, const_only, snrs_tot, n_full_converged, argbinmap, const_suppress, const_suppress2, var_suppress, filename_gb_init, filename_gb_common):
+    filename_out = get_processed_gb_filename(galaxy_dir, const_only, snr_thresh, wc, nt_min=nt_min, nt_max=nt_max, smooth_lengtht=smooth_lengtht, smooth_lengthf=smooth_lengthf)
+
+    hf_out = h5py.File(filename_out, 'w')
+    hf_out.create_group('SAET')
+    hf_out['SAET'].create_dataset('galactic_bg_const', data=galactic_bg_const+galactic_bg_const_base, compression='gzip')
+    hf_out['SAET'].create_dataset('galactic_bg_suppress', data=galactic_bg_suppress, compression='gzip')
+    hf_out['SAET'].create_dataset('galactic_bg', data=galactic_bg, compression='gzip')
+    hf_out['SAET'].create_dataset('smooth_lengthf', data=smooth_lengthf)
+    hf_out['SAET'].create_dataset('smooth_lengtht', data=smooth_lengtht)
+    hf_out['SAET'].create_dataset('snr_thresh', data=snr_thresh)
+    hf_out['SAET'].create_dataset('snr_min', data=snr_min)
+    hf_out['SAET'].create_dataset('period_list', data=period_list1)
+
+    hf_out['SAET'].create_dataset('Nt', data=wc.Nt)
+    hf_out['SAET'].create_dataset('Nf', data=wc.Nf)
+    hf_out['SAET'].create_dataset('dt', data=wc.dt)
+    hf_out['SAET'].create_dataset('n_iterations', data=n_iterations)
+    hf_out['SAET'].create_dataset('n_bin_use', data=n_bin_use)
+    hf_out['SAET'].create_dataset('SAET_m', data=SAET_m)
+    hf_out['SAET'].create_dataset('snrs_tot', data=snrs_tot[n_full_converged], compression='gzip')
+    hf_out['SAET'].create_dataset('argbinmap', data=argbinmap, compression='gzip')
+
+    hf_out['SAET'].create_dataset('const_suppress', data=const_suppress, compression='gzip')
+    hf_out['SAET'].create_dataset('const_suppress2', data=const_suppress2[n_full_converged], compression='gzip')
+
+    hf_out['SAET'].create_dataset('var_suppress', data=var_suppress[n_full_converged], compression='gzip')
+    hf_out['SAET'].create_dataset('SAEf', data=SAE_fin, compression='gzip')
+
+    hf_out['SAET'].create_dataset('source_gb_file', data=get_galaxy_filename(galaxy_file, galaxy_dir))
+    hf_out['SAET'].create_dataset('preliminary_gb_file', data=get_preliminary_filename(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt))
+    hf_out['SAET'].create_dataset('init_gb_file', data=filename_gb_init)
+    hf_out['SAET'].create_dataset('common_gb_noise_file', data=filename_gb_common)
+
+    hf_out.create_group('wc')
+    for key in wc._fields:
+        hf_out['wc'].create_dataset(key, data=getattr(wc, key))
+
+    hf_out.create_group('lc')
+    for key in lc._fields:
+        hf_out['lc'].create_dataset(key, data=getattr(lc, key))
+
+    hf_out.close()
+
+# TODO consolidate with store_preliminary
+#def store_init_gb_file(galaxy_dir, galaxy_file, wc, lc, snr_thresh, snr_min, galactic_bg_const, noise_realization, smooth_lengthf, smooth_lengtht, n_iterations, n_bin_use, SAET_m, snrs_tot):
+#    filename_out = get_init_filename(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
+#    hf_out = h5py.File(filename_out, 'w')
+#    hf_out.create_group('SAET')
+#    hf_out['SAET'].create_dataset('galactic_bg_const', data=galactic_bg_const, compression='gzip')
+#    hf_out['SAET'].create_dataset('noise_realization', data=noise_realization, compression='gzip')
+#    hf_out['SAET'].create_dataset('smooth_lengthf', data=smooth_lengthf)
+#    hf_out['SAET'].create_dataset('smooth_lengtht', data=smooth_lengtht)
+#    hf_out['SAET'].create_dataset('snr_thresh', data=snr_thresh)
+#    hf_out['SAET'].create_dataset('snr_min', data=snr_min)
+#    hf_out['SAET'].create_dataset('Nt', data=wc.Nt)
+#    hf_out['SAET'].create_dataset('Nf', data=wc.Nf)
+#    hf_out['SAET'].create_dataset('dt', data=wc.dt)
+#    hf_out['SAET'].create_dataset('n_iterations', data=n_iterations)
+#    hf_out['SAET'].create_dataset('n_bin_use', data=n_bin_use)
+#    hf_out['SAET'].create_dataset('SAET_m', data=SAET_m)
+#    hf_out['SAET'].create_dataset('snrs_tot', data=snrs_tot[0], compression='gzip')
+#    hf_out['SAET'].create_dataset('source_gb_file', data=get_galaxy_filename(galaxy_file, galaxy_dir))
+#    hf_out['SAET'].create_dataset('preliminary_gb_file', data=get_preliminary_filename(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt))
+#
+#    hf_out.create_group('wc')
+#    for key in wc._fields:
+#        hf_out['wc'].create_dataset(key, data=getattr(wc, key))
+#
+#    hf_out.create_group('lc')
+#    for key in lc._fields:
+#        hf_out['lc'].create_dataset(key, data=getattr(lc, key))
+#
+#    hf_out.close()

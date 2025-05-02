@@ -1,29 +1,28 @@
 """Get the waveform for a galaxy of galactic binaries"""
 
-from time import perf_counter
-
-
 import numpy as np
-import h5py
 
 from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 
 from wdm_const import wdm_const as wc
 from wdm_const import lisa_const as lc
 import global_const as gc
-from instrument_noise import DiagonalStationaryDenseInstrumentNoiseModel, instrument_noise_AET_wdm_m, DiagonalNonstationaryDenseInstrumentNoiseModel
+from instrument_noise import DiagonalStationaryDenseInstrumentNoiseModel, instrument_noise_AET_wdm_m
+
+from iterative_fit_helpers import do_preliminary_loop, IterationConfig
 
 import global_file_index as gfi
 
+
 if __name__=='__main__':
     galaxy_file = 'galaxy_binaries.hdf5'
-    galaxy_dir = 'Galaxies/Galaxy2/'
+    galaxy_dir = 'Galaxies/Galaxy1/'
 
     Nf = 2048
     Nt = 4096
     dt = 30.0750732421875
 
-    params_gb, n_dgb, n_igb, n_vgb, n_tot = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
+    params_gb, _, _, _, n_tot = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
 
     params0 = params_gb[0].copy()
 
@@ -35,110 +34,32 @@ if __name__=='__main__':
 
     noise_realization = noise_AET_dense_pure.generate_dense_noise()
 
-    galactic_bg = np.zeros((wc.Nt*wc.Nf, wc.NC))
     n_bin_use = n_tot
 
     n_iterations = 2
     SAET_tot = np.zeros((n_iterations+1, wc.Nt, wc.Nf, wc.NC))
     SAET_tot[0] = noise_AET_dense_pure.SAET.copy()
 
-    snr_thresh = 7
-    snr_min = 7
-    snr_autosuppress = 500
-    snrs = np.zeros((n_iterations, n_bin_use, wc.NC))
+    snr_thresh = 7.
+    snr_min = np.full(n_iterations, snr_thresh)
+    snr_autosuppress = np.full(n_iterations, snr_thresh)
+    snr_autosuppress[0] = 500.
     snrs_tot = np.zeros((n_iterations, n_bin_use))
 
-    const_suppress = np.zeros(n_bin_use, dtype=np.bool_)
-    var_suppress = np.zeros((n_iterations, n_bin_use), dtype=np.bool_)
+    const_suppress_in = np.zeros(n_bin_use, dtype=np.bool_)
 
     galactic_bg_const = np.zeros((wc.Nt*wc.Nf, wc.NC))
 
-    ti = perf_counter()
-    for itrn in range(0, n_iterations):
-        galactic_bg = np.zeros((wc.Nt*wc.Nf, wc.NC))
-        noise_AET_dense = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot[itrn], wc, prune=False)
-        t0n = perf_counter()
+    smooth_lengthf = np.full(n_iterations, 8)
+    smooth_lengtht = np.full(n_iterations, 84*2)
 
-        for itrb in range(0, n_bin_use):
-            if itrb%10000==0 and itrn==0:
-                tin = perf_counter()
-                print("itrb="+str(itrb)+" at t="+str(tin-t0n)+" s in loop")
-            if not const_suppress[itrb]:
-                waveT_ini.update_params(params_gb[itrb].copy())
-                listT_temp, waveT_temp, NUTs_temp = waveT_ini.get_unsorted_coeffs()
-                snrs[itrn, itrb] = noise_AET_dense.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp)
-                snrs_tot[itrn, itrb] = np.linalg.norm(snrs[itrn, itrb])
-                if itrn == 0 and snrs_tot[0, itrb]<snr_min:
-                    const_suppress[itrb] = True
-                    for itrc in range(0, wc.NC):
-                        galactic_bg_const[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
-                elif snrs_tot[itrn, itrb]<snr_autosuppress:
-                    for itrc in range(0, wc.NC):
-                        galactic_bg[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
-                else:
-                    var_suppress[itrn, itrb] = True
-        t1n = perf_counter()
-        print('made bg '+str(itrn)+' in time '+str(t1n-t0n)+'s')
+    ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_autosuppress, smooth_lengthf, smooth_lengtht)
 
-        galactic_bg_res = galactic_bg+galactic_bg_const
-
-        galactic_bg_full = galactic_bg_res.reshape((wc.Nt, wc.Nf, wc.NC)).copy()#+noise_realization
-
-        signal_full = galactic_bg_full+noise_realization
-
-        SAET_galactic_bg_smoothf_white = np.zeros((wc.Nt, wc.Nf, wc.NC))
-        SAET_galactic_bg_smoothft_white = np.zeros((wc.Nt, wc.Nf, wc.NC))
-        SAET_galactic_bg_smooth = np.zeros((wc.Nt, wc.Nf, wc.NC))
-
-        for itrc in range(0, wc.NC):
-            smooth_lengthf = 8
-            SAET_galactic_bg_white = signal_full[:, :, itrc]**2/SAET_m[:, itrc]
-            for itrf in range(0, wc.Nf):
-                rreach = smooth_lengthf//2-max(itrf-wc.Nf+smooth_lengthf//2+1, 0)
-                lreach = smooth_lengthf//2-max(smooth_lengthf//2-itrf, 0)
-                SAET_galactic_bg_smoothf_white[:, itrf, itrc] = np.mean(SAET_galactic_bg_white[:, itrf-lreach:itrf+rreach+1], axis=1)
-            smooth_lengtht = 84*2
-            for itrt in range(0, wc.Nt):
-                rreach = smooth_lengtht//2-max(itrt-wc.Nt+smooth_lengtht//2+1, 0)
-                lreach = smooth_lengtht//2-max(smooth_lengtht//2-itrt, 0)
-                SAET_galactic_bg_smoothft_white[itrt, :, itrc] = np.mean(SAET_galactic_bg_smoothf_white[itrt-lreach:itrt+rreach+1, :, itrc], axis=0)
-            SAET_galactic_bg_smooth[:, :, itrc] = SAET_galactic_bg_smoothft_white[:, :, itrc]*SAET_m[:, itrc]
-
-        snr_autosuppress = snr_thresh
-        SAET_tot[itrn+1] = SAET_galactic_bg_smooth
+    galactic_bg_full, galactic_bg_const, signal_full, SAET_tot, var_suppress, snrs, snrs_tot, noise_AET_dense = do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_ini, params_gb, snrs_tot, galactic_bg_const, noise_realization, SAET_m)
 
     do_hf_write = True
     if do_hf_write:
-        filename_out = gfi.get_preliminary_filename(galaxy_dir, snr_thresh, Nf, Nt, dt)
-        hf_out = h5py.File(filename_out, 'w')
-        hf_out.create_group('SAET')
-        hf_out['SAET'].create_dataset('galactic_bg_const', data=galactic_bg_const, compression='gzip')
-        hf_out['SAET'].create_dataset('noise_realization', data=noise_realization, compression='gzip')
-        hf_out['SAET'].create_dataset('smooth_lengthf', data=smooth_lengthf)
-        hf_out['SAET'].create_dataset('smooth_lengtht', data=smooth_lengtht)
-        hf_out['SAET'].create_dataset('snr_thresh', data=snr_thresh)
-        hf_out['SAET'].create_dataset('snr_min', data=snr_min)
-        hf_out['SAET'].create_dataset('Nt', data=wc.Nt)
-        hf_out['SAET'].create_dataset('Nf', data=wc.Nf)
-        hf_out['SAET'].create_dataset('dt', data=wc.dt)
-        hf_out['SAET'].create_dataset('n_iterations', data=n_iterations)
-        hf_out['SAET'].create_dataset('n_bin_use', data=n_bin_use)
-        hf_out['SAET'].create_dataset('SAET_m', data=SAET_m)
-        hf_out['SAET'].create_dataset('snrs_tot', data=snrs_tot[0], compression='gzip')
-        hf_out['SAET'].create_dataset('source_gb_file', data=gfi.get_galaxy_filename(galaxy_file, galaxy_dir))
-
-        hf_out.create_group('wc')
-        for key in wc._fields:
-            hf_out['wc'].create_dataset(key, data=getattr(wc, key))
-
-        hf_out.create_group('lc')
-        for key in lc._fields:
-            hf_out['lc'].create_dataset(key, data=getattr(lc, key))
-        #hf_out['SAET'].create_dataset('wc', data=wc)
-        #hf_out['SAET'].create_dataset('lc', data=lc)
-
-        hf_out.close()
-
+        gfi.store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_bg_const, noise_realization, n_bin_use, SAET_m, snrs_tot)
 
     plot_noise_spectrum_evolve = True
     if plot_noise_spectrum_evolve:
