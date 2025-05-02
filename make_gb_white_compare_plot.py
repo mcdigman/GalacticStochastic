@@ -27,7 +27,7 @@ mpl.rcParams['ytick.minor.size'] = 3
 mpl.rcParams['ytick.major.width'] = 1.5
 mpl.rcParams['ytick.minor.width'] = 1.5
 
-galaxy_dir = 'Galaxies/Galaxy2/'
+galaxy_dir = 'Galaxies/Galaxy4/'
 
 
 def result_normality_battery(signal_in):
@@ -77,8 +77,9 @@ if __name__ == '__main__':
 
     _, noise_realization = gfi.get_noise_common(galaxy_dir, snr_thresh, wc, lc)
 
-    _, galactic_bg_var = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, smooth_lengtht, smooth_lengthf, False)
-    _, galactic_bg_const = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, smooth_lengtht, smooth_lengthf, True)
+    #TODO _var should _cyclo and _const should also be changed to deconflict names
+    _, galactic_bg_var = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, False)
+    _, galactic_bg_const = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, True)
 
     signal_full_var = galactic_bg_var + noise_realization
     signal_full_const = galactic_bg_const + noise_realization

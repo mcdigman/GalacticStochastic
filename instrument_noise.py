@@ -59,8 +59,8 @@ def instrument_noise_AET(f, lc, wc):
 #@njit()
 def instrument_noise_AET_wdm_m(lc, wc):
     """
-    get the instrument noise curve as a function of frequency for the wdm 
-    wavelet decomposition 
+    get the instrument noise curve as a function of frequency for the wdm
+    wavelet decomposition
 
     Parameters
     ----------
@@ -123,17 +123,17 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel:
     def __init__(self, SAET, wc, prune):
         """
         initialize the fully diagonal, nonstationary instrument noise model
-        
+
         Parameters
         ----------
         SAET : numpy.ndarray
-            array of instrument noise curve for each TDI curve - usually output 
-            from instrument_noise_AET_wdm_m 
+            array of instrument noise curve for each TDI curve - usually output
+            from instrument_noise_AET_wdm_m
             shape: (Nf x NC)=(freq layers x number of TDI channels)
         wc : namedtuple
             constants for WDM wavelet basis also from wdm_const.py
         prune : bool
-            if prune=True, cut the 1st and last values, 
+            if prune=True, cut the 1st and last values,
             which may not be calculated correctly
 
         Returns
@@ -160,7 +160,7 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel:
     def generate_dense_noise(self):
         """
         generate random noise for full matrix
-        
+
         Parameters
         ----------
         There are no parameters required
@@ -168,7 +168,7 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel:
         Returns
         -------
         noise_res : numpy.ndarray
-            noise matrix of shape (Nt, Nf, NC) Number of time pixels, 
+            noise matrix of shape (Nt, Nf, NC) Number of time pixels,
             Freq layers, Number of TDI channels. All specified by wdm_const.py
         """
         noise_res = np.zeros((self.wc.Nt, self.wc.Nf, self.wc.NC))
@@ -188,17 +188,17 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
     instrument noise model to feed to snr and fisher matrix calculations"""
     def __init__(self, SAET_m, wc, prune):
         """initialize the stationary instrument noise model
-        
+
         Parameters
         ----------
         SAET : numpy.ndarray
-            array of instrument noise curve for each TDI curve - usually output 
-            from instrument_noise_AET_wdm_m 
+            array of instrument noise curve for each TDI curve - usually output
+            from instrument_noise_AET_wdm_m
             shape: (Nf x NC) freq layers x number of TDI channels
         wc : namedtuple
             constants for WDM wavelet basis also from wdm_const.py
         prune : bool
-            if prune=True, cut the 1st and last values, 
+            if prune=True, cut the 1st and last values,
             which may not be calculated correctly
 
         Returns
@@ -250,7 +250,7 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
     def generate_dense_noise(self):
         """
         generate random noise for full matrix
-        
+
         Parameters
         ----------
         There are no parameters required
@@ -258,7 +258,7 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
         Returns
         -------
         noise_res : numpy.ndarray
-            noise matrix of shape (Nt, Nf, NC) Number of time pixels, 
+            noise matrix of shape (Nt, Nf, NC) Number of time pixels,
             Freq layers, Number of TDI channels. All specified by wdm_const.py
         """
         noise_res = np.zeros((self.wc.Nt, self.wc.Nf, self.wc.NC))
@@ -270,27 +270,27 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
     def get_sparse_snrs(self, NUs, lists_pixels, wavelet_data, nt_min=0, nt_max=-1):
         """
         get s/n of waveform in each TDI channel. parameters usually come from
-        BinaryWaveletAmpFreqDT.get_unsorted_coeffs() from 
+        BinaryWaveletAmpFreqDT.get_unsorted_coeffs() from
         wavelet_detector_waveforms.
-        
+
         Parameters
         ----------
-        NUs : numpy.ndarray 
+        NUs : numpy.ndarray
             number of wavelet coefficients used in sparse representation
             shape: number of TDI channels
         lists_pixels : numpy.ndarray
             stores the index of x,y coordinates of the pixels that
-            shape: (NC, ____) number of TDI channels x total possible wavelet 
-            basis. Total possible wavelet basis is specified in 
+            shape: (NC, ____) number of TDI channels x total possible wavelet
+            basis. Total possible wavelet basis is specified in
             wavelet_detector_waveforms.py
         wavelet_data : numpy.ndarray
-            stores the value of the pixels specified by lists_pixels. 
-            Shape is the same as lists_pixels: shape: (NC, ____) 
-        nt_min : int, default=0 
-            time pixels that are start/end of slice for evaluating. 
+            stores the value of the pixels specified by lists_pixels.
+            Shape is the same as lists_pixels: shape: (NC, ____)
+        nt_min : int, default=0
+            time pixels that are start/end of slice for evaluating.
             Used for selecting a subset of time pixels
         nt_max : int, default=-1
-        
+
         Returns
         -------
         snr : numpy.ndarray
@@ -308,7 +308,7 @@ def get_sparse_snr_helper(NUs, lists_pixels, wavelet_data, nt_min, nt_max, wc, i
 
     Parameters
     ----------
-    NUs : numpy.ndarray 
+    NUs : numpy.ndarray
         number of wavelet coefficients used in sparse representation
         shape: number of TDI channels
     lists_pixels
@@ -317,8 +317,8 @@ def get_sparse_snr_helper(NUs, lists_pixels, wavelet_data, nt_min, nt_max, wc, i
     nt_max
     wc : namedtuple
         constants for WDM wavelet basis also from wdm_const.py
-    inv_chol_SAET : 
-    
+    inv_chol_SAET :
+
 
     Returns
     -------

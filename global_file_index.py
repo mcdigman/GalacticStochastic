@@ -1,7 +1,10 @@
 """index for loading the current versions of files"""
 import numpy as np
 import h5py
+
 from instrument_noise import instrument_noise_AET_wdm_m
+
+import iterative_fit_helpers as ifh
 
 import wdm_const
 
@@ -20,17 +23,15 @@ def get_init_filename(galaxy_dir, snr_thresh, Nf, Nt, dt):
 
 
 def get_preliminary_filename(galaxy_dir, snr_thresh, Nf, Nt, dt):
-    return galaxy_dir + ('gb8_full_abbrev_snr=%.2f' % snr_thresh) +"_Nf="+str(Nf)+"_Nt="+str(Nt)+"_dt=%.2f.hdf5" % dt
+    return galaxy_dir + ('gb8_full_abbrev_snr=%.2f' % snr_thresh) +'_Nf='+str(Nf)+'_Nt='+str(Nt)+'_dt=%.2f.hdf5' % dt
 
 
 def get_galaxy_filename(galaxy_file, galaxy_dir):
     return galaxy_dir + galaxy_file
 
 
-def get_processed_gb_filename(galaxy_dir, const_only, snr_thresh, wc, nt_min=0, nt_max=-1, smooth_lengtht=0, smooth_lengthf=6):
-    if nt_max == -1:
-        nt_max = wc.Nt
-    return galaxy_dir + "gb8_processed_smoothf="+str(smooth_lengthf)+'smootht='+str(smooth_lengtht)+('snr=%.2f' % snr_thresh)+"_Nf="+str(wc.Nf)+"_Nt="+str(wc.Nt)+"_dt="+str(wc.dt)+"const="+str(const_only)+"nt_min="+str(nt_min)+"nt_max="+str(nt_max)+".hdf5"
+def get_processed_gb_filename(galaxy_dir, const_only, snr_thresh, wc, nt_min, nt_max):
+    return galaxy_dir + ('gb8_processed_snr=%.2f' % snr_thresh) +'_Nf='+str(wc.Nf)+'_Nt='+str(wc.Nt)+'_dt='+str(wc.dt)+'_const='+str(const_only)+'_nt_min='+str(nt_min)+'_nt_max='+str(nt_max)+'.hdf5'
 
 
 def get_noise_common(galaxy_dir, snr_thresh, wc, lc):
@@ -45,7 +46,7 @@ def get_noise_common(galaxy_dir, snr_thresh, wc, lc):
     assert lc == lc2
 
     hf_in.close()
-    return filename_gb_common, noise_realization_common
+    return noise_realization_common
 
 
 def get_full_galactic_params(galaxy_file, galaxy_dir, fmin=0.00001, fmax=0.1, use_dgb=True, use_igb=True, use_vgb=True):
@@ -119,27 +120,14 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
     hf_in = h5py.File(filename_gb_init, 'r')
 
     #check given parameters match expectations
-    Nt_got = hf_in['SAET']['Nt'][()]
-    Nf_got = hf_in['SAET']['Nf'][()]
-    dt_got = hf_in['SAET']['dt'][()]
 
     wc = wdm_const.WDMWaveletConstants(**{key:hf_in['wc'][key][()] for key in hf_in['wc'].keys()})
     lc = wdm_const.LISAConstants(**{key:hf_in['lc'][key][()] for key in hf_in['lc'].keys()})
+    preliminary_ic = ifh.IterationConfig(**{key:hf_in['preliminary_ic'][key][()] for key in hf_in['preliminary_ic'].keys()})
 
-    snr_thresh_got = hf_in['SAET']['snr_thresh'][()]
-    snr_min_got = hf_in['SAET']['snr_min'][()]
-
-    assert Nt_got == Nt
-    assert Nf_got == wc.Nf
-    assert dt_got == wc.dt
-    assert snr_thresh_got == snr_thresh
-    #snr_min_got = snr_min
-
+    # TODO add check for wc and lc match expectations
     galactic_bg_const_in = np.asarray(hf_in['SAET']['galactic_bg_const'])
     noise_realization_got = np.asarray(hf_in['SAET']['noise_realization'])
-    smooth_lengthf_got = hf_in['SAET']['smooth_lengthf'][()]
-    smooth_lengtht_got = hf_in['SAET']['smooth_lengtht'][()]
-    n_iterations_got = hf_in['SAET']['n_iterations'][()]
 
     snr_tots_in = np.asarray(hf_in['SAET']['snrs_tot'])
     SAET_m = np.asarray(hf_in['SAET']['SAET_m'])
@@ -150,22 +138,18 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
 
     hf_in.close()
 
-    return filename_gb_init, snr_min_got, galactic_bg_const_in, noise_realization_got, smooth_lengthf_got, smooth_lengtht_got, n_iterations_got, snr_tots_in, SAET_m, wc, lc
+    return galactic_bg_const_in, noise_realization_got, snr_tots_in, SAET_m, wc, lc, preliminary_ic
 
-def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, smooth_lengtht, smooth_lengthf, const_only):
-    filename_in = get_processed_gb_filename(galaxy_dir, const_only, snr_thresh, wc, nt_min=nt_min, nt_max=nt_max, smooth_lengtht=smooth_lengtht, smooth_lengthf=smooth_lengthf)
+def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, const_only):
+    filename_in = get_processed_gb_filename(galaxy_dir, const_only, snr_thresh, wc, nt_min, nt_max)
     hf_in = h5py.File(filename_in,'r')
 
-
-    #check given parameters match expectations
-    snr_thresh_got = hf_in['SAET']['snr_thresh'][()]
-
+    # check parameters in file match current parameters
     wc2 = wdm_const.WDMWaveletConstants(**{key:hf_in['wc'][key][()] for key in hf_in['wc'].keys()})
     lc2 = wdm_const.LISAConstants(**{key:hf_in['lc'][key][()] for key in hf_in['lc'].keys()})
 
     assert wc2 == wc
     assert lc2 == lc
-    assert snr_thresh == snr_thresh_got
 
     galactic_bg_const = np.asarray(hf_in['SAET']['galactic_bg_const'])
     galactic_bg = np.asarray(hf_in['SAET']['galactic_bg'])
@@ -173,15 +157,11 @@ def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, smoot
     SAET_m = np.asarray(hf_in['SAET']['SAET_m'])
 
     SAETf_got = np.zeros((wc.Nt,wc.Nf,wc.NC))
-    #SAET_switch_got = np.zeros((wc.Nt,wc.Nf,wc.NC))
     SAET1_got = np.zeros((wc.Nt,wc.Nf,wc.NC))
 
     SAETf_got[:,:,:2] = np.asarray(hf_in['SAET']['SAEf'])
-    #SAET_switch_got[:,:,:2] = np.asarray(hf_in['SAET']['SAE_switch'])
-    #SAET1_got[:,:,:2] = np.asarray(hf_in['SAET']['SAE1'])
 
     SAETf_got[:,:,2] = SAET_m[:,2]
-    #SAET_switch_got[:,:,2] = SAET_m[:,2]
     SAET1_got[:,:,2] = SAET_m[:,2]
 
     argbinmap = np.asarray(hf_in['SAET']['argbinmap'])
@@ -229,24 +209,18 @@ def store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_bg_c
 
     hf_out.close()
 
-def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, snr_thresh, snr_min, nt_min, nt_max, smooth_lengtht, smooth_lengthf, galactic_bg_const, galactic_bg_const_base, galactic_bg_suppress, galactic_bg, period_list1, n_iterations, n_bin_use, SAET_m, SAE_fin, const_only, snrs_tot, n_full_converged, argbinmap, const_suppress, const_suppress2, var_suppress, filename_gb_init, filename_gb_common):
-    filename_out = get_processed_gb_filename(galaxy_dir, const_only, snr_thresh, wc, nt_min=nt_min, nt_max=nt_max, smooth_lengtht=smooth_lengtht, smooth_lengthf=smooth_lengthf)
+def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max, bgd, period_list1, n_bin_use, SAET_m, SAE_fin, const_only, snrs_tot, n_full_converged, argbinmap, const_suppress, const_suppress2, var_suppress, ic_preliminary):
+    filename_gb_init = get_preliminary_filename(galaxy_dir, ic_preliminary.snr_thresh, wc.Nf, wc.Nt, wc.dt)
+    filename_gb_common = get_common_noise_filename(galaxy_dir, ic_preliminary.snr_thresh, wc)
+    filename_out = get_processed_gb_filename(galaxy_dir, const_only, ic.snr_thresh, wc, nt_min, nt_max)
 
     hf_out = h5py.File(filename_out, 'w')
     hf_out.create_group('SAET')
-    hf_out['SAET'].create_dataset('galactic_bg_const', data=galactic_bg_const+galactic_bg_const_base, compression='gzip')
-    hf_out['SAET'].create_dataset('galactic_bg_suppress', data=galactic_bg_suppress, compression='gzip')
-    hf_out['SAET'].create_dataset('galactic_bg', data=galactic_bg, compression='gzip')
-    hf_out['SAET'].create_dataset('smooth_lengthf', data=smooth_lengthf)
-    hf_out['SAET'].create_dataset('smooth_lengtht', data=smooth_lengtht)
-    hf_out['SAET'].create_dataset('snr_thresh', data=snr_thresh)
-    hf_out['SAET'].create_dataset('snr_min', data=snr_min)
+    hf_out['SAET'].create_dataset('galactic_bg_const', data=bgd.galactic_bg_const + bgd.galactic_bg_const_base, compression='gzip')
+    hf_out['SAET'].create_dataset('galactic_bg_suppress', data=bgd.galactic_bg_suppress, compression='gzip')
+    hf_out['SAET'].create_dataset('galactic_bg', data=bgd.galactic_bg, compression='gzip')
     hf_out['SAET'].create_dataset('period_list', data=period_list1)
 
-    hf_out['SAET'].create_dataset('Nt', data=wc.Nt)
-    hf_out['SAET'].create_dataset('Nf', data=wc.Nf)
-    hf_out['SAET'].create_dataset('dt', data=wc.dt)
-    hf_out['SAET'].create_dataset('n_iterations', data=n_iterations)
     hf_out['SAET'].create_dataset('n_bin_use', data=n_bin_use)
     hf_out['SAET'].create_dataset('SAET_m', data=SAET_m)
     hf_out['SAET'].create_dataset('snrs_tot', data=snrs_tot[n_full_converged], compression='gzip')
@@ -259,7 +233,7 @@ def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, snr_thresh, snr_min
     hf_out['SAET'].create_dataset('SAEf', data=SAE_fin, compression='gzip')
 
     hf_out['SAET'].create_dataset('source_gb_file', data=get_galaxy_filename(galaxy_file, galaxy_dir))
-    hf_out['SAET'].create_dataset('preliminary_gb_file', data=get_preliminary_filename(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt))
+    hf_out['SAET'].create_dataset('preliminary_gb_file', data=filename_gb_init) # TODO these are redundant as constructed
     hf_out['SAET'].create_dataset('init_gb_file', data=filename_gb_init)
     hf_out['SAET'].create_dataset('common_gb_noise_file', data=filename_gb_common)
 
@@ -270,6 +244,14 @@ def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, snr_thresh, snr_min
     hf_out.create_group('lc')
     for key in lc._fields:
         hf_out['lc'].create_dataset(key, data=getattr(lc, key))
+
+    hf_out.create_group('ic')
+    for key in ic._fields:
+        hf_out['ic'].create_dataset(key, data=getattr(ic, key))
+
+    hf_out.create_group('ic_preliminary')
+    for key in ic_preliminary._fields:
+        hf_out['ic_preliminary'].create_dataset(key, data=getattr(ic_preliminary, key))
 
     hf_out.close()
 

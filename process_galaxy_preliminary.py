@@ -16,7 +16,7 @@ import global_file_index as gfi
 
 if __name__=='__main__':
     galaxy_file = 'galaxy_binaries.hdf5'
-    galaxy_dir = 'Galaxies/Galaxy1/'
+    galaxy_dir = 'Galaxies/Galaxy4/'
 
     Nf = 2048
     Nt = 4096
