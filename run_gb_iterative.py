@@ -391,7 +391,7 @@ if __name__ == '__main__':
 
         do_hf_out = True
         if do_hf_out:
-            gfi.store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, snr_thresh, ic.snr_min, nt_min, nt_max, ic.smooth_lengtht, ic.smooth_lengthf, galactic_bg_const, galactic_bg_const_base, galactic_bg_suppress, galactic_bg, period_list1, ic.n_iterations, n_bin_use, SAET_m, SAE_fin, const_only, snrs_tot, n_full_converged, argbinmap, const_suppress, const_suppress2, var_suppress, filename_gb_init, filename_gb_common)
+            gfi.store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, snr_thresh, ic.snr_min, nt_min, nt_max, ic.smooth_lengtht[0], ic.smooth_lengthf[0], galactic_bg_const, galactic_bg_const_base, galactic_bg_suppress, galactic_bg, period_list1, ic.n_iterations, n_bin_use, SAET_m, SAE_fin, const_only, snrs_tot, n_full_converged, argbinmap, const_suppress, const_suppress2, var_suppress, filename_gb_init, filename_gb_common)
 
         tf = perf_counter()
         print('loop time = %.3es' % (tf-ti))
