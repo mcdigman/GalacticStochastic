@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     filename_gb_init, snr_min_got, galactic_bg_const_in, noise_realization_got, smooth_lengthf_got, smooth_lengtht_got, n_iterations_got, snr_tots_in, SAET_m, wc, lc = gfi.load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt)
 
-    for itrm in range(0, 1):
+    for itrm in range(1):
         const_only = False
         nt_min = 256*6
         nt_max = nt_min+2*512
@@ -84,7 +84,7 @@ if __name__ == '__main__':
             assert wc.Nt <= noise_realization_common.shape[0]
 
         SAET_m_alt = np.zeros((wc.Nf, wc.NC))
-        for itrc in range(0, 3):
+        for itrc in range(3):
             SAET_m_alt[:, itrc] = (noise_realization_common[:, :, itrc]**2).mean(axis=0)
         # first element isn't validated so don't necessarily expect it to be correct
         assert np.allclose(SAET_m[1:], SAET_m_alt[1:], atol=1.e-80, rtol=4.e-1)
@@ -243,19 +243,19 @@ if __name__ == '__main__':
                     const_suppress2[itrn, itrb] = const_suppress_loc
 
                     if not var_suppress_loc and not const_suppress_loc:
-                        for itrc in range(0, 2):
+                        for itrc in range(2):
                             galactic_bg[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
                     elif var_suppress_loc and not const_suppress_loc:
-                        for itrc in range(0, 2):
+                        for itrc in range(2):
                             galactic_bg_suppress[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
                     elif not var_suppress_loc and const_suppress_loc:
                         if itrn == 1:
                             const_suppress2[itrn, itrb] = False
                             const_suppress[itrb] = True
-                            for itrc in range(0, 2):
+                            for itrc in range(2):
                                 galactic_bg_const_base[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
                         else:
-                            for itrc in range(0, 2):
+                            for itrc in range(2):
                                 galactic_bg_const[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
                     else:
                         raise ValueError('impossible state')
@@ -289,8 +289,8 @@ if __name__ == '__main__':
                     assert n_var_suppressed == n_var_suppressed_new or force_converge[itrn] or np.all(var_suppress[itrn] == var_suppress[itrn-2]) or np.all(var_suppress[itrn] == var_suppress[itrn-3])
                     if switch_next[itrn]:
                         print('subtraction converged at ' + str(itrn))
-                        var_converged[itrn+1] = True
                         switch_next[itrn+1] = False
+                        var_converged[itrn+1] = True
                         const_converged[itrn+1] = True
                     else:
                         if (np.all(var_suppress[itrn] == var_suppress[itrn-2]) or np.all(var_suppress[itrn] == var_suppress[itrn-3])) and not np.all(var_suppress[itrn] == var_suppress[itrn-1]):
@@ -299,8 +299,11 @@ if __name__ == '__main__':
                         print('subtraction predicted initial converged at ' + str(itrn) + ' next iteration will be check iteration')
                         switch_next[itrn+1] = True
                         var_converged[itrn+1] = False
+                        const_converged[itrn+1] = const_converged[itrn]
                 else:
                     switch_next[itrn+1] = False
+                    var_converged[itrn+1] = var_converged[itrn]
+                    const_converged[itrn+1] = const_converged[itrn]
 
                     if itrn < n_cyclo_switch:
                         # TODO check this is being used appropriately
@@ -313,6 +316,8 @@ if __name__ == '__main__':
                     n_var_suppressed = n_var_suppressed_new
             else:
                 switch_next[itrn+1] = False
+                var_converged[itrn+1] = var_converged[itrn]
+                const_converged[itrn+1] = const_converged[itrn]
 
             if itr_save < idx_SAE_save.size and itrn == idx_SAE_save[itr_save]:
                 SAE_tots[itr_save] = SAET_tot_cur[:, :, :2]
@@ -360,6 +365,7 @@ if __name__ == '__main__':
                         const_converged[itrn+1] = False
                     else:
                         switchf_next[itrn+1] = False
+                        const_converged[itrn+1] = const_converged[itrn+1]
 
                 n_const_suppressed = n_const_suppressed_new
             else:
