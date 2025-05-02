@@ -164,16 +164,16 @@ if __name__ == '__main__':
         n_const_suppressed = const_suppress2[0].sum()
         var_converged = np.zeros(ic.n_iterations+1, dtype=np.bool_)
         const_converged = np.zeros(ic.n_iterations+1, dtype=np.bool_)
-        switch_next = False
-        switchf_next = False
-        force_converge = False
+        switch_next = np.zeros(ic.n_iterations+1, dtype=np.bool_)
+        switchf_next = np.zeros(ic.n_iterations+1, dtype=np.bool_)
+        force_converge = np.zeros(ic.n_iterations+1, dtype=np.bool_)
         n_full_converged = ic.n_iterations-1
 
 
         print('entered loop', itrm)
         ti = perf_counter()
         for itrn in range(1, ic.n_iterations):
-            if switchf_next:
+            if switchf_next[itrn]:
                 galactic_bg_const = np.zeros((wc.Nt*wc.Nf, wc.NC))
                 const_suppress2[itrn] = False
             else:
@@ -183,7 +183,7 @@ if __name__ == '__main__':
                 galactic_bg = galactic_bg.copy()
             else:
                 galactic_bg = np.zeros((wc.Nt*wc.Nf, wc.NC))
-                if switch_next:
+                if switch_next[itrn]:
                     galactic_bg_suppress = np.zeros((wc.Nt*wc.Nf, wc.NC))
                     var_suppress[itrn] = False#var_suppress[itrn-1]
                 else:
@@ -285,22 +285,22 @@ if __name__ == '__main__':
                 galactic_bg_res = galactic_bg + galactic_bg_const + galactic_bg_const_base
                 n_var_suppressed_new = var_suppress[itrn].sum()
 
-                if itrn > 1 and (force_converge or (np.all(var_suppress[itrn] == var_suppress[itrn-1]) or np.all(var_suppress[itrn] == var_suppress[itrn-2]) or np.all(var_suppress[itrn] == var_suppress[itrn-3]))):
-                    assert n_var_suppressed == n_var_suppressed_new or force_converge or np.all(var_suppress[itrn] == var_suppress[itrn-2]) or np.all(var_suppress[itrn] == var_suppress[itrn-3])
-                    if switch_next:
+                if itrn > 1 and (force_converge[itrn] or (np.all(var_suppress[itrn] == var_suppress[itrn-1]) or np.all(var_suppress[itrn] == var_suppress[itrn-2]) or np.all(var_suppress[itrn] == var_suppress[itrn-3]))):
+                    assert n_var_suppressed == n_var_suppressed_new or force_converge[itrn] or np.all(var_suppress[itrn] == var_suppress[itrn-2]) or np.all(var_suppress[itrn] == var_suppress[itrn-3])
+                    if switch_next[itrn]:
                         print('subtraction converged at ' + str(itrn))
                         var_converged[itrn+1] = True
-                        switch_next = False
+                        switch_next[itrn+1] = False
                         const_converged[itrn+1] = True
                     else:
                         if (np.all(var_suppress[itrn] == var_suppress[itrn-2]) or np.all(var_suppress[itrn] == var_suppress[itrn-3])) and not np.all(var_suppress[itrn] == var_suppress[itrn-1]):
                             print('cycling detected at ' + str(itrn) + ', doing final check iteration aborting')
-                            force_converge = True
+                            force_converge[itrn+1] = True
                         print('subtraction predicted initial converged at ' + str(itrn) + ' next iteration will be check iteration')
-                        switch_next = True
+                        switch_next[itrn+1] = True
                         var_converged[itrn+1] = False
                 else:
-                    switch_next = False
+                    switch_next[itrn+1] = False
 
                     if itrn < n_cyclo_switch:
                         # TODO check this is being used appropriately
@@ -312,13 +312,13 @@ if __name__ == '__main__':
                     noise_AET_dense = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_cur, wc, prune=True)
                     n_var_suppressed = n_var_suppressed_new
             else:
-                switch_next = False
+                switch_next[itrn+1] = False
 
             if itr_save < idx_SAE_save.size and itrn == idx_SAE_save[itr_save]:
                 SAE_tots[itr_save] = SAET_tot_cur[:, :, :2]
                 itr_save += 1
 
-            if not const_converged[itrn+1] or switch_next:
+            if not const_converged[itrn+1] or switch_next[itrn+1]:
                 if itrn < n_const_force:
                     SAET_tot_base, _, _ = get_SAET_cyclostationary_mean(galactic_bg_const + galactic_bg_const_base, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
                 else:
@@ -332,42 +332,42 @@ if __name__ == '__main__':
                 noise_AET_dense_base = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_base, wc, prune=True)
 
                 n_const_suppressed_new = const_suppress2[itrn].sum()
-                if switch_next and const_converged[itrn+1]:
+                if switch_next[itrn+1] and const_converged[itrn+1]:
                     print('overriding constant convergence to check background model')
                     const_converged[itrn+1] = False
-                    switchf_next = False
+                    switchf_next[itrn+1] = False
                 elif n_const_suppressed_new - n_const_suppressed < 0:
                     if var_converged[itrn+1]:
-                        switch_next = True
+                        switch_next[itrn+1] = True
                         var_converged[itrn+1] = False
-                    switchf_next = False
+                    switchf_next[itrn+1] = False
                     const_converged[itrn+1] = False
                     print('addition removed values at ' + str(itrn) + ', repeating check iteration')
 
                 elif itrn != 1 and np.abs(n_const_suppressed_new - n_const_suppressed) < const_converge_change_thresh:
-                    if switchf_next:
+                    if switchf_next[itrn+1]:
                         const_converged[itrn+1] = True
-                        switchf_next = False
+                        switchf_next[itrn+1] = False
                         print('addition converged at ' + str(itrn))
                     else:
                         print('near convergence in constant adaption at '+str(itrn), ' doing check iteration')
-                        switchf_next = False
+                        switchf_next[itrn+1] = False
                         const_converged[itrn+1] = False
                 else:
                     if var_converged[itrn+1]:
                         print('addition convergence continuing beyond subtraction, try check iteration')
-                        switchf_next = False
+                        switchf_next[itrn+1] = False
                         const_converged[itrn+1] = False
                     else:
-                        switchf_next = False
+                        switchf_next[itrn+1] = False
 
                 n_const_suppressed = n_const_suppressed_new
             else:
-                switchf_next = False
+                switchf_next[itrn+1] = False
 
-            if switchf_next:
+            if switchf_next[itrn+1]:
                 assert not const_converged[itrn+1]
-            if switch_next:
+            if switch_next[itrn+1]:
                 assert not var_converged[itrn+1]
 
 
