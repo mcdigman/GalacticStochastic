@@ -1,5 +1,7 @@
 """second step in processing the waveform from a galaxy of binaries"""
 
+import configparser
+
 import numpy as np
 
 from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
@@ -9,21 +11,26 @@ import global_file_index as gfi
 
 from iterative_fit_helpers import do_preliminary_loop, IterationConfig
 
+from wdm_config import get_wavelet_model
+
 if __name__=='__main__':
-    galaxy_file = 'galaxy_binaries.hdf5'
-    galaxy_dir = 'Galaxies/Galaxy1/'
+
+    config = configparser.ConfigParser()
+    config.read('default_parameters.ini')
+
+    galaxy_file = config['files']['galaxy_file']
+    galaxy_dir = config['files']['galaxy_dir']
+
+    wc = get_wavelet_model(config)
+
+    snr_thresh = 7.
 
     params_gb, _, _, _, n_tot = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
 
     params0 = params_gb[0].copy()
 
-    snr_thresh = 7.
 
-    Nf = 2048
-    Nt = 4096
-    dt = 30.0750732421875
-
-    galactic_bg_const_in, noise_realization_common, snrs_tot_in, wc, lc = gfi.load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, Nf, Nt, dt)
+    galactic_bg_const_in, noise_realization_common, snrs_tot_in, _, lc = gfi.load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
 
 
 

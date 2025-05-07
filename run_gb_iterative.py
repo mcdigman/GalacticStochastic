@@ -15,6 +15,8 @@ import global_const as gc
 
 from iterative_fit_helpers import IterationConfig, unit_normal_battery, sustain_snr_helper, run_binary_coadd2, total_signal_consistency_check, subtraction_convergence_decision, addition_convergence_decision, BGDecomposition
 
+from wdm_config import get_wavelet_model
+
 
 if __name__ == '__main__':
 
@@ -24,14 +26,15 @@ if __name__ == '__main__':
     galaxy_file = config['files']['galaxy_file']
     galaxy_dir = config['files']['galaxy_dir']
 
-    snr_thresh = 7
+    wc = get_wavelet_model(config)
 
-    from wdm_const import wdm_const as wc
+    snr_thresh = 7.
 
-    galactic_bg_const_in, noise_realization_got, snr_tots_in, SAET_m, wc, lc, ic_preliminary = gfi.load_init_galactic_file(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
+
+    galactic_bg_const_in, noise_realization_got, snr_tots_in, SAET_m, _, lc, ic_preliminary = gfi.load_init_galactic_file(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
 
     for itrm in range(1):
-        const_only = False
+        const_only = True
         nt_min = 256*6
         nt_max = nt_min+2*512
         print(nt_min, nt_max, wc.Nt, wc.Nf, const_only)

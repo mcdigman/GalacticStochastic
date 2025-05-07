@@ -1,5 +1,7 @@
 """make plot comparing galactic background noise spectra with and without cyclostationary model"""
 
+import configparser
+
 import numpy as np
 
 import matplotlib as mpl
@@ -9,11 +11,12 @@ import scipy.special
 import scipy.stats
 import scipy.ndimage
 
-from wdm_const import wdm_const as wc
 from wdm_const import lisa_const as lc
 import global_const as gc
 from instrument_noise import instrument_noise_AET_wdm_m
 from galactic_fit_helpers import get_SAET_cyclostationary_mean
+
+from wdm_config import get_wavelet_model
 
 import global_file_index as gfi
 
@@ -26,8 +29,6 @@ mpl.rcParams['ytick.major.size'] = 7
 mpl.rcParams['ytick.minor.size'] = 3
 mpl.rcParams['ytick.major.width'] = 1.5
 mpl.rcParams['ytick.minor.width'] = 1.5
-
-galaxy_dir = 'Galaxies/Galaxy4/'
 
 
 def result_normality_battery(signal_in):
@@ -66,12 +67,21 @@ def result_normality_battery(signal_in):
 
 
 if __name__ == '__main__':
+
+    config = configparser.ConfigParser()
+    config.read('default_parameters.ini')
+
+    galaxy_file = config['files']['galaxy_file']
+    galaxy_dir = config['files']['galaxy_dir']
+
+    wc = get_wavelet_model(config)
+
     nt_min = 256*6
     nt_max = nt_min + 512*2
     nt_min_report = 0
     nt_max_report = nt_max-nt_min
 
-    snr_thresh = 7
+    snr_thresh = 7.
     smooth_lengthf = 6
     smooth_lengtht = 0
 

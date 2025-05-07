@@ -1,26 +1,31 @@
 """Get the waveform for a galaxy of galactic binaries"""
 
+import configparser
+
 import numpy as np
 
 from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 
-from wdm_const import wdm_const as wc
 from wdm_const import lisa_const as lc
 import global_const as gc
 from instrument_noise import DiagonalStationaryDenseInstrumentNoiseModel, instrument_noise_AET_wdm_m
 
 from iterative_fit_helpers import do_preliminary_loop, IterationConfig
 
+from wdm_config import get_wavelet_model
+
 import global_file_index as gfi
 
 
 if __name__=='__main__':
-    galaxy_file = 'galaxy_binaries.hdf5'
-    galaxy_dir = 'Galaxies/Galaxy4/'
+    config = configparser.ConfigParser()
+    config.read('default_parameters.ini')
 
-    Nf = 2048
-    Nt = 4096
-    dt = 30.0750732421875
+    galaxy_file = config['files']['galaxy_file']
+    galaxy_dir = config['files']['galaxy_dir']
+
+    wc = get_wavelet_model(config)
+
 
     params_gb, _, _, _, n_tot = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
 

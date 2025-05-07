@@ -100,6 +100,7 @@ def get_wavelet_model(config):
     dfd = DF/Tw*dfdot
 
     # number of TDI channels to use
+    # TODO move this some place else
     NC = 3
 
     return WDMWaveletConstants(Nf, Nt, dt, mult, Nsf, Nfd, dfdot, Nfd_negative, Nst, Tobs, NC, DF, DT, nx, dfd, df, BW, Tw, K, A, B, dom, DOM, insDOM)

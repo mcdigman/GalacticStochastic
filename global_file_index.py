@@ -8,6 +8,8 @@ import iterative_fit_helpers as ifh
 
 import wdm_const
 
+import wdm_config
+
 #full_galactic_params_filename = 'LDC/LDC2_sangria_training_v2.h5'
 
 n_par_gb = 8
@@ -31,7 +33,7 @@ def get_galaxy_filename(galaxy_file, galaxy_dir):
 
 
 def get_processed_gb_filename(galaxy_dir, const_only, snr_thresh, wc, nt_min, nt_max):
-    return galaxy_dir + ('gb8_processed_snr=%.2f' % snr_thresh) +'_Nf='+str(wc.Nf)+'_Nt='+str(wc.Nt)+'_dt='+str(wc.dt)+'_const='+str(const_only)+'_nt_min='+str(nt_min)+'_nt_max='+str(nt_max)+'.hdf5'
+    return galaxy_dir + ('gb8_processed_snr=%.2f' % snr_thresh) +'_Nf='+str(wc.Nf)+'_Nt='+str(wc.Nt) + ('_dt=%.2f' % (wc.dt)) + '_const='+str(const_only)+'_nt_min='+str(nt_min)+'_nt_max='+str(nt_max)+'.hdf5'
 
 
 def get_noise_common(galaxy_dir, snr_thresh, wc, lc):
@@ -39,7 +41,7 @@ def get_noise_common(galaxy_dir, snr_thresh, wc, lc):
     hf_in = h5py.File(filename_gb_common, 'r')
     noise_realization_common = np.asarray(hf_in['SAET']['noise_realization'])
 
-    wc2 = wdm_const.WDMWaveletConstants(**{key:hf_in['wc'][key][()] for key in hf_in['wc'].keys()})
+    wc2 = wdm_config.WDMWaveletConstants(**{key:hf_in['wc'][key][()] for key in hf_in['wc'].keys()})
     lc2 = wdm_const.LISAConstants(**{key:hf_in['lc'][key][()] for key in hf_in['lc'].keys()})
 
     assert wc == wc2
@@ -102,7 +104,7 @@ def load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, Nf, Nt, 
 
     hf_in = h5py.File(preliminary_gb_filename, 'r')
 
-    wc = wdm_const.WDMWaveletConstants(**{key:hf_in['wc'][key][()] for key in hf_in['wc'].keys()})
+    wc = wdm_config.WDMWaveletConstants(**{key:hf_in['wc'][key][()] for key in hf_in['wc'].keys()})
     lc = wdm_const.LISAConstants(**{key:hf_in['lc'][key][()] for key in hf_in['lc'].keys()})
 
     gb_file_source = hf_in['SAET']['source_gb_file'][()].decode()
@@ -121,7 +123,7 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
 
     #check given parameters match expectations
 
-    wc = wdm_const.WDMWaveletConstants(**{key:hf_in['wc'][key][()] for key in hf_in['wc'].keys()})
+    wc = wdm_config.WDMWaveletConstants(**{key:hf_in['wc'][key][()] for key in hf_in['wc'].keys()})
     lc = wdm_const.LISAConstants(**{key:hf_in['lc'][key][()] for key in hf_in['lc'].keys()})
     preliminary_ic = ifh.IterationConfig(**{key:hf_in['preliminary_ic'][key][()] for key in hf_in['preliminary_ic'].keys()})
 
@@ -145,7 +147,7 @@ def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, const
     hf_in = h5py.File(filename_in,'r')
 
     # check parameters in file match current parameters
-    wc2 = wdm_const.WDMWaveletConstants(**{key:hf_in['wc'][key][()] for key in hf_in['wc'].keys()})
+    wc2 = wdm_config.WDMWaveletConstants(**{key:hf_in['wc'][key][()] for key in hf_in['wc'].keys()})
     lc2 = wdm_const.LISAConstants(**{key:hf_in['lc'][key][()] for key in hf_in['lc'].keys()})
 
     assert wc2 == wc
