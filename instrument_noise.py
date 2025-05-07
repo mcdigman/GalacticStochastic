@@ -65,9 +65,9 @@ def instrument_noise_AET_wdm_m(lc, wc):
     Parameters
     ----------
     lc : namedtuple
-        constants for LISA constellation specified in wdm_const.py
+        constants for LISA constellation specified in lisa_config.py
     wc : namedtuple
-        constants for WDM wavelet basis also from wdm_const.py
+        constants for WDM wavelet basis also from wdm_config.py
 
     Returns
     -------
@@ -131,7 +131,7 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel:
             from instrument_noise_AET_wdm_m
             shape: (Nf x NC)=(freq layers x number of TDI channels)
         wc : namedtuple
-            constants for WDM wavelet basis also from wdm_const.py
+            constants for WDM wavelet basis also from wdm_config.py
         prune : bool
             if prune=True, cut the 1st and last values,
             which may not be calculated correctly
@@ -169,7 +169,7 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel:
         -------
         noise_res : numpy.ndarray
             noise matrix of shape (Nt, Nf, NC) Number of time pixels,
-            Freq layers, Number of TDI channels. All specified by wdm_const.py
+            Freq layers, Number of TDI channels. All specified by wdm_config.py
         """
         noise_res = np.zeros((self.wc.Nt, self.wc.Nf, self.wc.NC))
         for j in range(0, self.wc.Nt):
@@ -196,7 +196,7 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
             from instrument_noise_AET_wdm_m
             shape: (Nf x NC) freq layers x number of TDI channels
         wc : namedtuple
-            constants for WDM wavelet basis also from wdm_const.py
+            constants for WDM wavelet basis also from wdm_config.py
         prune : bool
             if prune=True, cut the 1st and last values,
             which may not be calculated correctly
@@ -259,7 +259,7 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
         -------
         noise_res : numpy.ndarray
             noise matrix of shape (Nt, Nf, NC) Number of time pixels,
-            Freq layers, Number of TDI channels. All specified by wdm_const.py
+            Freq layers, Number of TDI channels. All specified by wdm_config.py
         """
         noise_res = np.zeros((self.wc.Nt, self.wc.Nf, self.wc.NC))
         for j in range(0, self.wc.Nt):
@@ -316,7 +316,7 @@ def get_sparse_snr_helper(NUs, lists_pixels, wavelet_data, nt_min, nt_max, wc, i
     nt_min
     nt_max
     wc : namedtuple
-        constants for WDM wavelet basis also from wdm_const.py
+        constants for WDM wavelet basis also from wdm_config.py
     inv_chol_SAET :
 
 

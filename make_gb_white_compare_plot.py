@@ -11,12 +11,13 @@ import scipy.special
 import scipy.stats
 import scipy.ndimage
 
-from wdm_const import lisa_const as lc
 import global_const as gc
 from instrument_noise import instrument_noise_AET_wdm_m
 from galactic_fit_helpers import get_SAET_cyclostationary_mean
 
 from wdm_config import get_wavelet_model
+
+from lisa_config import get_lisa_constants
 
 import global_file_index as gfi
 
@@ -75,6 +76,8 @@ if __name__ == '__main__':
     galaxy_dir = config['files']['galaxy_dir']
 
     wc = get_wavelet_model(config)
+
+    lc = get_lisa_constants(config)
 
     nt_min = 256*6
     nt_max = nt_min + 512*2

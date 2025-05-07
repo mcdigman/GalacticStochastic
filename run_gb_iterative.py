@@ -17,6 +17,8 @@ from iterative_fit_helpers import IterationConfig, unit_normal_battery, sustain_
 
 from wdm_config import get_wavelet_model
 
+from lisa_config import get_lisa_constants
+
 
 if __name__ == '__main__':
 
@@ -28,10 +30,12 @@ if __name__ == '__main__':
 
     wc = get_wavelet_model(config)
 
+    lc = get_lisa_constants(config)
+
     snr_thresh = 7.
 
 
-    galactic_bg_const_in, noise_realization_got, snr_tots_in, SAET_m, _, lc, ic_preliminary = gfi.load_init_galactic_file(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
+    galactic_bg_const_in, noise_realization_got, snr_tots_in, SAET_m, _, _, ic_preliminary = gfi.load_init_galactic_file(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
 
     for itrm in range(1):
         const_only = True

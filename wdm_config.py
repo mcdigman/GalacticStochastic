@@ -10,45 +10,45 @@ WDMWaveletConstants = namedtuple('WDMWaveletConstants', ['Nf', 'Nt', 'dt', 'mult
 
 def get_wavelet_model(config):
     # number of time pixels (should be even)
-    Nf = np.int64(ast.literal_eval(config['wavelet constants']['Nf']))
+    Nf = int(ast.literal_eval(config['wavelet constants']['Nf']))
     assert Nf & 1 == 0 # check even
 
     # number of frequency pixels (should be even)
-    Nt = np.int64(ast.literal_eval(config['wavelet constants']['Nt']))
+    Nt = int(ast.literal_eval(config['wavelet constants']['Nt']))
     assert Nt & 1 == 0 # check even
 
     # time sampling cadence (units of seconds)
-    dt = np.float64(ast.literal_eval(config['wavelet constants']['dt']))
+    dt = float(ast.literal_eval(config['wavelet constants']['dt']))
     assert dt > 0.
 
     # over sampling
-    mult = np.int64(ast.literal_eval(config['wavelet constants']['mult']))
+    mult = int(ast.literal_eval(config['wavelet constants']['mult']))
 
     # number of frequency steps in interpolation table
-    Nsf = np.int64(ast.literal_eval(config['wavelet constants']['Nsf']))
+    Nsf = int(ast.literal_eval(config['wavelet constants']['Nsf']))
 
     # number of fdots in interpolation table
-    Nfd = np.int64(ast.literal_eval(config['wavelet constants']['Nfd']))
+    Nfd = int(ast.literal_eval(config['wavelet constants']['Nfd']))
 
     # fractional fdot increment in interpolation table
-    dfdot = np.float64(ast.literal_eval(config['wavelet constants']['dfdot']))
+    dfdot = float(ast.literal_eval(config['wavelet constants']['dfdot']))
 
     # number of fdot increments which are less than zero in the interpolation table
-    Nfd_negative = np.int64(ast.literal_eval(config['wavelet constants']['Nfd_negative']))
+    Nfd_negative = int(ast.literal_eval(config['wavelet constants']['Nfd_negative']))
     assert Nfd_negative < Nfd
 
     # number of time steps used to compute the interpolation table; must be an integer times mult
-    Nst = np.int64(ast.literal_eval(config['wavelet constants']['Nst']))
+    Nst = int(ast.literal_eval(config['wavelet constants']['Nst']))
 
-    dkstep = np.int64(Nst//mult)
+    dkstep = int(Nst//mult)
     if dkstep*mult != Nst:
         raise ValueError('ratio of Nst and mult must be an integer')
 
     # filter steepness of wavelet transform
-    nx = np.float64(ast.literal_eval(config['wavelet constants']['nx']))
+    nx = float(ast.literal_eval(config['wavelet constants']['nx']))
 
     # reduced filter length; must be a power of 2
-    L = np.int64(ast.literal_eval(config['wavelet constants']['L']))
+    L = int(ast.literal_eval(config['wavelet constants']['L']))
     assert L > 0 and (L & (L - 1)) == 0  # check power of 2
 
 

@@ -13,6 +13,8 @@ from iterative_fit_helpers import do_preliminary_loop, IterationConfig
 
 from wdm_config import get_wavelet_model
 
+from lisa_config import get_lisa_constants
+
 if __name__=='__main__':
 
     config = configparser.ConfigParser()
@@ -22,6 +24,8 @@ if __name__=='__main__':
     galaxy_dir = config['files']['galaxy_dir']
 
     wc = get_wavelet_model(config)
+
+    lc = get_lisa_constants(config)
 
     snr_thresh = 7.
 

@@ -6,11 +6,9 @@ from instrument_noise import instrument_noise_AET_wdm_m
 
 import iterative_fit_helpers as ifh
 
-import wdm_const
-
 import wdm_config
 
-#full_galactic_params_filename = 'LDC/LDC2_sangria_training_v2.h5'
+import lisa_config
 
 n_par_gb = 8
 labels_gb = ['Amplitude', 'EclipticLatitude', 'EclipticLongitude', 'Frequency', 'FrequencyDerivative', 'Inclination', 'InitialPhase', 'Polarization']
@@ -42,7 +40,7 @@ def get_noise_common(galaxy_dir, snr_thresh, wc, lc):
     noise_realization_common = np.asarray(hf_in['SAET']['noise_realization'])
 
     wc2 = wdm_config.WDMWaveletConstants(**{key:hf_in['wc'][key][()] for key in hf_in['wc'].keys()})
-    lc2 = wdm_const.LISAConstants(**{key:hf_in['lc'][key][()] for key in hf_in['lc'].keys()})
+    lc2 = lisa_config.LISAConstants(**{key:hf_in['lc'][key][()] for key in hf_in['lc'].keys()})
 
     assert wc == wc2
     assert lc == lc2
@@ -105,7 +103,7 @@ def load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, Nf, Nt, 
     hf_in = h5py.File(preliminary_gb_filename, 'r')
 
     wc = wdm_config.WDMWaveletConstants(**{key:hf_in['wc'][key][()] for key in hf_in['wc'].keys()})
-    lc = wdm_const.LISAConstants(**{key:hf_in['lc'][key][()] for key in hf_in['lc'].keys()})
+    lc = lisa_config.LISAConstants(**{key:hf_in['lc'][key][()] for key in hf_in['lc'].keys()})
 
     gb_file_source = hf_in['SAET']['source_gb_file'][()].decode()
     full_galactic_params_filename = get_galaxy_filename(galaxy_file, galaxy_dir)
@@ -124,7 +122,7 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
     #check given parameters match expectations
 
     wc = wdm_config.WDMWaveletConstants(**{key:hf_in['wc'][key][()] for key in hf_in['wc'].keys()})
-    lc = wdm_const.LISAConstants(**{key:hf_in['lc'][key][()] for key in hf_in['lc'].keys()})
+    lc = lisa_config.LISAConstants(**{key:hf_in['lc'][key][()] for key in hf_in['lc'].keys()})
     preliminary_ic = ifh.IterationConfig(**{key:hf_in['preliminary_ic'][key][()] for key in hf_in['preliminary_ic'].keys()})
 
     # TODO add check for wc and lc match expectations
@@ -148,7 +146,7 @@ def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, const
 
     # check parameters in file match current parameters
     wc2 = wdm_config.WDMWaveletConstants(**{key:hf_in['wc'][key][()] for key in hf_in['wc'].keys()})
-    lc2 = wdm_const.LISAConstants(**{key:hf_in['lc'][key][()] for key in hf_in['lc'].keys()})
+    lc2 = lisa_config.LISAConstants(**{key:hf_in['lc'][key][()] for key in hf_in['lc'].keys()})
 
     assert wc2 == wc
     assert lc2 == lc

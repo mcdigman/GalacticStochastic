@@ -6,13 +6,14 @@ import numpy as np
 
 from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 
-from wdm_const import lisa_const as lc
 import global_const as gc
 from instrument_noise import DiagonalStationaryDenseInstrumentNoiseModel, instrument_noise_AET_wdm_m
 
 from iterative_fit_helpers import do_preliminary_loop, IterationConfig
 
 from wdm_config import get_wavelet_model
+
+from lisa_config import get_lisa_constants
 
 import global_file_index as gfi
 
@@ -26,6 +27,7 @@ if __name__=='__main__':
 
     wc = get_wavelet_model(config)
 
+    lc = get_lisa_constants(config)
 
     params_gb, _, _, _, n_tot = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
 
