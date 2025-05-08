@@ -2,19 +2,15 @@
 
 import configparser
 
-import pytest 
-
 import numpy as np
-
+import pytest
 import scipy.ndimage
+import WDMWaveletTransforms.fft_funcs as fft
 from scipy.interpolate import InterpolatedUnivariateSpline
 
-
-from galactic_fit_helpers import get_SAET_cyclostationary_mean
-
-from wdm_config import get_wavelet_model
-
 import global_const as gc
+from galactic_fit_helpers import get_SAET_cyclostationary_mean
+from wdm_config import get_wavelet_model
 
 # we  can use the same baise noise for most things and modulate it as necessary
 config = configparser.ConfigParser()
@@ -161,6 +157,10 @@ def nonstationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, fi
     print('amp 0',amp_got)
     # TODO why is this factor of 2 appearing?
     print('amp 1',2*amp_list)
+    print(np.mean(t_mult), np.mean(t_mult**2))
+    t_fft = fft.rfft(t_mult[:, 0]-1.)*2/Nt_loc
+    abs_fft = np.abs(t_fft)
+    print(1.+abs_fft[0]/2)
 
 
     print('angle 0',angle_got)

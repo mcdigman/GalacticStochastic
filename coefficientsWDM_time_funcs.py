@@ -1,13 +1,10 @@
 """C 2023 Matthew C. Digman
 python port of coefficients WDM_time.c"""
 
-from numba import njit, prange
 import numpy as np
-
 import scipy.fft as spf
-
+from numba import njit, prange
 from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
-
 
 
 def wavelet(m, N, nrm, dom, DOM, Nf, dt, nx=4.):

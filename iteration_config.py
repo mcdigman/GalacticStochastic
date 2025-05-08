@@ -1,13 +1,10 @@
 """read wavelet transform constants in from config file and compute derived parameters"""
 
+import ast
+import json
 from collections import namedtuple
 
-import json
-
-import ast
-
 import numpy as np
-
 
 IterationConfig = namedtuple('IterationConfig', ['n_iterations', 'snr_thresh', 'snr_min', 'snr_autosuppress', 'smooth_lengthf', 'smooth_lengtht'])
 

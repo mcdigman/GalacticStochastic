@@ -1,13 +1,13 @@
 """get the instrument noise profile"""
 
 import numpy as np
-from numpy.random import normal
-
 #import numba as nb
 from numba import njit
+from numpy.random import normal
+from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
+
 #from numba.experimental import jitclass
 
-from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 
 #try:
 #    import numpy.random_intel as random

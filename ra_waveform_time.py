@@ -5,9 +5,9 @@ from collections import namedtuple
 import numpy as np
 from numba import njit
 
-from ra_waveform_freq import RAantenna_inplace, spacecraft_vec, get_xis_inplace, get_tensor_basis
-
 from algebra_tools import gradient_homog_2d_inplace
+from ra_waveform_freq import (RAantenna_inplace, get_tensor_basis,
+                              get_xis_inplace, spacecraft_vec)
 
 StationaryWaveformTime = namedtuple('StationaryWaveformTime', ['T', 'PT', 'FT', 'FTd', 'AT'])
 SpacecraftChannels = namedtuple('SpacecraftChannels', ['T', 'RR', 'II', 'dRR', 'dII'])

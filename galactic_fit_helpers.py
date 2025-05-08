@@ -1,12 +1,10 @@
 """process fits to galactic background"""
 
 import numpy as np
-
+import scipy.ndimage
+import WDMWaveletTransforms.fft_funcs as fft
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.optimize import dual_annealing
-import scipy.ndimage
-
-import WDMWaveletTransforms.fft_funcs as fft
 
 import global_const as gc
 

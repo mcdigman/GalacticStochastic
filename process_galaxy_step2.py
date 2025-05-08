@@ -4,16 +4,14 @@ import configparser
 
 import numpy as np
 
-from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 import global_const as gc
-from instrument_noise import DiagonalStationaryDenseInstrumentNoiseModel, instrument_noise_AET_wdm_m
 import global_file_index as gfi
-
-from iterative_fit_helpers import do_preliminary_loop, IterationConfig
-
-from wdm_config import get_wavelet_model
-
+from instrument_noise import (DiagonalStationaryDenseInstrumentNoiseModel,
+                              instrument_noise_AET_wdm_m)
+from iterative_fit_helpers import IterationConfig, do_preliminary_loop
 from lisa_config import get_lisa_constants
+from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
+from wdm_config import get_wavelet_model
 
 if __name__=='__main__':
 

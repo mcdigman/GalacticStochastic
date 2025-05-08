@@ -1,8 +1,8 @@
 import configparser
 
+from lisa_config import get_lisa_constants
 from wdm_config import get_wavelet_model
 
-from lisa_config import get_lisa_constants
 
 def get_config_objects(ini_filename):
     config = configparser.ConfigParser()

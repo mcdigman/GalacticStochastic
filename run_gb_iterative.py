@@ -1,24 +1,23 @@
 """run iterative processing of galactic background"""
 
-from time import perf_counter
-
 import configparser
+from time import perf_counter
 
 import numpy as np
 
-from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
-from instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
-
-import global_file_index as gfi
-
 import global_const as gc
-
-from iterative_fit_helpers import IterationConfig, unit_normal_battery, sustain_snr_helper, run_binary_coadd2, total_signal_consistency_check, subtraction_convergence_decision, addition_convergence_decision, BGDecomposition
-
-from wdm_config import get_wavelet_model
-
+import global_file_index as gfi
+from instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
+from iterative_fit_helpers import (BGDecomposition, IterationConfig,
+                                   addition_convergence_decision,
+                                   run_binary_coadd2,
+                                   subtraction_convergence_decision,
+                                   sustain_snr_helper,
+                                   total_signal_consistency_check,
+                                   unit_normal_battery)
 from lisa_config import get_lisa_constants
-
+from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
+from wdm_config import get_wavelet_model
 
 if __name__ == '__main__':
 
@@ -254,7 +253,6 @@ if __name__ == '__main__':
         print('       %10d total detectable' % n_bright)
 
 import matplotlib.pyplot as plt
-
 
 do_parseval_plot = False
 if do_parseval_plot:

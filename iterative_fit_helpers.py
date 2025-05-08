@@ -1,17 +1,13 @@
 """helper functions for the iterative fit loops"""
 
 from collections import namedtuple
-
 from time import perf_counter
 
 import numpy as np
-
 import scipy.stats
 
-from instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
-
 from galactic_fit_helpers import get_SAET_cyclostationary_mean
-
+from instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
 
 IterationConfig = namedtuple('IterationConfig', ['n_iterations', 'snr_thresh', 'snr_min', 'snr_autosuppress', 'smooth_lengthf', 'smooth_lengtht'])
 BGDecomposition = namedtuple('BGDecomposition', ['galactic_bg_const_base', 'galactic_bg_const', 'galactic_bg', 'galactic_bg_suppress'])

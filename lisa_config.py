@@ -1,10 +1,8 @@
 """read wavelet transform constants in from config file and compute derived parameters"""
 
-from collections import namedtuple
-
-from warnings import warn
-
 import ast
+from collections import namedtuple
+from warnings import warn
 
 import numpy as np
 

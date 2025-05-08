@@ -1,14 +1,11 @@
 """index for loading the current versions of files"""
-import numpy as np
 import h5py
-
-from instrument_noise import instrument_noise_AET_wdm_m
+import numpy as np
 
 import iterative_fit_helpers as ifh
-
-import wdm_config
-
 import lisa_config
+import wdm_config
+from instrument_noise import instrument_noise_AET_wdm_m
 
 n_par_gb = 8
 labels_gb = ['Amplitude', 'EclipticLatitude', 'EclipticLongitude', 'Frequency', 'FrequencyDerivative', 'Inclination', 'InitialPhase', 'Polarization']

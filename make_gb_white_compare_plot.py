@@ -2,26 +2,20 @@
 
 import configparser
 
-import numpy as np
-
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-
+import numpy as np
+import scipy.ndimage
 import scipy.special
 import scipy.stats
-import scipy.ndimage
-
-import global_const as gc
-from instrument_noise import instrument_noise_AET_wdm_m
-from galactic_fit_helpers import get_SAET_cyclostationary_mean
-
-from wdm_config import get_wavelet_model
-
-from lisa_config import get_lisa_constants
-
-import global_file_index as gfi
 
 import config_helper
+import global_const as gc
+import global_file_index as gfi
+from galactic_fit_helpers import get_SAET_cyclostationary_mean
+from instrument_noise import instrument_noise_AET_wdm_m
+from lisa_config import get_lisa_constants
+from wdm_config import get_wavelet_model
 
 mpl.rcParams['axes.linewidth'] = 1.2
 mpl.rcParams['xtick.major.size'] = 7

@@ -1,15 +1,14 @@
 """scratch to test processing of galactic background"""
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
 
+import config_helper
+import global_file_index as gfi
+from galactic_fit_helpers import (fit_gb_spectrum_evolve,
+                                  get_SAET_cyclostationary_mean)
 from instrument_noise import instrument_noise_AET_wdm_m
 
-from galactic_fit_helpers import get_SAET_cyclostationary_mean, fit_gb_spectrum_evolve
-
-import config_helper
-
-import global_file_index as gfi
-
-import matplotlib as mpl
 mpl.rcParams['axes.linewidth'] = 1.2
 mpl.rcParams['xtick.major.size'] = 7
 mpl.rcParams['xtick.minor.size'] = 3
@@ -19,7 +18,6 @@ mpl.rcParams['ytick.major.size'] = 7
 mpl.rcParams['ytick.minor.size'] = 3
 mpl.rcParams['ytick.major.width'] = 1.5
 mpl.rcParams['ytick.minor.width'] = 1.5
-import matplotlib.pyplot as plt
 
 
 if __name__ == '__main__':

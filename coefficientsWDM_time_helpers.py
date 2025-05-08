@@ -2,15 +2,13 @@
 test the wdm time functions"""
 from time import time
 
+import h5py
 import numpy as np
 import scipy as sp
-import h5py
-
 from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 
-from coefficientsWDM_time_funcs import wavelet, get_ev_t_full
-
 import global_const as gc
+from coefficientsWDM_time_funcs import get_ev_t_full, wavelet
 
 
 def get_evTs(wc, check_cache=True, hf_out=False):
