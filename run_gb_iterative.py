@@ -37,10 +37,10 @@ if __name__ == '__main__':
 
     galactic_bg_const_in, _, snr_tots_in, SAET_m, _, _, ic_preliminary = gfi.load_init_galactic_file(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
 
-    for itrm in range(1):
+    for itrm in range(0,1):
         const_only = False
-        nt_min = 256*4
-        nt_max = nt_min+2048
+        nt_min = 256*(7-itrm)
+        nt_max = nt_min+512*(itrm+1)
         print(nt_min, nt_max, wc.Nt, wc.Nf, const_only)
 
         params_gb, _, _, _, n_tot = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)

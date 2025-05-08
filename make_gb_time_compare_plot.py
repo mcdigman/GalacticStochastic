@@ -1,18 +1,15 @@
 """scratch to test processing of galactic background"""
 import numpy as np
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-
-
 from instrument_noise import instrument_noise_AET_wdm_m
 
-from galactic_fit_helpers import get_SAET_cyclostationary_mean
+from galactic_fit_helpers import get_SAET_cyclostationary_mean, fit_gb_spectrum_evolve
 
 import config_helper
 
 import global_file_index as gfi
 
+import matplotlib as mpl
 mpl.rcParams['axes.linewidth'] = 1.2
 mpl.rcParams['xtick.major.size'] = 7
 mpl.rcParams['xtick.minor.size'] = 3
@@ -22,48 +19,74 @@ mpl.rcParams['ytick.major.size'] = 7
 mpl.rcParams['ytick.minor.size'] = 3
 mpl.rcParams['ytick.major.width'] = 1.5
 mpl.rcParams['ytick.minor.width'] = 1.5
+import matplotlib.pyplot as plt
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
+
+    snr_thresh = 7.
+    smooth_targ_length = 0.25
+
     config, wc, lc = config_helper.get_config_objects('default_parameters.ini')
     galaxy_dir = config['files']['galaxy_dir']
 
-    snr_thresh = 7.
+    fs = np.arange(0,wc.Nf)*wc.DF
+
 
     const_only = False
+    idx_use = [0,1,3,7]
+    nt_mins = np.array([256*7,256*6,256*5,256*4,256*3,256*2,256*1,256*0])[idx_use]
+    nt_maxs = np.array([512*1,512*2,512*3,512*4,512*5,512*6,512*7,512*8])[idx_use]+nt_mins
 
-    if const_only:
-        period_list = np.array([])
-    else:
-        period_list = np.array([1,2,3,4,5])
-
-    SAET_m = instrument_noise_AET_wdm_m(lc, wc)
-
-    Nts =     np.array([4096, 4096, 4096])
-    nt_mins = np.array([256*4,256*6,256*7])
-    nt_maxs = np.array([2048,1024,512])+nt_mins
-
+    nt_ranges = nt_maxs-nt_mins
     nk = nt_maxs.size
     assert nt_mins.size==nt_maxs.size
-    assert nt_maxs.size==Nts.size
 
-    SAETs_var = []
+    itrl_fit = 0
+
+    if not const_only:
+        period_list1 = np.array([1,2,3,4,5])
+    else:
+        period_list1 = np.array([],dtype=np.int64)
+
+    SAET_pures = np.zeros((nk,wc.Nf,3))
+    SAET_pures_smooth = np.zeros((nk,wc.Nf,3))
+
+    SAET_m = instrument_noise_AET_wdm_m(lc, wc)
+    SAE_offset = 1.*SAET_m[:,0]
+
+    r_tots = np.zeros((nk,wc.Nt,wc.NC))
 
     for itrk in range(0,nk):
-        print(Nts[itrk])
         _, galactic_bg_total = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_mins[itrk], nt_maxs[itrk], const_only)
-        SAET_model_var, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_bg_total, SAET_m,wc, 0.,filter_periods=True,period_list=period_list, Nt_loc=wc.Nt)
-        SAETs_var.append(SAET_model_var)
+        SAET_pures[itrk] = np.mean(galactic_bg_total,axis=0)
 
-    do_SAE_plot = True
-    if do_SAE_plot:
-        for itrk in range(0,nk):
-            SAET_loc = SAETs_var[itrk]
-            #TODO investigate last bin behavior
-            plt.loglog(np.arange(1,wc.Nf-1)*wc.DF,np.mean(SAET_loc[:,1:wc.Nf-1,0],axis=0).T)
+        SAET_pures_smooth[itrk,0,:] = SAET_pures[itrk,0,:]
 
-        plt.xlabel('f (Hz)')
-        plt.ylabel(r"$S^{AE}_{nm}$ (1/Hz)")
-        #plt.xlim(1.e-4,1.e-2)
-        plt.ylim(5.e-45,1.e-40)
-        plt.show()
+        _, r_tots[itrk], SAET_mean_cur, _ ,_ = get_SAET_cyclostationary_mean(galactic_bg_total,SAET_m,wc, smooth_targ_length,filter_periods=not const_only,period_list=period_list1,Nt_loc=wc.Nt)
+        SAET_pures_smooth[itrk] = SAET_mean_cur
+
+        for itrc in range(0,2):
+            SAET_pures_smooth[itrk,:,itrc] += SAE_offset
+
+    arg_cut = wc.Nf-1
+    fit_mask = (fs>1.e-5)&(fs<fs[arg_cut])
+
+    SAE_fit_evolve, _ = fit_gb_spectrum_evolve(SAET_pures_smooth[itrl_fit:,fit_mask,:],fs[fit_mask],fs[1:],nt_ranges[itrl_fit:],SAE_offset[fit_mask], wc)
+
+
+    fig = plt.figure(figsize=(5.4,3.5))
+    ax = fig.subplots(1)
+    fig.subplots_adjust(wspace=0.,hspace=0.,left=0.13,top=0.99,right=0.99,bottom=0.12)
+    ax.loglog(fs[1:],wc.dt*(SAET_pures_smooth[:,1:,:2].mean(axis=2)-SAE_offset[1:]+SAET_m[1:,0]).T,alpha=0.5,label='_nolegend_')
+    ax.set_prop_cycle(None)
+    ax.loglog(fs[1:],wc.dt*(SAE_fit_evolve[:]+SAET_m[1:,0]).T,linewidth=3)
+    ax.set_prop_cycle(None)
+    ax.loglog(fs[1:],wc.dt*(SAET_m[1:,0]),'k--')
+    ax.tick_params(axis='both',direction='in',which='both',top=True,right=True)
+    plt.ylim([wc.dt*2.e-44,wc.dt*2.e-43])
+    plt.xlim([3.e-4,6.e-3])
+    plt.xlabel('f [Hz]')
+    plt.ylabel(r"$S^{AE}(f)$ [Hz$^{-1}$]")
+    plt.legend(['1 year','2 years','4 years','8 years'])
+    plt.show()

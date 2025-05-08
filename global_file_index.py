@@ -254,34 +254,3 @@ def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max,
         hf_out['ic_preliminary'].create_dataset(key, data=getattr(ic_preliminary, key))
 
     hf_out.close()
-
-# TODO consolidate with store_preliminary
-#def store_init_gb_file(galaxy_dir, galaxy_file, wc, lc, snr_thresh, snr_min, galactic_bg_const, noise_realization, smooth_lengthf, smooth_lengtht, n_iterations, n_bin_use, SAET_m, snrs_tot):
-#    filename_out = get_init_filename(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
-#    hf_out = h5py.File(filename_out, 'w')
-#    hf_out.create_group('SAET')
-#    hf_out['SAET'].create_dataset('galactic_bg_const', data=galactic_bg_const, compression='gzip')
-#    hf_out['SAET'].create_dataset('noise_realization', data=noise_realization, compression='gzip')
-#    hf_out['SAET'].create_dataset('smooth_lengthf', data=smooth_lengthf)
-#    hf_out['SAET'].create_dataset('smooth_lengtht', data=smooth_lengtht)
-#    hf_out['SAET'].create_dataset('snr_thresh', data=snr_thresh)
-#    hf_out['SAET'].create_dataset('snr_min', data=snr_min)
-#    hf_out['SAET'].create_dataset('Nt', data=wc.Nt)
-#    hf_out['SAET'].create_dataset('Nf', data=wc.Nf)
-#    hf_out['SAET'].create_dataset('dt', data=wc.dt)
-#    hf_out['SAET'].create_dataset('n_iterations', data=n_iterations)
-#    hf_out['SAET'].create_dataset('n_bin_use', data=n_bin_use)
-#    hf_out['SAET'].create_dataset('SAET_m', data=SAET_m)
-#    hf_out['SAET'].create_dataset('snrs_tot', data=snrs_tot[0], compression='gzip')
-#    hf_out['SAET'].create_dataset('source_gb_file', data=get_galaxy_filename(galaxy_file, galaxy_dir))
-#    hf_out['SAET'].create_dataset('preliminary_gb_file', data=get_preliminary_filename(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt))
-#
-#    hf_out.create_group('wc')
-#    for key in wc._fields:
-#        hf_out['wc'].create_dataset(key, data=getattr(wc, key))
-#
-#    hf_out.create_group('lc')
-#    for key in lc._fields:
-#        hf_out['lc'].create_dataset(key, data=getattr(lc, key))
-#
-#    hf_out.close()
