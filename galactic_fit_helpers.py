@@ -59,8 +59,8 @@ def filter_periods_fft(r_got1, Nt_loc, period_list, wc):
                 amp_got[itrk, itrc] = abs_fft[idx]
                 angle_got[itrk, itrc] = angle_fft[idx] % (2*np.pi)
         angle_fftm = angle_fft % (2*np.pi)
-        # TODO this print statement assumes 8 years always
-        print("%5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f"%(abs_fft[1*8], angle_fftm[1*8], abs_fft[2*8], angle_fftm[2*8], abs_fft[3*8], angle_fftm[3*8], abs_fft[4*8], angle_fftm[4*8], abs_fft[5*8], angle_fftm[5*8]))
+        mult = np.int64(wc.Tobs/gc.SECSYEAR)
+        print("%5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f"%(abs_fft[1*mult], angle_fftm[1*mult], abs_fft[2*mult], angle_fftm[2*mult], abs_fft[3*mult], angle_fftm[3*mult], abs_fft[4*mult], angle_fftm[4*mult], abs_fft[5*mult], angle_fftm[5*mult]))
         r_fft1[:, itrc] = rec
     return r_fft1, amp_got, angle_got
 
