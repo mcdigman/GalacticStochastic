@@ -1,10 +1,13 @@
 """process fits to galactic background"""
 
+from warnings import warn
+
 import numpy as np
 import scipy.ndimage
 import WDMWaveletTransforms.fft_funcs as fft
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.optimize import dual_annealing
+
 
 import global_const as gc
 
@@ -23,23 +26,43 @@ def filter_periods_fft(r_got1, Nt_loc, period_list, wc):
     ts = np.arange(0, Nt_loc)*wc.DT
     wts = 2*np.pi/gc.SECSYEAR*ts
     r_fft1 = np.zeros((wc.Nt, wc.NC))
-    amp_got = np.zeros(period_list.size)
-    angle_got = np.zeros(period_list.size)
+    amp_got = np.zeros((period_list.size, wc.NC))
+    angle_got = np.zeros((period_list.size, wc.NC))
     for itrc in range(0, 2):
         res_fft = fft.rfft(r_got1[:, itrc]-1.)*2/Nt_loc
         abs_fft = np.abs(res_fft)
         angle_fft = -np.angle(res_fft)
+
+        # handle signs for highest and lowest frequency components
+        if angle_fft[0] < -0.1:
+            abs_fft[0] = - abs_fft[0]
+
+        if angle_fft[-1] < -0.1:
+            abs_fft[-1] = - abs_fft[-1]
+
         rec = 1.+abs_fft[0]/2+np.zeros(Nt_loc)
+
         for itrk, k in enumerate(period_list):
-            idx = np.int64(wc.Tobs/gc.SECSYEAR)*k # TODO handle non-integer k/ not exact mult of Tobs/SECSYEAR
-            rec += abs_fft[idx]*np.cos(k*wts - angle_fft[idx])
-            amp_got[itrk] = abs_fft[idx]
-            angle_got[itrk] = angle_fft[idx] % (2*np.pi)
+            idx = np.int64(wc.Tobs/gc.SECSYEAR*k) # TODO handle non-integer k/ not exact mult of Tobs/SECSYEAR
+            if np.abs(idx - wc.Tobs/gc.SECSYEAR*k) > 0.01:
+                warn('fft based filtering expects periods that are an integer fraction of the observing time: got %10.8f for %10.8f' % (wc.Tobs/gc.SECSYEAR*k, k))
+            if k == 0:
+                # already adding the constant case above, whether or not it is requested
+                amp_got[itrk, itrc] = abs_fft[0]/2
+                angle_got[itrk, itrc] = 0.
+            elif k == np.int64(gc.SECSYEAR//wc.DT)//2:
+                amp_got[itrk,itrc] = abs_fft[-1]/np.sqrt(2.)
+                angle_got[itrk, itrc] = np.pi/4.
+                rec += amp_got[itrk,itrc]*np.cos(k*wts - angle_got[itrk,itrc])
+            else:
+                rec += abs_fft[idx]*np.cos(k*wts - angle_fft[idx])
+                amp_got[itrk, itrc] = abs_fft[idx]
+                angle_got[itrk, itrc] = angle_fft[idx] % (2*np.pi)
         angle_fftm = angle_fft % (2*np.pi)
         # TODO this print statement assumes 8 years always
         print("%5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f"%(abs_fft[1*8], angle_fftm[1*8], abs_fft[2*8], angle_fftm[2*8], abs_fft[3*8], angle_fftm[3*8], abs_fft[4*8], angle_fftm[4*8], abs_fft[5*8], angle_fftm[5*8]))
         r_fft1[:, itrc] = rec
-    return r_fft1, amp_got, angle_got 
+    return r_fft1, amp_got, angle_got
 
 
 #TODO needs unit tests
@@ -64,7 +87,8 @@ def get_SAET_cyclostationary_mean(galactic_bg, SAET_m, wc, smooth_lengthf=4, fil
             r_got1[:, itrc] = np.mean(SAET_pure_in[:, r_eval_mask, itrc]/(SAET_pure_mean[r_eval_mask, itrc] + 1.e-13*np.max(SAET_pure_mean[r_eval_mask, itrc])), axis=1)
 
         if period_list is None:
-            period_list = np.arange(1, np.int64(gc.SECSYEAR//wc.DT)//2 + 1)
+            # if no period list is given, do every possible period
+            period_list = np.arange(0, np.int64(gc.SECSYEAR//wc.DT)//2+1/int(wc.Tobs/gc.SECSYEAR), 1/int(wc.Tobs/gc.SECSYEAR))
 
 
         r_fft1, amp_got, angle_got = filter_periods_fft(r_got1, Nt_loc, period_list, wc)
@@ -128,8 +152,8 @@ def fit_gb_spectrum_evolve(SAET_goals, fs, fs_report, nt_ranges, offset, wc):
         log10f2 = tpl[5]
         alpha = tpl[6]
         for itry in range(n_spect):
-            log10f1 = (a1*np.log10(TobsYEAR_locs[itry])+b1)
-            log10fknee = (ak*np.log10(TobsYEAR_locs[itry])+bk)
+            log10f1 = a1*np.log10(TobsYEAR_locs[itry]) + b1
+            log10fknee = ak*np.log10(TobsYEAR_locs[itry]) + bk
             resid += np.sum((np.log10(np.abs(SAE_gal_model(fs, log10A, log10f2, log10f1, log10fknee, alpha))+offset)-log_SAE_goals[itry, :, :].T).flatten()**2)
         return resid
 
@@ -165,8 +189,8 @@ def fit_gb_spectrum_evolve(SAET_goals, fs, fs_report, nt_ranges, offset, wc):
 
     SAE_base_res = np.zeros((n_spect, fs_report.size))
     for itry in range(n_spect):
-        log10f1 = (a1*np.log10(TobsYEAR_locs[itry])+b1)
-        log10fknee = (ak*np.log10(TobsYEAR_locs[itry])+bk)
+        log10f1 = a1*np.log10(TobsYEAR_locs[itry]) + b1
+        log10fknee = ak*np.log10(TobsYEAR_locs[itry]) + bk
         SAE_base_res[itry, :] = SAE_gal_model(fs_report, log10A, log10f2, log10f1, log10fknee, alpha)
 
     return SAE_base_res, res

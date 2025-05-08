@@ -9,8 +9,9 @@ import WDMWaveletTransforms.fft_funcs as fft
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 import global_const as gc
-from galactic_fit_helpers import get_SAET_cyclostationary_mean
+from galactic_fit_helpers import get_SAET_cyclostationary_mean, filter_periods_fft
 from wdm_config import get_wavelet_model
+
 
 # we  can use the same baise noise for most things and modulate it as necessary
 config = configparser.ConfigParser()
@@ -18,7 +19,132 @@ config.read('tests/galactic_fit_test_config1.ini')
 
 wc = get_wavelet_model(config)
 
+np.random.seed(3141592)
 bg_base = np.random.normal(0.,1.,(wc.Nt, wc.Nf, wc.NC))
+
+@pytest.mark.parametrize('sign_high', [1,-1])
+@pytest.mark.parametrize('sign_low', [1,-1])
+def test_filter_periods_fft_full(sign_low, sign_high):
+    """test filtering max period with ffts for fixed fourier amplitude"""
+    np.random.seed(442)
+
+    period_list = np.arange(0, np.int64(gc.SECSYEAR//wc.DT)//2+1/int(wc.Tobs/gc.SECSYEAR),1/int(wc.Tobs/gc.SECSYEAR))
+
+    amp_exp = np.zeros((period_list.size,3))
+
+    amp_exp[:,0] = np.random.uniform(0.,1., period_list.size)
+    amp_exp[:,1] = np.random.uniform(0.,1., period_list.size)
+    amp_exp[:,2] = np.random.uniform(0.,1., period_list.size)
+
+    angle_exp = np.zeros((period_list.size,3))
+
+    angle_exp[:,0] = np.random.uniform(0.,2*np.pi, period_list.size)
+    angle_exp[:,1] = np.random.uniform(0.,2*np.pi, period_list.size)
+    angle_exp[:,2] = np.random.uniform(0.,2*np.pi, period_list.size)
+
+    ts = np.arange(0, wc.Nt)*wc.DT
+    xs = np.zeros((wc.Nt,wc.NC))
+    for itrc in range(0, 3):
+        for itrp in range(0, period_list.size):
+            if period_list[itrp] == 0.:
+                angle_exp[itrp,itrc] = 0.
+                amp_exp[itrp,itrc] *= sign_low
+                xs[:,itrc] += amp_exp[itrp,itrc]
+            elif period_list[itrp] == np.int64(gc.SECSYEAR//wc.DT)//2:
+                angle_exp[itrp,itrc] = sign_high*np.pi/4.
+                xs[:,itrc] += amp_exp[itrp,itrc]*np.cos(2*np.pi/gc.SECSYEAR*period_list[itrp]*ts - angle_exp[itrp,itrc])
+            else:
+                xs[:,itrc] += amp_exp[itrp,itrc]*np.cos(2*np.pi/gc.SECSYEAR*period_list[itrp]*ts - angle_exp[itrp,itrc])
+
+    xs += 1.
+
+    r_fft1, amp_got, angle_got = filter_periods_fft(xs, wc.Nt, period_list, wc)
+
+    print(period_list[-1])
+    print(period_list[-1] % (np.int64(gc.SECSYEAR//wc.DT)//2))
+    print(amp_got[-1])
+    print(amp_exp[-1])
+    print(amp_got[0])
+    print(amp_exp[0])
+    print(amp_got[-1,:2]/amp_exp[-1,:2])
+    print(angle_got[-1])
+    print(angle_exp[-1])
+    assert np.allclose(amp_got[:,:2], amp_exp[:,:2],atol=1.e-12,rtol=1.e-12)
+    assert np.allclose(angle_exp[:,:2], angle_exp[:,:2],atol=1.e-12,rtol=1.e-12)
+
+    assert np.allclose(r_fft1[:,:2], xs[:,:2], atol=1.e-10, rtol=1.e-10)
+    # TODO this is checking behavior that probably isn't actually desirable
+    assert np.allclose(r_fft1[:,2], 0., atol=1.e-12, rtol=1.e-12)
+
+def test_filter_periods_fft_full2():
+    """test filtering max period with ffts for random data"""
+    np.random.seed(442)
+
+    period_list = np.arange(0, np.int64(gc.SECSYEAR//wc.DT)//2+1/int(wc.Tobs/gc.SECSYEAR),1/int(wc.Tobs/gc.SECSYEAR))
+
+    xs = np.random.normal(0.,1.,(wc.Nt,wc.NC))
+
+    xs += 1.
+
+    r_fft1, amp_got, angle_got = filter_periods_fft(xs, wc.Nt, period_list, wc)
+
+    print(np.mean(r_fft1,axis=0))
+    print(np.mean(xs,axis=0))
+    print(amp_got[0])
+
+    assert np.allclose(r_fft1[:,:2], xs[:,:2], atol=1.e-10, rtol=1.e-10)
+    # TODO this is checking behavior that probably isn't actually desirable
+    assert np.allclose(r_fft1[:,2], 0., atol=1.e-12, rtol=1.e-12)
+
+@pytest.mark.parametrize('itrk', [0.25,0.5,0.9,1.,1.1,1.5,2.,2.5,3.,15.,16.,17.])
+def test_filter_periods_fft1(itrk):
+    """test filtering 1 period with ffts"""
+
+    period_list = np.array([itrk])
+    amp_exp = np.array([[0.1,0.2,1.]])
+    angle_exp = np.array([[0.6,0.1,0.3]])
+    ts = np.arange(0, wc.Nt)*wc.DT
+    xs = np.zeros((wc.Nt,wc.NC))
+    xs[:,0] = amp_exp[0,0]*np.cos(2*np.pi/gc.SECSYEAR*period_list[0]*ts-angle_exp[0,0])
+    xs[:,1] = amp_exp[0,1]*np.cos(2*np.pi/gc.SECSYEAR*period_list[0]*ts-angle_exp[0,1])
+    xs[:,2] = amp_exp[0,2]*np.cos(2*np.pi/gc.SECSYEAR*3*ts-angle_exp[0,2])
+    
+    plt.plot(np.abs(fft.rfft(r_fft1[:,0]-xs[:,0])))
+    plt.show()
+
+    assert np.allclose(r_fft1[:,:2], xs[:,:2], atol=1.e-10, rtol=1.e-10)
+    # TODO this is checking behavior that probably isn't actually desirable
+    assert np.allclose(r_fft1[:,2], 0., atol=1.e-12, rtol=1.e-12)
+
+@pytest.mark.parametrize('itrk', [0.25,0.5,0.9,1.,1.1,1.5,2.,2.5,3.,15.,16.,17.])
+def test_filter_periods_fft1(itrk):
+    """test filtering 1 period with ffts"""
+
+    period_list = np.array([itrk])
+    amp_exp = np.array([[0.1,0.2,1.]])
+    angle_exp = np.array([[0.6,0.1,0.3]])
+    ts = np.arange(0, wc.Nt)*wc.DT
+    xs = np.zeros((wc.Nt,wc.NC))
+    xs[:,0] = amp_exp[0,0]*np.cos(2*np.pi/gc.SECSYEAR*period_list[0]*ts-angle_exp[0,0])
+    xs[:,1] = amp_exp[0,1]*np.cos(2*np.pi/gc.SECSYEAR*period_list[0]*ts-angle_exp[0,1])
+    xs[:,2] = amp_exp[0,2]*np.cos(2*np.pi/gc.SECSYEAR*3*ts-angle_exp[0,2])
+
+    xs += 1.
+
+    if np.abs(np.int64(wc.Tobs/gc.SECSYEAR*itrk) - wc.Tobs/gc.SECSYEAR*itrk) > 0.01:
+        with pytest.warns(UserWarning):
+            filter_periods_fft(xs, wc.Nt, period_list, wc)
+            return
+
+    r_fft1, amp_got, angle_got = filter_periods_fft(xs, wc.Nt, period_list, wc)
+
+    assert np.allclose(amp_got[:,:2], amp_exp[:,:2],atol=1.e-12,rtol=1.e-12)
+    assert np.allclose(angle_exp[:,:2], angle_exp[:,:2],atol=1.e-12,rtol=1.e-12)
+
+    assert np.allclose(r_fft1[:,:2], xs[:,:2], atol=1.e-12, rtol=1.e-12)
+    # TODO this is checking behavior that probably isn't actually desirable
+    assert np.allclose(r_fft1[:,2], 0., atol=1.e-12, rtol=1.e-12)
+        
 
 def test_stationary_mean_scramble_invariance():
     """SAET for stationary mean should be independent of time order of the samples; check this is true""" 
@@ -153,12 +279,12 @@ def nonstationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, fi
     for itrc in range(0, wc.NC):
         SAET_m[:,itrc] = get_noise_model_helper(noise_models[itrc])
 
-    SAET_got, _, _, amp_got, angle_got = get_SAET_cyclostationary_mean(bg_here, SAET_m, wc, smooth_lengthf=smooth_lengthf, filter_periods=filter_periods, period_list=period_list) 
+    SAET_got, rec_got, _, amp_got, angle_got = get_SAET_cyclostationary_mean(bg_here, SAET_m, wc, smooth_lengthf=smooth_lengthf, filter_periods=filter_periods, period_list=period_list) 
     print('amp 0',amp_got)
     # TODO why is this factor of 2 appearing?
     print('amp 1',2*amp_list)
     print(np.mean(t_mult), np.mean(t_mult**2))
-    t_fft = fft.rfft(t_mult[:, 0]-1.)*2/Nt_loc
+    t_fft = fft.rfft(t_mult[:, 0]-1.)*2/wc.Nt
     abs_fft = np.abs(t_fft)
     print(1.+abs_fft[0]/2)
 
@@ -169,9 +295,17 @@ def nonstationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, fi
     print((angle_got - phase_list + np.pi) % (2*np.pi) + phase_list - np.pi,)
     print(phase_list)
 
-    for itrp in range(period_list.size):
-        assert np.isclose(amp_got[itrp], 2*amp_list[itrp], atol=1.e-2, rtol=1.e-1)
-        assert np.isclose((angle_got[itrp] - phase_list[itrp] + np.pi) % (2*np.pi) + phase_list[itrp] - np.pi, phase_list[itrp], atol=1.e-2/(amp_got[itrp]+0.001), rtol=1.e-1)
+    for itrc in range(0,2):
+        for itrp in range(period_list.size):
+            if not np.isclose(amp_got[itrp,itrc], 2*amp_list[itrp], atol=1.e-2, rtol=1.e-1):
+                import matplotlib.pyplot as plt
+                plt.plot(t_mult[:,0])
+                plt.plot(rec_got[:,0])
+                #plt.plot(abs_fft)
+                #plt.plot(np.abs(np.fft.rfft(rec_got[:,0])))
+                plt.show()
+            assert np.isclose(amp_got[itrp, itrc], 2*amp_list[itrp], atol=1.e-2, rtol=1.e-1)
+            assert np.isclose((angle_got[itrp, itrc] - phase_list[itrp] + np.pi) % (2*np.pi) + phase_list[itrp] - np.pi, phase_list[itrp], atol=1.e-2/(amp_got[itrp, itrc]+0.001), rtol=1.e-1)
 
 
     # replicate expected smoothed multiplier
