@@ -43,11 +43,12 @@ def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_in
 
         signal_full = galactic_bg_full + noise_realization
 
-        SAET_tot[itrn+1] = get_smoothed_timevarying_spectrum(wc, signal_full, SAET_m, ic.smooth_lengthf[itrn], ic.smooth_lengtht[itrn])
+        #SAET_tot[itrn+1] = get_smoothed_timevarying_spectrum(wc, galactic_bg_full, signal_full, SAET_m, ic.smooth_lengthf[itrn], ic.smooth_lengtht[itrn])
+        SAET_tot[itrn+1], _, _, _, _ = get_SAET_cyclostationary_mean(galactic_bg_full, SAET_m, wc, smooth_lengthf=ic.smooth_lengthf[itrn], filter_periods=False, period_list=np.array([]))
 
     return galactic_bg_full, galactic_bg_const, signal_full, SAET_tot, var_suppress, snrs, snrs_tot, noise_AET_dense
 
-def get_smoothed_timevarying_spectrum(wc, signal_full, SAET_m, smooth_lengthf, smooth_lengtht):
+def get_smoothed_timevarying_spectrum(wc, galactic_bg_full, signal_full, SAET_m, smooth_lengthf, smooth_lengtht):
     SAET_galactic_bg_smoothf_white = np.zeros((wc.Nt, wc.Nf, wc.NC))
     SAET_galactic_bg_smoothft_white = np.zeros((wc.Nt, wc.Nf, wc.NC))
     SAET_galactic_bg_smooth = np.zeros((wc.Nt, wc.Nf, wc.NC))
@@ -63,6 +64,13 @@ def get_smoothed_timevarying_spectrum(wc, signal_full, SAET_m, smooth_lengthf, s
             lreach = smooth_lengtht//2 - max(smooth_lengtht//2-itrt, 0)
             SAET_galactic_bg_smoothft_white[itrt, :, itrc] = np.mean(SAET_galactic_bg_smoothf_white[itrt-lreach:itrt+rreach+1, :, itrc], axis=0)
         SAET_galactic_bg_smooth[:, :, itrc] = SAET_galactic_bg_smoothft_white[:, :, itrc]*SAET_m[:, itrc]
+
+    #SAET_alt, _, _ = get_SAET_cyclostationary_mean(galactic_bg_full, SAET_m, wc, smooth_lengthf=smooth_lengthf/10., filter_periods=True, period_list=None)
+    #import matplotlib.pyplot as plt
+    #plt.semilogy(SAET_alt[0,1:,0])
+    #plt.semilogy(np.mean(SAET_galactic_bg_smooth[:,1:,0],axis=0))
+    #plt.show()
+
 
     return SAET_galactic_bg_smooth
 
@@ -254,9 +262,9 @@ def subtraction_convergence_decision(bgd, var_suppress, itrn, force_converge, n_
 
     # don't use cyclostationary model until specified iteration
     if itrn < n_cyclo_switch:
-        SAET_tot_cur, _, _ = get_SAET_cyclostationary_mean(galactic_bg_res, SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods=False, period_list=period_list1)
+        SAET_tot_cur, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_bg_res, SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods=False, period_list=period_list1)
     else:
-        SAET_tot_cur, _, _ = get_SAET_cyclostationary_mean(galactic_bg_res, SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods=not const_only, period_list=period_list1)
+        SAET_tot_cur, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_bg_res, SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods=not const_only, period_list=period_list1)
 
     noise_AET_dense = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_cur, wc, prune=True)
 
@@ -267,10 +275,10 @@ def addition_convergence_decision(bgd, itrn, n_const_suppressed, switch_next, va
     if not const_converged[itrn+1] or switch_next[itrn+1]:
         if itrn < n_const_force:
             #TODO should use smooth_lengthf or smooth_lengthf_targ
-            SAET_tot_base, _, _ = get_SAET_cyclostationary_mean(bgd.galactic_bg_const + bgd.galactic_bg_const_base, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
+            SAET_tot_base, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.galactic_bg_const + bgd.galactic_bg_const_base, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
             const_converged[itrn+1] = const_converged[itrn+1]
         else:
-            SAET_tot_base, _, _ = get_SAET_cyclostationary_mean(bgd.galactic_bg_const + bgd.galactic_bg_const_base, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
+            SAET_tot_base, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.galactic_bg_const + bgd.galactic_bg_const_base, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
             const_converged[itrn+1] = True
             # need to disable adaption of constant here because after this point the convergence isn't guaranteed to be monotonic
             print('disabled constant adaptation at ' + str(itrn))

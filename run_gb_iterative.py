@@ -7,7 +7,7 @@ import configparser
 import numpy as np
 
 from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
-from instrument_noise import instrument_noise_AET_wdm_m, DiagonalNonstationaryDenseInstrumentNoiseModel
+from instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
 
 import global_file_index as gfi
 
@@ -35,15 +35,15 @@ if __name__ == '__main__':
     snr_thresh = 7.
 
 
-    galactic_bg_const_in, noise_realization_got, snr_tots_in, SAET_m, _, _, ic_preliminary = gfi.load_init_galactic_file(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
+    galactic_bg_const_in, _, snr_tots_in, SAET_m, _, _, ic_preliminary = gfi.load_init_galactic_file(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
 
     for itrm in range(1):
-        const_only = True
-        nt_min = 256*6
-        nt_max = nt_min+2*512
+        const_only = False
+        nt_min = 256*4
+        nt_max = nt_min+2048
         print(nt_min, nt_max, wc.Nt, wc.Nf, const_only)
 
-        params_gb, n_dgb, n_igb, n_vgb, n_tot = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
+        params_gb, _, _, _, n_tot = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
 
 
         smooth_lengthf_long = 6
@@ -83,29 +83,7 @@ if __name__ == '__main__':
 
         ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_autosuppresses, smooth_lengthfs, smooth_lengthts)
 
-        common_noise = True
-        noise_realization_common = gfi.get_noise_common(galaxy_dir, ic_preliminary.snr_thresh, wc, lc)
-        if common_noise:
-            # get a common noise realization so results at different lengths are comparable
-            assert wc.Nt <= noise_realization_common.shape[0]
-
-        SAET_m_alt = np.zeros((wc.Nf, wc.NC))
-        for itrc in range(3):
-            SAET_m_alt[:, itrc] = (noise_realization_common[:, :, itrc]**2).mean(axis=0)
-        # first element isn't validated so don't necessarily expect it to be correct
-        assert np.allclose(SAET_m[1:], SAET_m_alt[1:], atol=1.e-80, rtol=4.e-1)
-
-        SAET_m_alt2 = instrument_noise_AET_wdm_m(lc, wc)
-        assert np.allclose(SAET_m[1:], SAET_m_alt2[1:], atol=1.e-80, rtol=4.e-1)
-
-        # check input SAET makes sense with noise realization
-
         galactic_bg_const = np.zeros_like(galactic_bg_const_in)
-
-        if common_noise:
-            noise_realization = noise_realization_common[0:wc.Nt, :, :].copy() # TODO possibly needs to be an nt_min offset?
-        else:
-            noise_realization = noise_realization_got.copy()
 
         if const_only:
             period_list1 = np.array([])
@@ -142,7 +120,6 @@ if __name__ == '__main__':
 
         params0 = params_gb[0].copy()
         waveT_ini = BinaryWaveletAmpFreqDT(params0.copy(), wc, lc)
-        listT_temp, waveT_temp, NUTs_temp = waveT_ini.get_unsorted_coeffs()
 
         SAET_tot_cur = np.zeros((wc.Nt, wc.Nf, wc.NC))
         SAET_tot_cur[:] = SAET_m

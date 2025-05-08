@@ -21,6 +21,8 @@ from lisa_config import get_lisa_constants
 
 import global_file_index as gfi
 
+import config_helper
+
 mpl.rcParams['axes.linewidth'] = 1.2
 mpl.rcParams['xtick.major.size'] = 7
 mpl.rcParams['xtick.minor.size'] = 3
@@ -69,15 +71,8 @@ def result_normality_battery(signal_in):
 
 if __name__ == '__main__':
 
-    config = configparser.ConfigParser()
-    config.read('default_parameters.ini')
-
-    galaxy_file = config['files']['galaxy_file']
+    config, wc, lc = config_helper.get_config_objects('default_parameters.ini')
     galaxy_dir = config['files']['galaxy_dir']
-
-    wc = get_wavelet_model(config)
-
-    lc = get_lisa_constants(config)
 
     nt_min = 256*6
     nt_max = nt_min + 512*2
@@ -99,8 +94,8 @@ if __name__ == '__main__':
 
     SAET_m = instrument_noise_AET_wdm_m(lc, wc)
 
-    SAET_model, _, _ = get_SAET_cyclostationary_mean(galactic_bg_var, SAET_m, wc, 0, filter_periods=True, period_list=np.array([1, 2, 3, 4, 5]))
-    SAET_model_const, _, _ = get_SAET_cyclostationary_mean(galactic_bg_const, SAET_m, wc, 0, filter_periods=True, period_list=np.array([]))
+    SAET_model, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_bg_var, SAET_m, wc, 0, filter_periods=True, period_list=np.array([1, 2, 3, 4, 5]))
+    #SAET_model_const, _, _ = get_SAET_cyclostationary_mean(galactic_bg_const, SAET_m, wc, 0, filter_periods=True, period_list=np.array([]))
 
     fs = np.arange(1, wc.Nf)*wc.DF
 
@@ -111,7 +106,7 @@ if __name__ == '__main__':
     signal_white_resid_const = result_normality_battery(signal_full_const)
 
 
-extent = [nt_min_report*wc.DT/gc.SECSYEAR, nt_max_report*wc.DT/gc.SECSYEAR, nf_min*wc.DF, nf_max*wc.DF]
+extent = (nt_min_report*wc.DT/gc.SECSYEAR, nt_max_report*wc.DT/gc.SECSYEAR, nf_min*wc.DF, nf_max*wc.DF)
 
 
 def white_plot_ax(ax_in, title, data):
