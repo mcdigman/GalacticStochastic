@@ -172,15 +172,18 @@ def subtraction_convergence_decision(bgd, var_suppress, itrn, force_converge, n_
     n_var_suppressed[itrn+1] = var_suppress[itrn].sum()
 
     # subtraction is either converged or oscillating
-    if itrn > 1 and (force_converge[itrn] or (np.all(var_suppress[itrn] == var_suppress[itrn-1]) or np.all(var_suppress[itrn] == var_suppress[itrn-2]) or np.all(var_suppress[itrn] == var_suppress[itrn-3]))):
-        assert n_var_suppressed[itrn] == n_var_suppressed[itrn+1] or force_converge[itrn] or np.all(var_suppress[itrn] == var_suppress[itrn-2]) or np.all(var_suppress[itrn] == var_suppress[itrn-3])
+    osc1 = np.all(var_suppress[itrn] == var_suppress[itrn-1])
+    osc2 = np.all(var_suppress[itrn] == var_suppress[itrn-2])
+    osc3 = np.all(var_suppress[itrn] == var_suppress[itrn-3])
+    if itrn > 1 and (force_converge[itrn] or (osc1 or osc2 or osc3)):
+        assert n_var_suppressed[itrn] == n_var_suppressed[itrn+1] or force_converge[itrn] or osc2 or osc3
         if switch_next[itrn]:
             print('subtraction converged at ' + str(itrn))
             switch_next[itrn+1] = False
             var_converged[itrn+1] = True
             const_converged[itrn+1] = True
         else:
-            if (np.all(var_suppress[itrn] == var_suppress[itrn-2]) or np.all(var_suppress[itrn] == var_suppress[itrn-3])) and not np.all(var_suppress[itrn] == var_suppress[itrn-1]):
+            if (osc2 or osc3) and not osc1:
                 print('cycling detected at ' + str(itrn) + ', doing final check iteration aborting')
                 force_converge[itrn+1] = True
             print('subtraction predicted initial converged at ' + str(itrn) + ' next iteration will be check iteration')

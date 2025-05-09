@@ -5,6 +5,7 @@ import numpy as np
 import iterative_fit_helpers as ifh
 import lisa_config
 import wdm_config
+import iteration_config
 from instrument_noise import instrument_noise_AET_wdm_m
 
 n_par_gb = 8
@@ -120,7 +121,7 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
 
     wc = wdm_config.WDMWaveletConstants(**{key:hf_in['wc'][key][()] for key in hf_in['wc'].keys()})
     lc = lisa_config.LISAConstants(**{key:hf_in['lc'][key][()] for key in hf_in['lc'].keys()})
-    preliminary_ic = ifh.IterationConfig(**{key:hf_in['preliminary_ic'][key][()] for key in hf_in['preliminary_ic'].keys()})
+    preliminary_ic = ifh.IterationConfig(**{key:hf_in['preliminary_ic'][key][()] for key in iteration_config.IterationConfig._fields})
 
     # TODO add check for wc and lc match expectations
     galactic_bg_const_in = np.asarray(hf_in['SAET']['galactic_bg_const'])
