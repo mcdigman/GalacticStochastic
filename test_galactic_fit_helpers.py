@@ -5,13 +5,12 @@ import configparser
 import numpy as np
 import pytest
 import scipy.ndimage
-import WDMWaveletTransforms.fft_funcs as fft
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 import global_const as gc
-from galactic_fit_helpers import get_SAET_cyclostationary_mean, filter_periods_fft
+from galactic_fit_helpers import (filter_periods_fft,
+                                  get_SAET_cyclostationary_mean)
 from wdm_config import get_wavelet_model
-
 
 # we  can use the same baise noise for most things and modulate it as necessary
 config = configparser.ConfigParser()
@@ -20,48 +19,49 @@ config.read('tests/galactic_fit_test_config1.ini')
 wc = get_wavelet_model(config)
 
 np.random.seed(3141592)
-bg_base = np.random.normal(0.,1.,(wc.Nt, wc.Nf, wc.NC))
+bg_base = np.random.normal(0., 1., (wc.Nt, wc.Nf, wc.NC))
 
-@pytest.mark.parametrize('sign_high', [1,-1])
-@pytest.mark.parametrize('sign_low', [1,-1])
+@pytest.mark.parametrize('sign_high', [1, -1])
+@pytest.mark.parametrize('sign_low', [1, -1])
 def test_filter_periods_fft_full(sign_low, sign_high):
     """test filtering max period with ffts for fixed fourier amplitude"""
     np.random.seed(442)
 
-    period_list = np.arange(0, np.int64(gc.SECSYEAR//wc.DT)//2+1/int(wc.Tobs/gc.SECSYEAR),1/int(wc.Tobs/gc.SECSYEAR))
+    period_list = np.arange(0, np.int64(gc.SECSYEAR//wc.DT)//2+1/int(wc.Tobs/gc.SECSYEAR), 1/int(wc.Tobs/gc.SECSYEAR))
 
-    amp_exp = np.zeros((period_list.size,3))
+    amp_exp = np.zeros((period_list.size, wc.NC))
 
-    amp_exp[:,0] = np.random.uniform(0.,1., period_list.size)
-    amp_exp[:,1] = np.random.uniform(0.,1., period_list.size)
-    amp_exp[:,2] = np.random.uniform(0.,1., period_list.size)
+    amp_exp[:, 0] = np.random.uniform(0., 1., period_list.size)
+    amp_exp[:, 1] = np.random.uniform(0., 1., period_list.size)
+    amp_exp[:, 2] = np.random.uniform(0., 1., period_list.size)
 
-    angle_exp = np.zeros((period_list.size,3))
+    angle_exp = np.zeros((period_list.size, wc.NC))
 
-    angle_exp[:,0] = np.random.uniform(0.,2*np.pi, period_list.size)
-    angle_exp[:,1] = np.random.uniform(0.,2*np.pi, period_list.size)
-    angle_exp[:,2] = np.random.uniform(0.,2*np.pi, period_list.size)
+    angle_exp[:, 0] = np.random.uniform(0., 2*np.pi, period_list.size)
+    angle_exp[:, 1] = np.random.uniform(0., 2*np.pi, period_list.size)
+    angle_exp[:, 2] = np.random.uniform(0., 2*np.pi, period_list.size)
 
     ts = np.arange(0, wc.Nt)*wc.DT
-    xs = np.zeros((wc.Nt,wc.NC))
-    for itrc in range(0, 3):
+    xs = np.zeros((wc.Nt, wc.NC))
+    for itrc in range(wc.NC):
         for itrp in range(0, period_list.size):
             if period_list[itrp] == 0.:
-                angle_exp[itrp,itrc] = 0.
-                amp_exp[itrp,itrc] *= sign_low
-                xs[:,itrc] += amp_exp[itrp,itrc]
+                angle_exp[itrp, itrc] = 0.
+                amp_exp[itrp, itrc] *= sign_low
+                xs[:, itrc] += amp_exp[itrp, itrc]
             elif period_list[itrp] == np.int64(gc.SECSYEAR//wc.DT)//2:
-                angle_exp[itrp,itrc] = sign_high*np.pi/4.
-                xs[:,itrc] += amp_exp[itrp,itrc]*np.cos(2*np.pi/gc.SECSYEAR*period_list[itrp]*ts - angle_exp[itrp,itrc])
+                angle_exp[itrp, itrc] = sign_high*np.pi/4.
+                xs[:, itrc] += amp_exp[itrp, itrc]*np.cos(2*np.pi/gc.SECSYEAR*period_list[itrp]*ts - angle_exp[itrp, itrc])
             else:
-                xs[:,itrc] += amp_exp[itrp,itrc]*np.cos(2*np.pi/gc.SECSYEAR*period_list[itrp]*ts - angle_exp[itrp,itrc])
+                xs[:, itrc] += amp_exp[itrp, itrc]*np.cos(2*np.pi/gc.SECSYEAR*period_list[itrp]*ts - angle_exp[itrp, itrc])
 
     xs += 1.
 
     r_fft1, amp_got, angle_got = filter_periods_fft(xs, wc.Nt, period_list, wc)
 
-    assert np.allclose(amp_got, amp_exp,atol=1.e-12,rtol=1.e-12)
-    assert np.allclose(angle_exp, angle_exp,atol=1.e-12,rtol=1.e-12)
+    assert np.allclose(amp_got, amp_exp, atol=1.e-12, rtol=1.e-12)
+    assert np.allclose((angle_got[:-1] - angle_exp[:-1] + np.pi) % (2*np.pi) + angle_exp[:-1] - np.pi, angle_exp[:-1], atol=1.e-10, rtol=1.e-10)
+    assert np.allclose(angle_got[-1], np.pi/4.)
 
     assert np.allclose(r_fft1, xs, atol=1.e-10, rtol=1.e-10)
 
@@ -69,46 +69,29 @@ def test_filter_periods_fft_full2():
     """test filtering max period with ffts for random data"""
     np.random.seed(442)
 
-    period_list = np.arange(0, np.int64(gc.SECSYEAR//wc.DT)//2+1/int(wc.Tobs/gc.SECSYEAR),1/int(wc.Tobs/gc.SECSYEAR))
+    period_list = np.arange(0, np.int64(gc.SECSYEAR//wc.DT)//2+1/int(wc.Tobs/gc.SECSYEAR), 1/int(wc.Tobs/gc.SECSYEAR))
 
-    xs = np.random.normal(0.,1.,(wc.Nt,wc.NC))
+    xs = np.random.normal(0., 1., (wc.Nt, wc.NC))
 
     xs += 1.
 
-    r_fft1, amp_got, angle_got = filter_periods_fft(xs, wc.Nt, period_list, wc)
+    r_fft1, _, _ = filter_periods_fft(xs, wc.Nt, period_list, wc)
 
     assert np.allclose(r_fft1, xs, atol=1.e-10, rtol=1.e-10)
 
-@pytest.mark.parametrize('itrk', [0.25,0.5,0.9,1.,1.1,1.5,2.,2.5,3.,15.,16.,17.])
+
+@pytest.mark.parametrize('itrk', [0.25, 0.5, 0.9, 1., 1.1, 1.5, 2., 2.5, 3., 15., 16., 17.])
 def test_filter_periods_fft1(itrk):
     """test filtering 1 period with ffts"""
 
     period_list = np.array([itrk])
-    amp_exp = np.array([[0.1,0.2,1.]])
-    angle_exp = np.array([[0.6,0.1,0.3]])
+    amp_exp = np.array([[0.1, 0.2, 1.]])
+    angle_exp = np.array([[0.6, 0.1, 0.3]])
     ts = np.arange(0, wc.Nt)*wc.DT
-    xs = np.zeros((wc.Nt,wc.NC))
-    xs[:,0] = amp_exp[0,0]*np.cos(2*np.pi/gc.SECSYEAR*period_list[0]*ts-angle_exp[0,0])
-    xs[:,1] = amp_exp[0,1]*np.cos(2*np.pi/gc.SECSYEAR*period_list[0]*ts-angle_exp[0,1])
-    xs[:,2] = amp_exp[0,2]*np.cos(2*np.pi/gc.SECSYEAR*3*ts-angle_exp[0,2])
-    
-    plt.plot(np.abs(fft.rfft(r_fft1[:,0]-xs[:,0])))
-    plt.show()
-
-    assert np.allclose(r_fft1, xs, atol=1.e-10, rtol=1.e-10)
-
-@pytest.mark.parametrize('itrk', [0.25,0.5,0.9,1.,1.1,1.5,2.,2.5,3.,15.,16.,17.])
-def test_filter_periods_fft1(itrk):
-    """test filtering 1 period with ffts"""
-
-    period_list = np.array([itrk])
-    amp_exp = np.array([[0.1,0.2,1.]])
-    angle_exp = np.array([[0.6,0.1,0.3]])
-    ts = np.arange(0, wc.Nt)*wc.DT
-    xs = np.zeros((wc.Nt,wc.NC))
-    xs[:,0] = amp_exp[0,0]*np.cos(2*np.pi/gc.SECSYEAR*period_list[0]*ts-angle_exp[0,0])
-    xs[:,1] = amp_exp[0,1]*np.cos(2*np.pi/gc.SECSYEAR*period_list[0]*ts-angle_exp[0,1])
-    xs[:,2] = amp_exp[0,2]*np.cos(2*np.pi/gc.SECSYEAR*period_list[0]*ts-angle_exp[0,2])
+    xs = np.zeros((wc.Nt, wc.NC))
+    xs[:, 0] = amp_exp[0, 0]*np.cos(2*np.pi/gc.SECSYEAR*period_list[0]*ts-angle_exp[0, 0])
+    xs[:, 1] = amp_exp[0, 1]*np.cos(2*np.pi/gc.SECSYEAR*period_list[0]*ts-angle_exp[0, 1])
+    xs[:, 2] = amp_exp[0, 2]*np.cos(2*np.pi/gc.SECSYEAR*period_list[0]*ts-angle_exp[0, 2])
 
     xs += 1.
 
@@ -117,37 +100,32 @@ def test_filter_periods_fft1(itrk):
             filter_periods_fft(xs, wc.Nt, period_list, wc)
             return
 
-    r_fft1, amp_got, angle_got = filter_periods_fft(xs, wc.Nt, period_list, wc)
+    r_fft1, amp_got, _ = filter_periods_fft(xs, wc.Nt, period_list, wc)
 
     assert np.allclose(amp_got, amp_exp, atol=1.e-12, rtol=1.e-12)
-    assert np.allclose(angle_exp, angle_exp,atol=1.e-12,rtol=1.e-12)
+    assert np.allclose(angle_exp, angle_exp, atol=1.e-12, rtol=1.e-12)
 
     assert np.allclose(r_fft1, xs, atol=1.e-12, rtol=1.e-12)
-        
+
 
 def test_stationary_mean_scramble_invariance():
-    """SAET for stationary mean should be independent of time order of the samples; check this is true""" 
-
-    config = configparser.ConfigParser()
-    config.read('tests/galactic_fit_test_config1.ini')
-
-    wc = get_wavelet_model(config)
+    """SAET for stationary mean should be independent of time order of the samples; check this is true"""
 
     # get the background
     bg_here1 = 1000*bg_base.copy()
 
     # get scrambled time indices
-    idx_sel2 = np.arange(0,wc.Nt)
+    idx_sel2 = np.arange(0, wc.Nt)
     np.random.shuffle(idx_sel2)
-    
+
     # get the same background with time indices scrambled
     bg_here2 = bg_here1[idx_sel2].copy()
 
     SAET_m = np.full((wc.Nf, wc.NC), 1.)
 
     # get both SAETs
-    SAET_got1, _, _, _, _ = get_SAET_cyclostationary_mean(bg_here1, SAET_m, wc, smooth_lengthf=1., filter_periods=False, period_list=np.array([])) 
-    SAET_got2, _, _, _, _ = get_SAET_cyclostationary_mean(bg_here2, SAET_m, wc, smooth_lengthf=1., filter_periods=False, period_list=np.array([])) 
+    SAET_got1, _, _, _, _ = get_SAET_cyclostationary_mean(bg_here1, SAET_m, wc, smooth_lengthf=1., filter_periods=False, period_list=np.array([]))
+    SAET_got2, _, _, _, _ = get_SAET_cyclostationary_mean(bg_here2, SAET_m, wc, smooth_lengthf=1., filter_periods=False, period_list=np.array([]))
 
     # check for expected invariance
     assert np.allclose(SAET_got1, SAET_got2, atol=1.e-14, rtol=1.e-13)
@@ -181,8 +159,9 @@ def get_noise_model_helper(model_name):
         raise ValueError('unrecognized option for bg model')
     return f_mult
 
+
 def stationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, filter_periods):
-    """helper to test stationary mean with several lengths of spectral smoothing can reproduce injected input spectrum""" 
+    """helper to test stationary mean with several lengths of spectral smoothing can reproduce injected input spectrum"""
 
     f_mult = np.full((wc.Nf, wc.NC), 0.)
     for itrc in range(0, wc.NC):
@@ -195,9 +174,9 @@ def stationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, filte
 
     SAET_m = np.full((wc.Nf, wc.NC), 0.)
     for itrc in range(0, wc.NC):
-        SAET_m[:,itrc] = get_noise_model_helper(noise_models[itrc])
+        SAET_m[:, itrc] = get_noise_model_helper(noise_models[itrc])
 
-    SAET_got, _, _, _, _ = get_SAET_cyclostationary_mean(bg_here, SAET_m, wc, smooth_lengthf=smooth_lengthf, filter_periods=filter_periods, period_list=np.array([])) 
+    SAET_got, _, _, _, _ = get_SAET_cyclostationary_mean(bg_here, SAET_m, wc, smooth_lengthf=smooth_lengthf, filter_periods=filter_periods, period_list=np.array([]))
 
     # replicate expected smoothed multiplier
     f_mult_smooth = np.zeros_like(f_mult)
@@ -209,16 +188,11 @@ def stationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, filte
         log_f_mult_interp = InterpolatedUnivariateSpline(log_fs, np.log10(f_mult[1:, itrc]**2+1.e-50), k=3, ext=2)(log_fs_interp)
 
         log_f_mult_smooth_interp = scipy.ndimage.gaussian_filter(log_f_mult_interp, smooth_lengthf*interp_mult)
-        f_mult_smooth[:, itrc] = np.hstack([f_mult[0, itrc],np.sqrt(10**InterpolatedUnivariateSpline(log_fs_interp, log_f_mult_smooth_interp, k=3, ext=2)(log_fs)-1.e-50)])
-    
+        f_mult_smooth[:, itrc] = np.hstack([f_mult[0, itrc], np.sqrt(10**InterpolatedUnivariateSpline(log_fs_interp, log_f_mult_smooth_interp, k=3, ext=2)(log_fs)-1.e-50)])
+
     for itrc in range(0, wc.NC):
         # check that in constant model the resulting spectrum is indeed constant
         assert np.all(SAET_got[:, :, itrc] == SAET_got[0, :, itrc])
-
-    #import matplotlib.pyplot as plt
-    #plt.plot( 1.+f_mult_smooth[:]**2)
-    #plt.semilogy(SAET_got[0, :, 0])
-    #plt.show()
 
     # check that adding known noise produces known spectrum
     for itrc in range(wc.NC):
@@ -226,14 +200,13 @@ def stationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, filte
         for itrf in range(0, wc.Nf):
             got_loc = SAET_got[0, itrf, itrc]
             pred_loc = SAET_m[itrf, itrc]+f_mult_smooth[itrf, itrc]**2
-            print(itrf, got_loc, SAET_m[itrf, itrc], f_mult_smooth[itrf, itrc]**2, pred_loc, (got_loc-pred_loc)/((f_mult_smooth[itrf, itrc]**2)/np.sqrt(wc.Nt)))
             assert np.allclose(got_loc, pred_loc, atol=5*(f_mult_smooth[itrf, itrc]**2)/np.sqrt(wc.Nt), rtol=5*(f_mult_smooth[itrf, itrc]**2)/np.sqrt(wc.Nt))
 
 
-@pytest.mark.parametrize('amp2_mult', [0.,0.09,0.11,0.5,0.9,1.,2.])
+@pytest.mark.parametrize('amp2_mult', [0., 0.09, 0.11, 0.5, 0.9, 1., 2.])
 def test_nonstationary_mean_faint_alternate(amp2_mult):
     """test a case where there is a faint alternate frequency with a different periodicity;
-    the fainter periodicity should be ignored completely""" 
+    the fainter periodicity should be ignored completely"""
     smooth_lengthf = 1.
     filter_periods = True
 
@@ -246,7 +219,7 @@ def test_nonstationary_mean_faint_alternate(amp2_mult):
     amp2 = amp1*np.sqrt(amp2_mult)
     phase2 = 0.7
 
-    period_list = np.arange(0, np.int64(gc.SECSYEAR//wc.DT)//2+1/int(wc.Tobs/gc.SECSYEAR),1/int(wc.Tobs/gc.SECSYEAR))
+    period_list = np.arange(0, np.int64(gc.SECSYEAR//wc.DT)//2+1/int(wc.Tobs/gc.SECSYEAR), 1/int(wc.Tobs/gc.SECSYEAR))
 
     f_mult1 = np.full((wc.Nf, wc.NC), 0.)
     f_mult2 = np.full((wc.Nf, wc.NC), 0.)
@@ -259,58 +232,52 @@ def test_nonstationary_mean_faint_alternate(amp2_mult):
     t_mult1 = np.full((wc.Nt, wc.NC), 0.)
     t_mult2 = np.full((wc.Nt, wc.NC), 0.)
     for itrc in range(0, wc.NC):
-        t_mult1[:,itrc] += amp1*np.cos(2*np.pi/gc.SECSYEAR*ts*itrk1 - phase1)
-        t_mult2[:,itrc] += amp2*np.cos(2*np.pi/gc.SECSYEAR*ts*itrk2 - phase2)
+        t_mult1[:, itrc] += amp1*np.cos(2*np.pi/gc.SECSYEAR*ts*itrk1 - phase1)
+        t_mult2[:, itrc] += amp2*np.cos(2*np.pi/gc.SECSYEAR*ts*itrk2 - phase2)
 
     #bg_here = bg_base.copy()
-    bg_here = np.full_like(bg_base,1.)
+    bg_here = np.full_like(bg_base, 1.)
 
     for itrc in range(0, wc.NC):
-        bg_here[:, :, itrc] *= np.outer(t_mult1[:,itrc], f_mult1[:,itrc]) + np.outer(t_mult2[:,itrc], f_mult2[:,itrc])
+        bg_here[:, :, itrc] *= np.outer(t_mult1[:, itrc], f_mult1[:, itrc]) + np.outer(t_mult2[:, itrc], f_mult2[:, itrc])
 
     SAET_m = np.full((wc.Nf, wc.NC), 0.)
     for itrc in range(0, wc.NC):
-        SAET_m[:,itrc] = get_noise_model_helper('white_equal')
+        SAET_m[:, itrc] = get_noise_model_helper('white_equal')
 
-    SAET_got, rec_got, _, amp_got, angle_got = get_SAET_cyclostationary_mean(bg_here, SAET_m, wc, smooth_lengthf=smooth_lengthf, filter_periods=filter_periods, period_list=None) 
+    _, _, _, amp_got, _ = get_SAET_cyclostationary_mean(bg_here, SAET_m, wc, smooth_lengthf=smooth_lengthf, filter_periods=filter_periods, period_list=None)
 
-    r_fft1, amp_got1, angle_got1 = filter_periods_fft(t_mult1**2+1., wc.Nt, period_list, wc)
+    _, amp_got1, _ = filter_periods_fft(t_mult1**2+1., wc.Nt, period_list, wc)
 
-    if  amp2**2 < 0.1 * amp1**2: 
-        assert np.allclose(amp_got[2*int(wc.Tobs/gc.SECSYEAR)*itrk1,:],1.,atol=1.e-10,rtol=1.e-10)
-        assert np.allclose(amp_got[int(wc.Tobs/gc.SECSYEAR)*itrk1,:],0.,atol=1.e-10,rtol=1.e-10)
-        assert np.allclose(amp_got[2*int(wc.Tobs/gc.SECSYEAR)*itrk2,:],0.,atol=1.e-10,rtol=1.e-10)
-        assert np.allclose(amp_got[int(wc.Tobs/gc.SECSYEAR)*itrk2,:],0.,atol=1.e-10,rtol=1.e-10)
+    if  amp2**2 < 0.1 * amp1**2:
+        assert np.allclose(amp_got[2*int(wc.Tobs/gc.SECSYEAR)*itrk1, :], 1., atol=1.e-10, rtol=1.e-10)
+        assert np.allclose(amp_got[int(wc.Tobs/gc.SECSYEAR)*itrk1, :], 0., atol=1.e-10, rtol=1.e-10)
+        assert np.allclose(amp_got[2*int(wc.Tobs/gc.SECSYEAR)*itrk2, :], 0., atol=1.e-10, rtol=1.e-10)
+        assert np.allclose(amp_got[int(wc.Tobs/gc.SECSYEAR)*itrk2, :], 0., atol=1.e-10, rtol=1.e-10)
     else:
-        assert not np.allclose(amp_got[2*int(wc.Tobs/gc.SECSYEAR)*itrk1,:],1.,atol=1.e-10,rtol=1.e-10)
-        assert np.allclose(amp_got[int(wc.Tobs/gc.SECSYEAR)*itrk1,:],0.,atol=1.e-10,rtol=1.e-10)
-        assert not np.allclose(amp_got[2*int(wc.Tobs/gc.SECSYEAR)*itrk2,:],0.,atol=1.e-10,rtol=1.e-10)
-        assert np.allclose(amp_got[int(wc.Tobs/gc.SECSYEAR)*itrk2,:],0.,atol=1.e-10,rtol=1.e-10)
+        assert not np.allclose(amp_got[2*int(wc.Tobs/gc.SECSYEAR)*itrk1, :], 1., atol=1.e-10, rtol=1.e-10)
+        assert np.allclose(amp_got[int(wc.Tobs/gc.SECSYEAR)*itrk1, :], 0., atol=1.e-10, rtol=1.e-10)
+        assert not np.allclose(amp_got[2*int(wc.Tobs/gc.SECSYEAR)*itrk2, :], 0., atol=1.e-10, rtol=1.e-10)
+        assert np.allclose(amp_got[int(wc.Tobs/gc.SECSYEAR)*itrk2, :], 0., atol=1.e-10, rtol=1.e-10)
 
-    assert np.allclose(amp_got[2*int(wc.Tobs/gc.SECSYEAR)*itrk1,:]+amp_got[2*int(wc.Tobs/gc.SECSYEAR)*itrk2,:],1.,atol=1.e-10,rtol=1.e-10)
+    assert np.allclose(amp_got[2*int(wc.Tobs/gc.SECSYEAR)*itrk1, :]+amp_got[2*int(wc.Tobs/gc.SECSYEAR)*itrk2, :], 1., atol=1.e-10, rtol=1.e-10)
 
     if amp1 > amp2:
         for itrc in range(wc.NC):
-            assert np.argmax(amp_got[:,itrc]) == 2*int(wc.Tobs/gc.SECSYEAR)*itrk1
-            assert np.argmax(amp_got1[1:,itrc]) == np.argmax(amp_got[1:,itrc])
+            assert np.argmax(amp_got[:, itrc]) == 2*int(wc.Tobs/gc.SECSYEAR)*itrk1
+            assert np.argmax(amp_got1[1:, itrc]) == np.argmax(amp_got[1:, itrc])
     elif amp1 < amp2:
         for itrc in range(wc.NC):
-            assert np.argmax(amp_got[:,itrc]) == 2*int(wc.Tobs/gc.SECSYEAR)*itrk2
+            assert np.argmax(amp_got[:, itrc]) == 2*int(wc.Tobs/gc.SECSYEAR)*itrk2
     else:
         for itrc in range(wc.NC):
-            assert np.argmax(amp_got[:,itrc]) == 2*int(wc.Tobs/gc.SECSYEAR)*min(itrk1,itrk2)
+            assert np.argmax(amp_got[:, itrc]) == 2*int(wc.Tobs/gc.SECSYEAR)*min(itrk1, itrk2)
 
-    
 
 def test_nonstationary_mean_zero_case():
-    """test a case where rec_use is very small/negative for numerical stability/ensure SAET cannot be nan""" 
+    """test a case where rec_use is very small/negative for numerical stability/ensure SAET cannot be nan"""
     smooth_lengthf = 1.
     filter_periods = True
-
-    # input periods, amplitudes, phases
-    period_list1 = np.array([2])
-    amp_list1 = np.array([1.])
-    phase_list1 = np.array([0.])
 
     f_mult = np.full((wc.Nf, wc.NC), 0.)
     for itrc in range(0, wc.NC):
@@ -319,7 +286,7 @@ def test_nonstationary_mean_zero_case():
     ts = np.arange(0, wc.Nt)*wc.DT
     t_mult = np.full((wc.Nt, wc.NC), 1.)
     for itrc in range(0, wc.NC):
-        t_mult[:,itrc] = np.exp(-(ts - gc.SECSYEAR/2)**2/(2*(0.05*gc.SECSYEAR)**2))
+        t_mult[:, itrc] = np.exp(-(ts - gc.SECSYEAR/2)**2/(2*(0.05*gc.SECSYEAR)**2))
 
     bg_here = bg_base.copy()
 
@@ -327,13 +294,13 @@ def test_nonstationary_mean_zero_case():
         bg_here[:, itrf, :] *= f_mult[itrf]
 
     for itrt in range(0, wc.Nt):
-        bg_here[itrt, :, :] *= t_mult[itrt,:]
+        bg_here[itrt, :, :] *= t_mult[itrt, :]
 
     SAET_m = np.full((wc.Nf, wc.NC), 0.)
     for itrc in range(0, wc.NC):
-        SAET_m[:,itrc] = get_noise_model_helper('white_faint')
+        SAET_m[:, itrc] = get_noise_model_helper('white_faint')
 
-    SAET_got, rec_got, _, amp_got, angle_got = get_SAET_cyclostationary_mean(bg_here, SAET_m, wc, smooth_lengthf=smooth_lengthf, filter_periods=filter_periods, period_list=None) 
+    SAET_got, rec_got, _, _, _ = get_SAET_cyclostationary_mean(bg_here, SAET_m, wc, smooth_lengthf=smooth_lengthf, filter_periods=filter_periods, period_list=None)
 
     assert np.all(rec_got > 0.)
 
@@ -347,20 +314,20 @@ def test_nonstationary_mean_zero_case():
         log_f_mult_interp = InterpolatedUnivariateSpline(log_fs, np.log10(f_mult[1:, itrc]**2+1.e-50), k=3, ext=2)(log_fs_interp)
 
         log_f_mult_smooth_interp = scipy.ndimage.gaussian_filter(log_f_mult_interp, smooth_lengthf*interp_mult)
-        f_mult_smooth[:, itrc] = np.hstack([f_mult[0, itrc],np.sqrt(10**InterpolatedUnivariateSpline(log_fs_interp, log_f_mult_smooth_interp, k=3, ext=2)(log_fs)-1.e-50)])
-    
+        f_mult_smooth[:, itrc] = np.hstack([f_mult[0, itrc], np.sqrt(10**InterpolatedUnivariateSpline(log_fs_interp, log_f_mult_smooth_interp, k=3, ext=2)(log_fs)-1.e-50)])
+
     # check that adding known noise produces known spectrum
     for itrc in range(0, 2):
         # check no rows outside ~5 sigma of being consistent with expected result
         for itrf in range(0, wc.Nf):
             got_loc = SAET_got[:, itrf, itrc]
-            bg_loc = f_mult_smooth[itrf, itrc]**2*t_mult[:,itrc]**2
+            bg_loc = f_mult_smooth[itrf, itrc]**2*t_mult[:, itrc]**2
             pred_loc = SAET_m[itrf, itrc] + bg_loc# - amp1**2/2/(1+amp1**2/2)
             assert np.allclose(got_loc, pred_loc, atol=5*(f_mult_smooth[itrf, itrc]**2)/np.sqrt(wc.Nt), rtol=5*(bg_loc)/np.sqrt(wc.Nt))
 
 
 def nonstationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, filter_periods, itrk1, amp1, phase1):
-    """helper to test stationary mean with several lengths of spectral smoothing can reproduce injected input spectrum""" 
+    """helper to test stationary mean with several lengths of spectral smoothing can reproduce injected input spectrum"""
 
     # input periods, amplitudes, phases
     period_list1 = np.array([itrk1])
@@ -368,9 +335,7 @@ def nonstationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, fi
     phase_list1 = np.array([phase1])
 
     # periods, amplitudes, phases to record
-    period_list2 = np.array([0,itrk1,2*itrk1])
-    amp_list2 = np.array([0.,amp1,0.])
-    phase_list2 = np.array([0.,phase1,0.])
+    period_list2 = np.array([0, itrk1, 2*itrk1])
 
     # expected results after processing
     # note that the expected results contains a harmonic because t_mult is squared
@@ -390,46 +355,22 @@ def nonstationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, fi
             t_mult[:, itrc] += amp_list1[itrp]*np.cos(2*np.pi/gc.SECSYEAR*ts*period_list1[itrp] - phase_list1[itrp])
 
     # checks for closeness can be much stricter if bg_here is 1, but may not cover all variations
-    #bg_here = np.full_like(bg_base, 1.) 
+    #bg_here = np.full_like(bg_base, 1.)
     bg_here = bg_base.copy()
 
     for itrf in range(0, wc.Nf):
         bg_here[:, itrf, :] *= f_mult[itrf]
 
     for itrt in range(0, wc.Nt):
-        bg_here[itrt, :, :] *= t_mult[itrt,:]
+        bg_here[itrt, :, :] *= t_mult[itrt, :]
 
     SAET_m = np.full((wc.Nf, wc.NC), 0.)
     for itrc in range(0, wc.NC):
-        SAET_m[:,itrc] = get_noise_model_helper(noise_models[itrc])
+        SAET_m[:, itrc] = get_noise_model_helper(noise_models[itrc])
 
-    SAET_got, rec_got, _, amp_got, angle_got = get_SAET_cyclostationary_mean(bg_here, SAET_m, wc, smooth_lengthf=smooth_lengthf, filter_periods=filter_periods, period_list=period_list2) 
+    SAET_got, rec_got, _, amp_got, angle_got = get_SAET_cyclostationary_mean(bg_here, SAET_m, wc, smooth_lengthf=smooth_lengthf, filter_periods=filter_periods, period_list=period_list2)
 
     assert np.all(rec_got > 0.)
-
-    print('amp 0',amp_got)
-    print('amp 0',amp_got[1,0])
-
-    print(amp_list1)
-    print(amp_list2)
-    print(amp_exp)
-    print(amp_got[:,0])
-    print(phase_list1)
-    print(phase_list2)
-    print(phase_exp)
-    print(angle_got[:,0])
-
-    t_fft = fft.rfft(t_mult[:, 0]-1.)*2/wc.Nt
-    abs_fft = np.abs(t_fft)
-    print(1.+abs_fft[0]/2)
-    print(t_mult**2/np.mean(t_mult**2))
-
-
-    print('angle 0', angle_got)
-    print('angle 1',phase_list1)
-
-    print((angle_got - phase_list1 + np.pi) % (2*np.pi) + phase_list1 - np.pi,)
-    print(phase_list1)
 
     for itrc in range(wc.NC):
         for itrp in range(period_list1.size):
@@ -447,20 +388,15 @@ def nonstationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, fi
         log_f_mult_interp = InterpolatedUnivariateSpline(log_fs, np.log10(f_mult[1:, itrc]**2+1.e-50), k=3, ext=2)(log_fs_interp)
 
         log_f_mult_smooth_interp = scipy.ndimage.gaussian_filter(log_f_mult_interp, smooth_lengthf*interp_mult)
-        f_mult_smooth[:, itrc] = np.hstack([f_mult[0, itrc],np.sqrt(10**InterpolatedUnivariateSpline(log_fs_interp, log_f_mult_smooth_interp, k=3, ext=2)(log_fs)-1.e-50)])
-    
+        f_mult_smooth[:, itrc] = np.hstack([f_mult[0, itrc], np.sqrt(10**InterpolatedUnivariateSpline(log_fs_interp, log_f_mult_smooth_interp, k=3, ext=2)(log_fs)-1.e-50)])
+
     # check that adding known noise produces known spectrum
     for itrc in range(wc.NC):
         # check no rows outside ~5 sigma of being consistent with expected result
         for itrf in range(0, wc.Nf):
             got_loc = SAET_got[:, itrf, itrc]
-            bg_loc = f_mult_smooth[itrf, itrc]**2*t_mult[:,itrc]**2
+            bg_loc = f_mult_smooth[itrf, itrc]**2*t_mult[:, itrc]**2
             pred_loc = SAET_m[itrf, itrc] + bg_loc
-            if not np.allclose(got_loc, pred_loc, atol=5*(f_mult_smooth[itrf, itrc]**2)/np.sqrt(wc.Nt), rtol=5*(bg_loc)/np.sqrt(wc.Nt)):
-                import matplotlib.pyplot as plt
-                plt.plot(got_loc)
-                plt.plot(pred_loc)
-                plt.show()
             assert np.allclose(got_loc, pred_loc, atol=5*(f_mult_smooth[itrf, itrc]**2)/np.sqrt(wc.Nt), rtol=5*(bg_loc)/np.sqrt(wc.Nt))
 
 
@@ -472,7 +408,8 @@ def test_nonstationary_bg_power_bg_slope(bg_model, noise_model, itrk, phase):
     """ test that smoothed time varying spectrum with different brightnesses constant noise model produces expected results"""
     nonstationary_mean_smooth_helper([bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], 1., True, itrk, 0.2, phase)
 
-@pytest.mark.parametrize('bg_model', ['white_faint', 'white_equal','white_bright'])
+
+@pytest.mark.parametrize('bg_model', ['white_faint', 'white_equal', 'white_bright'])
 @pytest.mark.parametrize('noise_model', ['white_equal'])
 @pytest.mark.parametrize('itrk', [16])
 @pytest.mark.parametrize('phase', [0.2])
@@ -480,15 +417,16 @@ def test_nonstationary_bg_power_bg_brightness(bg_model, noise_model, itrk, phase
     """ test that smoothed time varying spectrum with different brightnesses constant noise model produces expected results"""
     nonstationary_mean_smooth_helper([bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], 1., True, itrk, 0.2, phase)
 
+
 @pytest.mark.parametrize('bg_model', ['white_bright'])
 @pytest.mark.parametrize('noise_model', ['white_equal'])
 @pytest.mark.parametrize('itrk', [2])
-@pytest.mark.parametrize('phase', [0.])
+@pytest.mark.parametrize('phase', [0., 0.3])
 @pytest.mark.parametrize('amp', [0., 0.1, 0.2, 0.4, 0.5, 0.8, 0.999, 1., 1.2])
-#@pytest.mark.parametrize('amp', [0.01, 0.1,  0.999])
 def test_nonstationary_bg_power_bg_amp(bg_model, noise_model, itrk, phase, amp):
     """ test that smoothed time varying spectrum with different modulation amplitudes constant noise model produces expected results"""
     nonstationary_mean_smooth_helper([bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], 1., True, itrk, amp, phase)
+
 
 @pytest.mark.parametrize('bg_model', ['white_bright'])
 @pytest.mark.parametrize('noise_model', ['white_equal'])
@@ -507,21 +445,25 @@ def test_nonstationary_bg_power_noise_brightness(bg_model, noise_model, itrk, ph
     """ test that smoothed time varying spectrum with different noises brightnesses constant background brightness produces expected results"""
     nonstationary_mean_smooth_helper([bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], 1., True, itrk, 0.2, phase)
 
+
 @pytest.mark.parametrize('bg_model', ['white_bright'])
 @pytest.mark.parametrize('noise_model', ['white_equal'])
-@pytest.mark.parametrize('itrk', [1,3,16])
-@pytest.mark.parametrize('phase', [0.,0.2,0.3,np.pi/2-0.01,np.pi/2., np.pi/2+0.01, np.pi-0.01,np.pi, np.pi+0.01, 3*np.pi/2-0.01,3*np.pi/2., 3*np.pi/2+0.01, 2*np.pi-0.01,2*np.pi, 2*np.pi+0.01])
+@pytest.mark.parametrize('itrk', [1, 3, 16])
+@pytest.mark.parametrize('phase', [0., 0.2, 0.3, np.pi/2-0.01, np.pi/2., np.pi/2+0.01, np.pi-0.01, np.pi, np.pi+0.01, 3*np.pi/2-0.01, 3*np.pi/2., 3*np.pi/2+0.01, 2*np.pi-0.01, 2*np.pi, 2*np.pi+0.01])
 def test_nonstationary_bg_power_phase(bg_model, noise_model, itrk, phase):
     """ test that smoothed time varying spectrum with constant noise model produces expected results with different phases"""
     nonstationary_mean_smooth_helper([bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], 1., True, itrk, 0.2, phase)
+
 
 def test_different_bg_spectra():
     """ test that smoothed time invariant spectrum produce expected results if background spectrum differs between channels"""
     stationary_mean_smooth_helper(['powerlaw1', 'white_bright', 'powerlaw2'], ['white_equal', 'white_equal', 'white_equal'], 1., False)
 
+
 def test_different_noise_spectra():
     """ test that smoothed time invariant spectrum produce expected results if noise spectrum differs between channels"""
     stationary_mean_smooth_helper(['white_equal', 'white_equal', 'white_equal'], ['powerlaw1', 'white_equal', 'powerlaw2'], 1., False)
+
 
 def test_different_noise_bg_spectra():
     """ test that smoothed time invariant spectrum produce expected results if noise and background spectra differs between channels"""
@@ -534,29 +476,33 @@ def test_stationary_bg_power(bg_model, noise_model):
     """ test that smoothed time invariant spectrum with constant noise model produces expected results with different background noise powers"""
     stationary_mean_smooth_helper([bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], 1., False)
 
+
 @pytest.mark.parametrize('bg_model', ['white_equal'])
 @pytest.mark.parametrize('noise_model', ['white_faint', 'white_equal', 'white_bright'])
 def test_stationary_noise_power(bg_model, noise_model):
     """ test that smoothed time invariant spectrum with constant noise model produces expected results with different instrument noise powers"""
     stationary_mean_smooth_helper([bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], 1., False)
 
-@pytest.mark.parametrize('bg_model', ['sin1','sin2','sin3','powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2'], False)
+
+@pytest.mark.parametrize('bg_model', ['sin1', 'sin2', 'sin3', 'powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2'], False)
 @pytest.mark.parametrize('noise_model', ['white_equal'])
 @pytest.mark.parametrize('smooth_lengthf', [1.])
 def test_stationary_filter_bg_(bg_model, noise_model, smooth_lengthf):
     """ test nothing unexpected happens if filter_periods is true but the noise model has no harmonics"""
     stationary_mean_smooth_helper([bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], smooth_lengthf, True)
 
-@pytest.mark.parametrize('bg_model', ['sin1','sin2','sin3','powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2'], False)
+
+@pytest.mark.parametrize('bg_model', ['sin1', 'sin2', 'sin3', 'powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2'], False)
 @pytest.mark.parametrize('noise_model', ['white_equal'])
 @pytest.mark.parametrize('smooth_lengthf', [0.1, 1., 10., 100.])
 def test_stationary_mean_bg_smooth(bg_model, noise_model, smooth_lengthf):
     """ test that smoothed time invariant spectrum with constant instrument noise model produces expected results with different smoothing lengths"""
     stationary_mean_smooth_helper([bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], smooth_lengthf, False)
 
+
 @pytest.mark.parametrize('bg_model', ['sin2', 'sin3', 'powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2'])
-@pytest.mark.parametrize('noise_model', ['sin1','sin2','sin3','powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2'])
-@pytest.mark.parametrize('smooth_lengthf', [1.,100.])
+@pytest.mark.parametrize('noise_model', ['sin1', 'sin2', 'sin3', 'powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2'])
+@pytest.mark.parametrize('smooth_lengthf', [1., 100.])
 def test_stationary_mean__instrument_smooth(bg_model, noise_model, smooth_lengthf):
     """ test that smoothed time invariant spectrum with different pairs of instrument and bg noise model produces expected results"""
     stationary_mean_smooth_helper([bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], smooth_lengthf, False)
