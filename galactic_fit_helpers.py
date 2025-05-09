@@ -23,17 +23,27 @@ def SAE_gal_model_alt(f, A, alpha, beta, kappa, gamma, fknee):
 
 
 def filter_periods_fft(r_got1, Nt_loc, period_list, wc):
+    """filter to a specific set of periods using an fft, period_list is in multiples of wc.Tobs/gc.SECSYEAR"""
+
+    # get the same number of frequencies as the input r
+    NC = r_got1.shape[1]
+
+    # time and angular frequency grids
     ts = np.arange(0, Nt_loc)*wc.DT
     wts = 2*np.pi/gc.SECSYEAR*ts
+
+    # places to store results
     r_fft1 = np.zeros((wc.Nt, wc.NC))
     amp_got = np.zeros((period_list.size, wc.NC))
     angle_got = np.zeros((period_list.size, wc.NC))
-    for itrc in range(0, 2):
+
+    # iterate over input frequencies
+    for itrc in range(NC):
         res_fft = fft.rfft(r_got1[:, itrc]-1.)*2/Nt_loc
         abs_fft = np.abs(res_fft)
         angle_fft = -np.angle(res_fft)
 
-        # handle signs for highest and lowest frequency components
+        # highest and lowest frequency components with signs instead of angles
         if angle_fft[0] < -0.1:
             abs_fft[0] = - abs_fft[0]
 
@@ -42,8 +52,9 @@ def filter_periods_fft(r_got1, Nt_loc, period_list, wc):
 
         rec = 1.+abs_fft[0]/2+np.zeros(Nt_loc)
 
+        # iterate over the periods we want to restrict to
         for itrk, k in enumerate(period_list):
-            idx = np.int64(wc.Tobs/gc.SECSYEAR*k) # TODO handle non-integer k/ not exact mult of Tobs/SECSYEAR
+            idx = np.int64(wc.Tobs/gc.SECSYEAR*k)
             if np.abs(idx - wc.Tobs/gc.SECSYEAR*k) > 0.01:
                 warn('fft based filtering expects periods that are an integer fraction of the observing time: got %10.8f for %10.8f' % (wc.Tobs/gc.SECSYEAR*k, k))
             if k == 0:
@@ -51,40 +62,53 @@ def filter_periods_fft(r_got1, Nt_loc, period_list, wc):
                 amp_got[itrk, itrc] = abs_fft[0]/2
                 angle_got[itrk, itrc] = 0.
             elif k == np.int64(gc.SECSYEAR//wc.DT)//2:
+                # set amplitude and phase in highest frequency case
                 amp_got[itrk,itrc] = abs_fft[-1]/np.sqrt(2.)
                 angle_got[itrk, itrc] = np.pi/4.
                 rec += amp_got[itrk,itrc]*np.cos(k*wts - angle_got[itrk,itrc])
             else:
+                # set amplitude and phase in other cases
                 rec += abs_fft[idx]*np.cos(k*wts - angle_fft[idx])
                 amp_got[itrk, itrc] = abs_fft[idx]
                 angle_got[itrk, itrc] = angle_fft[idx] % (2*np.pi)
+
         angle_fftm = angle_fft % (2*np.pi)
         mult = np.int64(wc.Tobs/gc.SECSYEAR)
-        print("%5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f"%(abs_fft[1*mult], angle_fftm[1*mult], abs_fft[2*mult], angle_fftm[2*mult], abs_fft[3*mult], angle_fftm[3*mult], abs_fft[4*mult], angle_fftm[4*mult], abs_fft[5*mult], angle_fftm[5*mult]))
+
+        print("%3d & %5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f"%(itrc, abs_fft[1*mult], angle_fftm[1*mult], abs_fft[2*mult], angle_fftm[2*mult], abs_fft[3*mult], angle_fftm[3*mult], abs_fft[4*mult], angle_fftm[4*mult], abs_fft[5*mult], angle_fftm[5*mult]))
         r_fft1[:, itrc] = rec
     return r_fft1, amp_got, angle_got
 
 
-#TODO needs unit tests
 def get_SAET_cyclostationary_mean(galactic_bg, SAET_m, wc, smooth_lengthf=4, filter_periods=False, period_list=None, Nt_loc=-1):
     """ note the smoothing length is the length in *log* frequency, and the input is assumed spaced linearly in frequency"""
     if Nt_loc == -1:
         Nt_loc = wc.Nt
-    SAET_pure_in = (galactic_bg.reshape((wc.Nt, wc.Nf, wc.NC)))**2
+
+    NC_loc = SAET_m.shape[1]
+
+    SAET_pure_in = (galactic_bg[...,:NC_loc].reshape((wc.Nt, wc.Nf, NC_loc)))**2
     SAET_pure_mean = np.mean(SAET_pure_in, axis=0)
 
     amp_got = None
     angle_got = None
 
     if not filter_periods:
-        rec_use = np.zeros((wc.Nt, wc.NC))+1.
+        rec_use = np.zeros((wc.Nt, NC_loc))+1.
     else:
-        r_got1 = np.zeros((wc.Nt, wc.NC))
-        SAET_pure_white = SAET_pure_mean/SAET_m
+        r_got1 = np.zeros((wc.Nt, NC_loc))
+        SAET_pure_white = np.abs(SAET_pure_mean/SAET_m)
 
-        for itrc in range(0, 2):
+        for itrc in range(NC_loc):
+            # completely cutting out faint frequencies completely seemed to work better for calculating the envelope modulation
+            # than a weighted average, although there might be other ways
             r_eval_mask = SAET_pure_white[:, itrc] > 0.1*np.max(SAET_pure_white[:, itrc])
             r_got1[:, itrc] = np.mean(SAET_pure_in[:, r_eval_mask, itrc]/(SAET_pure_mean[r_eval_mask, itrc] + 1.e-13*np.max(SAET_pure_mean[r_eval_mask, itrc])), axis=1)
+
+            assert np.all(r_got1[:,itrc] >= 0.)
+
+        # input ratio can't be negative except due to numerical noise (will enforce nonzero later)
+        r_got1 = np.abs(r_got1)
 
         if period_list is None:
             # if no period list is given, do every possible period
@@ -93,34 +117,53 @@ def get_SAET_cyclostationary_mean(galactic_bg, SAET_m, wc, smooth_lengthf=4, fil
 
         r_fft1, amp_got, angle_got = filter_periods_fft(r_got1, Nt_loc, period_list, wc)
 
-        rec_use = r_fft1
+        # the multiplier must be strictly positive
+        # but due to noise/numerical inaccuracy in the fft it could be slightly negative
+        # it also appears in a division, so we will lose numerical stability if it is too small.
+        # add a numerical cutoff to small values scaled to the largest
+        rec_use = r_fft1.copy()
 
+        rec_use[rec_use < 1.e-6*np.max(rec_use)] = 1.e-6*np.max(rec_use)
+
+        # absolute value should have no effect here unless rec_use was entirely negative
+        rec_use = np.abs(rec_use)
+
+    # get spectrum as a function of time with time variation removed
     SAET_pure_mod = SAET_pure_in.copy()
-    for itrc in range(0, 2):
-        SAET_pure_mod[:, :, itrc] = (SAET_pure_mod[:, :, itrc].T/rec_use[:, itrc]).T
+    for itrc in range(NC_loc):
+        SAET_pure_mod[:, :, itrc] = np.abs((SAET_pure_mod[:, :, itrc].T/rec_use[:, itrc]).T)
 
+    # get mean spectrum with time variation removed
+    SAET_pures = np.abs(np.mean(SAET_pure_mod, axis=0))
 
-    SAET_pures = np.mean(SAET_pure_mod, axis=0)
-
-    SAET_pures_smooth2 = np.zeros((wc.Nf, 3))
+    SAET_pures_smooth2 = np.zeros((wc.Nf, NC_loc))
     SAET_pures_smooth2[0, :] = SAET_pures[0, :]
 
     log_fs = np.log10(np.arange(1, wc.Nf)*wc.DF)
 
     interp_mult = 10
 
+    # interpolate from the evenly spaced input frequency bins to a finer set of log frequency bins
+    # so we can apply the smoothing in log frequency instead of frequency
     n_f_interp = interp_mult*wc.Nf
     log_fs_interp = np.linspace(np.log10(wc.DF), np.log10(wc.DF*(wc.Nf-1)), n_f_interp)
 
-    for itrc in range(0, 3):
-        log_SAE_pure_loc_smooth1 = np.log10(SAET_pures[1:, itrc]+1.e-50)
+    for itrc in range(NC_loc):
+        # add and later remove a small numerical stabilizer for cases where the SAET is zero
+        # better behaved to interpolate in log(SAE) as well
+        log_SAE_pure_loc_smooth1 = np.log10(SAET_pures[1:, itrc] + 1.e-50)
         log_SAE_interp_loc = InterpolatedUnivariateSpline(log_fs, log_SAE_pure_loc_smooth1, k=3, ext=2)(log_fs_interp)
         log_SAE_interp_loc_smooth = scipy.ndimage.gaussian_filter(log_SAE_interp_loc, smooth_lengthf*interp_mult)
-        SAET_pures_smooth2[1:, itrc] = 10**InterpolatedUnivariateSpline(log_fs_interp, log_SAE_interp_loc_smooth, k=3, ext=2)(log_fs)-1.e-50
+        SAET_pures_smooth2[1:, itrc] = 10**InterpolatedUnivariateSpline(log_fs_interp, log_SAE_interp_loc_smooth, k=3, ext=2)(log_fs) - 1.e-50
 
-    SAET_res = np.zeros((wc.Nt, wc.Nf, wc.NC))+SAET_m
-    for itrc in range(0, 2):
+    # enforce positive just in case subtraction misbheaved
+    SAET_pures_smooth2 = np.abs(SAET_pures_smooth2)
+
+    SAET_res = np.zeros((wc.Nt, wc.Nf, NC_loc))+SAET_m
+    for itrc in range(NC_loc):
         SAET_res[:, :, itrc] += np.outer(rec_use[:, itrc], SAET_pures_smooth2[:, itrc])
+
+    SAET_res = np.abs(SAET_res)
 
     assert np.all(np.isfinite(SAET_res))
 
