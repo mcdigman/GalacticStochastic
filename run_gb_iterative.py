@@ -13,11 +13,12 @@ from iterative_fit_helpers import (BGDecomposition, IterationConfig,
                                    run_binary_coadd2,
                                    subtraction_convergence_decision,
                                    sustain_snr_helper,
-                                   total_signal_consistency_check,
-                                   unit_normal_battery)
+                                   total_signal_consistency_check)
 from lisa_config import get_lisa_constants
 from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 from wdm_config import get_wavelet_model
+
+from testing_tools import unit_normal_battery
 
 if __name__ == '__main__':
 

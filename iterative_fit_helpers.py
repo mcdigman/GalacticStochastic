@@ -44,31 +44,31 @@ def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_in
 
     return galactic_bg_full, galactic_bg_const, signal_full, SAET_tot, var_suppress, snrs, snrs_tot, noise_AET_dense
 
-def get_smoothed_timevarying_spectrum(wc, galactic_bg_full, signal_full, SAET_m, smooth_lengthf, smooth_lengtht):
-    SAET_galactic_bg_smoothf_white = np.zeros((wc.Nt, wc.Nf, wc.NC))
-    SAET_galactic_bg_smoothft_white = np.zeros((wc.Nt, wc.Nf, wc.NC))
-    SAET_galactic_bg_smooth = np.zeros((wc.Nt, wc.Nf, wc.NC))
-
-    for itrc in range(wc.NC):
-        SAET_galactic_bg_white = signal_full[:, :, itrc]**2/SAET_m[:, itrc]
-        for itrf in range(wc.Nf):
-            rreach = smooth_lengthf//2 - max(itrf-wc.Nf+smooth_lengthf//2+1, 0)
-            lreach = smooth_lengthf//2 - max(smooth_lengthf//2-itrf, 0)
-            SAET_galactic_bg_smoothf_white[:, itrf, itrc] = np.mean(SAET_galactic_bg_white[:, itrf-lreach:itrf+rreach+1], axis=1)
-        for itrt in range(wc.Nt):
-            rreach = smooth_lengtht//2 - max(itrt-wc.Nt+smooth_lengtht//2+1, 0)
-            lreach = smooth_lengtht//2 - max(smooth_lengtht//2-itrt, 0)
-            SAET_galactic_bg_smoothft_white[itrt, :, itrc] = np.mean(SAET_galactic_bg_smoothf_white[itrt-lreach:itrt+rreach+1, :, itrc], axis=0)
-        SAET_galactic_bg_smooth[:, :, itrc] = SAET_galactic_bg_smoothft_white[:, :, itrc]*SAET_m[:, itrc]
-
-    #SAET_alt, _, _ = get_SAET_cyclostationary_mean(galactic_bg_full, SAET_m, wc, smooth_lengthf=smooth_lengthf/10., filter_periods=True, period_list=None)
-    #import matplotlib.pyplot as plt
-    #plt.semilogy(SAET_alt[0,1:,0])
-    #plt.semilogy(np.mean(SAET_galactic_bg_smooth[:,1:,0],axis=0))
-    #plt.show()
-
-
-    return SAET_galactic_bg_smooth
+#def get_smoothed_timevarying_spectrum(wc, galactic_bg_full, signal_full, SAET_m, smooth_lengthf, smooth_lengtht):
+#    SAET_galactic_bg_smoothf_white = np.zeros((wc.Nt, wc.Nf, wc.NC))
+#    SAET_galactic_bg_smoothft_white = np.zeros((wc.Nt, wc.Nf, wc.NC))
+#    SAET_galactic_bg_smooth = np.zeros((wc.Nt, wc.Nf, wc.NC))
+#
+#    for itrc in range(wc.NC):
+#        SAET_galactic_bg_white = signal_full[:, :, itrc]**2/SAET_m[:, itrc]
+#        for itrf in range(wc.Nf):
+#            rreach = smooth_lengthf//2 - max(itrf-wc.Nf+smooth_lengthf//2+1, 0)
+#            lreach = smooth_lengthf//2 - max(smooth_lengthf//2-itrf, 0)
+#            SAET_galactic_bg_smoothf_white[:, itrf, itrc] = np.mean(SAET_galactic_bg_white[:, itrf-lreach:itrf+rreach+1], axis=1)
+#        for itrt in range(wc.Nt):
+#            rreach = smooth_lengtht//2 - max(itrt-wc.Nt+smooth_lengtht//2+1, 0)
+#            lreach = smooth_lengtht//2 - max(smooth_lengtht//2-itrt, 0)
+#            SAET_galactic_bg_smoothft_white[itrt, :, itrc] = np.mean(SAET_galactic_bg_smoothf_white[itrt-lreach:itrt+rreach+1, :, itrc], axis=0)
+#        SAET_galactic_bg_smooth[:, :, itrc] = SAET_galactic_bg_smoothft_white[:, :, itrc]*SAET_m[:, itrc]
+#
+#    #SAET_alt, _, _ = get_SAET_cyclostationary_mean(galactic_bg_full, SAET_m, wc, smooth_lengthf=smooth_lengthf/10., filter_periods=True, period_list=None)
+#    #import matplotlib.pyplot as plt
+#    #plt.semilogy(SAET_alt[0, 1:, 0])
+#    #plt.semilogy(np.mean(SAET_galactic_bg_smooth[:, 1:, 0], axis=0))
+#    #plt.show()
+#
+#
+#    return SAET_galactic_bg_smooth
 
 def run_binary_coadd(itrb, const_suppress_in, waveT_ini, noise_AET_dense, snrs, snrs_tot, itrn, galactic_bg_const, galactic_bg, var_suppress, wc, params_gb, snr_min, snr_autosuppress):
     if not const_suppress_in[itrb]:
@@ -86,40 +86,6 @@ def run_binary_coadd(itrb, const_suppress_in, waveT_ini, noise_AET_dense, snrs, 
         else:
             var_suppress[itrn, itrb] = True
 
-# TODO move this function to a different file
-def unit_normal_battery(signal, mult=1., sig_thresh=5., A2_cut=2.28, do_assert=True):
-    """battery of tests for checking if signal is unit normal white noise"""
-    #default anderson darling cutoff of 2.28 is hand selected to
-    #give ~1 in 1e5 empirical probablity of false positive for n=64
-    #calibration looks about same for n=32 could probably choose better way
-    #with current defaults that should make it the most sensitive test
-    n_sig = signal.size
-    if n_sig == 0:
-        return False, 0., 0., 0.
-
-    sig_adjust = signal/mult
-    mean_wave = np.mean(sig_adjust)
-    std_wave = np.std(sig_adjust)
-    std_std_wave = np.std(sig_adjust)*np.sqrt(2/n_sig)
-
-    #anderson darling test statistic assuming true mean and variance are unknown
-    sig_sort = np.sort((sig_adjust-mean_wave)/std_wave)
-    phis = scipy.stats.norm.cdf(sig_sort)
-    A2 = -n_sig-1/n_sig*np.sum((2*np.arange(1, n_sig+1)-1)*np.log(phis)+(2*(n_sig-np.arange(1, n_sig+1))+1)*np.log(1-phis))
-    A2Star = A2*(1+4/n_sig-25/n_sig**2)
-    print(A2Star, A2_cut)
-
-    test1 = np.abs(mean_wave)/std_wave < sig_thresh
-    test2 = np.abs(std_wave-1.)/std_std_wave < sig_thresh
-    test3 = A2Star < A2_cut #should be less than cutoff value
-
-    #check mean and variance
-    if do_assert:
-        assert test1
-        assert test2
-        assert test3
-
-    return test1 and test2 and test3, A2Star, np.abs(mean_wave)/std_wave, np.abs(std_wave-1.)/std_std_wave
 
 # TODO consolidate with the other run_binary_coadd
 def run_binary_coadd2(waveT_ini, params_gb, var_suppress, const_suppress, const_suppress2, snrs_base, snrs, snrs_tot, snrs_tot_base, itrn, itrb, noise_AET_dense, noise_AET_dense_base, ic, const_converged, var_converged, nt_min, nt_max, bgd):
