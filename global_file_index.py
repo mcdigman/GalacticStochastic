@@ -121,7 +121,8 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
 
     wc = wdm_config.WDMWaveletConstants(**{key:hf_in['wc'][key][()] for key in hf_in['wc'].keys()})
     lc = lisa_config.LISAConstants(**{key:hf_in['lc'][key][()] for key in hf_in['lc'].keys()})
-    preliminary_ic = ifh.IterationConfig(**{key:hf_in['preliminary_ic'][key][()] for key in iteration_config.IterationConfig._fields})
+    #preliminary_ic = ifh.IterationConfig(**{key:hf_in['preliminary_ic'][key][()] for key in iteration_config.IterationConfig._fields})
+    snr_min = hf_in['preliminary_ic']['snr_min'][()]
 
     # TODO add check for wc and lc match expectations
     galactic_bg_const_in = np.asarray(hf_in['SAET']['galactic_bg_const'])
@@ -136,7 +137,7 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
 
     hf_in.close()
 
-    return galactic_bg_const_in, noise_realization_got, snr_tots_in, SAET_m, wc, lc, preliminary_ic
+    return galactic_bg_const_in, noise_realization_got, snr_tots_in, SAET_m, wc, lc, snr_min
 
 def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, const_only):
     filename_in = get_processed_gb_filename(galaxy_dir, const_only, snr_thresh, wc, nt_min, nt_max)
@@ -206,9 +207,9 @@ def store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_bg_c
 
     hf_out.close()
 
-def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max, bgd, period_list1, n_bin_use, SAET_m, SAE_fin, const_only, snrs_tot, n_full_converged, argbinmap, const_suppress, const_suppress2, var_suppress, ic_preliminary):
-    filename_gb_init = get_preliminary_filename(galaxy_dir, ic_preliminary.snr_thresh, wc.Nf, wc.Nt, wc.dt)
-    filename_gb_common = get_common_noise_filename(galaxy_dir, ic_preliminary.snr_thresh, wc)
+def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max, bgd, period_list1, n_bin_use, SAET_m, SAE_fin, const_only, snrs_tot, n_full_converged, argbinmap, const_suppress, const_suppress2, var_suppress, snr_min_in):
+    filename_gb_init = get_preliminary_filename(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
+    filename_gb_common = get_common_noise_filename(galaxy_dir, ic.snr_thresh, wc)
     filename_out = get_processed_gb_filename(galaxy_dir, const_only, ic.snr_thresh, wc, nt_min, nt_max)
 
     hf_out = h5py.File(filename_out, 'w')
@@ -247,7 +248,8 @@ def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max,
         hf_out['ic'].create_dataset(key, data=getattr(ic, key))
 
     hf_out.create_group('ic_preliminary')
-    for key in ic_preliminary._fields:
-        hf_out['ic_preliminary'].create_dataset(key, data=getattr(ic_preliminary, key))
+    hf_out['ic_preliminary'].create_dataset('snr_min',data=snr_min_in)
+    #for key in ic_preliminary._fields:
+    #    hf_out['ic_preliminary'].create_dataset(key, data=getattr(ic_preliminary, key))
 
     hf_out.close()
