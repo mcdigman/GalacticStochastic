@@ -158,46 +158,46 @@ def total_signal_consistency_check(galactic_full_signal, bgd, itrn):
         #check all contributions to the total signal are tracked accurately
         assert np.allclose(galactic_full_signal, bgd.galactic_bg_const_base + bgd.galactic_bg_const + bgd.galactic_bg + bgd.galactic_bg_suppress, atol=1.e-300, rtol=1.e-6)
 
-def subtraction_convergence_decision(bgd, var_suppress, itrn, force_converge, n_var_suppressed, switch_next, var_converged, const_converged, SAET_m, wc, ic, period_list1, const_only, noise_AET_dense, n_cyclo_switch, SAET_tot_cur):
+def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, period_list1, const_only, noise_AET_dense, n_cyclo_switch, SAET_tot_cur):
 
     # short circuit if we have previously decided subtraction is converged
-    if var_converged[itrn]:
-        switch_next[itrn+1] = False
-        var_converged[itrn+1] = var_converged[itrn]
-        const_converged[itrn+1] = const_converged[itrn]
-        n_var_suppressed[itrn+1] = n_var_suppressed[itrn]
+    if fit_state.var_converged[itrn]:
+        fit_state.switch_next[itrn+1] = False
+        fit_state.var_converged[itrn+1] = fit_state.var_converged[itrn]
+        fit_state.const_converged[itrn+1] = fit_state.const_converged[itrn]
+        bis.n_var_suppress[itrn+1] = bis.n_var_suppress[itrn]
         return noise_AET_dense, SAET_tot_cur
 
     galactic_bg_res = bgd.galactic_bg + bgd.galactic_bg_const + bgd.galactic_bg_const_base
-    n_var_suppressed[itrn+1] = var_suppress[itrn].sum()
+    bis.n_var_suppress[itrn+1] = bis.var_suppress[itrn].sum()
 
     # subtraction is either converged or oscillating
-    osc1 = np.all(var_suppress[itrn] == var_suppress[itrn-1])
-    osc2 = np.all(var_suppress[itrn] == var_suppress[itrn-2])
-    osc3 = np.all(var_suppress[itrn] == var_suppress[itrn-3])
-    if itrn > 1 and (force_converge[itrn] or (osc1 or osc2 or osc3)):
-        assert n_var_suppressed[itrn] == n_var_suppressed[itrn+1] or force_converge[itrn] or osc2 or osc3
-        if switch_next[itrn]:
+    osc1 = np.all(bis.var_suppress[itrn] == bis.var_suppress[itrn-1])
+    osc2 = np.all(bis.var_suppress[itrn] == bis.var_suppress[itrn-2])
+    osc3 = np.all(bis.var_suppress[itrn] == bis.var_suppress[itrn-3])
+    if itrn > 1 and (fit_state.force_converge[itrn] or (osc1 or osc2 or osc3)):
+        assert bis.n_var_suppress[itrn] == bis.n_var_suppress[itrn+1] or fit_state.force_converge[itrn] or osc2 or osc3
+        if fit_state.switch_next[itrn]:
             print('subtraction converged at ' + str(itrn))
-            switch_next[itrn+1] = False
-            var_converged[itrn+1] = True
-            const_converged[itrn+1] = True
+            fit_state.switch_next[itrn+1] = False
+            fit_state.var_converged[itrn+1] = True
+            fit_state.const_converged[itrn+1] = True
         else:
             if (osc2 or osc3) and not osc1:
                 print('cycling detected at ' + str(itrn) + ', doing final check iteration aborting')
-                force_converge[itrn+1] = True
+                fit_state.force_converge[itrn+1] = True
             print('subtraction predicted initial converged at ' + str(itrn) + ' next iteration will be check iteration')
-            switch_next[itrn+1] = True
-            var_converged[itrn+1] = False
-            const_converged[itrn+1] = const_converged[itrn]
+            fit_state.switch_next[itrn+1] = True
+            fit_state.var_converged[itrn+1] = False
+            fit_state.const_converged[itrn+1] = fit_state.const_converged[itrn]
 
         return noise_AET_dense, SAET_tot_cur
 
 
     # subtraction has not converged, get a new noise model
-    switch_next[itrn+1] = False
-    var_converged[itrn+1] = var_converged[itrn]
-    const_converged[itrn+1] = const_converged[itrn]
+    fit_state.switch_next[itrn+1] = False
+    fit_state.var_converged[itrn+1] = fit_state.var_converged[itrn]
+    fit_state.const_converged[itrn+1] = fit_state.const_converged[itrn]
 
     # don't use cyclostationary model until specified iteration
     if itrn < n_cyclo_switch:

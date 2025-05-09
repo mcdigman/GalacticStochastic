@@ -90,7 +90,7 @@ class IterativeFitManager():
         galactic_bg = np.zeros((wc.Nt*wc.Nf, wc.NC))
 
         self.bgd = BGDecomposition(galactic_bg_const_base, galactic_bg_const, galactic_bg, galactic_bg_suppress)
-        
+
         galactic_bg_const = None
         galactic_bg_const_base = None
         galactic_bg_suppress = None
@@ -132,7 +132,7 @@ class IterativeFitManager():
 
         t1n = perf_counter()
 
-        self.noise_AET_dense_base, self.SAET_tot_cur = subtraction_convergence_decision(self.bgd, self.bis.var_suppress, itrn, self.fit_state.force_converge, self.bis.n_var_suppress, self.fit_state.switch_next, self.fit_state.var_converged, self.fit_state.const_converged, self.SAET_m, self.wc, self.ic, self.period_list, self.const_only, self.noise_AET_dense_base, self.n_cyclo_switch, self.SAET_tot_cur)
+        self.noise_AET_dense_base, self.SAET_tot_cur = subtraction_convergence_decision(self.bgd, self.bis, self.fit_state, itrn, self.SAET_m, self.wc, self.ic, self.period_list, self.const_only, self.noise_AET_dense_base, self.n_cyclo_switch, self.SAET_tot_cur)
 
         self.noise_AET_dense_base_base, self.SAET_tot_base = addition_convergence_decision(self.bgd, itrn, self.bis.n_const_suppress, self.fit_state.switch_next, self.fit_state.var_converged, self.fit_state.switchf_next, self.fit_state.const_converged, self.SAET_m, self.wc, self.period_list, self.const_only, self.noise_AET_dense_base_base, self.SAET_tot_cur, self.SAET_tot_base, self.n_const_force, self.const_converge_change_thresh, self.bis.const_suppress2, self.smooth_lengthf_fix)
 
