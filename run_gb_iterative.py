@@ -1,26 +1,16 @@
 """run iterative processing of galactic background"""
 
 import configparser
-from time import perf_counter
 
+import matplotlib.pyplot as plt
 import numpy as np
 
-import global_const as gc
 import global_file_index as gfi
-from instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
-from iterative_fit_helpers import (BGDecomposition, IterationConfig,
-                                   addition_convergence_decision,
-                                   run_binary_coadd2,
-                                   subtraction_convergence_decision,
-                                   sustain_snr_helper,
-                                   total_signal_consistency_check)
-from lisa_config import get_lisa_constants
-from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
-from wdm_config import get_wavelet_model
-
-from testing_tools import unit_normal_battery
-
+from iterative_fit_helpers import IterationConfig
 from iterative_fit_manager import IterativeFitManager
+from lisa_config import get_lisa_constants
+from testing_tools import unit_normal_battery
+from wdm_config import get_wavelet_model
 
 if __name__ == '__main__':
 
@@ -44,7 +34,7 @@ if __name__ == '__main__':
         nt_max = nt_min+512*(itrm+1)
         print(nt_min, nt_max, wc.Nt, wc.Nf, const_only)
 
-        params_gb, _, _, _, n_tot = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
+        params_gb, _, _, _, _ = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
 
         # iteration to switch to cyclostationary noise model (using it too early may be noisy)
         n_cyclo_switch = 3
@@ -58,7 +48,7 @@ if __name__ == '__main__':
         snr_high_initial = 30.
         snr_high_fix = snr_thresh
         snr_high_settle_mult = 7.
-        snr_high_settle_scale = 2./n_cyclo_switch 
+        snr_high_settle_scale = 2./n_cyclo_switch
         snr_high_settle_offset = 4./n_cyclo_switch
         snr_high_fix_itr = 4
 
@@ -76,7 +66,7 @@ if __name__ == '__main__':
 
         snr_autosuppresses[0] = snr_high_initial
 
-        # phase in the frequency smoothing length gradually 
+        # phase in the frequency smoothing length gradually
         # give absorbing constants a relative advantage on early iterations
         # because for the first iteration we included no galactic background
 
@@ -101,169 +91,15 @@ if __name__ == '__main__':
 
         ifm = IterativeFitManager(lc, wc, ic, SAET_m, n_iterations, galactic_bg_const_in, snr_tots_in, snr_min_in, params_gb, period_list, nt_min, nt_max, n_cyclo_switch, const_only, n_const_force, const_converge_change_thresh, smooth_lengthf_fix)
 
+        params_gb = None
+
         ifm.do_loop()
-        #galactic_bg_const = np.zeros_like(galactic_bg_const_in)
-
-        ##iteration to switch to fitting spectrum fully
-
-        #const_suppress_in = (snr_tots_in < snr_min_in[0]) | (params_gb[:, 3] >= (wc.Nf-1)*wc.DF)
-        #argbinmap = np.argwhere(~const_suppress_in).flatten()
-        #const_suppress = const_suppress_in[argbinmap]
-        #params_gb = params_gb[argbinmap]
-        #n_bin_use = argbinmap.size
-
-        #snrs_tot = np.zeros((n_iterations, n_bin_use))
-        #idx_SAE_save = np.hstack([np.arange(0, min(10, n_iterations)), np.arange(min(10, n_iterations), 4), n_iterations-1])
-        #itr_save = 0
-
-        #ifm.SAE_tots = np.zeros((idx_SAE_save.size, wc.Nt, wc.Nf, 2))
-        #SAE_fin = np.zeros((wc.Nt, wc.Nf, 2))
-
-        #snrs = np.zeros((n_iterations, n_bin_use, wc.NC))
-        #snrs_base = np.zeros((n_iterations, n_bin_use, wc.NC))
-        #snrs_tot_base = np.zeros((n_iterations, n_bin_use))
-        #var_suppress = np.zeros((n_iterations, n_bin_use), dtype=np.bool_)
-        #suppressed = np.zeros((n_iterations, n_bin_use), dtype=np.bool_)
-
-        #const_suppress2 = np.zeros((n_iterations, n_bin_use), dtype=np.bool_)
-        #parseval_const = np.zeros(n_iterations)
-        #parseval_bg = np.zeros(n_iterations)
-        #parseval_sup = np.zeros(n_iterations)
-        #parseval_tot = np.zeros(n_iterations)
-
-
-        #params0 = params_gb[0].copy()
-        #waveT_ini = BinaryWaveletAmpFreqDT(params0.copy(), wc, lc)
-
-        #ifm.SAET_tot_cur = np.zeros((wc.Nt, wc.Nf, wc.NC))
-        #ifm.SAET_tot_cur[:] = SAET_m
-
-        #SAET_tot_base = np.zeros((wc.Nt, wc.Nf, wc.NC))
-        #SAET_tot_base[:] = SAET_m
-        #if idx_SAE_save[itr_save] == 0:
-        #    ifm.SAE_tots[0] = ifm.SAET_tot_cur[:, :, :2]
-        #    itr_save += 1
-        #SAET_tot_base = np.min([SAET_tot_base, ifm.SAET_tot_cur], axis=0)
-
-        #noise_AET_dense = DiagonalNonstationaryDenseInstrumentNoiseModel(ifm.SAET_tot_cur, wc, prune=True)
-        #noise_AET_dense_base = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_base, wc, prune=True)
-
-        #galactic_bg_const_base = galactic_bg_const_in.copy()
-        #galactic_full_signal = np.zeros((wc.Nt*wc.Nf, wc.NC))
-        #galactic_bg_suppress = np.zeros((wc.Nt*wc.Nf, wc.NC))
-        #galactic_bg = np.zeros((wc.Nt*wc.Nf, wc.NC))
-        #n_const_suppressed = np.zeros(ic.n_iterations+1, dtype=np.int64)
-        #n_const_suppressed[1] = const_suppress2[0].sum()
-        #n_var_suppressed = np.zeros(ic.n_iterations+1, dtype=np.int64)
-        #n_var_suppressed[1] = var_suppress[0].sum()
-        #var_converged = np.zeros(ic.n_iterations+1, dtype=np.bool_)
-        #const_converged = np.zeros(ic.n_iterations+1, dtype=np.bool_)
-        #switch_next = np.zeros(ic.n_iterations+1, dtype=np.bool_)
-        #switchf_next = np.zeros(ic.n_iterations+1, dtype=np.bool_)
-        #force_converge = np.zeros(ic.n_iterations+1, dtype=np.bool_)
-        #n_full_converged = ic.n_iterations-1
-
-        #bgd = BGDecomposition(galactic_bg_const_base, galactic_bg_const, galactic_bg, galactic_bg_suppress)
-
-
-        #print('entered loop', itrm)
-        #ti = perf_counter()
-        #for itrn in range(1, ic.n_iterations):
-        #    if switchf_next[itrn]:
-        #        bgd.galactic_bg_const[:] = 0.
-        #        const_suppress2[itrn] = False
-        #    else:
-        #        const_suppress2[itrn] = const_suppress2[itrn-1]
-
-        #    if var_converged[itrn]:
-        #        var_suppress[itrn] = var_suppress[itrn-1]
-        #    else:
-        #        bgd.galactic_bg[:] = 0.
-        #        if switch_next[itrn]:
-        #            bgd.galactic_bg_suppress[:] = 0.
-        #            var_suppress[itrn] = False
-        #        else:
-        #            var_suppress[itrn] = var_suppress[itrn-1]
-
-        #    t0n = perf_counter()
-
-        #    # do the finishing step for itrn=0 to set everything at the end of the loop as it should be
-
-        #    suppressed[itrn] = var_suppress[itrn] | const_suppress2[itrn] | const_suppress
-
-        #    idxbs = np.argwhere(~suppressed[itrn]).flatten()
-        #    for itrb in idxbs:
-        #        if not suppressed[itrn, itrb]:
-        #            run_binary_coadd2(waveT_ini, params_gb, var_suppress, const_suppress, const_suppress2, snrs_base, snrs, snrs_tot, snrs_tot_base, itrn, itrb, noise_AET_dense, noise_AET_dense_base, ic, const_converged, var_converged, nt_min, nt_max, bgd)
-
-        #    # copy forward prior calculations of snr calculations that were skipped in this loop iteration
-        #    sustain_snr_helper(const_converged, snrs_tot_base, snrs_base, snrs_tot, snrs, itrn, suppressed[itrn], var_converged)
-
-        #    # sanity check that the total signal does not change regardless of what bucket the binaries are allocated to
-        #    total_signal_consistency_check(galactic_full_signal, bgd, itrn)
-
-
-        #    t1n = perf_counter()
-
-        #    noise_AET_dense, ifm.SAET_tot_cur = subtraction_convergence_decision(bgd, var_suppress, itrn, force_converge, n_var_suppressed, switch_next, var_converged, const_converged, SAET_m, wc, ic, period_list, const_only, noise_AET_dense, n_cyclo_switch, ifm.SAET_tot_cur)
-
-        #    if itr_save < idx_SAE_save.size and itrn == idx_SAE_save[itr_save]:
-        #        ifm.SAE_tots[itr_save] = ifm.SAET_tot_cur[:, :, :2]
-        #        itr_save += 1
-
-        #    noise_AET_dense_base, SAET_tot_base = addition_convergence_decision(bgd, itrn, n_const_suppressed, switch_next, var_converged, switchf_next, const_converged, SAET_m, wc, period_list, const_only, noise_AET_dense_base, ifm.SAET_tot_cur, SAET_tot_base, n_const_force, const_converge_change_thresh, const_suppress2, smooth_lengthf_fix)
-
-        #    if var_converged[itrn]:
-        #        assert np.all(var_suppress[itrn] == var_suppress[itrn-1])
-
-        #    if const_converged[itrn]:
-        #        assert np.all(const_suppress2[itrn] == const_suppress2[itrn-1])
-
-        #    if switchf_next[itrn+1]:
-        #        assert not const_converged[itrn+1]
-        #    if switch_next[itrn+1]:
-        #        assert not var_converged[itrn+1]
-
-        #    #assert not np.any(var_suppress[itrn] & const_suppress2[itrn])
-
-        #    parseval_tot[itrn] = np.sum((bgd.galactic_bg_const_base+bgd.galactic_bg_const+bgd.galactic_bg+bgd.galactic_bg_suppress).reshape((wc.Nt, wc.Nf, wc.NC))[:, 1:, 0:2]**2/SAET_m[1:, 0:2])
-        #    parseval_bg[itrn] = np.sum((bgd.galactic_bg_const_base+bgd.galactic_bg_const+bgd.galactic_bg).reshape((wc.Nt, wc.Nf, wc.NC))[:, 1:, 0:2]**2/SAET_m[1:, 0:2])
-        #    parseval_const[itrn] = np.sum((bgd.galactic_bg_const_base+bgd.galactic_bg_const).reshape((wc.Nt, wc.Nf, wc.NC))[:, 1:, 0:2]**2/SAET_m[1:, 0:2])
-        #    parseval_sup[itrn] = np.sum((bgd.galactic_bg_suppress).reshape((wc.Nt, wc.Nf, wc.NC))[:, 1:, 0:2]**2/SAET_m[1:, 0:2])
-
-        #    t2n = perf_counter()
-        #    print('made bg %3d in time %7.3fs fit time %7.3fs' % (itrn, t1n-t0n, t2n-t1n))
-
-        #    if var_converged[itrn+1] and const_converged[itrn+1]:
-        #        print('result fully converged at '+str(itrn)+', no further iterations needed')
-        #        n_full_converged = itrn
-        #        break
-
-        #SAE_fin[:] = ifm.SAET_tot_cur[:, :, :2]
-
 
         do_hf_out = True
         if do_hf_out:
             gfi.store_processed_gb_file(galaxy_dir, galaxy_file, ifm.wc, ifm.lc, ifm.ic, ifm.nt_min, ifm.nt_max, ifm.bgd, ifm.period_list, ifm.n_bin_use, ifm.SAET_m, ifm.SAE_fin, ifm.const_only, ifm.snrs_tot, ifm.n_full_converged, ifm.argbinmap, ifm.const_suppress, ifm.const_suppress2, ifm.var_suppress, snr_min_in)
 
-        tf = perf_counter()
-        print('loop time = %.3es' % (tf-ifm.ti))
 
-        Tobs_consider_yr = (ifm.nt_max - ifm.nt_min)*wc.DT/gc.SECSYEAR
-        n_consider = ifm.n_bin_use
-        n_faint = ifm.const_suppress.sum()
-        n_faint2 = ifm.const_suppress2[itrn].sum()
-        n_bright = ifm.var_suppress[itrn].sum()
-        n_ambiguous = (~(ifm.const_suppress[itrn] | ifm.var_suppress[itrn])).sum()
-        print('Out of %10d total binaries, %10d were deemed undetectable by a previous evaluation, %10d were considered here.' % (n_tot, n_tot - n_consider, n_consider))
-        print('The iterative procedure deemed (%5.3f yr observation at threshold snr=%5.3f):' % (Tobs_consider_yr, snr_thresh))
-        print('       %10d undetectable due to instrument noise' % n_faint)
-        print('       %10d undetectable dut to galactic confusion' % n_faint2)
-        print('       %10d undecided (presumed undetectable)' % n_ambiguous)
-        print('       %10d total undetectable' % (n_tot - n_bright))
-        print('       %10d total detectable' % n_bright)
-
-import matplotlib.pyplot as plt
 
 do_parseval_plot = False
 if do_parseval_plot:
