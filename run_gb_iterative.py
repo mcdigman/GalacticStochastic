@@ -97,7 +97,7 @@ if __name__ == '__main__':
 
         do_hf_out = True
         if do_hf_out:
-            gfi.store_processed_gb_file(galaxy_dir, galaxy_file, ifm.wc, ifm.lc, ifm.ic, ifm.nt_min, ifm.nt_max, ifm.bgd, ifm.period_list, ifm.n_bin_use, ifm.SAET_m, ifm.SAE_fin, ifm.const_only, ifm.snrs_tot, ifm.n_full_converged, ifm.argbinmap, ifm.const_suppress, ifm.const_suppress2, ifm.var_suppress, snr_min_in)
+            gfi.store_processed_gb_file(galaxy_dir, galaxy_file, ifm.wc, ifm.lc, ifm.ic, ifm.nt_min, ifm.nt_max, ifm.bgd, ifm.period_list, ifm.n_bin_use, ifm.SAET_m, ifm.SAE_fin, ifm.const_only, ifm.bis.snrs_tot, ifm.n_full_converged, ifm.argbinmap, ifm.const_suppress, ifm.bis.const_suppress2, ifm.bis.var_suppress, snr_min_in)
 
 
 
