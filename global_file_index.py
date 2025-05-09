@@ -178,7 +178,6 @@ def store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_bg_c
     hf_out['SAET'].create_dataset('galactic_bg_const', data=galactic_bg_const, compression='gzip')
     hf_out['SAET'].create_dataset('noise_realization', data=noise_realization, compression='gzip')
     hf_out['SAET'].create_dataset('smooth_lengthf', data=ic.smooth_lengthf)
-    hf_out['SAET'].create_dataset('smooth_lengtht', data=ic.smooth_lengtht)
     hf_out['SAET'].create_dataset('snr_thresh', data=ic.snr_thresh)
     hf_out['SAET'].create_dataset('snr_min', data=ic.snr_min)
     hf_out['SAET'].create_dataset('Nt', data=wc.Nt)

@@ -53,9 +53,8 @@ if __name__=='__main__':
     galactic_bg_const = np.zeros((wc.Nt*wc.Nf, wc.NC))
 
     smooth_lengthf = np.full(n_iterations, 8)
-    smooth_lengtht = np.full(n_iterations, 84*2)
 
-    ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_autosuppress, smooth_lengthf, smooth_lengtht)
+    ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_autosuppress, smooth_lengthf)
 
     galactic_bg_full, galactic_bg_const, signal_full, SAET_tot, var_suppress, snrs, snrs_tot, noise_AET_dense = do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_ini, params_gb, snrs_tot, galactic_bg_const, noise_realization, SAET_m)
 

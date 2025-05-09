@@ -70,7 +70,6 @@ if __name__ == '__main__':
         smooth_lengthfs[2] = smooth_lengthf_targ + smooth_lengthf_long*np.exp(-2)
         smooth_lengthfs[3] = smooth_lengthf_targ + smooth_lengthf_long*np.exp(-3)
 
-        smooth_lengthts = np.zeros(n_iterations)
 
 
         snr_min = np.zeros(n_iterations)
@@ -81,7 +80,7 @@ if __name__ == '__main__':
 
         const_converge_change_thresh = 3
 
-        ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_autosuppresses, smooth_lengthfs, smooth_lengthts)
+        ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_autosuppresses, smooth_lengthfs)
 
         galactic_bg_const = np.zeros_like(galactic_bg_const_in)
 

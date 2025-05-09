@@ -75,7 +75,6 @@ if __name__ == '__main__':
 
     snr_thresh = 7.
     smooth_lengthf = 6
-    smooth_lengtht = 0
 
     noise_realization = gfi.get_noise_common(galaxy_dir, snr_thresh, wc, lc)
 

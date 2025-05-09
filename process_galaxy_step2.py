@@ -61,9 +61,8 @@ if __name__=='__main__':
     galactic_bg_const = galactic_bg_const_in.reshape(wc.Nt, wc.Nf, wc.NC)[:wc.Nt].reshape(wc.Nt*wc.Nf, wc.NC)
 
     smooth_lengthf = np.full(n_iterations, 8)
-    smooth_lengtht = np.full(n_iterations, 84*2)
 
-    ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_autosuppress, smooth_lengthf, smooth_lengtht)
+    ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_autosuppress, smooth_lengthf)
 
     const_suppress_in = snrs_tot_in < ic.snr_min[0]
 
@@ -72,7 +71,6 @@ if __name__=='__main__':
     do_hf_write = True
     if do_hf_write:
         gfi.store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_bg_const, noise_realization, n_bin_use, SAET_m, snrs_tot)
-        #gfi.store_init_gb_file(galaxy_dir, galaxy_file, wc, lc, snr_thresh, snr_min, galactic_bg_const, noise_realization, smooth_lengthf, smooth_lengtht, n_iterations, n_bin_use, SAET_m, snrs_tot)
 
     plot_noise_spectrum_evolve = True
     if plot_noise_spectrum_evolve:

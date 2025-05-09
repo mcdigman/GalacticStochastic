@@ -9,7 +9,7 @@ import scipy.stats
 from galactic_fit_helpers import get_SAET_cyclostationary_mean
 from instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
 
-IterationConfig = namedtuple('IterationConfig', ['n_iterations', 'snr_thresh', 'snr_min', 'snr_autosuppress', 'smooth_lengthf', 'smooth_lengtht'])
+IterationConfig = namedtuple('IterationConfig', ['n_iterations', 'snr_thresh', 'snr_min', 'snr_autosuppress', 'smooth_lengthf'])
 BGDecomposition = namedtuple('BGDecomposition', ['galactic_bg_const_base', 'galactic_bg_const', 'galactic_bg', 'galactic_bg_suppress'])
 
 def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_ini, params_gb, snrs_tot, galactic_bg_const, noise_realization, SAET_m):
@@ -39,36 +39,10 @@ def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_in
 
         signal_full = galactic_bg_full + noise_realization
 
-        #SAET_tot[itrn+1] = get_smoothed_timevarying_spectrum(wc, galactic_bg_full, signal_full, SAET_m, ic.smooth_lengthf[itrn], ic.smooth_lengtht[itrn])
         SAET_tot[itrn+1], _, _, _, _ = get_SAET_cyclostationary_mean(galactic_bg_full, SAET_m, wc, smooth_lengthf=ic.smooth_lengthf[itrn], filter_periods=False, period_list=np.array([]))
 
     return galactic_bg_full, galactic_bg_const, signal_full, SAET_tot, var_suppress, snrs, snrs_tot, noise_AET_dense
 
-#def get_smoothed_timevarying_spectrum(wc, galactic_bg_full, signal_full, SAET_m, smooth_lengthf, smooth_lengtht):
-#    SAET_galactic_bg_smoothf_white = np.zeros((wc.Nt, wc.Nf, wc.NC))
-#    SAET_galactic_bg_smoothft_white = np.zeros((wc.Nt, wc.Nf, wc.NC))
-#    SAET_galactic_bg_smooth = np.zeros((wc.Nt, wc.Nf, wc.NC))
-#
-#    for itrc in range(wc.NC):
-#        SAET_galactic_bg_white = signal_full[:, :, itrc]**2/SAET_m[:, itrc]
-#        for itrf in range(wc.Nf):
-#            rreach = smooth_lengthf//2 - max(itrf-wc.Nf+smooth_lengthf//2+1, 0)
-#            lreach = smooth_lengthf//2 - max(smooth_lengthf//2-itrf, 0)
-#            SAET_galactic_bg_smoothf_white[:, itrf, itrc] = np.mean(SAET_galactic_bg_white[:, itrf-lreach:itrf+rreach+1], axis=1)
-#        for itrt in range(wc.Nt):
-#            rreach = smooth_lengtht//2 - max(itrt-wc.Nt+smooth_lengtht//2+1, 0)
-#            lreach = smooth_lengtht//2 - max(smooth_lengtht//2-itrt, 0)
-#            SAET_galactic_bg_smoothft_white[itrt, :, itrc] = np.mean(SAET_galactic_bg_smoothf_white[itrt-lreach:itrt+rreach+1, :, itrc], axis=0)
-#        SAET_galactic_bg_smooth[:, :, itrc] = SAET_galactic_bg_smoothft_white[:, :, itrc]*SAET_m[:, itrc]
-#
-#    #SAET_alt, _, _ = get_SAET_cyclostationary_mean(galactic_bg_full, SAET_m, wc, smooth_lengthf=smooth_lengthf/10., filter_periods=True, period_list=None)
-#    #import matplotlib.pyplot as plt
-#    #plt.semilogy(SAET_alt[0, 1:, 0])
-#    #plt.semilogy(np.mean(SAET_galactic_bg_smooth[:, 1:, 0], axis=0))
-#    #plt.show()
-#
-#
-#    return SAET_galactic_bg_smooth
 
 def run_binary_coadd(itrb, const_suppress_in, waveT_ini, noise_AET_dense, snrs, snrs_tot, itrn, galactic_bg_const, galactic_bg, var_suppress, wc, params_gb, snr_min, snr_autosuppress):
     if not const_suppress_in[itrb]:
