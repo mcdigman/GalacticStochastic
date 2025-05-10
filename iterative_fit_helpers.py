@@ -20,7 +20,7 @@ def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_in
 
     for itrn in range(ic.n_iterations):
         galactic_bg = np.zeros((wc.Nt*wc.Nf, wc.NC))
-        noise_AET_dense = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot[itrn], wc, prune=False)
+        noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot[itrn], wc, prune=False)
 
         t0n = perf_counter()
 
@@ -29,7 +29,7 @@ def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_in
                 tin = perf_counter()
                 print("Starting binary # %11d at t=%9.2f s at iteration %4d" % (itrb, (tin - t0n), itrn))
 
-            run_binary_coadd(itrb, const_suppress_in, waveT_ini, noise_AET_dense, snrs, snrs_tot, itrn, galactic_bg_const, galactic_bg, var_suppress, wc, params_gb, ic.snr_min[itrn], ic.snr_autosuppress[itrn])
+            run_binary_coadd(itrb, const_suppress_in, waveT_ini, noise_upper, snrs, snrs_tot, itrn, galactic_bg_const, galactic_bg, var_suppress, wc, params_gb, ic.snr_min[itrn], ic.snr_autosuppress[itrn])
 
         t1n = perf_counter()
 
@@ -41,14 +41,14 @@ def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_in
 
         SAET_tot[itrn+1], _, _, _, _ = get_SAET_cyclostationary_mean(galactic_bg_full, SAET_m, wc, smooth_lengthf=ic.smooth_lengthf[itrn], filter_periods=False, period_list=np.array([]))
 
-    return galactic_bg_full, galactic_bg_const, signal_full, SAET_tot, var_suppress, snrs, snrs_tot, noise_AET_dense
+    return galactic_bg_full, galactic_bg_const, signal_full, SAET_tot, var_suppress, snrs, snrs_tot, noise_upper
 
 
-def run_binary_coadd(itrb, const_suppress_in, waveT_ini, noise_AET_dense, snrs, snrs_tot, itrn, galactic_bg_const, galactic_bg, var_suppress, wc, params_gb, snr_min, snr_autosuppress):
+def run_binary_coadd(itrb, const_suppress_in, waveT_ini, noise_upper, snrs, snrs_tot, itrn, galactic_bg_const, galactic_bg, var_suppress, wc, params_gb, snr_min, snr_autosuppress):
     if not const_suppress_in[itrb]:
         waveT_ini.update_params(params_gb[itrb].copy())
         listT_temp, waveT_temp, NUTs_temp = waveT_ini.get_unsorted_coeffs()
-        snrs[itrn, itrb] = noise_AET_dense.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp)
+        snrs[itrn, itrb] = noise_upper.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp)
         snrs_tot[itrn, itrb] = np.linalg.norm(snrs[itrn, itrb])
         if itrn == 0 and snrs_tot[0, itrb]<snr_min:
             const_suppress_in[itrb] = True
@@ -62,17 +62,17 @@ def run_binary_coadd(itrb, const_suppress_in, waveT_ini, noise_AET_dense, snrs, 
 
 
 # TODO consolidate with the other run_binary_coadd
-def run_binary_coadd2(waveT_ini, params_gb, var_suppress, const_suppress, const_suppress2, snrs_base, snrs, snrs_tot, snrs_tot_base, itrn, itrb, noise_AET_dense, noise_AET_dense_base, ic, const_converged, var_converged, nt_min, nt_max, bgd):
+def run_binary_coadd2(waveT_ini, params_gb, var_suppress, const_suppress, const_suppress2, snrs_base, snrs, snrs_tot, snrs_tot_base, itrn, itrb, noise_upper, noise_lower, ic, const_converged, var_converged, nt_min, nt_max, bgd):
     waveT_ini.update_params(params_gb[itrb].copy())
     listT_temp, waveT_temp, NUTs_temp = waveT_ini.get_unsorted_coeffs()
 
-    var_suppress[itrn, itrb], const_suppress2[itrn, itrb] = suppress_decision_helper(snrs_base, snrs, snrs_tot, snrs_tot_base, itrn, itrb, listT_temp, NUTs_temp, waveT_temp, noise_AET_dense, noise_AET_dense_base, ic, const_converged, var_converged, nt_min, nt_max)
+    var_suppress[itrn, itrb], const_suppress2[itrn, itrb] = suppress_decision_helper(snrs_base, snrs, snrs_tot, snrs_tot_base, itrn, itrb, listT_temp, NUTs_temp, waveT_temp, noise_upper, noise_lower, ic, const_converged, var_converged, nt_min, nt_max)
     suppress_coadd_helper(var_suppress, const_suppress, const_suppress2, itrn, itrb, bgd, listT_temp, NUTs_temp, waveT_temp, var_converged)
 
 
-def suppress_decision_helper(snrs_base, snrs, snrs_tot, snrs_tot_base, itrn, itrb, listT_temp, NUTs_temp, waveT_temp, noise_AET_dense, noise_AET_dense_base, ic, const_converged, var_converged, nt_min, nt_max):
+def suppress_decision_helper(snrs_base, snrs, snrs_tot, snrs_tot_base, itrn, itrb, listT_temp, NUTs_temp, waveT_temp, noise_upper, noise_lower, ic, const_converged, var_converged, nt_min, nt_max):
     if not const_converged[itrn]:
-        snrs_base[itrn, itrb] = noise_AET_dense_base.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp, nt_min, nt_max)
+        snrs_base[itrn, itrb] = noise_lower.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp, nt_min, nt_max)
         snrs_tot_base[itrn, itrb] = np.linalg.norm(snrs_base[itrn, itrb])
         thresh_base = snrs_tot_base[itrn, itrb] < ic.snr_min[itrn]
     else:
@@ -81,7 +81,7 @@ def suppress_decision_helper(snrs_base, snrs, snrs_tot, snrs_tot_base, itrn, itr
         thresh_base = False
 
     if not var_converged[itrn]:
-        snrs[itrn, itrb] = noise_AET_dense.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp, nt_min, nt_max)
+        snrs[itrn, itrb] = noise_upper.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp, nt_min, nt_max)
         snrs_tot[itrn, itrb] = np.linalg.norm(snrs[itrn, itrb])
         thresh_var = snrs_tot[itrn, itrb] >= ic.snr_autosuppress[itrn]
     else:
@@ -158,7 +158,7 @@ def total_signal_consistency_check(galactic_full_signal, bgd, itrn):
         #check all contributions to the total signal are tracked accurately
         assert np.allclose(galactic_full_signal, bgd.galactic_bg_const_base + bgd.galactic_bg_const + bgd.galactic_bg + bgd.galactic_bg_suppress, atol=1.e-300, rtol=1.e-6)
 
-def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, period_list1, const_only, noise_AET_dense, n_cyclo_switch):
+def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, period_list1, const_only, noise_upper, n_cyclo_switch):
 
     # short circuit if we have previously decided subtraction is converged
     if fit_state.var_converged[itrn]:
@@ -166,7 +166,7 @@ def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, 
         fit_state.var_converged[itrn+1] = fit_state.var_converged[itrn]
         fit_state.const_converged[itrn+1] = fit_state.const_converged[itrn]
         bis.n_var_suppress[itrn+1] = bis.n_var_suppress[itrn]
-        return noise_AET_dense
+        return noise_upper
 
     galactic_bg_res = bgd.galactic_bg + bgd.galactic_bg_const + bgd.galactic_bg_const_base
     bis.n_var_suppress[itrn+1] = bis.var_suppress[itrn].sum()
@@ -191,7 +191,7 @@ def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, 
             fit_state.var_converged[itrn+1] = False
             fit_state.const_converged[itrn+1] = fit_state.const_converged[itrn]
 
-        return noise_AET_dense
+        return noise_upper
 
 
     # subtraction has not converged, get a new noise model
@@ -205,14 +205,14 @@ def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, 
     else:
         SAET_tot_cur, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_bg_res, SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods=not const_only, period_list=period_list1)
 
-    noise_AET_dense = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_cur, wc, prune=True)
+    noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_cur, wc, prune=True)
 
     SAET_tot_cur = None
 
-    return noise_AET_dense
+    return noise_upper
 
 
-def addition_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, period_list1, const_only, noise_AET_dense_base, noise_AET_dense, n_const_force, const_converge_change_thresh, smooth_lengthf_targ):
+def addition_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, period_list1, const_only, noise_lower, noise_upper, n_const_force, const_converge_change_thresh, smooth_lengthf_targ):
     if not fit_state.const_converged[itrn+1] or fit_state.switch_next[itrn+1]:
         if itrn < n_const_force:
             #TODO should use smooth_lengthf or smooth_lengthf_targ
@@ -225,8 +225,8 @@ def addition_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, period_
             print('disabled constant adaptation at ' + str(itrn))
 
         # make sure this will always predict >= snrs to the actual spectrum in use
-        SAET_tot_base = np.min([SAET_tot_base, noise_AET_dense.SAET], axis=0)
-        noise_AET_dense_base = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_base, wc, prune=True)
+        SAET_tot_base = np.min([SAET_tot_base, noise_upper.SAET], axis=0)
+        noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_base, wc, prune=True)
 
         SAET_tot_base = None
 
@@ -278,4 +278,4 @@ def addition_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, period_
         fit_state.var_converged[itrn+1] = fit_state.var_converged[itrn+1]
         bis.n_const_suppress[itrn+1] = bis.n_const_suppress[itrn]
 
-    return noise_AET_dense_base
+    return noise_lower

@@ -32,15 +32,15 @@ if __name__=='__main__':
     listT_temp, waveT_temp, NUTs_temp = waveT_ini.get_unsorted_coeffs()
 
     SAET_m = instrument_noise_AET_wdm_m(lc, wc)
-    noise_AET_dense_pure = DiagonalStationaryDenseInstrumentNoiseModel(SAET_m, wc, prune=False)
+    noise_floor = DiagonalStationaryDenseInstrumentNoiseModel(SAET_m, wc, prune=False)
 
-    noise_realization = noise_AET_dense_pure.generate_dense_noise()
+    noise_realization = noise_floor.generate_dense_noise()
 
     n_bin_use = n_tot
 
     n_iterations = 2
     SAET_tot = np.zeros((n_iterations+1, wc.Nt, wc.Nf, wc.NC))
-    SAET_tot[0] = noise_AET_dense_pure.SAET.copy()
+    SAET_tot[0] = noise_floor.SAET.copy()
 
     snr_thresh = 7.
     snr_min = np.full(n_iterations, snr_thresh)
@@ -56,7 +56,7 @@ if __name__=='__main__':
 
     ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_autosuppress, smooth_lengthf)
 
-    galactic_bg_full, galactic_bg_const, signal_full, SAET_tot, var_suppress, snrs, snrs_tot, noise_AET_dense = do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_ini, params_gb, snrs_tot, galactic_bg_const, noise_realization, SAET_m)
+    galactic_bg_full, galactic_bg_const, signal_full, SAET_tot, var_suppress, snrs, snrs_tot, noise_upper = do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_ini, params_gb, snrs_tot, galactic_bg_const, noise_realization, SAET_m)
 
     do_hf_write = True
     if do_hf_write:

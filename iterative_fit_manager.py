@@ -48,8 +48,8 @@ class IterativeFitManager():
         self.idx_SAET_save = np.hstack([np.arange(0, min(10, n_iterations)), np.arange(min(10, n_iterations), 4), n_iterations-1])
         self.itr_save = 0
 
-        self.SAET_tots = np.zeros((self.idx_SAET_save.size, wc.Nt, wc.Nf, 2))
-        self.SAET_fin = np.zeros((wc.Nt, wc.Nf, 2))
+        self.SAET_tots = np.zeros((self.idx_SAET_save.size, wc.Nt, wc.Nf, 3))
+        self.SAET_fin = np.zeros((wc.Nt, wc.Nf, 3))
 
 
         self.parseval_const = np.zeros(n_iterations)
@@ -67,12 +67,12 @@ class IterativeFitManager():
         SAET_tot_base = np.zeros((wc.Nt, wc.Nf, wc.NC))
         SAET_tot_base[:] = self.SAET_m
         if self.idx_SAET_save[self.itr_save] == 0:
-            self.SAET_tots[0] = SAET_tot_cur[:, :, :2]
+            self.SAET_tots[0] = SAET_tot_cur[:, :, :]
             self.itr_save += 1
         SAET_tot_base = np.min([SAET_tot_base, SAET_tot_cur], axis=0)
 
-        self.noise_AET_dense = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_cur, wc, prune=True)
-        self.noise_AET_dense_base = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_base, wc, prune=True)
+        self.noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_cur, wc, prune=True)
+        self.noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_base, wc, prune=True)
 
         SAET_tot_cur = None
         SAET_tot_base = None
@@ -134,9 +134,9 @@ class IterativeFitManager():
 
         t1n = perf_counter()
 
-        self.noise_AET_dense = subtraction_convergence_decision(self.bgd, self.bis, self.fit_state, itrn, self.SAET_m, self.wc, self.ic, self.period_list, self.const_only, self.noise_AET_dense, self.n_cyclo_switch)
+        self.noise_upper = subtraction_convergence_decision(self.bgd, self.bis, self.fit_state, itrn, self.SAET_m, self.wc, self.ic, self.period_list, self.const_only, self.noise_upper, self.n_cyclo_switch)
 
-        self.noise_AET_dense_base = addition_convergence_decision(self.bgd, self.bis, self.fit_state, itrn, self.SAET_m, self.wc, self.period_list, self.const_only, self.noise_AET_dense_base, self.noise_AET_dense, self.n_const_force, self.const_converge_change_thresh, self.smooth_lengthf_fix)
+        self.noise_lower = addition_convergence_decision(self.bgd, self.bis, self.fit_state, itrn, self.SAET_m, self.wc, self.period_list, self.const_only, self.noise_lower, self.noise_upper, self.n_const_force, self.const_converge_change_thresh, self.smooth_lengthf_fix)
 
         self._state_check(itrn)
 
@@ -155,15 +155,15 @@ class IterativeFitManager():
         idxbs = np.argwhere(~self.bis.suppress[itrn]).flatten()
         for itrb in idxbs:
             if not self.bis.suppress[itrn, itrb]:
-                run_binary_coadd2(self.waveform_manager, self.params_gb, self.bis.var_suppress, self.const_suppress, self.bis.const_suppress2, self.bis.snrs_base, self.bis.snrs, self.bis.snrs_tot, self.bis.snrs_tot_base, itrn, itrb, self.noise_AET_dense, self.noise_AET_dense_base, self.ic, self.fit_state.const_converged, self.fit_state.var_converged, self.nt_min, self.nt_max, self.bgd)
+                run_binary_coadd2(self.waveform_manager, self.params_gb, self.bis.var_suppress, self.const_suppress, self.bis.const_suppress2, self.bis.snrs_base, self.bis.snrs, self.bis.snrs_tot, self.bis.snrs_tot_base, itrn, itrb, self.noise_upper, self.noise_lower, self.ic, self.fit_state.const_converged, self.fit_state.var_converged, self.nt_min, self.nt_max, self.bgd)
 
     def _iteration_cleanup(self, itrn):
         if self.itr_save < self.idx_SAET_save.size and itrn == self.idx_SAET_save[self.itr_save]:
-            self.SAET_tots[self.itr_save] = self.noise_AET_dense.SAET[:, :, :]
+            self.SAET_tots[self.itr_save] = self.noise_upper.SAET[:, :, :]
             self.itr_save += 1
 
     def _loop_cleanup(self):
-        self.SAET_fin[:] = self.noise_AET_dense.SAET[:, :, :]
+        self.SAET_fin[:] = self.noise_upper.SAET[:, :, :]
 
     def check_done(self,itrn):
         if self.fit_state.var_converged[itrn+1] and self.fit_state.const_converged[itrn+1]:
