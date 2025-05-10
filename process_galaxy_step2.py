@@ -32,7 +32,7 @@ if __name__=='__main__':
     params0 = params_gb[0].copy()
 
 
-    galactic_bg_const_in, noise_realization_common, snrs_tot_in, _, lc = gfi.load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
+    galactic_below_in, noise_realization_common, snrs_tot_in, _, lc = gfi.load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
 
 
 
@@ -58,7 +58,9 @@ if __name__=='__main__':
     snrs_tot = np.zeros((n_iterations, n_bin_use))
     snrs_tot[:] = snrs_tot_in
 
-    galactic_bg_const = galactic_bg_const_in.reshape(wc.Nt, wc.Nf, wc.NC)[:wc.Nt].reshape(wc.Nt*wc.Nf, wc.NC)
+    galactic_below = galactic_below_in.reshape(wc.Nt, wc.Nf, wc.NC)[:wc.Nt].reshape(wc.Nt*wc.Nf, wc.NC)
+
+    galactic_below_in = None
 
     smooth_lengthf = np.full(n_iterations, 8)
 
@@ -66,11 +68,11 @@ if __name__=='__main__':
 
     const_suppress_in = snrs_tot_in < ic.snr_min[0]
 
-    galactic_bg_full, galactic_bg_const, signal_full, SAET_tot, var_suppress, snrs, snrs_tot, noise_upper = do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_ini, params_gb, snrs_tot, galactic_bg_const, noise_realization, SAET_m)
+    galactic_below_high, galactic_below, signal_full, SAET_tot, var_suppress, snrs, snrs_tot, noise_upper = do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_ini, params_gb, snrs_tot, galactic_below, noise_realization, SAET_m)
 
     do_hf_write = True
     if do_hf_write:
-        gfi.store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_bg_const, noise_realization, n_bin_use, SAET_m, snrs_tot)
+        gfi.store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, noise_realization, n_bin_use, SAET_m, snrs_tot)
 
     plot_noise_spectrum_evolve = True
     if plot_noise_spectrum_evolve:
@@ -100,7 +102,7 @@ if __name__=='__main__':
 
     plot_bg = True
     if plot_bg:
-        res = galactic_bg_full[:, :, 0]
+        res = galactic_below_high[:, :, 0]
         res = res[:, :wc.Nf//2]
         mask = (res==0.)
         res[mask] = np.nan

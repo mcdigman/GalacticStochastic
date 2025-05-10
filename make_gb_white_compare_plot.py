@@ -79,16 +79,16 @@ if __name__ == '__main__':
     noise_realization = gfi.get_noise_common(galaxy_dir, snr_thresh, wc, lc)
 
     #TODO _var should _cyclo and _const should also be changed to deconflict names
-    _, galactic_bg_var = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, False)
-    _, galactic_bg_const = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, True)
+    _, galactic_cyclo = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, False)
+    _, galactic_const = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, True)
 
-    signal_full_var = galactic_bg_var + noise_realization
-    signal_full_const = galactic_bg_const + noise_realization
+    signal_full_var = galactic_cyclo + noise_realization
+    signal_full_const = galactic_const + noise_realization
 
     SAET_m = instrument_noise_AET_wdm_m(lc, wc)
 
-    SAET_model, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_bg_var, SAET_m, wc, 0, filter_periods=True, period_list=np.array([1, 2, 3, 4, 5]))
-    #SAET_model_const, _, _ = get_SAET_cyclostationary_mean(galactic_bg_const, SAET_m, wc, 0, filter_periods=True, period_list=np.array([]))
+    SAET_model, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_cyclo, SAET_m, wc, 0, filter_periods=True, period_list=np.array([1, 2, 3, 4, 5]))
+    #SAET_model_const, _, _ = get_SAET_cyclostationary_mean(galactic_const, SAET_m, wc, 0, filter_periods=True, period_list=np.array([]))
 
     fs = np.arange(1, wc.Nf)*wc.DF
 
@@ -139,7 +139,7 @@ if do_2plot:
 
 do_3plot = True
 if do_3plot:
-    signal_white_2 = (galactic_bg_var[:, nf_min:nf_max, 0:2]**2/(SAET_model-SAET_m)[:, nf_min:nf_max, 0:2]).sum(axis=2)
+    signal_white_2 = (galactic_cyclo[:, nf_min:nf_max, 0:2]**2/(SAET_model-SAET_m)[:, nf_min:nf_max, 0:2]).sum(axis=2)
 
     fig, ax = plt.subplots(1, 3, figsize=(8.4, 2.85))
     fig.subplots_adjust(wspace=0., hspace=0., left=0.055, top=0.91, right=1.110, bottom=0.18)

@@ -10,16 +10,16 @@ from galactic_fit_helpers import get_SAET_cyclostationary_mean
 from instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
 
 IterationConfig = namedtuple('IterationConfig', ['n_iterations', 'snr_thresh', 'snr_min', 'snr_autosuppress', 'smooth_lengthf'])
-BGDecomposition = namedtuple('BGDecomposition', ['galactic_bg_const_base', 'galactic_bg_const', 'galactic_bg', 'galactic_bg_suppress'])
+BGDecomposition = namedtuple('BGDecomposition', ['galactic_floor', 'galactic_below', 'galactic_undecided', 'galactic_above'])
 
-def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_ini, params_gb, snrs_tot, galactic_bg_const, noise_realization, SAET_m):
+def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_ini, params_gb, snrs_tot, galactic_below, noise_realization, SAET_m):
     # TODO make snr_autosuppress and smooth_lengthf an array as a function of iteration
     # TODO make NC controllable; probably not much point in getting T channel snrs
     snrs = np.zeros((ic.n_iterations, n_bin_use, wc.NC))
     var_suppress = np.zeros((ic.n_iterations, n_bin_use), dtype=np.bool_)
 
     for itrn in range(ic.n_iterations):
-        galactic_bg = np.zeros((wc.Nt*wc.Nf, wc.NC))
+        galactic_undecided = np.zeros((wc.Nt*wc.Nf, wc.NC))
         noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot[itrn], wc, prune=False)
 
         t0n = perf_counter()
@@ -29,22 +29,22 @@ def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_in
                 tin = perf_counter()
                 print("Starting binary # %11d at t=%9.2f s at iteration %4d" % (itrb, (tin - t0n), itrn))
 
-            run_binary_coadd(itrb, const_suppress_in, waveT_ini, noise_upper, snrs, snrs_tot, itrn, galactic_bg_const, galactic_bg, var_suppress, wc, params_gb, ic.snr_min[itrn], ic.snr_autosuppress[itrn])
+            run_binary_coadd(itrb, const_suppress_in, waveT_ini, noise_upper, snrs, snrs_tot, itrn, galactic_below, galactic_undecided, var_suppress, wc, params_gb, ic.snr_min[itrn], ic.snr_autosuppress[itrn])
 
         t1n = perf_counter()
 
         print('Finished coadd for iteration %4d at time %9.2f s' % ((itrn, t1n-t0n)))
 
-        galactic_bg_full = (galactic_bg + galactic_bg_const).reshape((wc.Nt, wc.Nf, wc.NC))
+        galactic_below_high = (galactic_undecided + galactic_below).reshape((wc.Nt, wc.Nf, wc.NC))
 
-        signal_full = galactic_bg_full + noise_realization
+        signal_full = galactic_below_high + noise_realization
 
-        SAET_tot[itrn+1], _, _, _, _ = get_SAET_cyclostationary_mean(galactic_bg_full, SAET_m, wc, smooth_lengthf=ic.smooth_lengthf[itrn], filter_periods=False, period_list=np.array([]))
+        SAET_tot[itrn+1], _, _, _, _ = get_SAET_cyclostationary_mean(galactic_below_high, SAET_m, wc, smooth_lengthf=ic.smooth_lengthf[itrn], filter_periods=False, period_list=np.array([]))
 
-    return galactic_bg_full, galactic_bg_const, signal_full, SAET_tot, var_suppress, snrs, snrs_tot, noise_upper
+    return galactic_below_high, galactic_below, signal_full, SAET_tot, var_suppress, snrs, snrs_tot, noise_upper
 
 
-def run_binary_coadd(itrb, const_suppress_in, waveT_ini, noise_upper, snrs, snrs_tot, itrn, galactic_bg_const, galactic_bg, var_suppress, wc, params_gb, snr_min, snr_autosuppress):
+def run_binary_coadd(itrb, const_suppress_in, waveT_ini, noise_upper, snrs, snrs_tot, itrn, galactic_below, galactic_undecided, var_suppress, wc, params_gb, snr_min, snr_autosuppress):
     if not const_suppress_in[itrb]:
         waveT_ini.update_params(params_gb[itrb].copy())
         listT_temp, waveT_temp, NUTs_temp = waveT_ini.get_unsorted_coeffs()
@@ -53,10 +53,10 @@ def run_binary_coadd(itrb, const_suppress_in, waveT_ini, noise_upper, snrs, snrs
         if itrn == 0 and snrs_tot[0, itrb]<snr_min:
             const_suppress_in[itrb] = True
             for itrc in range(wc.NC):
-                galactic_bg_const[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+                galactic_below[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
         elif snrs_tot[itrn, itrb]<snr_autosuppress:
             for itrc in range(wc.NC):
-                galactic_bg[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+                galactic_undecided[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
         else:
             var_suppress[itrn, itrb] = True
 
@@ -124,21 +124,21 @@ def suppress_coadd_helper(var_suppress, const_suppress, const_suppress2, itrn, i
         if var_suppress[itrn, itrb]:
             # binary is bright enough to suppress
             for itrc in range(2):
-                bgd.galactic_bg_suppress[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+                bgd.galactic_above[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
         else:
             # binary neither faint nor bright enough to suppress
             for itrc in range(2):
-                bgd.galactic_bg[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+                bgd.galactic_undecided[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
     else:
         # binary is faint enough to suppress
         if itrn == 1:
             const_suppress2[itrn, itrb] = False
             const_suppress[itrb] = True
             for itrc in range(2):
-                bgd.galactic_bg_const_base[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+                bgd.galactic_floor[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
         else:
             for itrc in range(2):
-                bgd.galactic_bg_const[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+                bgd.galactic_below[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
 
 
 def sustain_snr_helper(const_converged, snrs_tot_base, snrs_base, snrs_tot, snrs, itrn, suppressed, var_converged):
@@ -150,13 +150,13 @@ def sustain_snr_helper(const_converged, snrs_tot_base, snrs_base, snrs_tot, snrs
         snrs_tot[itrn, suppressed] = snrs_tot[itrn-1, suppressed]
         snrs[itrn, suppressed] = snrs[itrn-1, suppressed]
 
-def total_signal_consistency_check(galactic_full_signal, bgd, itrn):
+def total_signal_consistency_check(galactic_total, bgd, itrn):
     if itrn == 1:
-        assert np.all(bgd.galactic_bg_const == 0.)
-        galactic_full_signal[:] = bgd.galactic_bg_const_base + bgd.galactic_bg_const + bgd.galactic_bg + bgd.galactic_bg_suppress
+        assert np.all(bgd.galactic_below == 0.)
+        galactic_total[:] = bgd.galactic_floor + bgd.galactic_below + bgd.galactic_undecided + bgd.galactic_above
     else:
         #check all contributions to the total signal are tracked accurately
-        assert np.allclose(galactic_full_signal, bgd.galactic_bg_const_base + bgd.galactic_bg_const + bgd.galactic_bg + bgd.galactic_bg_suppress, atol=1.e-300, rtol=1.e-6)
+        assert np.allclose(galactic_total, bgd.galactic_floor + bgd.galactic_below + bgd.galactic_undecided + bgd.galactic_above, atol=1.e-300, rtol=1.e-6)
 
 def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, period_list1, const_only, noise_upper, n_cyclo_switch):
 
@@ -168,7 +168,6 @@ def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, 
         bis.n_var_suppress[itrn+1] = bis.n_var_suppress[itrn]
         return noise_upper
 
-    galactic_bg_res = bgd.galactic_bg + bgd.galactic_bg_const + bgd.galactic_bg_const_base
     bis.n_var_suppress[itrn+1] = bis.var_suppress[itrn].sum()
 
     # subtraction is either converged or oscillating
@@ -200,10 +199,12 @@ def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, 
     fit_state.const_converged[itrn+1] = fit_state.const_converged[itrn]
 
     # don't use cyclostationary model until specified iteration
+    # higher estimate of galactic bg
+    galactic_below_high = bgd.galactic_undecided + bgd.galactic_below + bgd.galactic_floor
     if itrn < n_cyclo_switch:
-        SAET_tot_cur, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_bg_res, SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods=False, period_list=period_list1)
+        SAET_tot_cur, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_below_high, SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods=False, period_list=period_list1)
     else:
-        SAET_tot_cur, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_bg_res, SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods=not const_only, period_list=period_list1)
+        SAET_tot_cur, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_below_high, SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods=not const_only, period_list=period_list1)
 
     noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_cur, wc, prune=True)
 
@@ -216,10 +217,10 @@ def addition_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, period_
     if not fit_state.const_converged[itrn+1] or fit_state.switch_next[itrn+1]:
         if itrn < n_const_force:
             #TODO should use smooth_lengthf or smooth_lengthf_targ
-            SAET_tot_base, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.galactic_bg_const + bgd.galactic_bg_const_base, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
+            SAET_tot_base, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.galactic_below + bgd.galactic_floor, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
             fit_state.const_converged[itrn+1] = fit_state.const_converged[itrn+1]
         else:
-            SAET_tot_base, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.galactic_bg_const + bgd.galactic_bg_const_base, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
+            SAET_tot_base, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.galactic_below + bgd.galactic_floor, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
             fit_state.const_converged[itrn+1] = True
             # need to disable adaption of constant here because after this point the convergence isn't guaranteed to be monotonic
             print('disabled constant adaptation at ' + str(itrn))

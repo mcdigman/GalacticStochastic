@@ -56,12 +56,12 @@ if __name__ == '__main__':
     r_tots = np.zeros((nk,wc.Nt,wc.NC))
 
     for itrk in range(0,nk):
-        _, galactic_bg_total = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_mins[itrk], nt_maxs[itrk], const_only)
-        SAET_pures[itrk] = np.mean(galactic_bg_total,axis=0)
+        _, galactic_below_high = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_mins[itrk], nt_maxs[itrk], const_only)
+        SAET_pures[itrk] = np.mean(galactic_below_high,axis=0)
 
         SAET_pures_smooth[itrk,0,:] = SAET_pures[itrk,0,:]
 
-        _, r_tots[itrk], SAET_mean_cur, _ ,_ = get_SAET_cyclostationary_mean(galactic_bg_total,SAET_m,wc, smooth_targ_length,filter_periods=not const_only,period_list=period_list1,Nt_loc=wc.Nt)
+        _, r_tots[itrk], SAET_mean_cur, _ ,_ = get_SAET_cyclostationary_mean(galactic_below_high,SAET_m,wc, smooth_targ_length,filter_periods=not const_only,period_list=period_list1,Nt_loc=wc.Nt)
         SAET_pures_smooth[itrk] = SAET_mean_cur
 
         for itrc in range(0,2):

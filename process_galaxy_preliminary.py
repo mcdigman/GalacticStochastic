@@ -50,17 +50,17 @@ if __name__=='__main__':
 
     const_suppress_in = np.zeros(n_bin_use, dtype=np.bool_)
 
-    galactic_bg_const = np.zeros((wc.Nt*wc.Nf, wc.NC))
+    galactic_below = np.zeros((wc.Nt*wc.Nf, wc.NC))
 
     smooth_lengthf = np.full(n_iterations, 8)
 
     ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_autosuppress, smooth_lengthf)
 
-    galactic_bg_full, galactic_bg_const, signal_full, SAET_tot, var_suppress, snrs, snrs_tot, noise_upper = do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_ini, params_gb, snrs_tot, galactic_bg_const, noise_realization, SAET_m)
+    galactic_below_high, galactic_below, signal_full, SAET_tot, var_suppress, snrs, snrs_tot, noise_upper = do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_ini, params_gb, snrs_tot, galactic_below, noise_realization, SAET_m)
 
     do_hf_write = True
     if do_hf_write:
-        gfi.store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_bg_const, noise_realization, n_bin_use, SAET_m, snrs_tot)
+        gfi.store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, noise_realization, n_bin_use, SAET_m, snrs_tot)
 
     plot_noise_spectrum_evolve = True
     if plot_noise_spectrum_evolve:
@@ -90,7 +90,7 @@ if __name__=='__main__':
 
     plot_bg = False
     if plot_bg:
-        res = galactic_bg_full[:, :, 0]
+        res = galactic_below_high[:, :, 0]
         res = res[:, :wc.Nf//2]
         mask = (res==0.)
         res[mask] = np.nan
@@ -101,9 +101,9 @@ if __name__=='__main__':
     plot_realization_im = False
     if plot_realization_im:
         import matplotlib.pyplot as plt
-        mask = (galactic_bg_full==0.)
-        res = np.zeros_like(galactic_bg_full)
-        res[~mask] = np.log10(np.abs(galactic_bg_full[~mask]))
+        mask = (galactic_below_high==0.)
+        res = np.zeros_like(galactic_below_high)
+        res[~mask] = np.log10(np.abs(galactic_below_high[~mask]))
         plt.imshow(np.rot90(res[:, :, 0][:, 1:200]), aspect='auto')
         plt.ylabel('frequency')
         plt.xlabel('time')

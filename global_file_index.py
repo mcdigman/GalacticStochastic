@@ -106,11 +106,11 @@ def load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, Nf, Nt, 
     gb_file_source = hf_in['SAET']['source_gb_file'][()].decode()
     full_galactic_params_filename = get_galaxy_filename(galaxy_file, galaxy_dir)
     assert gb_file_source==full_galactic_params_filename
-    galactic_bg_const_in = np.asarray(hf_in['SAET']['galactic_bg_const'])
+    galactic_below_in = np.asarray(hf_in['SAET']['galactic_bg_const'])
     noise_realization_common = np.asarray(hf_in['SAET']['noise_realization'])
     snrs_tot_in = np.asarray(hf_in['SAET']['snrs_tot'])
     hf_in.close()
-    return galactic_bg_const_in, noise_realization_common, snrs_tot_in, wc, lc
+    return galactic_below_in, noise_realization_common, snrs_tot_in, wc, lc
 
 
 def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
@@ -125,7 +125,7 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
     snr_min = hf_in['preliminary_ic']['snr_min'][()]
 
     # TODO add check for wc and lc match expectations
-    galactic_bg_const_in = np.asarray(hf_in['SAET']['galactic_bg_const'])
+    galactic_below_in = np.asarray(hf_in['SAET']['galactic_bg_const'])
     noise_realization_got = np.asarray(hf_in['SAET']['noise_realization'])
 
     snr_tots_in = np.asarray(hf_in['SAET']['snrs_tot'])
@@ -137,7 +137,7 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
 
     hf_in.close()
 
-    return galactic_bg_const_in, noise_realization_got, snr_tots_in, SAET_m, wc, lc, snr_min
+    return galactic_below_in, noise_realization_got, snr_tots_in, SAET_m, wc, lc, snr_min
 
 def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, const_only):
     filename_in = get_processed_gb_filename(galaxy_dir, const_only, snr_thresh, wc, nt_min, nt_max)
@@ -150,8 +150,8 @@ def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, const
     assert wc2 == wc
     assert lc2 == lc
 
-    galactic_bg_const = np.asarray(hf_in['SAET']['galactic_bg_const'])
-    galactic_bg = np.asarray(hf_in['SAET']['galactic_bg'])
+    galactic_below = np.asarray(hf_in['SAET']['galactic_below'])
+    galactic_undecided = np.asarray(hf_in['SAET']['galactic_bg'])
 
     SAET_m = np.asarray(hf_in['SAET']['SAET_m'])
 
@@ -167,17 +167,17 @@ def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, const
 
     hf_in.close()
 
-    return argbinmap, (galactic_bg_const+galactic_bg).reshape((wc.Nt,wc.Nf,wc.NC))
+    return argbinmap, (galactic_below+galactic_undecided).reshape((wc.Nt,wc.Nf,wc.NC))
 
 
-def store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_bg_const, noise_realization, n_bin_use, SAET_m, snrs_tot):
+def store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, noise_realization, n_bin_use, SAET_m, snrs_tot):
     Nf = wc.Nf
     Nt = wc.Nt
     dt = wc.dt
     filename_out = get_preliminary_filename(galaxy_dir, ic.snr_thresh, Nf, Nt, dt)
     hf_out = h5py.File(filename_out, 'w')
     hf_out.create_group('SAET')
-    hf_out['SAET'].create_dataset('galactic_bg_const', data=galactic_bg_const, compression='gzip')
+    hf_out['SAET'].create_dataset('galactic_below', data=galactic_below, compression='gzip')
     hf_out['SAET'].create_dataset('noise_realization', data=noise_realization, compression='gzip')
     hf_out['SAET'].create_dataset('smooth_lengthf', data=ic.smooth_lengthf)
     hf_out['SAET'].create_dataset('snr_thresh', data=ic.snr_thresh)
@@ -214,9 +214,9 @@ def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max,
 
     hf_out = h5py.File(filename_out, 'w')
     hf_out.create_group('SAET')
-    hf_out['SAET'].create_dataset('galactic_bg_const', data=bgd.galactic_bg_const + bgd.galactic_bg_const_base, compression='gzip')
-    hf_out['SAET'].create_dataset('galactic_bg_suppress', data=bgd.galactic_bg_suppress, compression='gzip')
-    hf_out['SAET'].create_dataset('galactic_bg', data=bgd.galactic_bg, compression='gzip')
+    hf_out['SAET'].create_dataset('galactic_bg_const', data=bgd.galactic_below + bgd.galactic_floor, compression='gzip')
+    hf_out['SAET'].create_dataset('galactic_bg_suppress', data=bgd.galactic_above, compression='gzip')
+    hf_out['SAET'].create_dataset('galactic_bg', data=bgd.galactic_undecided, compression='gzip')
     hf_out['SAET'].create_dataset('period_list', data=period_list1)
 
     hf_out['SAET'].create_dataset('n_bin_use', data=n_bin_use)

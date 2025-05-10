@@ -91,7 +91,7 @@ def filter_periods_fft(r_mean, Nt_loc, period_list, wc):
 
 
 def get_SAET_cyclostationary_mean(
-        galactic_bg,
+        galactic_below,
         SAET_m,
         wc,
         smooth_lengthf=4,
@@ -108,7 +108,7 @@ def get_SAET_cyclostationary_mean(
 
     NC_loc = SAET_m.shape[1]
 
-    S_in = (galactic_bg[..., :NC_loc].reshape((wc.Nt, wc.Nf, NC_loc)))**2
+    S_in = (galactic_below[..., :NC_loc].reshape((wc.Nt, wc.Nf, NC_loc)))**2
     S_in_mean = np.mean(S_in, axis=0)
 
     amp_got = None

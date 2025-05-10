@@ -26,7 +26,7 @@ if __name__ == '__main__':
 
     snr_thresh = 7.
 
-    galactic_bg_const_in, _, snr_tots_in, SAET_m, _, _, snr_min_in = gfi.load_init_galactic_file(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
+    galactic_below_in, _, snr_tots_in, SAET_m, _, _, snr_min_in = gfi.load_init_galactic_file(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
 
     for itrm in range(0,1):
         const_only = False
@@ -89,7 +89,7 @@ if __name__ == '__main__':
 
         ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_autosuppresses, smooth_lengthfs)
 
-        ifm = IterativeFitManager(lc, wc, ic, SAET_m, n_iterations, galactic_bg_const_in, snr_tots_in, snr_min_in, params_gb, period_list, nt_min, nt_max, n_cyclo_switch, const_only, n_const_force, const_converge_change_thresh, smooth_lengthf_fix)
+        ifm = IterativeFitManager(lc, wc, ic, SAET_m, n_iterations, galactic_below_in, snr_tots_in, snr_min_in, params_gb, period_list, nt_min, nt_max, n_cyclo_switch, const_only, n_const_force, const_converge_change_thresh, smooth_lengthf_fix)
 
         params_gb = None
 
@@ -134,7 +134,7 @@ if plot_noise_spectrum_evolve:
     fig = plt.figure(figsize=(5.4, 3.5))
     ax = fig.subplots(1)
     fig.subplots_adjust(wspace=0., hspace=0., left=0.13, top=0.99, right=0.99, bottom=0.12)
-    ax.loglog(np.arange(1, wc.Nf)*wc.DF, (ifm.galactic_full_signal.reshape((wc.Nt, wc.Nf, wc.NC))[:, 1:, 0:2]**2).mean(axis=0).mean(axis=1)+SAET_m[1:, 0], 'k', alpha=0.3, zorder=-90)
+    ax.loglog(np.arange(1, wc.Nf)*wc.DF, (ifm.galactic_total.reshape((wc.Nt, wc.Nf, wc.NC))[:, 1:, 0:2]**2).mean(axis=0).mean(axis=1)+SAET_m[1:, 0], 'k', alpha=0.3, zorder=-90)
     ax.loglog(np.arange(1, wc.Nf)*wc.DF, np.mean(ifm.SAET_tots[[1, 2, 3, 4], :, 1:, 0], axis=1).T, '--', alpha=0.7)
     ax.loglog(np.arange(1, wc.Nf)*wc.DF, np.mean(ifm.noise_upper.SAET[:, 1:, 0:2], axis=0).mean(axis=1).T)
     ax.loglog(np.arange(1, wc.Nf)*wc.DF, SAET_m_shift[1:, 0], 'k--', zorder=-100)
@@ -149,8 +149,8 @@ if plot_noise_spectrum_evolve:
     plt.show()
 
 res_mask = (ifm.noise_upper.SAET[:, :, 0]-SAET_m[:, 0]).mean(axis=0) > 0.1*SAET_m[:, 0]
-galactic_bg_res = ifm.bgd.galactic_bg + ifm.bgd.galactic_bg_const + ifm.bgd.galactic_bg_const_base
-unit_normal_res, _, _, _ = unit_normal_battery((galactic_bg_res.reshape(wc.Nt, wc.Nf, wc.NC)[nt_min:nt_max, res_mask, 0:2]/np.sqrt(ifm.noise_upper.SAET[nt_min:nt_max, res_mask, 0:2]-SAET_m[res_mask, 0:2])).flatten(), A2_cut=10., sig_thresh=10.,do_assert=False)
+galactic_below_high = ifm.bgd.galactic_undecided + ifm.bgd.galactic_below + ifm.bgd.galactic_floor
+unit_normal_res, _, _, _ = unit_normal_battery((galactic_below_high.reshape(wc.Nt, wc.Nf, wc.NC)[nt_min:nt_max, res_mask, 0:2]/np.sqrt(ifm.noise_upper.SAET[nt_min:nt_max, res_mask, 0:2]-SAET_m[res_mask, 0:2])).flatten(), A2_cut=10., sig_thresh=10.,do_assert=False)
 if unit_normal_res:
     print('After iteration, final background PASSES normality tests')
 else:

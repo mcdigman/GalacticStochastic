@@ -17,7 +17,7 @@ from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 
 
 class IterativeFitManager():
-    def __init__(self, lc, wc, ic, SAET_m, n_iterations, galactic_bg_const_in, snr_tots_in, snr_min_in, params_gb, period_list, nt_min, nt_max, n_cyclo_switch, const_only, n_const_force, const_converge_change_thresh, smooth_lengthf_fix):
+    def __init__(self, lc, wc, ic, SAET_m, n_iterations, galactic_below_in, snr_tots_in, snr_min_in, params_gb, period_list, nt_min, nt_max, n_cyclo_switch, const_only, n_const_force, const_converge_change_thresh, smooth_lengthf_fix):
 
         self.wc = wc
         self.lc = lc
@@ -83,20 +83,20 @@ class IterativeFitManager():
         self.bis = BinaryInclusionState(ic.n_iterations, self.n_bin_use, self.wc)
         self.fit_state =  IterativeFitState(self.ic)
 
-        self.galactic_full_signal = np.zeros((wc.Nt*wc.Nf, wc.NC))
+        self.galactic_total = np.zeros((wc.Nt*wc.Nf, wc.NC))
 
-        galactic_bg_const_base = galactic_bg_const_in.copy()
-        galactic_bg_const_in = None
-        galactic_bg_const = np.zeros_like(galactic_bg_const_base)
-        galactic_bg_suppress = np.zeros((wc.Nt*wc.Nf, wc.NC))
-        galactic_bg = np.zeros((wc.Nt*wc.Nf, wc.NC))
+        galactic_floor = galactic_below_in.copy()
+        galactic_below_in = None
+        galactic_below = np.zeros_like(galactic_floor)
+        galactic_above = np.zeros((wc.Nt*wc.Nf, wc.NC))
+        galactic_undecided = np.zeros((wc.Nt*wc.Nf, wc.NC))
 
-        self.bgd = BGDecomposition(galactic_bg_const_base, galactic_bg_const, galactic_bg, galactic_bg_suppress)
+        self.bgd = BGDecomposition(galactic_floor, galactic_below, galactic_undecided, galactic_above)
 
-        galactic_bg_const = None
-        galactic_bg_const_base = None
-        galactic_bg_suppress = None
-        galactic_bg = None
+        galactic_below = None
+        galactic_floor = None
+        galactic_above = None
+        galactic_undecided = None
 
 
     def do_loop(self):
@@ -129,7 +129,7 @@ class IterativeFitManager():
         sustain_snr_helper(self.fit_state.const_converged, self.bis.snrs_tot_base, self.bis.snrs_base, self.bis.snrs_tot, self.bis.snrs, itrn, self.bis.suppress[itrn], self.fit_state.var_converged)
 
         # sanity check that the total signal does not change regardless of what bucket the binaries are allocated to
-        total_signal_consistency_check(self.galactic_full_signal, self.bgd, itrn)
+        total_signal_consistency_check(self.galactic_total, self.bgd, itrn)
 
 
         t1n = perf_counter()
@@ -190,7 +190,7 @@ class IterativeFitManager():
 
     def _state_update(self,itrn):
         if self.fit_state.switchf_next[itrn]:
-            self.bgd.galactic_bg_const[:] = 0.
+            self.bgd.galactic_below[:] = 0.
             self.bis.const_suppress2[itrn] = False
         else:
             self.bis.const_suppress2[itrn] = self.bis.const_suppress2[itrn-1]
@@ -198,9 +198,9 @@ class IterativeFitManager():
         if self.fit_state.var_converged[itrn]:
             self.bis.var_suppress[itrn] = self.bis.var_suppress[itrn-1]
         else:
-            self.bgd.galactic_bg[:] = 0.
+            self.bgd.galactic_undecided[:] = 0.
             if self.fit_state.switch_next[itrn]:
-                self.bgd.galactic_bg_suppress[:] = 0.
+                self.bgd.galactic_above[:] = 0.
                 self.bis.var_suppress[itrn] = False
             else:
                 self.bis.var_suppress[itrn] = self.bis.var_suppress[itrn-1]
@@ -219,10 +219,10 @@ class IterativeFitManager():
             assert not self.fit_state.var_converged[itrn+1]
 
     def _parseval_store(self,itrn):
-        self.parseval_tot[itrn] = np.sum((self.bgd.galactic_bg_const_base+self.bgd.galactic_bg_const+self.bgd.galactic_bg+self.bgd.galactic_bg_suppress).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
-        self.parseval_bg[itrn] = np.sum((self.bgd.galactic_bg_const_base+self.bgd.galactic_bg_const+self.bgd.galactic_bg).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
-        self.parseval_const[itrn] = np.sum((self.bgd.galactic_bg_const_base+self.bgd.galactic_bg_const).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
-        self.parseval_sup[itrn] = np.sum((self.bgd.galactic_bg_suppress).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
+        self.parseval_tot[itrn] = np.sum((self.bgd.galactic_floor+self.bgd.galactic_below+self.bgd.galactic_undecided+self.bgd.galactic_above).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
+        self.parseval_bg[itrn] = np.sum((self.bgd.galactic_floor+self.bgd.galactic_below+self.bgd.galactic_undecided).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
+        self.parseval_const[itrn] = np.sum((self.bgd.galactic_floor+self.bgd.galactic_below).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
+        self.parseval_sup[itrn] = np.sum((self.bgd.galactic_above).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
 
 class BinaryInclusionState():
     def __init__(self, n_iterations, n_bin_use, wc):
