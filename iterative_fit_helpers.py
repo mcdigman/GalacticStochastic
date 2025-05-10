@@ -158,7 +158,7 @@ def total_signal_consistency_check(galactic_full_signal, bgd, itrn):
         #check all contributions to the total signal are tracked accurately
         assert np.allclose(galactic_full_signal, bgd.galactic_bg_const_base + bgd.galactic_bg_const + bgd.galactic_bg + bgd.galactic_bg_suppress, atol=1.e-300, rtol=1.e-6)
 
-def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, period_list1, const_only, noise_AET_dense, n_cyclo_switch, SAET_tot_cur):
+def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, period_list1, const_only, noise_AET_dense, n_cyclo_switch):
 
     # short circuit if we have previously decided subtraction is converged
     if fit_state.var_converged[itrn]:
@@ -166,7 +166,7 @@ def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, 
         fit_state.var_converged[itrn+1] = fit_state.var_converged[itrn]
         fit_state.const_converged[itrn+1] = fit_state.const_converged[itrn]
         bis.n_var_suppress[itrn+1] = bis.n_var_suppress[itrn]
-        return noise_AET_dense, SAET_tot_cur
+        return noise_AET_dense
 
     galactic_bg_res = bgd.galactic_bg + bgd.galactic_bg_const + bgd.galactic_bg_const_base
     bis.n_var_suppress[itrn+1] = bis.var_suppress[itrn].sum()
@@ -191,7 +191,7 @@ def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, 
             fit_state.var_converged[itrn+1] = False
             fit_state.const_converged[itrn+1] = fit_state.const_converged[itrn]
 
-        return noise_AET_dense, SAET_tot_cur
+        return noise_AET_dense
 
 
     # subtraction has not converged, get a new noise model
@@ -207,71 +207,75 @@ def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, 
 
     noise_AET_dense = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_cur, wc, prune=True)
 
-    return noise_AET_dense, SAET_tot_cur
+    SAET_tot_cur = None
+
+    return noise_AET_dense
 
 
-def addition_convergence_decision(bgd, itrn, n_const_suppressed, switch_next, var_converged, switchf_next, const_converged, SAET_m, wc, period_list1, const_only, noise_AET_dense_base, SAET_tot_cur, SAET_tot_base, n_const_force, const_converge_change_thresh, const_suppress2, smooth_lengthf_targ):
-    if not const_converged[itrn+1] or switch_next[itrn+1]:
+def addition_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, period_list1, const_only, noise_AET_dense_base, noise_AET_dense, n_const_force, const_converge_change_thresh, smooth_lengthf_targ):
+    if not fit_state.const_converged[itrn+1] or fit_state.switch_next[itrn+1]:
         if itrn < n_const_force:
             #TODO should use smooth_lengthf or smooth_lengthf_targ
             SAET_tot_base, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.galactic_bg_const + bgd.galactic_bg_const_base, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
-            const_converged[itrn+1] = const_converged[itrn+1]
+            fit_state.const_converged[itrn+1] = fit_state.const_converged[itrn+1]
         else:
             SAET_tot_base, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.galactic_bg_const + bgd.galactic_bg_const_base, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
-            const_converged[itrn+1] = True
+            fit_state.const_converged[itrn+1] = True
             # need to disable adaption of constant here because after this point the convergence isn't guaranteed to be monotonic
             print('disabled constant adaptation at ' + str(itrn))
 
         # make sure this will always predict >= snrs to the actual spectrum in use
-        SAET_tot_base = np.min([SAET_tot_base, SAET_tot_cur], axis=0)
+        SAET_tot_base = np.min([SAET_tot_base, noise_AET_dense.SAET], axis=0)
         noise_AET_dense_base = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_base, wc, prune=True)
 
-        n_const_suppressed[itrn+1] = const_suppress2[itrn].sum()
-        if switch_next[itrn+1] and const_converged[itrn+1]:
+        SAET_tot_base = None
+
+        bis.n_const_suppress[itrn+1] = bis.const_suppress2[itrn].sum()
+        if fit_state.switch_next[itrn+1] and fit_state.const_converged[itrn+1]:
             print('overriding constant convergence to check background model')
-            switch_next[itrn+1] = switch_next[itrn+1]
-            var_converged[itrn+1] = var_converged[itrn+1]
-            switchf_next[itrn+1] = False
-            const_converged[itrn+1] = False
-        elif n_const_suppressed[itrn+1] - n_const_suppressed[itrn] < 0:
-            if var_converged[itrn+1]:
-                switch_next[itrn+1] = True
-                var_converged[itrn+1] = False
+            fit_state.switch_next[itrn+1] = fit_state.switch_next[itrn+1]
+            fit_state.var_converged[itrn+1] = fit_state.var_converged[itrn+1]
+            fit_state.switchf_next[itrn+1] = False
+            fit_state.const_converged[itrn+1] = False
+        elif bis.n_const_suppress[itrn+1] - bis.n_const_suppress[itrn] < 0:
+            if fit_state.var_converged[itrn+1]:
+                fit_state.switch_next[itrn+1] = True
+                fit_state.var_converged[itrn+1] = False
             else:
-                switch_next[itrn+1] = switch_next[itrn+1]
-                var_converged[itrn+1] = var_converged[itrn+1]
-            switchf_next[itrn+1] = False
-            const_converged[itrn+1] = False
+                fit_state.switch_next[itrn+1] = fit_state.switch_next[itrn+1]
+                fit_state.var_converged[itrn+1] = fit_state.var_converged[itrn+1]
+            fit_state.switchf_next[itrn+1] = False
+            fit_state.const_converged[itrn+1] = False
             print('addition removed values at ' + str(itrn) + ', repeating check iteration')
 
-        elif itrn != 1 and np.abs(n_const_suppressed[itrn+1] - n_const_suppressed[itrn]) < const_converge_change_thresh:
-            if switchf_next[itrn+1]:
-                const_converged[itrn+1] = True
-                switchf_next[itrn+1] = False
+        elif itrn != 1 and np.abs(bis.n_const_suppress[itrn+1] - bis.n_const_suppress[itrn]) < const_converge_change_thresh:
+            if fit_state.switchf_next[itrn+1]:
+                fit_state.const_converged[itrn+1] = True
+                fit_state.switchf_next[itrn+1] = False
                 print('addition converged at ' + str(itrn))
             else:
                 print('near convergence in constant adaption at '+str(itrn), ' doing check iteration')
-                switchf_next[itrn+1] = False
-                const_converged[itrn+1] = False
-            switch_next[itrn+1] = switch_next[itrn+1]
-            var_converged[itrn+1] = var_converged[itrn+1]
+                fit_state.switchf_next[itrn+1] = False
+                fit_state.const_converged[itrn+1] = False
+            fit_state.switch_next[itrn+1] = fit_state.switch_next[itrn+1]
+            fit_state.var_converged[itrn+1] = fit_state.var_converged[itrn+1]
         else:
-            if var_converged[itrn+1]:
+            if fit_state.var_converged[itrn+1]:
                 print('addition convergence continuing beyond subtraction, try check iteration')
-                switchf_next[itrn+1] = False
-                const_converged[itrn+1] = False
+                fit_state.switchf_next[itrn+1] = False
+                fit_state.const_converged[itrn+1] = False
             else:
-                switchf_next[itrn+1] = False
-                const_converged[itrn+1] = const_converged[itrn+1]
+                fit_state.switchf_next[itrn+1] = False
+                fit_state.const_converged[itrn+1] = fit_state.const_converged[itrn+1]
 
-            switch_next[itrn+1] = switch_next[itrn+1]
-            var_converged[itrn+1] = var_converged[itrn+1]
+            fit_state.switch_next[itrn+1] = fit_state.switch_next[itrn+1]
+            fit_state.var_converged[itrn+1] = fit_state.var_converged[itrn+1]
 
     else:
-        switchf_next[itrn+1] = False
-        const_converged[itrn+1] = const_converged[itrn+1]
-        switch_next[itrn+1] = switch_next[itrn+1]
-        var_converged[itrn+1] = var_converged[itrn+1]
-        n_const_suppressed[itrn+1] = n_const_suppressed[itrn]
+        fit_state.switchf_next[itrn+1] = False
+        fit_state.const_converged[itrn+1] = fit_state.const_converged[itrn+1]
+        fit_state.switch_next[itrn+1] = fit_state.switch_next[itrn+1]
+        fit_state.var_converged[itrn+1] = fit_state.var_converged[itrn+1]
+        bis.n_const_suppress[itrn+1] = bis.n_const_suppress[itrn]
 
-    return noise_AET_dense_base, SAET_tot_base
+    return noise_AET_dense_base
