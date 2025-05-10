@@ -60,11 +60,11 @@ if __name__ == '__main__':
 
         const_converge_change_thresh = 3
 
-        snr_autosuppresses = np.zeros(n_iterations) + snr_high_fix
+        snr_cut_bright = np.zeros(n_iterations) + snr_high_fix
         for itrn in range(snr_high_fix_itr):
-            snr_autosuppresses[itrn] += snr_high_settle_mult*np.exp(-snr_high_settle_scale*itrn - snr_high_settle_offset)
+            snr_cut_bright[itrn] += snr_high_settle_mult*np.exp(-snr_high_settle_scale*itrn - snr_high_settle_offset)
 
-        snr_autosuppresses[0] = snr_high_initial
+        snr_cut_bright[0] = snr_high_initial
 
         # phase in the frequency smoothing length gradually
         # give absorbing constants a relative advantage on early iterations
@@ -77,7 +77,7 @@ if __name__ == '__main__':
 
         snr_min = np.zeros(n_iterations)
         snr_min[0] = snr_low_initial               # for first iteration set to thresh because spectrum is pure noise
-        snr_min[1:] = snr_low_mult * snr_high_fix  # for subsequent, choose value to ensure almost nothing gets suppressed as constant because of its own power alone
+        snr_min[1:] = snr_low_mult * snr_high_fix  # for subsequent, choose value to ensure almost nothing gets decided as constant because of its own power alone
 
         if const_only:
             period_list = np.array([])
@@ -87,7 +87,7 @@ if __name__ == '__main__':
         # TODO move snr_min, snr_thresh, period_list, etc to init file
 
 
-        ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_autosuppresses, smooth_lengthfs)
+        ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_cut_bright, smooth_lengthfs)
 
         ifm = IterativeFitManager(lc, wc, ic, SAET_m, n_iterations, galactic_below_in, snr_tots_in, snr_min_in, params_gb, period_list, nt_min, nt_max, n_cyclo_switch, const_only, n_const_force, const_converge_change_thresh, smooth_lengthf_fix)
 
@@ -97,7 +97,7 @@ if __name__ == '__main__':
 
         do_hf_out = True
         if do_hf_out:
-            gfi.store_processed_gb_file(galaxy_dir, galaxy_file, ifm.wc, ifm.lc, ifm.ic, ifm.nt_min, ifm.nt_max, ifm.bgd, ifm.period_list, ifm.n_bin_use, ifm.SAET_m, ifm.SAET_fin, ifm.const_only, ifm.bis.snrs_tot, ifm.n_full_converged, ifm.argbinmap, ifm.const_suppress, ifm.bis.const_suppress2, ifm.bis.var_suppress, snr_min_in)
+            gfi.store_processed_gb_file(galaxy_dir, galaxy_file, ifm.wc, ifm.lc, ifm.ic, ifm.nt_min, ifm.nt_max, ifm.bgd, ifm.period_list, ifm.n_bin_use, ifm.SAET_m, ifm.SAET_fin, ifm.const_only, ifm.bis.snrs_tot, ifm.n_full_converged, ifm.argbinmap, ifm.faints_old, ifm.bis.faints_cur, ifm.bis.brights, snr_min_in)
 
 
 

@@ -9,14 +9,14 @@ import scipy.stats
 from galactic_fit_helpers import get_SAET_cyclostationary_mean
 from instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
 
-IterationConfig = namedtuple('IterationConfig', ['n_iterations', 'snr_thresh', 'snr_min', 'snr_autosuppress', 'smooth_lengthf'])
+IterationConfig = namedtuple('IterationConfig', ['n_iterations', 'snr_thresh', 'snr_min', 'snr_cut_bright', 'smooth_lengthf'])
 BGDecomposition = namedtuple('BGDecomposition', ['galactic_floor', 'galactic_below', 'galactic_undecided', 'galactic_above'])
 
-def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_ini, params_gb, snrs_tot, galactic_below, noise_realization, SAET_m):
-    # TODO make snr_autosuppress and smooth_lengthf an array as a function of iteration
+def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveT_ini, params_gb, snrs_tot, galactic_below, noise_realization, SAET_m):
+    # TODO make snr_cut_bright and smooth_lengthf an array as a function of iteration
     # TODO make NC controllable; probably not much point in getting T channel snrs
     snrs = np.zeros((ic.n_iterations, n_bin_use, wc.NC))
-    var_suppress = np.zeros((ic.n_iterations, n_bin_use), dtype=np.bool_)
+    brights = np.zeros((ic.n_iterations, n_bin_use), dtype=np.bool_)
 
     for itrn in range(ic.n_iterations):
         galactic_undecided = np.zeros((wc.Nt*wc.Nf, wc.NC))
@@ -29,7 +29,7 @@ def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_in
                 tin = perf_counter()
                 print("Starting binary # %11d at t=%9.2f s at iteration %4d" % (itrb, (tin - t0n), itrn))
 
-            run_binary_coadd(itrb, const_suppress_in, waveT_ini, noise_upper, snrs, snrs_tot, itrn, galactic_below, galactic_undecided, var_suppress, wc, params_gb, ic.snr_min[itrn], ic.snr_autosuppress[itrn])
+            run_binary_coadd(itrb, faints_in, waveT_ini, noise_upper, snrs, snrs_tot, itrn, galactic_below, galactic_undecided, brights, wc, params_gb, ic.snr_min[itrn], ic.snr_cut_bright[itrn])
 
         t1n = perf_counter()
 
@@ -41,99 +41,99 @@ def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_in
 
         SAET_tot[itrn+1], _, _, _, _ = get_SAET_cyclostationary_mean(galactic_below_high, SAET_m, wc, smooth_lengthf=ic.smooth_lengthf[itrn], filter_periods=False, period_list=np.array([]))
 
-    return galactic_below_high, galactic_below, signal_full, SAET_tot, var_suppress, snrs, snrs_tot, noise_upper
+    return galactic_below_high, galactic_below, signal_full, SAET_tot, brights, snrs, snrs_tot, noise_upper
 
 
-def run_binary_coadd(itrb, const_suppress_in, waveT_ini, noise_upper, snrs, snrs_tot, itrn, galactic_below, galactic_undecided, var_suppress, wc, params_gb, snr_min, snr_autosuppress):
-    if not const_suppress_in[itrb]:
+def run_binary_coadd(itrb, faints_in, waveT_ini, noise_upper, snrs, snrs_tot, itrn, galactic_below, galactic_undecided, brights, wc, params_gb, snr_min, snr_cut_bright):
+    if not faints_in[itrb]:
         waveT_ini.update_params(params_gb[itrb].copy())
         listT_temp, waveT_temp, NUTs_temp = waveT_ini.get_unsorted_coeffs()
         snrs[itrn, itrb] = noise_upper.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp)
         snrs_tot[itrn, itrb] = np.linalg.norm(snrs[itrn, itrb])
         if itrn == 0 and snrs_tot[0, itrb]<snr_min:
-            const_suppress_in[itrb] = True
+            faints_in[itrb] = True
             for itrc in range(wc.NC):
                 galactic_below[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
-        elif snrs_tot[itrn, itrb]<snr_autosuppress:
+        elif snrs_tot[itrn, itrb]<snr_cut_bright:
             for itrc in range(wc.NC):
                 galactic_undecided[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
         else:
-            var_suppress[itrn, itrb] = True
+            brights[itrn, itrb] = True
 
 
 # TODO consolidate with the other run_binary_coadd
-def run_binary_coadd2(waveT_ini, params_gb, var_suppress, const_suppress, const_suppress2, snrs_base, snrs, snrs_tot, snrs_tot_base, itrn, itrb, noise_upper, noise_lower, ic, const_converged, var_converged, nt_min, nt_max, bgd):
+def run_binary_coadd2(waveT_ini, params_gb, brights, faints_old, faints_cur, snrs_base, snrs, snrs_tot, snrs_tot_base, itrn, itrb, noise_upper, noise_lower, ic, faint_converged, bright_converged, nt_min, nt_max, bgd):
     waveT_ini.update_params(params_gb[itrb].copy())
     listT_temp, waveT_temp, NUTs_temp = waveT_ini.get_unsorted_coeffs()
 
-    var_suppress[itrn, itrb], const_suppress2[itrn, itrb] = suppress_decision_helper(snrs_base, snrs, snrs_tot, snrs_tot_base, itrn, itrb, listT_temp, NUTs_temp, waveT_temp, noise_upper, noise_lower, ic, const_converged, var_converged, nt_min, nt_max)
-    suppress_coadd_helper(var_suppress, const_suppress, const_suppress2, itrn, itrb, bgd, listT_temp, NUTs_temp, waveT_temp, var_converged)
+    brights[itrn, itrb], faints_cur[itrn, itrb] = decision_helper(snrs_base, snrs, snrs_tot, snrs_tot_base, itrn, itrb, listT_temp, NUTs_temp, waveT_temp, noise_upper, noise_lower, ic, faint_converged, bright_converged, nt_min, nt_max)
+    decide_coadd_helper(brights, faints_old, faints_cur, itrn, itrb, bgd, listT_temp, NUTs_temp, waveT_temp, bright_converged)
 
 
-def suppress_decision_helper(snrs_base, snrs, snrs_tot, snrs_tot_base, itrn, itrb, listT_temp, NUTs_temp, waveT_temp, noise_upper, noise_lower, ic, const_converged, var_converged, nt_min, nt_max):
-    if not const_converged[itrn]:
+def decision_helper(snrs_base, snrs, snrs_tot, snrs_tot_base, itrn, itrb, listT_temp, NUTs_temp, waveT_temp, noise_upper, noise_lower, ic, faint_converged, bright_converged, nt_min, nt_max):
+    if not faint_converged[itrn]:
         snrs_base[itrn, itrb] = noise_lower.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp, nt_min, nt_max)
         snrs_tot_base[itrn, itrb] = np.linalg.norm(snrs_base[itrn, itrb])
-        thresh_base = snrs_tot_base[itrn, itrb] < ic.snr_min[itrn]
+        faint_candidate = snrs_tot_base[itrn, itrb] < ic.snr_min[itrn]
     else:
         snrs_base[itrn, itrb] = snrs_base[itrn-1, itrb]
         snrs_tot_base[itrn, itrb] = snrs_tot_base[itrn-1, itrb]
-        thresh_base = False
+        faint_candidate = False
 
-    if not var_converged[itrn]:
+    if not bright_converged[itrn]:
         snrs[itrn, itrb] = noise_upper.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp, nt_min, nt_max)
         snrs_tot[itrn, itrb] = np.linalg.norm(snrs[itrn, itrb])
-        thresh_var = snrs_tot[itrn, itrb] >= ic.snr_autosuppress[itrn]
+        bright_candidate = snrs_tot[itrn, itrb] >= ic.snr_cut_bright[itrn]
     else:
         snrs[itrn, itrb] = snrs[itrn-1, itrb]
         snrs_tot[itrn, itrb] = snrs_tot[itrn-1, itrb]
-        thresh_var = False
+        bright_candidate = False
 
     if np.isnan(snrs_tot[itrn, itrb]) or np.isnan(snrs_tot_base[itrn, itrb]):
         raise ValueError('nan detected in snr at '+str(itrn)+', ' + str(itrb))
-    elif thresh_var and thresh_base:
+    elif bright_candidate and faint_candidate:
         # satifisfied conditions to be eliminated in both directions so just keep it
-        var_suppress_loc = False
-        const_suppress_loc = False
-    elif thresh_var:
+        bright_loc = False
+        faint_loc = False
+    elif bright_candidate:
         if snrs_tot[itrn, itrb] > snrs_tot_base[itrn, itrb]:
             # handle case where snr ordering is wrong to prevent oscillation
-            var_suppress_loc = False
+            bright_loc = False
         else:
-            var_suppress_loc = True
-        const_suppress_loc = False
-    elif thresh_base:
-        var_suppress_loc = False
-        const_suppress_loc = True
+            bright_loc = True
+        faint_loc = False
+    elif faint_candidate:
+        bright_loc = False
+        faint_loc = True
     else:
-        var_suppress_loc = False
-        const_suppress_loc = False
+        bright_loc = False
+        faint_loc = False
 
-    return var_suppress_loc, const_suppress_loc
+    return bright_loc, faint_loc
 
-def suppress_coadd_helper(var_suppress, const_suppress, const_suppress2, itrn, itrb, bgd, listT_temp, NUTs_temp, waveT_temp, var_converged):
+def decide_coadd_helper(brights, faints_old, faints_cur, itrn, itrb, bgd, listT_temp, NUTs_temp, waveT_temp, bright_converged):
     """add each binary to the correct part of the galactic spectrum, depending on whether it is bright or faint"""
-    # the same binary cannot be suppressed as both bright and faint
-    assert not (var_suppress[itrn, itrb] and  const_suppress2[itrn, itrb])
+    # the same binary cannot be decided as both bright and faint
+    assert not (brights[itrn, itrb] and  faints_cur[itrn, itrb])
 
     # don't add to anything if the subtraction is already converged and this binary would not require addition
-    if var_converged[itrn] and not const_suppress2[itrn, itrb]:
+    if bright_converged[itrn] and not faints_cur[itrn, itrb]:
         return
 
-    if not const_suppress2[itrn, itrb]:
-        if var_suppress[itrn, itrb]:
-            # binary is bright enough to suppress
+    if not faints_cur[itrn, itrb]:
+        if brights[itrn, itrb]:
+            # binary is bright enough to decide
             for itrc in range(2):
                 bgd.galactic_above[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
         else:
-            # binary neither faint nor bright enough to suppress
+            # binary neither faint nor bright enough to decide
             for itrc in range(2):
                 bgd.galactic_undecided[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
     else:
-        # binary is faint enough to suppress
+        # binary is faint enough to decide
         if itrn == 1:
-            const_suppress2[itrn, itrb] = False
-            const_suppress[itrb] = True
+            faints_cur[itrn, itrb] = False
+            faints_old[itrb] = True
             for itrc in range(2):
                 bgd.galactic_floor[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
         else:
@@ -141,14 +141,14 @@ def suppress_coadd_helper(var_suppress, const_suppress, const_suppress2, itrn, i
                 bgd.galactic_below[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
 
 
-def sustain_snr_helper(const_converged, snrs_tot_base, snrs_base, snrs_tot, snrs, itrn, suppressed, var_converged):
+def sustain_snr_helper(faint_converged, snrs_tot_base, snrs_base, snrs_tot, snrs, itrn, decided, bright_converged):
     #carry forward any other snr values we still know
-    if const_converged[itrn]:
-        snrs_tot_base[itrn, suppressed] = snrs_tot_base[itrn-1, suppressed]
-        snrs_base[itrn, suppressed] = snrs_base[itrn-1, suppressed]
-    if var_converged[itrn]:
-        snrs_tot[itrn, suppressed] = snrs_tot[itrn-1, suppressed]
-        snrs[itrn, suppressed] = snrs[itrn-1, suppressed]
+    if faint_converged[itrn]:
+        snrs_tot_base[itrn, decided] = snrs_tot_base[itrn-1, decided]
+        snrs_base[itrn, decided] = snrs_base[itrn-1, decided]
+    if bright_converged[itrn]:
+        snrs_tot[itrn, decided] = snrs_tot[itrn-1, decided]
+        snrs[itrn, decided] = snrs[itrn-1, decided]
 
 def total_signal_consistency_check(galactic_total, bgd, itrn):
     if itrn == 1:
@@ -161,42 +161,42 @@ def total_signal_consistency_check(galactic_total, bgd, itrn):
 def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, period_list1, const_only, noise_upper, n_cyclo_switch):
 
     # short circuit if we have previously decided subtraction is converged
-    if fit_state.var_converged[itrn]:
+    if fit_state.bright_converged[itrn]:
         fit_state.switch_next[itrn+1] = False
-        fit_state.var_converged[itrn+1] = fit_state.var_converged[itrn]
-        fit_state.const_converged[itrn+1] = fit_state.const_converged[itrn]
-        bis.n_var_suppress[itrn+1] = bis.n_var_suppress[itrn]
+        fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn]
+        fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn]
+        bis.n_brights_cur[itrn+1] = bis.n_brights_cur[itrn]
         return noise_upper
 
-    bis.n_var_suppress[itrn+1] = bis.var_suppress[itrn].sum()
+    bis.n_brights_cur[itrn+1] = bis.brights[itrn].sum()
 
     # subtraction is either converged or oscillating
-    osc1 = np.all(bis.var_suppress[itrn] == bis.var_suppress[itrn-1])
-    osc2 = np.all(bis.var_suppress[itrn] == bis.var_suppress[itrn-2])
-    osc3 = np.all(bis.var_suppress[itrn] == bis.var_suppress[itrn-3])
+    osc1 = np.all(bis.brights[itrn] == bis.brights[itrn-1])
+    osc2 = np.all(bis.brights[itrn] == bis.brights[itrn-2])
+    osc3 = np.all(bis.brights[itrn] == bis.brights[itrn-3])
     if itrn > 1 and (fit_state.force_converge[itrn] or (osc1 or osc2 or osc3)):
-        assert bis.n_var_suppress[itrn] == bis.n_var_suppress[itrn+1] or fit_state.force_converge[itrn] or osc2 or osc3
+        assert bis.n_brights_cur[itrn] == bis.n_brights_cur[itrn+1] or fit_state.force_converge[itrn] or osc2 or osc3
         if fit_state.switch_next[itrn]:
             print('subtraction converged at ' + str(itrn))
             fit_state.switch_next[itrn+1] = False
-            fit_state.var_converged[itrn+1] = True
-            fit_state.const_converged[itrn+1] = True
+            fit_state.bright_converged[itrn+1] = True
+            fit_state.faint_converged[itrn+1] = True
         else:
             if (osc2 or osc3) and not osc1:
                 print('cycling detected at ' + str(itrn) + ', doing final check iteration aborting')
                 fit_state.force_converge[itrn+1] = True
             print('subtraction predicted initial converged at ' + str(itrn) + ' next iteration will be check iteration')
             fit_state.switch_next[itrn+1] = True
-            fit_state.var_converged[itrn+1] = False
-            fit_state.const_converged[itrn+1] = fit_state.const_converged[itrn]
+            fit_state.bright_converged[itrn+1] = False
+            fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn]
 
         return noise_upper
 
 
     # subtraction has not converged, get a new noise model
     fit_state.switch_next[itrn+1] = False
-    fit_state.var_converged[itrn+1] = fit_state.var_converged[itrn]
-    fit_state.const_converged[itrn+1] = fit_state.const_converged[itrn]
+    fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn]
+    fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn]
 
     # don't use cyclostationary model until specified iteration
     # higher estimate of galactic bg
@@ -214,14 +214,13 @@ def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, 
 
 
 def addition_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, period_list1, const_only, noise_lower, noise_upper, n_const_force, const_converge_change_thresh, smooth_lengthf_targ):
-    if not fit_state.const_converged[itrn+1] or fit_state.switch_next[itrn+1]:
+    if not fit_state.faint_converged[itrn+1] or fit_state.switch_next[itrn+1]:
         if itrn < n_const_force:
-            #TODO should use smooth_lengthf or smooth_lengthf_targ
             SAET_tot_base, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.galactic_below + bgd.galactic_floor, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
-            fit_state.const_converged[itrn+1] = fit_state.const_converged[itrn+1]
+            fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn+1]
         else:
             SAET_tot_base, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.galactic_below + bgd.galactic_floor, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
-            fit_state.const_converged[itrn+1] = True
+            fit_state.faint_converged[itrn+1] = True
             # need to disable adaption of constant here because after this point the convergence isn't guaranteed to be monotonic
             print('disabled constant adaptation at ' + str(itrn))
 
@@ -231,52 +230,52 @@ def addition_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, period_
 
         SAET_tot_base = None
 
-        bis.n_const_suppress[itrn+1] = bis.const_suppress2[itrn].sum()
-        if fit_state.switch_next[itrn+1] and fit_state.const_converged[itrn+1]:
+        bis.n_faints_cur[itrn+1] = bis.faints_cur[itrn].sum()
+        if fit_state.switch_next[itrn+1] and fit_state.faint_converged[itrn+1]:
             print('overriding constant convergence to check background model')
             fit_state.switch_next[itrn+1] = fit_state.switch_next[itrn+1]
-            fit_state.var_converged[itrn+1] = fit_state.var_converged[itrn+1]
+            fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
             fit_state.switchf_next[itrn+1] = False
-            fit_state.const_converged[itrn+1] = False
-        elif bis.n_const_suppress[itrn+1] - bis.n_const_suppress[itrn] < 0:
-            if fit_state.var_converged[itrn+1]:
+            fit_state.faint_converged[itrn+1] = False
+        elif bis.n_faints_cur[itrn+1] - bis.n_faints_cur[itrn] < 0:
+            if fit_state.bright_converged[itrn+1]:
                 fit_state.switch_next[itrn+1] = True
-                fit_state.var_converged[itrn+1] = False
+                fit_state.bright_converged[itrn+1] = False
             else:
                 fit_state.switch_next[itrn+1] = fit_state.switch_next[itrn+1]
-                fit_state.var_converged[itrn+1] = fit_state.var_converged[itrn+1]
+                fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
             fit_state.switchf_next[itrn+1] = False
-            fit_state.const_converged[itrn+1] = False
+            fit_state.faint_converged[itrn+1] = False
             print('addition removed values at ' + str(itrn) + ', repeating check iteration')
 
-        elif itrn != 1 and np.abs(bis.n_const_suppress[itrn+1] - bis.n_const_suppress[itrn]) < const_converge_change_thresh:
+        elif itrn != 1 and np.abs(bis.n_faints_cur[itrn+1] - bis.n_faints_cur[itrn]) < const_converge_change_thresh:
             if fit_state.switchf_next[itrn+1]:
-                fit_state.const_converged[itrn+1] = True
+                fit_state.faint_converged[itrn+1] = True
                 fit_state.switchf_next[itrn+1] = False
                 print('addition converged at ' + str(itrn))
             else:
                 print('near convergence in constant adaption at '+str(itrn), ' doing check iteration')
                 fit_state.switchf_next[itrn+1] = False
-                fit_state.const_converged[itrn+1] = False
+                fit_state.faint_converged[itrn+1] = False
             fit_state.switch_next[itrn+1] = fit_state.switch_next[itrn+1]
-            fit_state.var_converged[itrn+1] = fit_state.var_converged[itrn+1]
+            fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
         else:
-            if fit_state.var_converged[itrn+1]:
+            if fit_state.bright_converged[itrn+1]:
                 print('addition convergence continuing beyond subtraction, try check iteration')
                 fit_state.switchf_next[itrn+1] = False
-                fit_state.const_converged[itrn+1] = False
+                fit_state.faint_converged[itrn+1] = False
             else:
                 fit_state.switchf_next[itrn+1] = False
-                fit_state.const_converged[itrn+1] = fit_state.const_converged[itrn+1]
+                fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn+1]
 
             fit_state.switch_next[itrn+1] = fit_state.switch_next[itrn+1]
-            fit_state.var_converged[itrn+1] = fit_state.var_converged[itrn+1]
+            fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
 
     else:
         fit_state.switchf_next[itrn+1] = False
-        fit_state.const_converged[itrn+1] = fit_state.const_converged[itrn+1]
+        fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn+1]
         fit_state.switch_next[itrn+1] = fit_state.switch_next[itrn+1]
-        fit_state.var_converged[itrn+1] = fit_state.var_converged[itrn+1]
-        bis.n_const_suppress[itrn+1] = bis.n_const_suppress[itrn]
+        fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
+        bis.n_faints_cur[itrn+1] = bis.n_faints_cur[itrn]
 
     return noise_lower

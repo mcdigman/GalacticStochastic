@@ -6,7 +6,7 @@ from collections import namedtuple
 
 import numpy as np
 
-IterationConfig = namedtuple('IterationConfig', ['n_iterations', 'snr_thresh', 'snr_min', 'snr_autosuppress', 'smooth_lengthf'])
+IterationConfig = namedtuple('IterationConfig', ['n_iterations', 'snr_thresh', 'snr_min', 'snr_cut_bright', 'smooth_lengthf'])
 
 def get_iteration_config(config):
     """Get lisa constant object from config file"""
@@ -24,6 +24,6 @@ def get_iteration_config(config):
     #period_list = np.array(json.loads(config.get('iterative fit constants','period_list'))),dtype=np.float64)
     assert np.all(period_list >= 0.)
 
-    #TODO also need ways to read in snr_autosuppress, smooth_lengthf
+    #TODO also need ways to read in snr_cut_bright, smooth_lengthf
 
-    return IterationConfig(n_iterations, snr_thresh, snr_min, snr_autosuppress, smooth_lengthf)
+    return IterationConfig(n_iterations, snr_thresh, snr_min, snr_cut_bright, smooth_lengthf)

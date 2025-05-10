@@ -52,8 +52,8 @@ if __name__=='__main__':
 
     snr_min = np.full(n_iterations, snr_thresh)
 
-    snr_autosuppress = np.full(n_iterations, snr_thresh)
-    snr_autosuppress[0] = 500.
+    snr_cut_bright = np.full(n_iterations, snr_thresh)
+    snr_cut_bright[0] = 500.
 
     snrs_tot = np.zeros((n_iterations, n_bin_use))
     snrs_tot[:] = snrs_tot_in
@@ -64,11 +64,11 @@ if __name__=='__main__':
 
     smooth_lengthf = np.full(n_iterations, 8)
 
-    ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_autosuppress, smooth_lengthf)
+    ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_cut_bright, smooth_lengthf)
 
-    const_suppress_in = snrs_tot_in < ic.snr_min[0]
+    faints_in = snrs_tot_in < ic.snr_min[0]
 
-    galactic_below_high, galactic_below, signal_full, SAET_tot, var_suppress, snrs, snrs_tot, noise_upper = do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, const_suppress_in, waveT_ini, params_gb, snrs_tot, galactic_below, noise_realization, SAET_m)
+    galactic_below_high, galactic_below, signal_full, SAET_tot, brights, snrs, snrs_tot, noise_upper = do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveT_ini, params_gb, snrs_tot, galactic_below, noise_realization, SAET_m)
 
     do_hf_write = True
     if do_hf_write:

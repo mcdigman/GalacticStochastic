@@ -78,11 +78,10 @@ if __name__ == '__main__':
 
     noise_realization = gfi.get_noise_common(galaxy_dir, snr_thresh, wc, lc)
 
-    #TODO _var should _cyclo and _const should also be changed to deconflict names
     _, galactic_cyclo = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, False)
     _, galactic_const = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, True)
 
-    signal_full_var = galactic_cyclo + noise_realization
+    signal_full_cyclo = galactic_cyclo + noise_realization
     signal_full_const = galactic_const + noise_realization
 
     SAET_m = instrument_noise_AET_wdm_m(lc, wc)
@@ -95,7 +94,7 @@ if __name__ == '__main__':
     nf_min = np.argmax(fs > 8.e-5)
     nf_max = np.argmax(fs > 4.e-3)
 
-    signal_white_resid = result_normality_battery(signal_full_var)
+    signal_white_resid = result_normality_battery(signal_full_cyclo)
     signal_white_resid_const = result_normality_battery(signal_full_const)
 
 

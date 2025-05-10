@@ -36,14 +36,14 @@ class IterativeFitManager():
 
         #iteration to switch to fitting spectrum fully
 
-        const_suppress_in = (snr_tots_in < snr_min_in[0]) | (params_gb[:, 3] >= (wc.Nf-1)*wc.DF)
-        self.argbinmap = np.argwhere(~const_suppress_in).flatten()
-        self.const_suppress = const_suppress_in[self.argbinmap]
+        faints_in = (snr_tots_in < snr_min_in[0]) | (params_gb[:, 3] >= (wc.Nf-1)*wc.DF)
+        self.argbinmap = np.argwhere(~faints_in).flatten()
+        self.faints_old = faints_in[self.argbinmap]
         self.params_gb = params_gb[self.argbinmap]
         self.n_bin_use = self.argbinmap.size
 
         params_gb = None
-        const_suppress_in = None
+        faints_in = None
 
         self.idx_SAET_save = np.hstack([np.arange(0, min(10, n_iterations)), np.arange(min(10, n_iterations), 4), n_iterations-1])
         self.itr_save = 0
@@ -126,7 +126,7 @@ class IterativeFitManager():
         self._run_binaries(itrn)
 
         # copy forward prior calculations of snr calculations that were skipped in this loop iteration
-        sustain_snr_helper(self.fit_state.const_converged, self.bis.snrs_tot_base, self.bis.snrs_base, self.bis.snrs_tot, self.bis.snrs, itrn, self.bis.suppress[itrn], self.fit_state.var_converged)
+        sustain_snr_helper(self.fit_state.faint_converged, self.bis.snrs_tot_base, self.bis.snrs_base, self.bis.snrs_tot, self.bis.snrs, itrn, self.bis.decided[itrn], self.fit_state.bright_converged)
 
         # sanity check that the total signal does not change regardless of what bucket the binaries are allocated to
         total_signal_consistency_check(self.galactic_total, self.bgd, itrn)
@@ -150,12 +150,12 @@ class IterativeFitManager():
     def _run_binaries(self,itrn):
         # do the finishing step for itrn=0 to set everything at the end of the loop as it should be
 
-        self.bis.suppress[itrn] = self.bis.var_suppress[itrn] | self.bis.const_suppress2[itrn] | self.const_suppress
+        self.bis.decided[itrn] = self.bis.brights[itrn] | self.bis.faints_cur[itrn] | self.faints_old
 
-        idxbs = np.argwhere(~self.bis.suppress[itrn]).flatten()
+        idxbs = np.argwhere(~self.bis.decided[itrn]).flatten()
         for itrb in idxbs:
-            if not self.bis.suppress[itrn, itrb]:
-                run_binary_coadd2(self.waveform_manager, self.params_gb, self.bis.var_suppress, self.const_suppress, self.bis.const_suppress2, self.bis.snrs_base, self.bis.snrs, self.bis.snrs_tot, self.bis.snrs_tot_base, itrn, itrb, self.noise_upper, self.noise_lower, self.ic, self.fit_state.const_converged, self.fit_state.var_converged, self.nt_min, self.nt_max, self.bgd)
+            if not self.bis.decided[itrn, itrb]:
+                run_binary_coadd2(self.waveform_manager, self.params_gb, self.bis.brights, self.faints_old, self.bis.faints_cur, self.bis.snrs_base, self.bis.snrs, self.bis.snrs_tot, self.bis.snrs_tot_base, itrn, itrb, self.noise_upper, self.noise_lower, self.ic, self.fit_state.faint_converged, self.fit_state.bright_converged, self.nt_min, self.nt_max, self.bgd)
 
     def _iteration_cleanup(self, itrn):
         if self.itr_save < self.idx_SAET_save.size and itrn == self.idx_SAET_save[self.itr_save]:
@@ -166,7 +166,7 @@ class IterativeFitManager():
         self.SAET_fin[:] = self.noise_upper.SAET[:, :, :]
 
     def check_done(self,itrn):
-        if self.fit_state.var_converged[itrn+1] and self.fit_state.const_converged[itrn+1]:
+        if self.fit_state.bright_converged[itrn+1] and self.fit_state.faint_converged[itrn+1]:
             print('result fully converged at '+str(itrn)+', no further iterations needed')
             self.n_full_converged = itrn
             return True
@@ -175,10 +175,10 @@ class IterativeFitManager():
     def print_report(self, itrn):
         Tobs_consider_yr = (self.nt_max - self.nt_min)*self.wc.DT/gc.SECSYEAR
         n_consider = self.n_bin_use
-        n_faint = self.const_suppress.sum()
-        n_faint2 = self.bis.const_suppress2[itrn].sum()
-        n_bright = self.bis.var_suppress[itrn].sum()
-        n_ambiguous = (~(self.const_suppress[itrn] | self.bis.var_suppress[itrn])).sum()
+        n_faint = self.faints_old.sum()
+        n_faint2 = self.bis.faints_cur[itrn].sum()
+        n_bright = self.bis.brights[itrn].sum()
+        n_ambiguous = (~(self.faints_old[itrn] | self.bis.brights[itrn])).sum()
         print('Out of %10d total binaries, %10d were deemed undetectable by a previous evaluation, %10d were considered here.' % (self.n_tot, self.n_tot - n_consider, n_consider))
         print('The iterative procedure deemed (%5.3f yr observation at threshold snr=%5.3f):' % (Tobs_consider_yr, self.ic.snr_thresh))
         print('       %10d undetectable due to instrument noise' % n_faint)
@@ -191,32 +191,32 @@ class IterativeFitManager():
     def _state_update(self,itrn):
         if self.fit_state.switchf_next[itrn]:
             self.bgd.galactic_below[:] = 0.
-            self.bis.const_suppress2[itrn] = False
+            self.bis.faints_cur[itrn] = False
         else:
-            self.bis.const_suppress2[itrn] = self.bis.const_suppress2[itrn-1]
+            self.bis.faints_cur[itrn] = self.bis.faints_cur[itrn-1]
 
-        if self.fit_state.var_converged[itrn]:
-            self.bis.var_suppress[itrn] = self.bis.var_suppress[itrn-1]
+        if self.fit_state.bright_converged[itrn]:
+            self.bis.brights[itrn] = self.bis.brights[itrn-1]
         else:
             self.bgd.galactic_undecided[:] = 0.
             if self.fit_state.switch_next[itrn]:
                 self.bgd.galactic_above[:] = 0.
-                self.bis.var_suppress[itrn] = False
+                self.bis.brights[itrn] = False
             else:
-                self.bis.var_suppress[itrn] = self.bis.var_suppress[itrn-1]
+                self.bis.brights[itrn] = self.bis.brights[itrn-1]
 
     def _state_check(self,itrn):
-        if self.fit_state.var_converged[itrn]:
-            assert np.all(self.bis.var_suppress[itrn] == self.bis.var_suppress[itrn-1])
+        if self.fit_state.bright_converged[itrn]:
+            assert np.all(self.bis.brights[itrn] == self.bis.brights[itrn-1])
 
-        if self.fit_state.const_converged[itrn]:
-            assert np.all(self.bis.const_suppress2[itrn] == self.bis.const_suppress2[itrn-1])
+        if self.fit_state.faint_converged[itrn]:
+            assert np.all(self.bis.faints_cur[itrn] == self.bis.faints_cur[itrn-1])
 
         if self.fit_state.switchf_next[itrn+1]:
-            assert not self.fit_state.const_converged[itrn+1]
+            assert not self.fit_state.faint_converged[itrn+1]
 
         if self.fit_state.switch_next[itrn+1]:
-            assert not self.fit_state.var_converged[itrn+1]
+            assert not self.fit_state.bright_converged[itrn+1]
 
     def _parseval_store(self,itrn):
         self.parseval_tot[itrn] = np.sum((self.bgd.galactic_floor+self.bgd.galactic_below+self.bgd.galactic_undecided+self.bgd.galactic_above).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
@@ -230,20 +230,18 @@ class BinaryInclusionState():
         self.snrs_base = np.zeros((n_iterations, n_bin_use, wc.NC))
         self.snrs_tot_base = np.zeros((n_iterations, n_bin_use))
         self.snrs_tot = np.zeros((n_iterations, n_bin_use))
-        self.var_suppress = np.zeros((n_iterations, n_bin_use), dtype=np.bool_)
-        self.suppress = np.zeros((n_iterations, n_bin_use), dtype=np.bool_)
-        self.const_suppress2 = np.zeros((n_iterations, n_bin_use), dtype=np.bool_)
+        self.brights = np.zeros((n_iterations, n_bin_use), dtype=np.bool_)
+        self.decided = np.zeros((n_iterations, n_bin_use), dtype=np.bool_)
+        self.faints_cur = np.zeros((n_iterations, n_bin_use), dtype=np.bool_)
 
-        self.n_const_suppress = np.zeros(n_iterations+1, dtype=np.int64)
-        #self.n_const_suppress[1] = self.const_suppress2[0].sum()
-        #self.n_var_suppress[1] = self.var_suppress[0].sum()
-        self.n_var_suppress = np.zeros(n_iterations+1, dtype=np.int64)
+        self.n_faints_cur = np.zeros(n_iterations+1, dtype=np.int64)
+        self.n_brights_cur = np.zeros(n_iterations+1, dtype=np.int64)
 
 
 class IterativeFitState():
     def __init__(self, ic):
-        self.var_converged = np.zeros(ic.n_iterations+1, dtype=np.bool_)
-        self.const_converged = np.zeros(ic.n_iterations+1, dtype=np.bool_)
+        self.bright_converged = np.zeros(ic.n_iterations+1, dtype=np.bool_)
+        self.faint_converged = np.zeros(ic.n_iterations+1, dtype=np.bool_)
         self.switch_next = np.zeros(ic.n_iterations+1, dtype=np.bool_)
         self.switchf_next = np.zeros(ic.n_iterations+1, dtype=np.bool_)
         self.force_converge = np.zeros(ic.n_iterations+1, dtype=np.bool_)

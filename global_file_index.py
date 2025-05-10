@@ -207,16 +207,16 @@ def store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_belo
 
     hf_out.close()
 
-def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max, bgd, period_list1, n_bin_use, SAET_m, SAE_fin, const_only, snrs_tot, n_full_converged, argbinmap, const_suppress, const_suppress2, var_suppress, snr_min_in):
+def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max, bgd, period_list1, n_bin_use, SAET_m, SAE_fin, const_only, snrs_tot, n_full_converged, argbinmap, faints_old, faints_cur, brights, snr_min_in):
     filename_gb_init = get_preliminary_filename(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
     filename_gb_common = get_common_noise_filename(galaxy_dir, ic.snr_thresh, wc)
     filename_out = get_processed_gb_filename(galaxy_dir, const_only, ic.snr_thresh, wc, nt_min, nt_max)
 
     hf_out = h5py.File(filename_out, 'w')
     hf_out.create_group('SAET')
-    hf_out['SAET'].create_dataset('galactic_bg_const', data=bgd.galactic_below + bgd.galactic_floor, compression='gzip')
-    hf_out['SAET'].create_dataset('galactic_bg_suppress', data=bgd.galactic_above, compression='gzip')
-    hf_out['SAET'].create_dataset('galactic_bg', data=bgd.galactic_undecided, compression='gzip')
+    hf_out['SAET'].create_dataset('galactic_below', data=bgd.galactic_below + bgd.galactic_floor, compression='gzip')
+    hf_out['SAET'].create_dataset('galactic_above', data=bgd.galactic_above, compression='gzip')
+    hf_out['SAET'].create_dataset('galactic_undecided', data=bgd.galactic_undecided, compression='gzip')
     hf_out['SAET'].create_dataset('period_list', data=period_list1)
 
     hf_out['SAET'].create_dataset('n_bin_use', data=n_bin_use)
@@ -224,10 +224,10 @@ def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max,
     hf_out['SAET'].create_dataset('snrs_tot', data=snrs_tot[n_full_converged], compression='gzip')
     hf_out['SAET'].create_dataset('argbinmap', data=argbinmap, compression='gzip')
 
-    hf_out['SAET'].create_dataset('const_suppress', data=const_suppress, compression='gzip')
-    hf_out['SAET'].create_dataset('const_suppress2', data=const_suppress2[n_full_converged], compression='gzip')
+    hf_out['SAET'].create_dataset('faints_old', data=faints_old, compression='gzip')
+    hf_out['SAET'].create_dataset('faints_cur', data=faints_cur[n_full_converged], compression='gzip')
 
-    hf_out['SAET'].create_dataset('var_suppress', data=var_suppress[n_full_converged], compression='gzip')
+    hf_out['SAET'].create_dataset('brights', data=brights[n_full_converged], compression='gzip')
     hf_out['SAET'].create_dataset('SAEf', data=SAE_fin, compression='gzip')
 
     hf_out['SAET'].create_dataset('source_gb_file', data=get_galaxy_filename(galaxy_file, galaxy_dir))
