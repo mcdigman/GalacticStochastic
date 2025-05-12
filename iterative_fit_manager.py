@@ -182,11 +182,7 @@ class IterativeFitManager():
         print('       %10d total detectable' % n_bright)
 
     def _state_update(self, itrn):
-        if self.fit_state.do_bright_check[itrn]:
-            self.bgd.galactic_below[:] = 0.
-            self.bis.faints_cur[itrn] = False
-        else:
-            self.bis.faints_cur[itrn] = self.bis.faints_cur[itrn-1]
+        self.bis.faints_cur[itrn] = self.bis.faints_cur[itrn-1]
 
         if self.fit_state.bright_converged[itrn]:
             self.bis.brights[itrn] = self.bis.brights[itrn-1]
@@ -204,9 +200,6 @@ class IterativeFitManager():
 
         if self.fit_state.faint_converged[itrn]:
             assert np.all(self.bis.faints_cur[itrn] == self.bis.faints_cur[itrn-1])
-
-        if self.fit_state.do_bright_check[itrn+1]:
-            assert not self.fit_state.faint_converged[itrn+1]
 
         if self.fit_state.do_faint_check[itrn+1]:
             assert not self.fit_state.bright_converged[itrn+1]
@@ -267,5 +260,19 @@ class IterativeFitState():
         self.bright_converged = np.zeros(ic.n_iterations+1, dtype=np.bool_)
         self.faint_converged = np.zeros(ic.n_iterations+1, dtype=np.bool_)
         self.do_faint_check = np.zeros(ic.n_iterations+1, dtype=np.bool_)
-        self.do_bright_check = np.zeros(ic.n_iterations+1, dtype=np.bool_)
         self.force_converge = np.zeros(ic.n_iterations+1, dtype=np.bool_)
+
+        self.bright_state_request = (False, False, False)
+        self.faint_state_request = (False, False, False)
+
+    def set_bright_state_request(self, do_faint_check, bright_converged, faint_converged):
+        self.bright_state_request = (do_faint_check, bright_converged, faint_converged)
+
+    def get_bright_state_request(self):
+        return self.bright_state_request
+
+    def set_faint_state_request(self, do_faint_check, bright_converged, faint_converged):
+        self.faint_state_request = (do_faint_check, bright_converged, faint_converged)
+
+    def get_faint_state_request(self):
+        return self.faint_state_request
