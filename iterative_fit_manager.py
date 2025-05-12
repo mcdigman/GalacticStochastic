@@ -9,8 +9,7 @@ from instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
 from iterative_fit_helpers import (BGDecomposition,
                                    addition_convergence_decision,
                                    run_binary_coadd2,
-                                   subtraction_convergence_decision,
-                                   sustain_snr_helper)
+                                   subtraction_convergence_decision)
 from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 
 
@@ -125,7 +124,8 @@ class IterativeFitManager():
         self._run_binaries(itrn)
 
         # copy forward prior calculations of snr calculations that were skipped in this loop iteration
-        sustain_snr_helper(self.fit_state.faint_converged, self.bis.snrs_tot_lower, self.bis.snrs_lower, self.bis.snrs_tot_upper, self.bis.snrs_upper, itrn, self.bis.decided[itrn], self.fit_state.bright_converged)
+        self.bis.sustain_snr_helper(itrn, self.fit_state.faint_converged, self.fit_state.bright_converged)
+        #sustain_snr_helper(self.fit_state.faint_converged, self.bis.snrs_tot_lower, self.bis.snrs_lower, self.bis.snrs_tot_upper, self.bis.snrs_upper, itrn, self.bis.decided[itrn], self.fit_state.bright_converged)
 
         # sanity check that the total signal does not change regardless of what bucket the binaries are allocated to
         self.bgd.total_signal_consistency_check()
@@ -235,6 +235,16 @@ class BinaryInclusionState():
 
         self.n_faints_cur = np.zeros(n_iterations+1, dtype=np.int64)
         self.n_brights_cur = np.zeros(n_iterations+1, dtype=np.int64)
+
+    def sustain_snr_helper(self, itrn, faint_converged, bright_converged):
+        #carry forward any other snr values we still know
+        if faint_converged[itrn]:
+            self.snrs_tot_lower[itrn, self.decided[itrn]] = self.snrs_tot_lower[itrn-1, self.decided[itrn]]
+            self.snrs_lower[itrn, self.decided[itrn]] = self.snrs_lower[itrn-1, self.decided[itrn]]
+
+        if bright_converged[itrn]:
+            self.snrs_tot_upper[itrn, self.decided[itrn]] = self.snrs_tot_upper[itrn-1, self.decided[itrn]]
+            self.snrs_upper[itrn, self.decided[itrn]] = self.snrs_upper[itrn-1, self.decided[itrn]]
 
 
 class IterativeFitState():

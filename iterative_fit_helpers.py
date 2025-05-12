@@ -230,14 +230,6 @@ def decide_coadd_helper(brights, faints_old, faints_cur, itrn, itrb, bgd, wavefo
             bgd.add_faint(listT_temp, NUTs_temp, waveT_temp)
 
 
-def sustain_snr_helper(faint_converged, snrs_tot_lower, snrs_lower, snrs_tot_upper, snrs_upper, itrn, decided, bright_converged):
-    #carry forward any other snr values we still know
-    if faint_converged[itrn]:
-        snrs_tot_lower[itrn, decided] = snrs_tot_lower[itrn-1, decided]
-        snrs_lower[itrn, decided] = snrs_lower[itrn-1, decided]
-    if bright_converged[itrn]:
-        snrs_tot_upper[itrn, decided] = snrs_tot_upper[itrn-1, decided]
-        snrs_upper[itrn, decided] = snrs_upper[itrn-1, decided]
 
 
 def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, period_list, const_only, noise_upper, n_cyclo_switch):
