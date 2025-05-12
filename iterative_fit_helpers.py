@@ -19,25 +19,48 @@ class BGDecomposition():
         self.galactic_below = galactic_below
         self.galactic_undecided = galactic_undecided
         self.galactic_above = galactic_above
+        self.NC_gal = galactic_below.shape[-1]
         self.galactic_total_cache = None
 
-    def get_galactic_total(self):
+    def get_galactic_total(self, bypass_check=False):
         """get the sum of all components of the galactic signal, detectable or not"""
-        return self.get_galactic_below_high() + self.galactic_above
+        if not bypass_check:
+            self.total_signal_consistency_check()
+        return self.get_galactic_below_high(bypass_check=True) + self.galactic_above
 
-    def get_galactic_below_high(self):
+    def get_galactic_below_high(self, bypass_check=False):
         """
         get the upper estimate of the unresolvable signal from the galactic background,
         assuming that the undecided part of the signal *is* part of the unresolvable background
         """
-        return self.get_galactic_below_low() + self.galactic_undecided
+        if not bypass_check:
+            self.total_signal_consistency_check()
+        return self.get_galactic_below_low(bypass_check=True) + self.galactic_undecided
 
-    def get_galactic_below_low(self):
+    def get_galactic_below_low(self, bypass_check=False):
         """
         get the lower estimate of the unresolvable signal from the galactic background,
         assuming that the undecided part of the signal *is not* part of the unresolvable background
         """
+        if not bypass_check:
+            self.total_signal_consistency_check()
         return self.galactic_floor + self.galactic_below
+
+    def get_galactic_coadd_resolvable(self, bypass_check=False):
+        """
+        get the coadded signal from only bright/resolvable galactic binaries
+        """
+        if not bypass_check:
+            self.total_signal_consistency_check()
+        return self.galactic_above
+
+    def get_galactic_coadd_undecided(self, bypass_check=False):
+        """
+        get the coadded signal from galactic binaries whose status as bright or faint has not yet been decided
+        """
+        if not bypass_check:
+            self.total_signal_consistency_check()
+        return self.galactic_undecided
 
     def total_signal_consistency_check(self):
         """
@@ -47,22 +70,37 @@ class BGDecomposition():
         """
         if self.galactic_total_cache is None:
             assert np.all(self.galactic_below == 0.)
-            self.galactic_total_cache = self.get_galactic_total()
+            self.galactic_total_cache = self.get_galactic_total(bypass_check=True)
         else:
             #check all contributions to the total signal are tracked accurately
-            assert np.allclose(self.galactic_total_cache, self.get_galactic_total(), atol=1.e-300, rtol=1.e-6)
+            assert np.allclose(self.galactic_total_cache, self.get_galactic_total(bypass_check=True), atol=1.e-300, rtol=1.e-6)
 
-    def get_galactic_coadd_resolvable(self):
-        """
-        get the coadded signal from only bright/resolvable galactic binaries
-        """
-        return self.galactic_above
+    # TODO the methods below might work better in a child class
+    def get_S_below_high(self, SAET_m, wc, smooth_lengthf, filter_periods, period_list, bypass_check=False):
+        S, _, _, _, _ = get_SAET_cyclostationary_mean(self.get_galactic_below_high(bypass_check=bypass_check), SAET_m, wc, smooth_lengthf=smooth_lengthf, filter_periods=filter_periods, period_list=period_list)
+        return S
 
-    def get_galactic_coadd_undecided(self):
-        """
-        get the coadded signal from galactic binaries whose status as bright or faint has not yet been decided
-        """
-        return self.galactic_undecided
+    def get_S_below_low(self, SAET_m, wc, smooth_lengthf, filter_periods, period_list, bypass_check=False):
+        S, _, _, _, _ = get_SAET_cyclostationary_mean(self.get_galactic_below_low(bypass_check=bypass_check), SAET_m, wc, smooth_lengthf=smooth_lengthf, filter_periods=filter_periods, period_list=period_list)
+        return S
+
+    def add_undecided(self, listT_temp, NUTs_temp, waveT_temp):
+        for itrc in range(self.NC_gal):
+            self.galactic_undecided[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+
+    def add_floor(self, listT_temp, NUTs_temp, waveT_temp):
+        for itrc in range(self.NC_gal):
+            self.galactic_floor[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+
+    def add_faint(self, listT_temp, NUTs_temp, waveT_temp):
+        for itrc in range(self.NC_gal):
+            self.galactic_below[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+
+    def add_bright(self, listT_temp, NUTs_temp, waveT_temp):
+        for itrc in range(self.NC_gal):
+            self.galactic_above[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+
+
 
 
 def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveform_model, params_gb, snrs_tot_upper, galactic_below, noise_realization, SAET_m):
@@ -178,22 +216,18 @@ def decide_coadd_helper(brights, faints_old, faints_cur, itrn, itrb, bgd, wavefo
     if not faints_cur[itrn, itrb]:
         if brights[itrn, itrb]:
             # binary is bright enough to decide
-            for itrc in range(2):
-                bgd.galactic_above[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+            bgd.add_bright(listT_temp, NUTs_temp, waveT_temp)
         else:
             # binary neither faint nor bright enough to decide
-            for itrc in range(2):
-                bgd.galactic_undecided[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+            bgd.add_undecided(listT_temp, NUTs_temp, waveT_temp)
     else:
         # binary is faint enough to decide
         if itrn == 1:
             faints_cur[itrn, itrb] = False
             faints_old[itrb] = True
-            for itrc in range(2):
-                bgd.galactic_floor[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+            bgd.add_floor(listT_temp, NUTs_temp, waveT_temp)
         else:
-            for itrc in range(2):
-                bgd.galactic_below[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+            bgd.add_faint(listT_temp, NUTs_temp, waveT_temp)
 
 
 def sustain_snr_helper(faint_converged, snrs_tot_lower, snrs_lower, snrs_tot_upper, snrs_upper, itrn, decided, bright_converged):
@@ -253,7 +287,7 @@ def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, 
         filter_periods = not const_only
 
     # use higher estimate of galactic bg
-    SAET_tot_upper, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.get_galactic_below_high(), SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods=filter_periods, period_list=period_list)
+    SAET_tot_upper = bgd.get_S_below_high(SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods, period_list)
     noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_upper, wc, prune=True)
 
     SAET_tot_upper = None
@@ -272,7 +306,8 @@ def addition_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, period_
 
         # make sure this will always predict >= snrs to the actual spectrum in use
         # use lower estimate of galactic bg
-        SAET_tot_lower, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.get_galactic_below_low(), SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list)
+        filter_periods = not const_only
+        SAET_tot_lower = bgd.get_S_below_low(SAET_m, wc, smooth_lengthf_targ, filter_periods, period_list)
         SAET_tot_lower = np.min([SAET_tot_lower, noise_upper.SAET], axis=0)
         noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_lower, wc, prune=True)
         SAET_tot_lower = None

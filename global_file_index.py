@@ -140,6 +140,7 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
     return galactic_below_in, noise_realization_got, snr_tots_in, SAET_m, wc, lc, snr_min
 
 def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, const_only):
+    # TODO loading should produce a galactic background decomposition object
     filename_in = get_processed_gb_filename(galaxy_dir, const_only, snr_thresh, wc, nt_min, nt_max)
     hf_in = h5py.File(filename_in,'r')
 
