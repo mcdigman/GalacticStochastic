@@ -149,7 +149,7 @@ if plot_noise_spectrum_evolve:
     plt.show()
 
 res_mask = (ifm.noise_upper.SAET[:, :, 0]-SAET_m[:, 0]).mean(axis=0) > 0.1*SAET_m[:, 0]
-galactic_below_high = ifm.bgd.galactic_undecided + ifm.bgd.galactic_below + ifm.bgd.galactic_floor
+galactic_below_high = ifm.bgd.get_galactic_below_high()
 unit_normal_res, _, _, _ = unit_normal_battery((galactic_below_high.reshape(wc.Nt, wc.Nf, wc.NC)[nt_min:nt_max, res_mask, 0:2]/np.sqrt(ifm.noise_upper.SAET[nt_min:nt_max, res_mask, 0:2]-SAET_m[res_mask, 0:2])).flatten(), A2_cut=10., sig_thresh=10.,do_assert=False)
 if unit_normal_res:
     print('After iteration, final background PASSES normality tests')

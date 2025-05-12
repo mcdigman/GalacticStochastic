@@ -10,8 +10,7 @@ from iterative_fit_helpers import (BGDecomposition,
                                    addition_convergence_decision,
                                    run_binary_coadd2,
                                    subtraction_convergence_decision,
-                                   sustain_snr_helper,
-                                   total_signal_consistency_check)
+                                   sustain_snr_helper)
 from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 
 
@@ -129,7 +128,7 @@ class IterativeFitManager():
         sustain_snr_helper(self.fit_state.faint_converged, self.bis.snrs_tot_lower, self.bis.snrs_lower, self.bis.snrs_tot_upper, self.bis.snrs_upper, itrn, self.bis.decided[itrn], self.fit_state.bright_converged)
 
         # sanity check that the total signal does not change regardless of what bucket the binaries are allocated to
-        total_signal_consistency_check(self.galactic_total, self.bgd, itrn)
+        self.bgd.total_signal_consistency_check()
 
 
         t1n = perf_counter()
@@ -219,10 +218,10 @@ class IterativeFitManager():
             assert not self.fit_state.bright_converged[itrn+1]
 
     def _parseval_store(self,itrn):
-        self.parseval_tot[itrn] = np.sum((self.bgd.galactic_floor+self.bgd.galactic_below+self.bgd.galactic_undecided+self.bgd.galactic_above).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
-        self.parseval_bg[itrn] = np.sum((self.bgd.galactic_floor+self.bgd.galactic_below+self.bgd.galactic_undecided).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
-        self.parseval_const[itrn] = np.sum((self.bgd.galactic_floor+self.bgd.galactic_below).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
-        self.parseval_sup[itrn] = np.sum((self.bgd.galactic_above).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
+        self.parseval_tot[itrn] = np.sum((self.bgd.get_galactic_total()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
+        self.parseval_bg[itrn] = np.sum((self.bgd.get_galactic_below_high()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
+        self.parseval_const[itrn] = np.sum((self.bgd.get_galactic_below_low()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
+        self.parseval_sup[itrn] = np.sum((self.bgd.get_galactic_coadd_resolvable()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
 
 class BinaryInclusionState():
     def __init__(self, n_iterations, n_bin_use, wc):

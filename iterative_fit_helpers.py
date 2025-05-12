@@ -10,7 +10,60 @@ from galactic_fit_helpers import get_SAET_cyclostationary_mean
 from instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
 
 IterationConfig = namedtuple('IterationConfig', ['n_iterations', 'snr_thresh', 'snr_min', 'snr_cut_bright', 'smooth_lengthf'])
-BGDecomposition = namedtuple('BGDecomposition', ['galactic_floor', 'galactic_below', 'galactic_undecided', 'galactic_above'])
+#BGDecomposition = namedtuple('BGDecomposition', ['galactic_floor', 'galactic_below', 'galactic_undecided', 'galactic_above'])
+
+class BGDecomposition():
+    """class to handle the internal decomposition of the galactic background"""
+    def __init__(self, galactic_floor, galactic_below, galactic_undecided, galactic_above):
+        self.galactic_floor = galactic_floor
+        self.galactic_below = galactic_below
+        self.galactic_undecided = galactic_undecided
+        self.galactic_above = galactic_above
+        self.galactic_total_cache = None
+
+    def get_galactic_total(self):
+        """get the sum of all components of the galactic signal, detectable or not"""
+        return self.get_galactic_below_high() + self.galactic_above
+
+    def get_galactic_below_high(self):
+        """
+        get the upper estimate of the unresolvable signal from the galactic background, 
+        assuming that the undecided part of the signal *is* part of the unresolvable background
+        """
+        return self.get_galactic_below_low() + self.galactic_undecided
+
+    def get_galactic_below_low(self):
+        """
+        get the lower estimate of the unresolvable signal from the galactic background, 
+        assuming that the undecided part of the signal *is not* part of the unresolvable background
+        """
+        return self.galactic_floor + self.galactic_below
+
+    def total_signal_consistency_check(self):
+        """
+        if we have previously cached the total recorded galactic signal,
+        check that the total not changed much.
+        Otherwise, cache the current total so future runs can check if it has changed
+        """
+        if self.galactic_total_cache is None:
+            assert np.all(self.galactic_below == 0.)
+            self.galactic_total_cache = self.get_galactic_total()
+        else:
+            #check all contributions to the total signal are tracked accurately
+            assert np.allclose(self.galactic_total_cache, self.get_galactic_total(), atol=1.e-300, rtol=1.e-6)
+
+    def get_galactic_coadd_resolvable(self):
+        """
+        get the coadded signal from only bright/resolvable galactic binaries 
+        """
+        return self.galactic_above
+
+    def get_galactic_coadd_undecided(self):
+        """
+        get the coadded signal from galactic binaries whose status as bright or faint has not yet been decided
+        """
+        return self.galactic_undecided
+        
 
 def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveform_model, params_gb, snrs_tot_upper, galactic_below, noise_realization, SAET_m):
     # TODO make snr_cut_bright and smooth_lengthf an array as a function of iteration
@@ -152,13 +205,6 @@ def sustain_snr_helper(faint_converged, snrs_tot_lower, snrs_lower, snrs_tot_upp
         snrs_tot_upper[itrn, decided] = snrs_tot_upper[itrn-1, decided]
         snrs_upper[itrn, decided] = snrs_upper[itrn-1, decided]
 
-def total_signal_consistency_check(galactic_total, bgd, itrn):
-    if itrn == 1:
-        assert np.all(bgd.galactic_below == 0.)
-        galactic_total[:] = bgd.galactic_floor + bgd.galactic_below + bgd.galactic_undecided + bgd.galactic_above
-    else:
-        #check all contributions to the total signal are tracked accurately
-        assert np.allclose(galactic_total, bgd.galactic_floor + bgd.galactic_below + bgd.galactic_undecided + bgd.galactic_above, atol=1.e-300, rtol=1.e-6)
 
 def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, period_list1, const_only, noise_upper, n_cyclo_switch):
 
@@ -202,7 +248,7 @@ def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, 
 
     # don't use cyclostationary model until specified iteration
     # higher estimate of galactic bg
-    galactic_below_high = bgd.galactic_undecided + bgd.galactic_below + bgd.galactic_floor
+    galactic_below_high = bgd.get_galactic_below_high()
     if itrn < n_cyclo_switch:
         SAET_tot_upper, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_below_high, SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods=False, period_list=period_list1)
     else:
@@ -218,10 +264,10 @@ def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, 
 def addition_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, period_list1, const_only, noise_lower, noise_upper, n_const_force, const_converge_change_thresh, smooth_lengthf_targ):
     if not fit_state.faint_converged[itrn+1] or fit_state.switch_next[itrn+1]:
         if itrn < n_const_force:
-            SAET_tot_lower, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.galactic_below + bgd.galactic_floor, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
+            SAET_tot_lower, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.get_galactic_below_low(), SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
             fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn+1]
         else:
-            SAET_tot_lower, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.galactic_below + bgd.galactic_floor, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
+            SAET_tot_lower, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.get_galactic_below_low(), SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
             fit_state.faint_converged[itrn+1] = True
             # need to disable adaption of constant here because after this point the convergence isn't guaranteed to be monotonic
             print('disabled constant adaptation at ' + str(itrn))
