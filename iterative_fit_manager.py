@@ -37,12 +37,16 @@ class IterativeFitManager():
 
         faints_in = (snr_tots_in < snr_min_in[0]) | (params_gb[:, 3] >= (wc.Nf-1)*wc.DF)
         self.argbinmap = np.argwhere(~faints_in).flatten()
-        self.faints_old = faints_in[self.argbinmap]
+        faints_old = faints_in[self.argbinmap]
         self.params_gb = params_gb[self.argbinmap]
         self.n_bin_use = self.argbinmap.size
 
         params_gb = None
         faints_in = None
+
+        self.bis = BinaryInclusionState(ic.n_iterations, self.n_bin_use, self.wc, faints_old)
+
+        faints_old = None
 
         self.idx_SAET_save = np.hstack([np.arange(0, min(10, n_iterations)), np.arange(min(10, n_iterations), 4), n_iterations-1])
         self.itr_save = 0
@@ -79,7 +83,6 @@ class IterativeFitManager():
 
         self.n_full_converged = ic.n_iterations-1
 
-        self.bis = BinaryInclusionState(ic.n_iterations, self.n_bin_use, self.wc)
         self.fit_state =  IterativeFitState(self.ic)
 
         self.galactic_total = np.zeros((wc.Nt*wc.Nf, wc.NC))
@@ -125,8 +128,7 @@ class IterativeFitManager():
         self._run_binaries(itrn)
 
         # copy forward prior calculations of snr calculations that were skipped in this loop iteration
-        self.bis.sustain_snr_helper(itrn, self.fit_state.faint_converged, self.fit_state.bright_converged)
-        #sustain_snr_helper(self.fit_state.faint_converged, self.bis.snrs_tot_lower, self.bis.snrs_lower, self.bis.snrs_tot_upper, self.bis.snrs_upper, itrn, self.bis.decided[itrn], self.fit_state.bright_converged)
+        self.bis.sustain_snr_helper(itrn, self.fit_state)
 
         # sanity check that the total signal does not change regardless of what bucket the binaries are allocated to
         self.bgd.total_signal_consistency_check()
@@ -152,12 +154,12 @@ class IterativeFitManager():
     def _run_binaries(self,itrn):
         # do the finishing step for itrn=0 to set everything at the end of the loop as it should be
 
-        self.bis.decided[itrn] = self.bis.brights[itrn] | self.bis.faints_cur[itrn] | self.faints_old
+        self.bis.decided[itrn] = self.bis.brights[itrn] | self.bis.faints_cur[itrn] | self.bis.faints_old
 
         idxbs = np.argwhere(~self.bis.decided[itrn]).flatten()
         for itrb in idxbs:
             if not self.bis.decided[itrn, itrb]:
-                run_binary_coadd2(self.waveform_manager, self.params_gb, self.bis.brights, self.faints_old, self.bis.faints_cur, self.bis.snrs_lower, self.bis.snrs_upper, self.bis.snrs_tot_upper, self.bis.snrs_tot_lower, itrn, itrb, self.noise_upper, self.noise_lower, self.ic, self.fit_state.faint_converged, self.fit_state.bright_converged, self.nt_min, self.nt_max, self.bgd)
+                run_binary_coadd2(self.waveform_manager, self.params_gb, self.bis, itrn, itrb, self.noise_upper, self.noise_lower, self.ic, self.fit_state, self.nt_min, self.nt_max, self.bgd)
 
     def _iteration_cleanup(self, itrn):
         if self.itr_save < self.idx_SAET_save.size and itrn == self.idx_SAET_save[self.itr_save]:
@@ -177,10 +179,10 @@ class IterativeFitManager():
     def print_report(self, itrn):
         Tobs_consider_yr = (self.nt_max - self.nt_min)*self.wc.DT/gc.SECSYEAR
         n_consider = self.n_bin_use
-        n_faint = self.faints_old.sum()
+        n_faint = self.bis.faints_old.sum()
         n_faint2 = self.bis.faints_cur[itrn].sum()
         n_bright = self.bis.brights[itrn].sum()
-        n_ambiguous = (~(self.faints_old[itrn] | self.bis.brights[itrn])).sum()
+        n_ambiguous = (~(self.bis.faints_old[itrn] | self.bis.brights[itrn])).sum()
         print('Out of %10d total binaries, %10d were deemed undetectable by a previous evaluation, %10d were considered here.' % (self.n_tot, self.n_tot - n_consider, n_consider))
         print('The iterative procedure deemed (%5.3f yr observation at threshold snr=%5.3f):' % (Tobs_consider_yr, self.ic.snr_thresh))
         print('       %10d undetectable due to instrument noise' % n_faint)
@@ -227,7 +229,7 @@ class IterativeFitManager():
         self.parseval_bright[itrn] = np.sum((self.bgd.get_galactic_coadd_resolvable()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
 
 class BinaryInclusionState():
-    def __init__(self, n_iterations, n_bin_use, wc):
+    def __init__(self, n_iterations, n_bin_use, wc, faints_old):
         self.snrs_upper = np.zeros((n_iterations, n_bin_use, wc.NC))
         self.snrs_lower = np.zeros((n_iterations, n_bin_use, wc.NC))
         self.snrs_tot_lower = np.zeros((n_iterations, n_bin_use))
@@ -239,19 +241,21 @@ class BinaryInclusionState():
         self.n_faints_cur = np.zeros(n_iterations+1, dtype=np.int64)
         self.n_brights_cur = np.zeros(n_iterations+1, dtype=np.int64)
 
-    def sustain_snr_helper(self, itrn, faint_converged, bright_converged):
+        self.faints_old = faints_old
+
+    def sustain_snr_helper(self, itrn, fit_state):
         #carry forward any other snr values we still know
-        if faint_converged[itrn]:
+        if fit_state.faint_converged[itrn]:
             self.snrs_tot_lower[itrn, self.decided[itrn]] = self.snrs_tot_lower[itrn-1, self.decided[itrn]]
             self.snrs_lower[itrn, self.decided[itrn]] = self.snrs_lower[itrn-1, self.decided[itrn]]
 
-        if bright_converged[itrn]:
+        if fit_state.bright_converged[itrn]:
             self.snrs_tot_upper[itrn, self.decided[itrn]] = self.snrs_tot_upper[itrn-1, self.decided[itrn]]
             self.snrs_upper[itrn, self.decided[itrn]] = self.snrs_upper[itrn-1, self.decided[itrn]]
 
     def oscillation_check_helper(self, itrn):
 
-        osc1 = False 
+        osc1 = False
         osc2 = False
         osc3 = False
 
