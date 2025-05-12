@@ -7,12 +7,10 @@ import numpy as np
 import global_const as gc
 from instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
 from iterative_fit_helpers import (BGDecomposition,
-                                   faint_convergence_decision,
-                                   run_binary_coadd2,
                                    bright_convergence_decision,
-                                   new_noise_helper)
+                                   faint_convergence_decision,
+                                   new_noise_helper, run_binary_coadd2)
 from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
-
 
 
 class IterativeFitManager():
@@ -32,8 +30,7 @@ class IterativeFitManager():
         self.faint_converge_change_thresh = faint_converge_change_thresh
         self.n_tot = params_gb.shape[0]
 
-
-        #iteration to switch to fitting spectrum fully
+        # iteration to switch to fitting spectrum fully
 
         faints_in = (snr_tots_in < snr_min_in[0]) | (params_gb[:, 3] >= (wc.Nf-1)*wc.DF)
         self.argbinmap = np.argwhere(~faints_in).flatten()
@@ -54,12 +51,10 @@ class IterativeFitManager():
         self.SAET_tots = np.zeros((self.idx_SAET_save.size, wc.Nt, wc.Nf, 3))
         self.SAET_fin = np.zeros((wc.Nt, wc.Nf, 3))
 
-
         self.parseval_below_low = np.zeros(n_iterations)
         self.parseval_below_high = np.zeros(n_iterations)
         self.parseval_bright = np.zeros(n_iterations)
         self.parseval_total = np.zeros(n_iterations)
-
 
         params0 = self.params_gb[0].copy()
         self.waveform_manager = BinaryWaveletAmpFreqDT(params0.copy(), wc, self.lc)
@@ -80,10 +75,9 @@ class IterativeFitManager():
         SAET_tot_upper = None
         SAET_tot_lower = None
 
-
         self.n_full_converged = ic.n_iterations-1
 
-        self.fit_state =  IterativeFitState(self.ic)
+        self.fit_state = IterativeFitState(self.ic)
 
         self.galactic_total = np.zeros((wc.Nt*wc.Nf, wc.NC))
 
@@ -100,7 +94,6 @@ class IterativeFitManager():
         galactic_above = None
         galactic_undecided = None
 
-
     def do_loop(self):
         print('entered loop')
         ti = perf_counter()
@@ -111,14 +104,12 @@ class IterativeFitManager():
             if self.check_done(itrn):
                 break
 
-
         self._loop_cleanup()
 
         tf = perf_counter()
         print('loop time = %.3es' % (tf-ti))
 
         self.print_report(itrn)
-
 
     def do_iteration(self, itrn):
         t0n = perf_counter()
@@ -132,7 +123,6 @@ class IterativeFitManager():
 
         # sanity check that the total signal does not change regardless of what bucket the binaries are allocated to
         self.bgd.total_signal_consistency_check()
-
 
         t1n = perf_counter()
 
@@ -151,7 +141,7 @@ class IterativeFitManager():
         t2n = perf_counter()
         print('made bg %3d in time %7.3fs fit time %7.3fs' % (itrn, t1n-t0n, t2n-t1n))
 
-    def _run_binaries(self,itrn):
+    def _run_binaries(self, itrn):
         # do the finishing step for itrn=0 to set everything at the end of the loop as it should be
 
         self.bis.decided[itrn] = self.bis.brights[itrn] | self.bis.faints_cur[itrn] | self.bis.faints_old
@@ -169,7 +159,7 @@ class IterativeFitManager():
     def _loop_cleanup(self):
         self.SAET_fin[:] = self.noise_upper.SAET[:, :, :]
 
-    def check_done(self,itrn):
+    def check_done(self, itrn):
         if self.fit_state.bright_converged[itrn+1] and self.fit_state.faint_converged[itrn+1]:
             print('result fully converged at '+str(itrn)+', no further iterations needed')
             self.n_full_converged = itrn
@@ -191,8 +181,7 @@ class IterativeFitManager():
         print('       %10d total undetectable' % (self.n_tot - n_bright))
         print('       %10d total detectable' % n_bright)
 
-
-    def _state_update(self,itrn):
+    def _state_update(self, itrn):
         if self.fit_state.do_bright_check[itrn]:
             self.bgd.galactic_below[:] = 0.
             self.bis.faints_cur[itrn] = False
@@ -209,7 +198,7 @@ class IterativeFitManager():
             else:
                 self.bis.brights[itrn] = self.bis.brights[itrn-1]
 
-    def _state_check(self,itrn):
+    def _state_check(self, itrn):
         if self.fit_state.bright_converged[itrn]:
             assert np.all(self.bis.brights[itrn] == self.bis.brights[itrn-1])
 
@@ -222,11 +211,12 @@ class IterativeFitManager():
         if self.fit_state.do_faint_check[itrn+1]:
             assert not self.fit_state.bright_converged[itrn+1]
 
-    def _parseval_store(self,itrn):
+    def _parseval_store(self, itrn):
         self.parseval_total[itrn] = np.sum((self.bgd.get_galactic_total()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
         self.parseval_below_high[itrn] = np.sum((self.bgd.get_galactic_below_high()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
         self.parseval_below_low[itrn] = np.sum((self.bgd.get_galactic_below_low()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
         self.parseval_bright[itrn] = np.sum((self.bgd.get_galactic_coadd_resolvable()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
+
 
 class BinaryInclusionState():
     def __init__(self, n_iterations, n_bin_use, wc, faints_old):
@@ -244,7 +234,7 @@ class BinaryInclusionState():
         self.faints_old = faints_old
 
     def sustain_snr_helper(self, itrn, fit_state):
-        #carry forward any other snr values we still know
+        # carry forward any other snr values we still know
         if fit_state.faint_converged[itrn]:
             self.snrs_tot_lower[itrn, self.decided[itrn]] = self.snrs_tot_lower[itrn-1, self.decided[itrn]]
             self.snrs_lower[itrn, self.decided[itrn]] = self.snrs_lower[itrn-1, self.decided[itrn]]
@@ -270,6 +260,7 @@ class BinaryInclusionState():
         old_match = osc2 or osc3
         cycling = old_match and not osc1
         return cycling, converged_or_cycling, old_match
+
 
 class IterativeFitState():
     def __init__(self, ic):

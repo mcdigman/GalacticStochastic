@@ -21,6 +21,7 @@ wc = get_wavelet_model(config)
 np.random.seed(3141592)
 bg_base = np.random.normal(0., 1., (wc.Nt, wc.Nf, wc.NC))
 
+
 @pytest.mark.parametrize('sign_high', [1, -1])
 @pytest.mark.parametrize('sign_low', [1, -1])
 def test_filter_periods_fft_full(sign_low, sign_high):
@@ -64,6 +65,7 @@ def test_filter_periods_fft_full(sign_low, sign_high):
     assert np.allclose(angle_got[-1], np.pi/4.)
 
     assert np.allclose(r_fft1, xs, atol=1.e-10, rtol=1.e-10)
+
 
 def test_filter_periods_fft_full2():
     """test filtering max period with ffts for random data"""
@@ -235,7 +237,7 @@ def test_nonstationary_mean_faint_alternate(amp2_mult):
         t_mult1[:, itrc] += amp1*np.cos(2*np.pi/gc.SECSYEAR*ts*itrk1 - phase1)
         t_mult2[:, itrc] += amp2*np.cos(2*np.pi/gc.SECSYEAR*ts*itrk2 - phase2)
 
-    #bg_here = bg_base.copy()
+    # bg_here = bg_base.copy()
     bg_here = np.full_like(bg_base, 1.)
 
     for itrc in range(0, wc.NC):
@@ -249,7 +251,7 @@ def test_nonstationary_mean_faint_alternate(amp2_mult):
 
     _, amp_got1, _ = filter_periods_fft(t_mult1**2+1., wc.Nt, period_list, wc)
 
-    if  amp2**2 < 0.1 * amp1**2:
+    if amp2**2 < 0.1 * amp1**2:
         assert np.allclose(amp_got[2*int(wc.Tobs/gc.SECSYEAR)*itrk1, :], 1., atol=1.e-10, rtol=1.e-10)
         assert np.allclose(amp_got[int(wc.Tobs/gc.SECSYEAR)*itrk1, :], 0., atol=1.e-10, rtol=1.e-10)
         assert np.allclose(amp_got[2*int(wc.Tobs/gc.SECSYEAR)*itrk2, :], 0., atol=1.e-10, rtol=1.e-10)
@@ -322,7 +324,7 @@ def test_nonstationary_mean_zero_case():
         for itrf in range(0, wc.Nf):
             got_loc = SAET_got[:, itrf, itrc]
             bg_loc = f_mult_smooth[itrf, itrc]**2*t_mult[:, itrc]**2
-            pred_loc = SAET_m[itrf, itrc] + bg_loc# - amp1**2/2/(1+amp1**2/2)
+            pred_loc = SAET_m[itrf, itrc] + bg_loc
             assert np.allclose(got_loc, pred_loc, atol=5*(f_mult_smooth[itrf, itrc]**2)/np.sqrt(wc.Nt), rtol=5*(bg_loc)/np.sqrt(wc.Nt))
 
 
@@ -343,7 +345,6 @@ def nonstationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, fi
     amp_exp = np.array([0.,  2*amp1/(1+amp1**2/2), 1/2*amp1**2/(1+amp1**2/2)])
     phase_exp = np.array([0.,  phase1, 2*phase1])
 
-
     f_mult = np.full((wc.Nf, wc.NC), 0.)
     for itrc in range(0, wc.NC):
         f_mult[:, itrc] = get_noise_model_helper(bg_models[itrc])
@@ -355,7 +356,7 @@ def nonstationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, fi
             t_mult[:, itrc] += amp_list1[itrp]*np.cos(2*np.pi/gc.SECSYEAR*ts*period_list1[itrp] - phase_list1[itrp])
 
     # checks for closeness can be much stricter if bg_here is 1, but may not cover all variations
-    #bg_here = np.full_like(bg_base, 1.)
+    # bg_here = np.full_like(bg_base, 1.)
     bg_here = bg_base.copy()
 
     for itrf in range(0, wc.Nf):
@@ -376,7 +377,6 @@ def nonstationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, fi
         for itrp in range(period_list1.size):
             assert np.isclose(amp_got[itrp, itrc], amp_exp[itrp], atol=1.e-2, rtol=1.e-1)
             assert np.isclose((angle_got[itrp, itrc] - phase_exp[itrp] + np.pi) % (2*np.pi) + phase_exp[itrp] - np.pi, phase_exp[itrp], atol=1.e-2/(amp_got[itrp, itrc]+0.001), rtol=1.e-1)
-
 
     # replicate expected smoothed multiplier
     f_mult_smooth = np.zeros_like(f_mult)

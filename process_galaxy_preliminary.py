@@ -13,7 +13,7 @@ from lisa_config import get_lisa_constants
 from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 from wdm_config import get_wavelet_model
 
-if __name__=='__main__':
+if __name__ == '__main__':
     config = configparser.ConfigParser()
     config.read('default_parameters.ini')
 
@@ -92,7 +92,7 @@ if __name__=='__main__':
     if plot_bg:
         res = galactic_below_high[:, :, 0]
         res = res[:, :wc.Nf//2]
-        mask = (res==0.)
+        mask = res == 0.
         res[mask] = np.nan
         import matplotlib.pyplot as plt
         plt.imshow(np.rot90(res), aspect='auto')
@@ -101,14 +101,13 @@ if __name__=='__main__':
     plot_realization_im = False
     if plot_realization_im:
         import matplotlib.pyplot as plt
-        mask = (galactic_below_high==0.)
+        mask = galactic_below_high == 0.
         res = np.zeros_like(galactic_below_high)
         res[~mask] = np.log10(np.abs(galactic_below_high[~mask]))
         plt.imshow(np.rot90(res[:, :, 0][:, 1:200]), aspect='auto')
         plt.ylabel('frequency')
         plt.xlabel('time')
         plt.show()
-
 
     do_hist_plots = False
     if do_hist_plots:

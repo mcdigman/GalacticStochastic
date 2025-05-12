@@ -28,7 +28,7 @@ if __name__ == '__main__':
 
     galactic_below_in, _, snr_tots_in, SAET_m, _, _, snr_min_in = gfi.load_init_galactic_file(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
 
-    for itrm in range(0,1):
+    for itrm in range(0, 1):
         stat_only = False
         nt_min = 256*(7-itrm)
         nt_max = nt_min+512*(itrm+1)
@@ -74,7 +74,6 @@ if __name__ == '__main__':
         for itrn in range(fsmooth_fix_itr):
             smooth_lengthfs[itrn] += fsmooth_settle_mult*np.exp(-fsmooth_settle_scale*itrn - fsmooth_settle_offset)
 
-
         snr_min = np.zeros(n_iterations)
         snr_min[0] = snr_low_initial               # for first iteration set to thresh because spectrum is just instrument noise
         snr_min[1:] = snr_low_mult * snr_high_fix  # for subsequent, choose value to ensure almost nothing gets decided as constant because of its own power alone
@@ -85,7 +84,6 @@ if __name__ == '__main__':
             period_list = np.array([1, 2, 3, 4, 5])
 
         # TODO move snr_min, snr_thresh, period_list, etc to init file
-
 
         ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_cut_bright, smooth_lengthfs)
 
@@ -98,8 +96,6 @@ if __name__ == '__main__':
         do_hf_out = True
         if do_hf_out:
             gfi.store_processed_gb_file(galaxy_dir, galaxy_file, ifm.wc, ifm.lc, ifm.ic, ifm.nt_min, ifm.nt_max, ifm.bgd, ifm.period_list, ifm.n_bin_use, ifm.SAET_m, ifm.SAET_fin, ifm.stat_only, ifm.bis.snrs_tot_upper, ifm.n_full_converged, ifm.argbinmap, ifm.bis.faints_old, ifm.bis.faints_cur, ifm.bis.brights, snr_min_in)
-
-
 
 do_parseval_plot = False
 if do_parseval_plot:
@@ -118,7 +114,6 @@ if plot_noise_spectrum_ambiguity:
     ax.loglog(np.arange(1, wc.Nf)*wc.DF, np.mean(ifm.noise_lower.SAET[:, 1:, 0:2], axis=0).mean(axis=1).T)
     ax.loglog(np.arange(1, wc.Nf)*wc.DF, SAET_m_shift[1:, 0], 'k--', zorder=-100)
     ax.tick_params(axis='both', direction='in', which='both', top=True, right=True)
-    #plt.legend(['initial', '1', '2', '3', '4', '5', '6', 'final'])
     # TODO handle if not all iterations complete
     plt.legend(['initial', '1', '2', '3', '4', '5', 'base'])
     plt.ylim([2.e-44, 4.e-43])
@@ -139,7 +134,6 @@ if plot_noise_spectrum_evolve:
     ax.loglog(np.arange(1, wc.Nf)*wc.DF, np.mean(ifm.noise_upper.SAET[:, 1:, 0:2], axis=0).mean(axis=1).T)
     ax.loglog(np.arange(1, wc.Nf)*wc.DF, SAET_m_shift[1:, 0], 'k--', zorder=-100)
     ax.tick_params(axis='both', direction='in', which='both', top=True, right=True)
-    #plt.legend(['initial', '1', '2', '3', '4', '5', '6', 'final'])
     # TODO handle if not all iterations complete
     plt.legend(['initial', '1', '2', '3', '4', '5', 'base'])
     plt.ylim([2.e-44, 4.e-43])
@@ -150,7 +144,7 @@ if plot_noise_spectrum_evolve:
 
 res_mask = (ifm.noise_upper.SAET[:, :, 0]-SAET_m[:, 0]).mean(axis=0) > 0.1*SAET_m[:, 0]
 galactic_below_high = ifm.bgd.get_galactic_below_high()
-unit_normal_res, _, _, _ = unit_normal_battery((galactic_below_high.reshape(wc.Nt, wc.Nf, wc.NC)[nt_min:nt_max, res_mask, 0:2]/np.sqrt(ifm.noise_upper.SAET[nt_min:nt_max, res_mask, 0:2]-SAET_m[res_mask, 0:2])).flatten(), A2_cut=10., sig_thresh=10.,do_assert=False)
+unit_normal_res, _, _, _ = unit_normal_battery((galactic_below_high.reshape(wc.Nt, wc.Nf, wc.NC)[nt_min:nt_max, res_mask, 0:2]/np.sqrt(ifm.noise_upper.SAET[nt_min:nt_max, res_mask, 0:2]-SAET_m[res_mask, 0:2])).flatten(), A2_cut=10., sig_thresh=10., do_assert=False)
 if unit_normal_res:
     print('After iteration, final background PASSES normality tests')
 else:

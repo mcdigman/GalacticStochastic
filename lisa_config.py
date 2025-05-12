@@ -10,6 +10,7 @@ import global_const as gc
 
 LISAConstants = namedtuple('LISAConstants', ['Larm', 'Sps', 'Sacc', 'kappa0', 'lambda0', 'fstr', 'ec', 'fm'])
 
+
 def get_lisa_constants(config):
     """Get lisa constant object from config file"""
 

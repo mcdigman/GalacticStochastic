@@ -13,7 +13,7 @@ from lisa_config import get_lisa_constants
 from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 from wdm_config import get_wavelet_model
 
-if __name__=='__main__':
+if __name__ == '__main__':
 
     config = configparser.ConfigParser()
     config.read('default_parameters.ini')
@@ -31,10 +31,7 @@ if __name__=='__main__':
 
     params0 = params_gb[0].copy()
 
-
     galactic_below_in, noise_realization_common, snrs_tot_upper_in, _, lc = gfi.load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
-
-
 
     waveT_ini = BinaryWaveletAmpFreqDT(params0.copy(), wc, lc)
     listT_temp, waveT_temp, NUTs_temp = waveT_ini.get_unsorted_coeffs()
@@ -104,7 +101,7 @@ if __name__=='__main__':
     if plot_bg:
         res = galactic_below_high[:, :, 0]
         res = res[:, :wc.Nf//2]
-        mask = (res==0.)
+        mask = res == 0.
         res[mask] = np.nan
         import matplotlib.pyplot as plt
         plt.imshow(np.rot90(res), aspect='auto')

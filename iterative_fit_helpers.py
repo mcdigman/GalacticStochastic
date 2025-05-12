@@ -4,13 +4,12 @@ from collections import namedtuple
 from time import perf_counter
 
 import numpy as np
-import scipy.stats
 
 from galactic_fit_helpers import get_SAET_cyclostationary_mean
 from instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
 
 IterationConfig = namedtuple('IterationConfig', ['n_iterations', 'snr_thresh', 'snr_min', 'snr_cut_bright', 'smooth_lengthf'])
-#BGDecomposition = namedtuple('BGDecomposition', ['galactic_floor', 'galactic_below', 'galactic_undecided', 'galactic_above'])
+
 
 class BGDecomposition():
     """class to handle the internal decomposition of the galactic background"""
@@ -72,7 +71,7 @@ class BGDecomposition():
             assert np.all(self.galactic_below == 0.)
             self.galactic_total_cache = self.get_galactic_total(bypass_check=True)
         else:
-            #check all contributions to the total signal are tracked accurately
+            # check all contributions to the total signal are tracked accurately
             assert np.allclose(self.galactic_total_cache, self.get_galactic_total(bypass_check=True), atol=1.e-300, rtol=1.e-6)
 
     # TODO the methods below might work better in a child class
@@ -99,8 +98,6 @@ class BGDecomposition():
     def add_bright(self, listT_temp, NUTs_temp, waveT_temp):
         for itrc in range(self.NC_gal):
             self.galactic_above[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
-
-
 
 
 def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveform_model, params_gb, snrs_tot_upper, galactic_below, noise_realization, SAET_m):
@@ -141,11 +138,11 @@ def run_binary_coadd(itrb, faints_in, waveform_model, noise_upper, snrs_upper, s
         listT_temp, waveT_temp, NUTs_temp = waveform_model.get_unsorted_coeffs()
         snrs_upper[itrn, itrb] = noise_upper.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp)
         snrs_tot_upper[itrn, itrb] = np.linalg.norm(snrs_upper[itrn, itrb])
-        if itrn == 0 and snrs_tot_upper[0, itrb]<snr_min:
+        if itrn == 0 and snrs_tot_upper[0, itrb] < snr_min:
             faints_in[itrb] = True
             for itrc in range(wc.NC):
                 galactic_below[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
-        elif snrs_tot_upper[itrn, itrb]<snr_cut_bright:
+        elif snrs_tot_upper[itrn, itrb] < snr_cut_bright:
             for itrc in range(wc.NC):
                 galactic_undecided[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
         else:
@@ -181,7 +178,7 @@ def decision_helper(bis, itrn, itrb, waveform_model, noise_upper, noise_lower, i
         bright_candidate = False
 
     if np.isnan(bis.snrs_tot_upper[itrn, itrb]) or np.isnan(bis.snrs_tot_lower[itrn, itrb]):
-        raise ValueError('nan detected in snr at '+str(itrn)+', ' + str(itrb))
+        raise ValueError('nan detected in snr at ' + str(itrn) + ', ' + str(itrb))
     elif bright_candidate and faint_candidate:
         # satifisfied conditions to be eliminated in both directions so just keep it
         bright_loc = False
@@ -202,10 +199,11 @@ def decision_helper(bis, itrn, itrb, waveform_model, noise_upper, noise_lower, i
 
     return bright_loc, faint_loc
 
+
 def decide_coadd_helper(bis, itrn, itrb, bgd, waveform_model, fit_state):
     """add each binary to the correct part of the galactic spectrum, depending on whether it is bright or faint"""
     # the same binary cannot be decided as both bright and faint
-    assert not (bis.brights[itrn, itrb] and  bis.faints_cur[itrn, itrb])
+    assert not (bis.brights[itrn, itrb] and bis.faints_cur[itrn, itrb])
 
     # don't add to anything if the bright adaptation is already converged and this binary would not be faint
     if fit_state.bright_converged[itrn] and not bis.faints_cur[itrn, itrb]:
@@ -228,8 +226,6 @@ def decide_coadd_helper(bis, itrn, itrb, bgd, waveform_model, fit_state):
             bgd.add_floor(listT_temp, NUTs_temp, waveT_temp)
         else:
             bgd.add_faint(listT_temp, NUTs_temp, waveT_temp)
-
-
 
 
 def bright_convergence_decision(bis, fit_state, itrn):
@@ -314,7 +310,6 @@ def faint_convergence_decision(bis, fit_state, itrn, n_min_faint_adapt, faint_co
             fit_state.faint_converged[itrn+1] = True
             # need to disable adaption of faint component here because after this point the convergence isn't guaranteed to be monotonic
             print('disabled faint component adaptation at ' + str(itrn))
-
 
         bis.n_faints_cur[itrn+1] = bis.faints_cur[itrn].sum()
         if fit_state.do_faint_check[itrn+1] and fit_state.faint_converged[itrn+1]:

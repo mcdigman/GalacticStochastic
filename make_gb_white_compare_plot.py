@@ -1,7 +1,5 @@
 """make plot comparing galactic background noise spectra with and without cyclostationary model"""
 
-import configparser
-
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,8 +12,6 @@ import global_const as gc
 import global_file_index as gfi
 from galactic_fit_helpers import get_SAET_cyclostationary_mean
 from instrument_noise import instrument_noise_AET_wdm_m
-from lisa_config import get_lisa_constants
-from wdm_config import get_wavelet_model
 
 mpl.rcParams['axes.linewidth'] = 1.2
 mpl.rcParams['xtick.major.size'] = 7
@@ -87,7 +83,7 @@ if __name__ == '__main__':
     SAET_m = instrument_noise_AET_wdm_m(lc, wc)
 
     SAET_model, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_cyclo, SAET_m, wc, 0, filter_periods=True, period_list=np.array([1, 2, 3, 4, 5]))
-    #SAET_model_stat, _, _ = get_SAET_cyclostationary_mean(galactic_stat, SAET_m, wc, 0, filter_periods=True, period_list=np.array([]))
+    # SAET_model_stat, _, _ = get_SAET_cyclostationary_mean(galactic_stat, SAET_m, wc, 0, filter_periods=True, period_list=np.array([]))
 
     fs = np.arange(1, wc.Nf)*wc.DF
 

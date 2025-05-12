@@ -5,16 +5,22 @@ from collections import namedtuple
 
 import numpy as np
 
-WDMWaveletConstants = namedtuple('WDMWaveletConstants', ['Nf', 'Nt', 'dt', 'mult', 'Nsf', 'Nfd', 'dfdot', 'Nfd_negative', 'Nst', 'Tobs', 'NC', 'DF', 'DT', 'nx', 'dfd', 'df', 'BW', 'Tw', 'K', 'A', 'B', 'dom', 'DOM', 'insDOM'])
+WDMWaveletConstants = namedtuple(
+        'WDMWaveletConstants',
+        [
+            'Nf', 'Nt', 'dt', 'mult', 'Nsf', 'Nfd', 'dfdot', 'Nfd_negative', 'Nst', 'Tobs', 'NC', 'DF', 'DT', 'nx', 'dfd', 'df', 'BW', 'Tw', 'K', 'A', 'B', 'dom', 'DOM', 'insDOM'
+        ]
+        )
+
 
 def get_wavelet_model(config):
     # number of time pixels (should be even)
     Nf = int(ast.literal_eval(config['wavelet constants']['Nf']))
-    assert Nf & 1 == 0 # check even
+    assert Nf & 1 == 0  # check even
 
     # number of frequency pixels (should be even)
     Nt = int(ast.literal_eval(config['wavelet constants']['Nt']))
-    assert Nt & 1 == 0 # check even
+    assert Nt & 1 == 0  # check even
 
     # time sampling cadence (units of seconds)
     dt = float(ast.literal_eval(config['wavelet constants']['dt']))
@@ -49,7 +55,6 @@ def get_wavelet_model(config):
     # reduced filter length; must be a power of 2
     L = int(ast.literal_eval(config['wavelet constants']['L']))
     assert L > 0 and (L & (L - 1)) == 0  # check power of 2
-
 
     # derived constants
 

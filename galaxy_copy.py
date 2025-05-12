@@ -27,9 +27,9 @@ hf_out['sky']['igb'].create_group('cat')
 n_par_gb = 8
 labels_gb = ['Amplitude', 'EclipticLatitude', 'EclipticLongitude', 'Frequency', 'FrequencyDerivative', 'Inclination', 'InitialPhase', 'Polarization']
 
-params_dgb[:,0] *= 10
-params_vgb[:,0] *= 10
-params_igb[:,0] *= 10
+params_dgb[:, 0] *= 10
+params_vgb[:, 0] *= 10
+params_igb[:, 0] *= 10
 
 for itrl in range(0, n_par_gb):
     hf_out['sky']['dgb']['cat'].create_dataset(labels_gb[itrl], data=params_dgb[:, itrl], compression='gzip')

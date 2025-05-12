@@ -9,35 +9,31 @@ from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 #from numba.experimental import jitclass
 
 
-#try:
-#    import numpy.random_intel as random
-#except ImportError:
-#    import numpy.random as random
-#import numpy.random as random
-
-
 def instrument_noise1(f, lc):
-    #Power spectral density of the detector noise and transfer frequency
+    # Power spectral density of the detector noise and transfer frequency
     SAE = np.zeros(f.size)
-    Sps = 9.e-24 #should match sangria v2? Should it be backlinknoise or readoutnoise?
-    Sacc = 5.76e-30 #from sangria v2
+    Sps = 9.e-24     # should match sangria v2? Should it be backlinknoise or readoutnoise?
+    Sacc = 5.76e-30  # from sangria v2
     fonfs = f/lc.fstr
-    #To match the LDC power spectra need a factor of 2 here. No idea why... (one sided/two sided?)
+    # To match the LDC power spectra need a factor of 2 here. No idea why... (one sided/two sided?)
     LC = 2.0*fonfs*fonfs
-    #roll-offs
+    # roll-offs
     rolla = (1.0+pow((4.0e-4/f), 2.0))*(1.0+pow((f/8.0e-3), 4.0))
-    rollw = (1.0+pow((2.0e-3/f), 4.0))
-    #Calculate the power spectral density of the detector noise at the given frequency
-    #not and exact match to the LDC, but within 10%
-    SAE = LC*16.0/3.0*pow(np.sin(fonfs), 2.0)*( (2.0+np.cos(fonfs))*(Sps)*rollw + 2.0*(3.0+2.0*np.cos(fonfs)+np.cos(2.0*fonfs))*(Sacc/pow(2.0*np.pi*f, 4.0)*rolla) ) / pow(2.0*lc.Larm, 2.0)
+    rollw = 1.0+pow((2.0e-3/f), 4.0)
+    # Calculate the power spectral density of the detector noise at the given frequency
+    # not and exact match to the LDC, but within 10%
+    SAE = LC*16.0/3.0*pow(np.sin(fonfs), 2.0)*(
+            (2.0+np.cos(fonfs))*(Sps)*rollw + 2.0*(3.0+2.0*np.cos(fonfs)+np.cos(2.0*fonfs))
+            *
+            (Sacc/pow(2.0*np.pi*f, 4.0)*rolla)) / pow(2.0*lc.Larm, 2.0)
     return SAE
 
 
 #@njit()
 def instrument_noise_AET(f, lc, wc):
     """get power spectral density in all 3 channels, assuming identical in all arms"""
-    #see arXiv:2005.03610
-    #see arXiv:1002.1291
+    # see arXiv:2005.03610
+    # see arXiv:1002.1291
     fonfs = f/lc.fstr
 
     LC = 64/(3*lc.Larm**2)
@@ -50,7 +46,7 @@ def instrument_noise_AET(f, lc, wc):
     SAET = np.zeros((f.size, wc.NC))
 
     #SAET[:, 0] = mult_all*(mult_sa*(1+cosfonfs+cosfonfs**2)+mult_sp*(2+cosfonfs))
-    SAET[:, 0] = instrument_noise1(f, lc) #TODO make this all self consistent
+    SAET[:, 0] = instrument_noise1(f, lc)  # TODO make this all self consistent
     SAET[:, 1] = SAET[:, 0]
     SAET[:, 2] = mult_all*(mult_sa/2*(1-2*cosfonfs+cosfonfs**2)+mult_sp*(1-cosfonfs))
     return SAET
@@ -76,12 +72,12 @@ def instrument_noise_AET_wdm_m(lc, wc):
         array shape is (freq. layers x number of TDI channels)
     """
 
-    #TODO why no plus 1?
+    # TODO why no plus 1?
     ls = np.arange(-wc.Nt//2, wc.Nt//2)
     fs = ls/wc.Tobs
     phif = np.sqrt(wc.dt)*phitilde_vec(2*np.pi*fs*wc.dt, wc.Nf, wc.nx)
 
-    #TODO check ad hoc normalization factor
+    # TODO check ad hoc normalization factor
     SAET_m = instrument_noise_AET_wdm_loop(phif, lc, wc)
     return SAET_m
 
@@ -89,9 +85,9 @@ def instrument_noise_AET_wdm_m(lc, wc):
 #@njit()
 def instrument_noise_AET_wdm_loop(phif, lc, wc):
     """helper to get the instrument noise for wdm"""
-    #realistically this really only needs run once and is fast enough without jit
-    #TODO check normalization
-    #TODO get first and last bins correct
+    # realistically this really only needs run once and is fast enough without jit
+    # TODO check normalization
+    # TODO get first and last bins correct
     #nrm =   np.sqrt(2*wc.Nf*wc.dt)*np.linalg.norm(phif)
     #nrm =   2*np.sqrt(2*wc.dt)*np.linalg.norm(phif)
     nrm = np.sqrt(12318/wc.Nf)*np.linalg.norm(phif)
@@ -102,12 +98,12 @@ def instrument_noise_AET_wdm_loop(phif, lc, wc):
     SAET_M = np.zeros((wc.Nf, wc.NC))
     half_Nt = wc.Nt//2
     fs_long = np.arange(-half_Nt, half_Nt+wc.Nf*half_Nt)/wc.Tobs
-    #prevent division by 0
+    # prevent division by 0
     fs_long[half_Nt] = fs_long[half_Nt+1]
     SAET_long = instrument_noise_AET(fs_long, lc, wc)
-    #excise the f=0 point
+    # excise the f=0 point
     SAET_long[half_Nt, :] = 0.
-    #apply window in loop
+    # apply window in loop
     for m in range(0, wc.Nf):
         SAET_M[m] = np.dot(phif2, SAET_long[m*half_Nt:(m+2)*half_Nt])
 
@@ -156,7 +152,6 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel:
             self.inv_chol_SAET[:, 0, :] = 0.
             self.inv_SAET[:, 0, :] = 0.
 
-
     def generate_dense_noise(self):
         """
         generate random noise for full matrix
@@ -175,7 +170,6 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel:
         for j in range(0, self.wc.Nt):
             noise_res[j, :, :] = normal(0., 1., (self.wc.Nf, self.wc.NC))*self.chol_SAET[j, :, :]
         return noise_res
-
 
     def get_sparse_snrs(self, NUs, lists_pixels, wavelet_data, nt_min=0, nt_max=-1):
         """get snr of waveform in each channel"""
@@ -205,17 +199,15 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
         -------
         DiagonalStationaryDenseInstrumentNoiseModel : class
         """
-        #self.NC = NC
         self.prune = prune
-        #self.SAET_m = instrument_noise_AET_wdm_m()
         self.SAET_m = SAET_m
         self.wc = wc
         self.inv_SAET_m = np.zeros((self.wc.Nf, self.wc.NC))
         self.inv_chol_SAET_m = np.zeros((self.wc.Nf, self.wc.NC))
         self.chol_SAET_m = np.zeros((self.wc.Nf, self.wc.NC))
         for m in range(0, self.wc.Nf):
-            if self.prune and (m==0 or m==wc.Nf):
-                #currently m can't be Nf but that is the value that should be pruned
+            if self.prune and (m == 0 or m == wc.Nf):
+                # currently m can't be Nf but that is the value that should be pruned
                 continue
             for itrc in range(0, self.wc.NC):
                 self.inv_SAET_m[m, itrc] = 1./self.SAET_m[m, itrc]
@@ -232,8 +224,8 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
                 self.inv_SAET[j, 1:, itrc] = self.inv_SAET_m[1:, itrc]
                 self.inv_chol_SAET[j, 1:, itrc] = self.inv_chol_SAET_m[1:, itrc]
                 self.chol_SAET[j, 1:, itrc] = self.chol_SAET_m[1:, itrc]
-                if j%2==0:
-                    #NOTE right now this just necessarily drops the highest frequency term, also note that lowest frequency term may be a bit different
+                if j % 2 == 0:
+                    # NOTE right now this just necessarily drops the highest frequency term, also note that lowest frequency term may be a bit different
                     self.SAET[j, 0, itrc] = self.SAET_m[0, itrc]
                     self.inv_SAET[j, 0, itrc] = self.inv_SAET_m[0, itrc]
                     self.inv_chol_SAET[j, 0, itrc] = self.inv_chol_SAET_m[0, itrc]
@@ -244,8 +236,7 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
         if self.prune:
             self.mean_SAE[0] = 0.
             self.inv_chol_mean_SAE[0] = 0.
-            #currently not right size for pruning
-
+            # currently not right size for pruning
 
     def generate_dense_noise(self):
         """
@@ -265,7 +256,6 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
         for j in range(0, self.wc.Nt):
             noise_res[j, :, :] = normal(0., 1., (self.wc.Nf, self.wc.NC))*self.chol_SAET[j, :, :]
         return noise_res
-
 
     def get_sparse_snrs(self, NUs, lists_pixels, wavelet_data, nt_min=0, nt_max=-1):
         """
@@ -331,7 +321,7 @@ def get_sparse_snr_helper(NUs, lists_pixels, wavelet_data, nt_min, nt_max, wc, i
         i_itrs = np.mod(lists_pixels[itrc, 0:NUs[itrc]], wc.Nf).astype(np.int64)
         j_itrs = (lists_pixels[itrc, 0:NUs[itrc]]-i_itrs)//wc.Nf
         for mm in range(0, NUs[itrc]):
-            if nt_min<=j_itrs[mm]<nt_max:
+            if nt_min <= j_itrs[mm] < nt_max:
                 mult = inv_chol_SAET[j_itrs[mm], i_itrs[mm], itrc]*wavelet_data[itrc, mm]
-                snr2s[itrc]+= mult*mult
+                snr2s[itrc] += mult*mult
         return np.sqrt(snr2s)
