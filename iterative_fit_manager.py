@@ -191,7 +191,7 @@ class IterativeFitManager():
 
 
     def _state_update(self,itrn):
-        if self.fit_state.switchf_next[itrn]:
+        if self.fit_state.do_bright_check[itrn]:
             self.bgd.galactic_below[:] = 0.
             self.bis.faints_cur[itrn] = False
         else:
@@ -201,7 +201,7 @@ class IterativeFitManager():
             self.bis.brights[itrn] = self.bis.brights[itrn-1]
         else:
             self.bgd.galactic_undecided[:] = 0.
-            if self.fit_state.switch_next[itrn]:
+            if self.fit_state.do_faint_check[itrn]:
                 self.bgd.galactic_above[:] = 0.
                 self.bis.brights[itrn] = False
             else:
@@ -214,10 +214,10 @@ class IterativeFitManager():
         if self.fit_state.faint_converged[itrn]:
             assert np.all(self.bis.faints_cur[itrn] == self.bis.faints_cur[itrn-1])
 
-        if self.fit_state.switchf_next[itrn+1]:
+        if self.fit_state.do_bright_check[itrn+1]:
             assert not self.fit_state.faint_converged[itrn+1]
 
-        if self.fit_state.switch_next[itrn+1]:
+        if self.fit_state.do_faint_check[itrn+1]:
             assert not self.fit_state.bright_converged[itrn+1]
 
     def _parseval_store(self,itrn):
@@ -249,11 +249,28 @@ class BinaryInclusionState():
             self.snrs_tot_upper[itrn, self.decided[itrn]] = self.snrs_tot_upper[itrn-1, self.decided[itrn]]
             self.snrs_upper[itrn, self.decided[itrn]] = self.snrs_upper[itrn-1, self.decided[itrn]]
 
+    def oscillation_check_helper(self, itrn):
+
+        osc1 = False 
+        osc2 = False
+        osc3 = False
+
+        if itrn > 0:
+            osc1 = np.all(self.brights[itrn] == self.brights[itrn-1])
+        if itrn > 1:
+            osc2 = np.all(self.brights[itrn] == self.brights[itrn-2])
+        if itrn > 2:
+            osc3 = np.all(self.brights[itrn] == self.brights[itrn-3])
+
+        converged_or_cycling = osc1 or osc2 or osc3
+        old_match = osc2 or osc3
+        cycling = osc_old and not osc1
+        return cycling, converged_or_cycling, old_match
 
 class IterativeFitState():
     def __init__(self, ic):
         self.bright_converged = np.zeros(ic.n_iterations+1, dtype=np.bool_)
         self.faint_converged = np.zeros(ic.n_iterations+1, dtype=np.bool_)
-        self.switch_next = np.zeros(ic.n_iterations+1, dtype=np.bool_)
-        self.switchf_next = np.zeros(ic.n_iterations+1, dtype=np.bool_)
+        self.do_faint_check = np.zeros(ic.n_iterations+1, dtype=np.bool_)
+        self.do_bright_check = np.zeros(ic.n_iterations+1, dtype=np.bool_)
         self.force_converge = np.zeros(ic.n_iterations+1, dtype=np.bool_)

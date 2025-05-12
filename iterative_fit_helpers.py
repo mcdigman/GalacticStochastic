@@ -237,7 +237,7 @@ def subtraction_convergence_decision(bis, fit_state, itrn):
 
     # short circuit if we have previously decided subtraction is converged
     if fit_state.bright_converged[itrn]:
-        fit_state.switch_next[itrn+1] = False
+        fit_state.do_faint_check[itrn+1] = False
         fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn]
         fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn]
         bis.n_brights_cur[itrn+1] = bis.n_brights_cur[itrn]
@@ -245,31 +245,31 @@ def subtraction_convergence_decision(bis, fit_state, itrn):
 
     bis.n_brights_cur[itrn+1] = bis.brights[itrn].sum()
 
-    # subtraction is either converged or oscillating
-    osc1 = np.all(bis.brights[itrn] == bis.brights[itrn-1])
-    osc2 = np.all(bis.brights[itrn] == bis.brights[itrn-2])
-    osc3 = np.all(bis.brights[itrn] == bis.brights[itrn-3])
-    if itrn > 1 and (fit_state.force_converge[itrn] or (osc1 or osc2 or osc3)):
-        assert bis.n_brights_cur[itrn] == bis.n_brights_cur[itrn+1] or fit_state.force_converge[itrn] or osc2 or osc3
-        if fit_state.switch_next[itrn]:
-            print('subtraction converged at ' + str(itrn))
-            fit_state.switch_next[itrn+1] = False
-            fit_state.bright_converged[itrn+1] = True
-            fit_state.faint_converged[itrn+1] = True
-        else:
-            if (osc2 or osc3) and not osc1:
-                print('cycling detected at ' + str(itrn) + ', doing final check iteration aborting')
-                fit_state.force_converge[itrn+1] = True
-            print('subtraction predicted initial converged at ' + str(itrn) + ' next iteration will be check iteration')
-            fit_state.switch_next[itrn+1] = True
-            fit_state.bright_converged[itrn+1] = False
-            fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn]
+    # don't check for convergence in first iteration
+    if itrn > 1:
+        # subtraction is either converged or oscillating
+        cycling, converged_or_cycling, old_match = bis.oscillation_check_helper(itrn)
+        if fit_state.force_converge[itrn] or converged_or_cycling:
+            assert bis.n_brights_cur[itrn] == bis.n_brights_cur[itrn+1] or fit_state.force_converge[itrn] or old_match
+            if fit_state.do_faint_check[itrn]:
+                print('subtraction converged at ' + str(itrn))
+                fit_state.do_faint_check[itrn+1] = False
+                fit_state.bright_converged[itrn+1] = True
+                fit_state.faint_converged[itrn+1] = True
+            else:
+                if cycling:
+                    print('cycling detected at ' + str(itrn) + ', doing final check iteration aborting')
+                    fit_state.force_converge[itrn+1] = True
+                print('subtraction predicted initial converged at ' + str(itrn) + ' next iteration will be check iteration')
+                fit_state.do_faint_check[itrn+1] = True
+                fit_state.bright_converged[itrn+1] = False
+                fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn]
 
-        return noise_safe
+            return noise_safe
 
     # subtraction has not converged, get a new noise model
     noise_safe = False
-    fit_state.switch_next[itrn+1] = False
+    fit_state.do_faint_check[itrn+1] = False
     fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn]
     fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn]
 
@@ -306,7 +306,7 @@ def new_noise_helper(noise_safe_upper, noise_safe_lower, noise_upper, noise_lowe
 
 def addition_convergence_decision(bis, fit_state, itrn, n_const_force, const_converge_change_thresh):
 
-    if not fit_state.faint_converged[itrn+1] or fit_state.switch_next[itrn+1]:
+    if not fit_state.faint_converged[itrn+1] or fit_state.do_faint_check[itrn+1]:
         noise_safe = False
         if itrn < n_const_force:
             fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn+1]
@@ -317,51 +317,51 @@ def addition_convergence_decision(bis, fit_state, itrn, n_const_force, const_con
 
 
         bis.n_faints_cur[itrn+1] = bis.faints_cur[itrn].sum()
-        if fit_state.switch_next[itrn+1] and fit_state.faint_converged[itrn+1]:
+        if fit_state.do_faint_check[itrn+1] and fit_state.faint_converged[itrn+1]:
             print('overriding constant convergence to check background model')
-            fit_state.switch_next[itrn+1] = fit_state.switch_next[itrn+1]
+            fit_state.do_faint_check[itrn+1] = fit_state.do_faint_check[itrn+1]
             fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
-            fit_state.switchf_next[itrn+1] = False
+            fit_state.do_bright_check[itrn+1] = False
             fit_state.faint_converged[itrn+1] = False
         elif bis.n_faints_cur[itrn+1] - bis.n_faints_cur[itrn] < 0:
             if fit_state.bright_converged[itrn+1]:
-                fit_state.switch_next[itrn+1] = True
+                fit_state.do_faint_check[itrn+1] = True
                 fit_state.bright_converged[itrn+1] = False
             else:
-                fit_state.switch_next[itrn+1] = fit_state.switch_next[itrn+1]
+                fit_state.do_faint_check[itrn+1] = fit_state.do_faint_check[itrn+1]
                 fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
-            fit_state.switchf_next[itrn+1] = False
+            fit_state.do_bright_check[itrn+1] = False
             fit_state.faint_converged[itrn+1] = False
             print('addition removed values at ' + str(itrn) + ', repeating check iteration')
 
         elif itrn != 1 and np.abs(bis.n_faints_cur[itrn+1] - bis.n_faints_cur[itrn]) < const_converge_change_thresh:
-            if fit_state.switchf_next[itrn+1]:
+            if fit_state.do_bright_check[itrn+1]:
                 fit_state.faint_converged[itrn+1] = True
-                fit_state.switchf_next[itrn+1] = False
+                fit_state.do_bright_check[itrn+1] = False
                 print('addition converged at ' + str(itrn))
             else:
                 print('near convergence in constant adaption at '+str(itrn), ' doing check iteration')
-                fit_state.switchf_next[itrn+1] = False
+                fit_state.do_bright_check[itrn+1] = False
                 fit_state.faint_converged[itrn+1] = False
-            fit_state.switch_next[itrn+1] = fit_state.switch_next[itrn+1]
+            fit_state.do_faint_check[itrn+1] = fit_state.do_faint_check[itrn+1]
             fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
         else:
             if fit_state.bright_converged[itrn+1]:
                 print('addition convergence continuing beyond subtraction, try check iteration')
-                fit_state.switchf_next[itrn+1] = False
+                fit_state.do_bright_check[itrn+1] = False
                 fit_state.faint_converged[itrn+1] = False
             else:
-                fit_state.switchf_next[itrn+1] = False
+                fit_state.do_bright_check[itrn+1] = False
                 fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn+1]
 
-            fit_state.switch_next[itrn+1] = fit_state.switch_next[itrn+1]
+            fit_state.do_faint_check[itrn+1] = fit_state.do_faint_check[itrn+1]
             fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
 
     else:
         noise_safe = True
-        fit_state.switchf_next[itrn+1] = False
+        fit_state.do_bright_check[itrn+1] = False
         fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn+1]
-        fit_state.switch_next[itrn+1] = fit_state.switch_next[itrn+1]
+        fit_state.do_faint_check[itrn+1] = fit_state.do_faint_check[itrn+1]
         fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
         bis.n_faints_cur[itrn+1] = bis.n_faints_cur[itrn]
 
