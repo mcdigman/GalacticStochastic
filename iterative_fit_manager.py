@@ -61,21 +61,21 @@ class IterativeFitManager():
         params0 = self.params_gb[0].copy()
         self.waveform_manager = BinaryWaveletAmpFreqDT(params0.copy(), wc, self.lc)
 
-        SAET_tot_cur = np.zeros((wc.Nt, wc.Nf, wc.NC))
-        SAET_tot_cur[:] = self.SAET_m
+        SAET_tot_upper = np.zeros((wc.Nt, wc.Nf, wc.NC))
+        SAET_tot_upper[:] = self.SAET_m
 
-        SAET_tot_base = np.zeros((wc.Nt, wc.Nf, wc.NC))
-        SAET_tot_base[:] = self.SAET_m
+        SAET_tot_lower = np.zeros((wc.Nt, wc.Nf, wc.NC))
+        SAET_tot_lower[:] = self.SAET_m
         if self.idx_SAET_save[self.itr_save] == 0:
-            self.SAET_tots[0] = SAET_tot_cur[:, :, :]
+            self.SAET_tots[0] = SAET_tot_upper[:, :, :]
             self.itr_save += 1
-        SAET_tot_base = np.min([SAET_tot_base, SAET_tot_cur], axis=0)
+        SAET_tot_lower = np.min([SAET_tot_lower, SAET_tot_upper], axis=0)
 
-        self.noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_cur, wc, prune=True)
-        self.noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_base, wc, prune=True)
+        self.noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_upper, wc, prune=True)
+        self.noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_lower, wc, prune=True)
 
-        SAET_tot_cur = None
-        SAET_tot_base = None
+        SAET_tot_upper = None
+        SAET_tot_lower = None
 
 
         self.n_full_converged = ic.n_iterations-1
@@ -126,7 +126,7 @@ class IterativeFitManager():
         self._run_binaries(itrn)
 
         # copy forward prior calculations of snr calculations that were skipped in this loop iteration
-        sustain_snr_helper(self.fit_state.faint_converged, self.bis.snrs_tot_base, self.bis.snrs_base, self.bis.snrs_tot, self.bis.snrs, itrn, self.bis.decided[itrn], self.fit_state.bright_converged)
+        sustain_snr_helper(self.fit_state.faint_converged, self.bis.snrs_tot_lower, self.bis.snrs_lower, self.bis.snrs_tot_upper, self.bis.snrs_upper, itrn, self.bis.decided[itrn], self.fit_state.bright_converged)
 
         # sanity check that the total signal does not change regardless of what bucket the binaries are allocated to
         total_signal_consistency_check(self.galactic_total, self.bgd, itrn)
@@ -155,7 +155,7 @@ class IterativeFitManager():
         idxbs = np.argwhere(~self.bis.decided[itrn]).flatten()
         for itrb in idxbs:
             if not self.bis.decided[itrn, itrb]:
-                run_binary_coadd2(self.waveform_manager, self.params_gb, self.bis.brights, self.faints_old, self.bis.faints_cur, self.bis.snrs_base, self.bis.snrs, self.bis.snrs_tot, self.bis.snrs_tot_base, itrn, itrb, self.noise_upper, self.noise_lower, self.ic, self.fit_state.faint_converged, self.fit_state.bright_converged, self.nt_min, self.nt_max, self.bgd)
+                run_binary_coadd2(self.waveform_manager, self.params_gb, self.bis.brights, self.faints_old, self.bis.faints_cur, self.bis.snrs_lower, self.bis.snrs_upper, self.bis.snrs_tot_upper, self.bis.snrs_tot_lower, itrn, itrb, self.noise_upper, self.noise_lower, self.ic, self.fit_state.faint_converged, self.fit_state.bright_converged, self.nt_min, self.nt_max, self.bgd)
 
     def _iteration_cleanup(self, itrn):
         if self.itr_save < self.idx_SAET_save.size and itrn == self.idx_SAET_save[self.itr_save]:
@@ -226,10 +226,10 @@ class IterativeFitManager():
 
 class BinaryInclusionState():
     def __init__(self, n_iterations, n_bin_use, wc):
-        self.snrs = np.zeros((n_iterations, n_bin_use, wc.NC))
-        self.snrs_base = np.zeros((n_iterations, n_bin_use, wc.NC))
-        self.snrs_tot_base = np.zeros((n_iterations, n_bin_use))
-        self.snrs_tot = np.zeros((n_iterations, n_bin_use))
+        self.snrs_upper = np.zeros((n_iterations, n_bin_use, wc.NC))
+        self.snrs_lower = np.zeros((n_iterations, n_bin_use, wc.NC))
+        self.snrs_tot_lower = np.zeros((n_iterations, n_bin_use))
+        self.snrs_tot_upper = np.zeros((n_iterations, n_bin_use))
         self.brights = np.zeros((n_iterations, n_bin_use), dtype=np.bool_)
         self.decided = np.zeros((n_iterations, n_bin_use), dtype=np.bool_)
         self.faints_cur = np.zeros((n_iterations, n_bin_use), dtype=np.bool_)

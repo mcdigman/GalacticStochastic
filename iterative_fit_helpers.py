@@ -12,7 +12,7 @@ from instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
 IterationConfig = namedtuple('IterationConfig', ['n_iterations', 'snr_thresh', 'snr_min', 'snr_cut_bright', 'smooth_lengthf'])
 BGDecomposition = namedtuple('BGDecomposition', ['galactic_floor', 'galactic_below', 'galactic_undecided', 'galactic_above'])
 
-def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveT_ini, params_gb, snrs_tot, galactic_below, noise_realization, SAET_m):
+def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveform_model, params_gb, snrs_tot_upper, galactic_below, noise_realization, SAET_m):
     # TODO make snr_cut_bright and smooth_lengthf an array as a function of iteration
     # TODO make NC controllable; probably not much point in getting T channel snrs
     snrs = np.zeros((ic.n_iterations, n_bin_use, wc.NC))
@@ -29,7 +29,7 @@ def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveT_ini, param
                 tin = perf_counter()
                 print("Starting binary # %11d at t=%9.2f s at iteration %4d" % (itrb, (tin - t0n), itrn))
 
-            run_binary_coadd(itrb, faints_in, waveT_ini, noise_upper, snrs, snrs_tot, itrn, galactic_below, galactic_undecided, brights, wc, params_gb, ic.snr_min[itrn], ic.snr_cut_bright[itrn])
+            run_binary_coadd(itrb, faints_in, waveform_model, noise_upper, snrs_upper, snrs_tot_upper, itrn, galactic_below, galactic_undecided, brights, wc, params_gb, ic.snr_min[itrn], ic.snr_cut_bright[itrn])
 
         t1n = perf_counter()
 
@@ -41,20 +41,20 @@ def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveT_ini, param
 
         SAET_tot[itrn+1], _, _, _, _ = get_SAET_cyclostationary_mean(galactic_below_high, SAET_m, wc, smooth_lengthf=ic.smooth_lengthf[itrn], filter_periods=False, period_list=np.array([]))
 
-    return galactic_below_high, galactic_below, signal_full, SAET_tot, brights, snrs, snrs_tot, noise_upper
+    return galactic_below_high, galactic_below, signal_full, SAET_tot, brights, snrs_upper, snrs_tot_upper, noise_upper
 
 
-def run_binary_coadd(itrb, faints_in, waveT_ini, noise_upper, snrs, snrs_tot, itrn, galactic_below, galactic_undecided, brights, wc, params_gb, snr_min, snr_cut_bright):
+def run_binary_coadd(itrb, faints_in, waveform_model, noise_upper, snrs_upper, snrs_tot_upper, itrn, galactic_below, galactic_undecided, brights, wc, params_gb, snr_min, snr_cut_bright):
     if not faints_in[itrb]:
-        waveT_ini.update_params(params_gb[itrb].copy())
-        listT_temp, waveT_temp, NUTs_temp = waveT_ini.get_unsorted_coeffs()
-        snrs[itrn, itrb] = noise_upper.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp)
-        snrs_tot[itrn, itrb] = np.linalg.norm(snrs[itrn, itrb])
-        if itrn == 0 and snrs_tot[0, itrb]<snr_min:
+        waveform_model.update_params(params_gb[itrb].copy())
+        listT_temp, waveT_temp, NUTs_temp = waveform_model.get_unsorted_coeffs()
+        snrs_upper[itrn, itrb] = noise_upper.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp)
+        snrs_tot_upper[itrn, itrb] = np.linalg.norm(snrs_upper[itrn, itrb])
+        if itrn == 0 and snrs_tot_upper[0, itrb]<snr_min:
             faints_in[itrb] = True
             for itrc in range(wc.NC):
                 galactic_below[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
-        elif snrs_tot[itrn, itrb]<snr_cut_bright:
+        elif snrs_tot_upper[itrn, itrb]<snr_cut_bright:
             for itrc in range(wc.NC):
                 galactic_undecided[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
         else:
@@ -62,41 +62,41 @@ def run_binary_coadd(itrb, faints_in, waveT_ini, noise_upper, snrs, snrs_tot, it
 
 
 # TODO consolidate with the other run_binary_coadd
-def run_binary_coadd2(waveT_ini, params_gb, brights, faints_old, faints_cur, snrs_base, snrs, snrs_tot, snrs_tot_base, itrn, itrb, noise_upper, noise_lower, ic, faint_converged, bright_converged, nt_min, nt_max, bgd):
-    waveT_ini.update_params(params_gb[itrb].copy())
-    listT_temp, waveT_temp, NUTs_temp = waveT_ini.get_unsorted_coeffs()
+def run_binary_coadd2(waveform_model, params_gb, brights, faints_old, faints_cur, snrs_lower, snrs_upper, snrs_tot_upper, snrs_tot_lower, itrn, itrb, noise_upper, noise_lower, ic, faint_converged, bright_converged, nt_min, nt_max, bgd):
+    waveform_model.update_params(params_gb[itrb].copy())
 
-    brights[itrn, itrb], faints_cur[itrn, itrb] = decision_helper(snrs_base, snrs, snrs_tot, snrs_tot_base, itrn, itrb, listT_temp, NUTs_temp, waveT_temp, noise_upper, noise_lower, ic, faint_converged, bright_converged, nt_min, nt_max)
-    decide_coadd_helper(brights, faints_old, faints_cur, itrn, itrb, bgd, listT_temp, NUTs_temp, waveT_temp, bright_converged)
+    brights[itrn, itrb], faints_cur[itrn, itrb] = decision_helper(snrs_lower, snrs_upper, snrs_tot_upper, snrs_tot_lower, itrn, itrb, waveform_model, noise_upper, noise_lower, ic, faint_converged, bright_converged, nt_min, nt_max)
+    decide_coadd_helper(brights, faints_old, faints_cur, itrn, itrb, bgd, waveform_model, bright_converged)
 
 
-def decision_helper(snrs_base, snrs, snrs_tot, snrs_tot_base, itrn, itrb, listT_temp, NUTs_temp, waveT_temp, noise_upper, noise_lower, ic, faint_converged, bright_converged, nt_min, nt_max):
+def decision_helper(snrs_lower, snrs_upper, snrs_tot_upper, snrs_tot_lower, itrn, itrb, waveform_model, noise_upper, noise_lower, ic, faint_converged, bright_converged, nt_min, nt_max):
+    listT_temp, waveT_temp, NUTs_temp = waveform_model.get_unsorted_coeffs()
     if not faint_converged[itrn]:
-        snrs_base[itrn, itrb] = noise_lower.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp, nt_min, nt_max)
-        snrs_tot_base[itrn, itrb] = np.linalg.norm(snrs_base[itrn, itrb])
-        faint_candidate = snrs_tot_base[itrn, itrb] < ic.snr_min[itrn]
+        snrs_lower[itrn, itrb] = noise_lower.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp, nt_min, nt_max)
+        snrs_tot_lower[itrn, itrb] = np.linalg.norm(snrs_lower[itrn, itrb])
+        faint_candidate = snrs_tot_lower[itrn, itrb] < ic.snr_min[itrn]
     else:
-        snrs_base[itrn, itrb] = snrs_base[itrn-1, itrb]
-        snrs_tot_base[itrn, itrb] = snrs_tot_base[itrn-1, itrb]
+        snrs_lower[itrn, itrb] = snrs_lower[itrn-1, itrb]
+        snrs_tot_lower[itrn, itrb] = snrs_tot_lower[itrn-1, itrb]
         faint_candidate = False
 
     if not bright_converged[itrn]:
-        snrs[itrn, itrb] = noise_upper.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp, nt_min, nt_max)
-        snrs_tot[itrn, itrb] = np.linalg.norm(snrs[itrn, itrb])
-        bright_candidate = snrs_tot[itrn, itrb] >= ic.snr_cut_bright[itrn]
+        snrs_upper[itrn, itrb] = noise_upper.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp, nt_min, nt_max)
+        snrs_tot_upper[itrn, itrb] = np.linalg.norm(snrs_upper[itrn, itrb])
+        bright_candidate = snrs_tot_upper[itrn, itrb] >= ic.snr_cut_bright[itrn]
     else:
-        snrs[itrn, itrb] = snrs[itrn-1, itrb]
-        snrs_tot[itrn, itrb] = snrs_tot[itrn-1, itrb]
+        snrs_upper[itrn, itrb] = snrs_upper[itrn-1, itrb]
+        snrs_tot_upper[itrn, itrb] = snrs_tot_upper[itrn-1, itrb]
         bright_candidate = False
 
-    if np.isnan(snrs_tot[itrn, itrb]) or np.isnan(snrs_tot_base[itrn, itrb]):
+    if np.isnan(snrs_tot_upper[itrn, itrb]) or np.isnan(snrs_tot_lower[itrn, itrb]):
         raise ValueError('nan detected in snr at '+str(itrn)+', ' + str(itrb))
     elif bright_candidate and faint_candidate:
         # satifisfied conditions to be eliminated in both directions so just keep it
         bright_loc = False
         faint_loc = False
     elif bright_candidate:
-        if snrs_tot[itrn, itrb] > snrs_tot_base[itrn, itrb]:
+        if snrs_tot_upper[itrn, itrb] > snrs_tot_lower[itrn, itrb]:
             # handle case where snr ordering is wrong to prevent oscillation
             bright_loc = False
         else:
@@ -111,7 +111,7 @@ def decision_helper(snrs_base, snrs, snrs_tot, snrs_tot_base, itrn, itrb, listT_
 
     return bright_loc, faint_loc
 
-def decide_coadd_helper(brights, faints_old, faints_cur, itrn, itrb, bgd, listT_temp, NUTs_temp, waveT_temp, bright_converged):
+def decide_coadd_helper(brights, faints_old, faints_cur, itrn, itrb, bgd, waveform_model, bright_converged):
     """add each binary to the correct part of the galactic spectrum, depending on whether it is bright or faint"""
     # the same binary cannot be decided as both bright and faint
     assert not (brights[itrn, itrb] and  faints_cur[itrn, itrb])
@@ -119,6 +119,8 @@ def decide_coadd_helper(brights, faints_old, faints_cur, itrn, itrb, bgd, listT_
     # don't add to anything if the subtraction is already converged and this binary would not require addition
     if bright_converged[itrn] and not faints_cur[itrn, itrb]:
         return
+
+    listT_temp, waveT_temp, NUTs_temp = waveform_model.get_unsorted_coeffs()
 
     if not faints_cur[itrn, itrb]:
         if brights[itrn, itrb]:
@@ -141,14 +143,14 @@ def decide_coadd_helper(brights, faints_old, faints_cur, itrn, itrb, bgd, listT_
                 bgd.galactic_below[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
 
 
-def sustain_snr_helper(faint_converged, snrs_tot_base, snrs_base, snrs_tot, snrs, itrn, decided, bright_converged):
+def sustain_snr_helper(faint_converged, snrs_tot_lower, snrs_lower, snrs_tot_upper, snrs_upper, itrn, decided, bright_converged):
     #carry forward any other snr values we still know
     if faint_converged[itrn]:
-        snrs_tot_base[itrn, decided] = snrs_tot_base[itrn-1, decided]
-        snrs_base[itrn, decided] = snrs_base[itrn-1, decided]
+        snrs_tot_lower[itrn, decided] = snrs_tot_lower[itrn-1, decided]
+        snrs_lower[itrn, decided] = snrs_lower[itrn-1, decided]
     if bright_converged[itrn]:
-        snrs_tot[itrn, decided] = snrs_tot[itrn-1, decided]
-        snrs[itrn, decided] = snrs[itrn-1, decided]
+        snrs_tot_upper[itrn, decided] = snrs_tot_upper[itrn-1, decided]
+        snrs_upper[itrn, decided] = snrs_upper[itrn-1, decided]
 
 def total_signal_consistency_check(galactic_total, bgd, itrn):
     if itrn == 1:
@@ -202,13 +204,13 @@ def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, 
     # higher estimate of galactic bg
     galactic_below_high = bgd.galactic_undecided + bgd.galactic_below + bgd.galactic_floor
     if itrn < n_cyclo_switch:
-        SAET_tot_cur, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_below_high, SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods=False, period_list=period_list1)
+        SAET_tot_upper, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_below_high, SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods=False, period_list=period_list1)
     else:
-        SAET_tot_cur, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_below_high, SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods=not const_only, period_list=period_list1)
+        SAET_tot_upper, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_below_high, SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods=not const_only, period_list=period_list1)
 
-    noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_cur, wc, prune=True)
+    noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_upper, wc, prune=True)
 
-    SAET_tot_cur = None
+    SAET_tot_upper = None
 
     return noise_upper
 
@@ -216,19 +218,19 @@ def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, 
 def addition_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, period_list1, const_only, noise_lower, noise_upper, n_const_force, const_converge_change_thresh, smooth_lengthf_targ):
     if not fit_state.faint_converged[itrn+1] or fit_state.switch_next[itrn+1]:
         if itrn < n_const_force:
-            SAET_tot_base, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.galactic_below + bgd.galactic_floor, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
+            SAET_tot_lower, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.galactic_below + bgd.galactic_floor, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
             fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn+1]
         else:
-            SAET_tot_base, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.galactic_below + bgd.galactic_floor, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
+            SAET_tot_lower, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.galactic_below + bgd.galactic_floor, SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
             fit_state.faint_converged[itrn+1] = True
             # need to disable adaption of constant here because after this point the convergence isn't guaranteed to be monotonic
             print('disabled constant adaptation at ' + str(itrn))
 
         # make sure this will always predict >= snrs to the actual spectrum in use
-        SAET_tot_base = np.min([SAET_tot_base, noise_upper.SAET], axis=0)
-        noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_base, wc, prune=True)
+        SAET_tot_lower = np.min([SAET_tot_lower, noise_upper.SAET], axis=0)
+        noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_lower, wc, prune=True)
 
-        SAET_tot_base = None
+        SAET_tot_lower = None
 
         bis.n_faints_cur[itrn+1] = bis.faints_cur[itrn].sum()
         if fit_state.switch_next[itrn+1] and fit_state.faint_converged[itrn+1]:

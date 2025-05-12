@@ -76,7 +76,7 @@ if __name__ == '__main__':
 
 
         snr_min = np.zeros(n_iterations)
-        snr_min[0] = snr_low_initial               # for first iteration set to thresh because spectrum is pure noise
+        snr_min[0] = snr_low_initial               # for first iteration set to thresh because spectrum is just instrument noise
         snr_min[1:] = snr_low_mult * snr_high_fix  # for subsequent, choose value to ensure almost nothing gets decided as constant because of its own power alone
 
         if const_only:
@@ -97,7 +97,7 @@ if __name__ == '__main__':
 
         do_hf_out = True
         if do_hf_out:
-            gfi.store_processed_gb_file(galaxy_dir, galaxy_file, ifm.wc, ifm.lc, ifm.ic, ifm.nt_min, ifm.nt_max, ifm.bgd, ifm.period_list, ifm.n_bin_use, ifm.SAET_m, ifm.SAET_fin, ifm.const_only, ifm.bis.snrs_tot, ifm.n_full_converged, ifm.argbinmap, ifm.faints_old, ifm.bis.faints_cur, ifm.bis.brights, snr_min_in)
+            gfi.store_processed_gb_file(galaxy_dir, galaxy_file, ifm.wc, ifm.lc, ifm.ic, ifm.nt_min, ifm.nt_max, ifm.bgd, ifm.period_list, ifm.n_bin_use, ifm.SAET_m, ifm.SAET_fin, ifm.const_only, ifm.bis.snrs_tot_upper, ifm.n_full_converged, ifm.argbinmap, ifm.faints_old, ifm.bis.faints_cur, ifm.bis.brights, snr_min_in)
 
 
 

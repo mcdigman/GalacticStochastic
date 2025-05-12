@@ -108,9 +108,9 @@ def load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, Nf, Nt, 
     assert gb_file_source==full_galactic_params_filename
     galactic_below_in = np.asarray(hf_in['SAET']['galactic_bg_const'])
     noise_realization_common = np.asarray(hf_in['SAET']['noise_realization'])
-    snrs_tot_in = np.asarray(hf_in['SAET']['snrs_tot'])
+    snrs_tot_upper_in = np.asarray(hf_in['SAET']['snrs_tot'])
     hf_in.close()
-    return galactic_below_in, noise_realization_common, snrs_tot_in, wc, lc
+    return galactic_below_in, noise_realization_common, snrs_tot_upper_in, wc, lc
 
 
 def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
@@ -170,7 +170,7 @@ def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, const
     return argbinmap, (galactic_below+galactic_undecided).reshape((wc.Nt,wc.Nf,wc.NC))
 
 
-def store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, noise_realization, n_bin_use, SAET_m, snrs_tot):
+def store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, noise_realization, n_bin_use, SAET_m, snrs_tot_upper):
     Nf = wc.Nf
     Nt = wc.Nt
     dt = wc.dt
@@ -188,7 +188,7 @@ def store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_belo
     hf_out['SAET'].create_dataset('n_iterations', data=ic.n_iterations)
     hf_out['SAET'].create_dataset('n_bin_use', data=n_bin_use)
     hf_out['SAET'].create_dataset('SAET_m', data=SAET_m)
-    hf_out['SAET'].create_dataset('snrs_tot', data=snrs_tot[0], compression='gzip')
+    hf_out['SAET'].create_dataset('snrs_tot_upper', data=snrs_tot_upper[0], compression='gzip')
     hf_out['SAET'].create_dataset('source_gb_file', data=get_galaxy_filename(galaxy_file, galaxy_dir))
     # TODO I think the stored preliminary filename needs to handle second calls to this differently
     hf_out['SAET'].create_dataset('preliminary_gb_file', data=get_preliminary_filename(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt))
@@ -207,7 +207,7 @@ def store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_belo
 
     hf_out.close()
 
-def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max, bgd, period_list1, n_bin_use, SAET_m, SAE_fin, const_only, snrs_tot, n_full_converged, argbinmap, faints_old, faints_cur, brights, snr_min_in):
+def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max, bgd, period_list1, n_bin_use, SAET_m, SAE_fin, const_only, snrs_tot_upper, n_full_converged, argbinmap, faints_old, faints_cur, brights, snr_min_in):
     filename_gb_init = get_preliminary_filename(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
     filename_gb_common = get_common_noise_filename(galaxy_dir, ic.snr_thresh, wc)
     filename_out = get_processed_gb_filename(galaxy_dir, const_only, ic.snr_thresh, wc, nt_min, nt_max)
@@ -221,7 +221,7 @@ def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max,
 
     hf_out['SAET'].create_dataset('n_bin_use', data=n_bin_use)
     hf_out['SAET'].create_dataset('SAET_m', data=SAET_m)
-    hf_out['SAET'].create_dataset('snrs_tot', data=snrs_tot[n_full_converged], compression='gzip')
+    hf_out['SAET'].create_dataset('snrs_tot_upper', data=snrs_tot_upper[n_full_converged], compression='gzip')
     hf_out['SAET'].create_dataset('argbinmap', data=argbinmap, compression='gzip')
 
     hf_out['SAET'].create_dataset('faints_old', data=faints_old, compression='gzip')

@@ -200,6 +200,7 @@ def get_SAET_cyclostationary_mean(
 
 
 def fit_gb_spectrum_evolve(SAET_goals, fs, fs_report, nt_ranges, offset, wc):
+    # TODO take NC in this function properly
     a1 = -0.25
     b1 = -2.70
     ak = -0.27
@@ -261,10 +262,10 @@ def fit_gb_spectrum_evolve(SAET_goals, fs, fs_report, nt_ranges, offset, wc):
     log10f2 = res[5]
     alpha = res[6]
 
-    SAE_base_res = np.zeros((n_spect, fs_report.size))
+    SAE_res = np.zeros((n_spect, fs_report.size))
     for itry in range(n_spect):
         log10f1 = a1*np.log10(TobsYEAR_locs[itry]) + b1
         log10fknee = ak*np.log10(TobsYEAR_locs[itry]) + bk
-        SAE_base_res[itry, :] = SAE_gal_model(fs_report, log10A, log10f2, log10f1, log10fknee, alpha)
+        SAE_res[itry, :] = SAE_gal_model(fs_report, log10A, log10f2, log10f1, log10fknee, alpha)
 
-    return SAE_base_res, res
+    return SAE_res, res

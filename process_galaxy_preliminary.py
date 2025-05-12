@@ -46,7 +46,7 @@ if __name__=='__main__':
     snr_min = np.full(n_iterations, snr_thresh)
     snr_cut_bright = np.full(n_iterations, snr_thresh)
     snr_cut_bright[0] = 500.
-    snrs_tot = np.zeros((n_iterations, n_bin_use))
+    snrs_tot_upper = np.zeros((n_iterations, n_bin_use))
 
     faints_in = np.zeros(n_bin_use, dtype=np.bool_)
 
@@ -56,11 +56,11 @@ if __name__=='__main__':
 
     ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_cut_bright, smooth_lengthf)
 
-    galactic_below_high, galactic_below, signal_full, SAET_tot, brights, snrs, snrs_tot, noise_upper = do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveT_ini, params_gb, snrs_tot, galactic_below, noise_realization, SAET_m)
+    galactic_below_high, galactic_below, signal_full, SAET_tot, brights, snrs_upper, snrs_tot_upper, noise_upper = do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveT_ini, params_gb, snrs_tot_upper, galactic_below, noise_realization, SAET_m)
 
     do_hf_write = True
     if do_hf_write:
-        gfi.store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, noise_realization, n_bin_use, SAET_m, snrs_tot)
+        gfi.store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, noise_realization, n_bin_use, SAET_m, snrs_tot_upper)
 
     plot_noise_spectrum_evolve = True
     if plot_noise_spectrum_evolve:

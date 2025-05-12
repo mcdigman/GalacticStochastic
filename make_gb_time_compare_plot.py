@@ -47,8 +47,8 @@ if __name__ == '__main__':
     else:
         period_list1 = np.array([],dtype=np.int64)
 
-    SAET_pures = np.zeros((nk,wc.Nf,3))
-    SAET_pures_smooth = np.zeros((nk,wc.Nf,3))
+    SAET_gal = np.zeros((nk,wc.Nf,3))
+    SAET_gal_smooth = np.zeros((nk,wc.Nf,3))
 
     SAET_m = instrument_noise_AET_wdm_m(lc, wc)
     SAE_offset = 1.*SAET_m[:,0]
@@ -57,26 +57,26 @@ if __name__ == '__main__':
 
     for itrk in range(0,nk):
         _, galactic_below_high = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_mins[itrk], nt_maxs[itrk], const_only)
-        SAET_pures[itrk] = np.mean(galactic_below_high,axis=0)
+        SAET_gal[itrk] = np.mean(galactic_below_high,axis=0)
 
-        SAET_pures_smooth[itrk,0,:] = SAET_pures[itrk,0,:]
+        SAET_gal_smooth[itrk,0,:] = SAET_gal[itrk,0,:]
 
         _, r_tots[itrk], SAET_mean_cur, _ ,_ = get_SAET_cyclostationary_mean(galactic_below_high,SAET_m,wc, smooth_targ_length,filter_periods=not const_only,period_list=period_list1,Nt_loc=wc.Nt)
-        SAET_pures_smooth[itrk] = SAET_mean_cur
+        SAET_gal_smooth[itrk] = SAET_mean_cur
 
         for itrc in range(0,2):
-            SAET_pures_smooth[itrk,:,itrc] += SAE_offset
+            SAET_gal_smooth[itrk,:,itrc] += SAE_offset
 
     arg_cut = wc.Nf-1
     fit_mask = (fs>1.e-5)&(fs<fs[arg_cut])
 
-    SAE_fit_evolve, _ = fit_gb_spectrum_evolve(SAET_pures_smooth[itrl_fit:,fit_mask,:],fs[fit_mask],fs[1:],nt_ranges[itrl_fit:],SAE_offset[fit_mask], wc)
+    SAE_fit_evolve, _ = fit_gb_spectrum_evolve(SAET_gal_smooth[itrl_fit:,fit_mask,:],fs[fit_mask],fs[1:],nt_ranges[itrl_fit:],SAE_offset[fit_mask], wc)
 
 
     fig = plt.figure(figsize=(5.4,3.5))
     ax = fig.subplots(1)
     fig.subplots_adjust(wspace=0.,hspace=0.,left=0.13,top=0.99,right=0.99,bottom=0.12)
-    ax.loglog(fs[1:],wc.dt*(SAET_pures_smooth[:,1:,:2].mean(axis=2)-SAE_offset[1:]+SAET_m[1:,0]).T,alpha=0.5,label='_nolegend_')
+    ax.loglog(fs[1:],wc.dt*(SAET_gal_smooth[:,1:,:2].mean(axis=2)-SAE_offset[1:]+SAET_m[1:,0]).T,alpha=0.5,label='_nolegend_')
     ax.set_prop_cycle(None)
     ax.loglog(fs[1:],wc.dt*(SAE_fit_evolve[:]+SAET_m[1:,0]).T,linewidth=3)
     ax.set_prop_cycle(None)

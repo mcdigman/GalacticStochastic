@@ -32,7 +32,7 @@ if __name__=='__main__':
     params0 = params_gb[0].copy()
 
 
-    galactic_below_in, noise_realization_common, snrs_tot_in, _, lc = gfi.load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
+    galactic_below_in, noise_realization_common, snrs_tot_upper_in, _, lc = gfi.load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
 
 
 
@@ -55,8 +55,8 @@ if __name__=='__main__':
     snr_cut_bright = np.full(n_iterations, snr_thresh)
     snr_cut_bright[0] = 500.
 
-    snrs_tot = np.zeros((n_iterations, n_bin_use))
-    snrs_tot[:] = snrs_tot_in
+    snrs_tot_upper = np.zeros((n_iterations, n_bin_use))
+    snrs_tot_upper[:] = snrs_tot_upper_in
 
     galactic_below = galactic_below_in.reshape(wc.Nt, wc.Nf, wc.NC)[:wc.Nt].reshape(wc.Nt*wc.Nf, wc.NC)
 
@@ -66,13 +66,13 @@ if __name__=='__main__':
 
     ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_cut_bright, smooth_lengthf)
 
-    faints_in = snrs_tot_in < ic.snr_min[0]
+    faints_in = snrs_tot_upper_in < ic.snr_min[0]
 
-    galactic_below_high, galactic_below, signal_full, SAET_tot, brights, snrs, snrs_tot, noise_upper = do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveT_ini, params_gb, snrs_tot, galactic_below, noise_realization, SAET_m)
+    galactic_below_high, galactic_below, signal_full, SAET_tot, brights, snrs_upper, snrs_tot_upper, noise_upper = do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveT_ini, params_gb, snrs_tot_upper, galactic_below, noise_realization, SAET_m)
 
     do_hf_write = True
     if do_hf_write:
-        gfi.store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, noise_realization, n_bin_use, SAET_m, snrs_tot)
+        gfi.store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, noise_realization, n_bin_use, SAET_m, snrs_tot_upper)
 
     plot_noise_spectrum_evolve = True
     if plot_noise_spectrum_evolve:
