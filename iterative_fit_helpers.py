@@ -27,14 +27,14 @@ class BGDecomposition():
 
     def get_galactic_below_high(self):
         """
-        get the upper estimate of the unresolvable signal from the galactic background, 
+        get the upper estimate of the unresolvable signal from the galactic background,
         assuming that the undecided part of the signal *is* part of the unresolvable background
         """
         return self.get_galactic_below_low() + self.galactic_undecided
 
     def get_galactic_below_low(self):
         """
-        get the lower estimate of the unresolvable signal from the galactic background, 
+        get the lower estimate of the unresolvable signal from the galactic background,
         assuming that the undecided part of the signal *is not* part of the unresolvable background
         """
         return self.galactic_floor + self.galactic_below
@@ -54,7 +54,7 @@ class BGDecomposition():
 
     def get_galactic_coadd_resolvable(self):
         """
-        get the coadded signal from only bright/resolvable galactic binaries 
+        get the coadded signal from only bright/resolvable galactic binaries
         """
         return self.galactic_above
 
@@ -63,12 +63,12 @@ class BGDecomposition():
         get the coadded signal from galactic binaries whose status as bright or faint has not yet been decided
         """
         return self.galactic_undecided
-        
+
 
 def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveform_model, params_gb, snrs_tot_upper, galactic_below, noise_realization, SAET_m):
     # TODO make snr_cut_bright and smooth_lengthf an array as a function of iteration
     # TODO make NC controllable; probably not much point in getting T channel snrs
-    snrs = np.zeros((ic.n_iterations, n_bin_use, wc.NC))
+    snrs_upper = np.zeros((ic.n_iterations, n_bin_use, wc.NC))
     brights = np.zeros((ic.n_iterations, n_bin_use), dtype=np.bool_)
 
     for itrn in range(ic.n_iterations):
@@ -206,7 +206,7 @@ def sustain_snr_helper(faint_converged, snrs_tot_lower, snrs_lower, snrs_tot_upp
         snrs_upper[itrn, decided] = snrs_upper[itrn-1, decided]
 
 
-def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, period_list1, const_only, noise_upper, n_cyclo_switch):
+def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, period_list, const_only, noise_upper, n_cyclo_switch):
 
     # short circuit if we have previously decided subtraction is converged
     if fit_state.bright_converged[itrn]:
@@ -247,13 +247,13 @@ def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, 
     fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn]
 
     # don't use cyclostationary model until specified iteration
-    # higher estimate of galactic bg
-    galactic_below_high = bgd.get_galactic_below_high()
     if itrn < n_cyclo_switch:
-        SAET_tot_upper, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_below_high, SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods=False, period_list=period_list1)
+        filter_periods = False
     else:
-        SAET_tot_upper, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_below_high, SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods=not const_only, period_list=period_list1)
+        filter_periods = not const_only
 
+    # use higher estimate of galactic bg
+    SAET_tot_upper, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.get_galactic_below_high(), SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods=filter_periods, period_list=period_list)
     noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_upper, wc, prune=True)
 
     SAET_tot_upper = None
@@ -261,21 +261,20 @@ def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, 
     return noise_upper
 
 
-def addition_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, period_list1, const_only, noise_lower, noise_upper, n_const_force, const_converge_change_thresh, smooth_lengthf_targ):
+def addition_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, period_list, const_only, noise_lower, noise_upper, n_const_force, const_converge_change_thresh, smooth_lengthf_targ):
     if not fit_state.faint_converged[itrn+1] or fit_state.switch_next[itrn+1]:
         if itrn < n_const_force:
-            SAET_tot_lower, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.get_galactic_below_low(), SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
             fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn+1]
         else:
-            SAET_tot_lower, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.get_galactic_below_low(), SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list1)
             fit_state.faint_converged[itrn+1] = True
             # need to disable adaption of constant here because after this point the convergence isn't guaranteed to be monotonic
             print('disabled constant adaptation at ' + str(itrn))
 
         # make sure this will always predict >= snrs to the actual spectrum in use
+        # use lower estimate of galactic bg
+        SAET_tot_lower, _, _, _, _ = get_SAET_cyclostationary_mean(bgd.get_galactic_below_low(), SAET_m, wc, smooth_lengthf_targ, filter_periods=not const_only, period_list=period_list)
         SAET_tot_lower = np.min([SAET_tot_lower, noise_upper.SAET], axis=0)
         noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_lower, wc, prune=True)
-
         SAET_tot_lower = None
 
         bis.n_faints_cur[itrn+1] = bis.faints_cur[itrn].sum()

@@ -207,7 +207,7 @@ def store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_belo
 
     hf_out.close()
 
-def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max, bgd, period_list1, n_bin_use, SAET_m, SAE_fin, const_only, snrs_tot_upper, n_full_converged, argbinmap, faints_old, faints_cur, brights, snr_min_in):
+def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max, bgd, period_list, n_bin_use, SAET_m, SAE_fin, const_only, snrs_tot_upper, n_full_converged, argbinmap, faints_old, faints_cur, brights, snr_min_in):
     filename_gb_init = get_preliminary_filename(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
     filename_gb_common = get_common_noise_filename(galaxy_dir, ic.snr_thresh, wc)
     filename_out = get_processed_gb_filename(galaxy_dir, const_only, ic.snr_thresh, wc, nt_min, nt_max)
@@ -217,7 +217,7 @@ def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max,
     hf_out['SAET'].create_dataset('galactic_below', data=bgd.get_galactic_below_low(), compression='gzip')
     hf_out['SAET'].create_dataset('galactic_above', data=bgd.get_galactic_coadd_resolvable(), compression='gzip')
     hf_out['SAET'].create_dataset('galactic_undecided', data=bgd.get_galactic_coadd_undecided(), compression='gzip')
-    hf_out['SAET'].create_dataset('period_list', data=period_list1)
+    hf_out['SAET'].create_dataset('period_list', data=period_list)
 
     hf_out['SAET'].create_dataset('n_bin_use', data=n_bin_use)
     hf_out['SAET'].create_dataset('SAET_m', data=SAET_m)
