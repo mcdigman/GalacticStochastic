@@ -9,7 +9,8 @@ from instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
 from iterative_fit_helpers import (BGDecomposition,
                                    addition_convergence_decision,
                                    run_binary_coadd2,
-                                   subtraction_convergence_decision)
+                                   subtraction_convergence_decision,
+                                   new_noise_helper)
 from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 
 
@@ -133,9 +134,11 @@ class IterativeFitManager():
 
         t1n = perf_counter()
 
-        self.noise_upper = subtraction_convergence_decision(self.bgd, self.bis, self.fit_state, itrn, self.SAET_m, self.wc, self.ic, self.period_list, self.const_only, self.noise_upper, self.n_cyclo_switch)
+        noise_safe_upper = subtraction_convergence_decision(self.bis, self.fit_state, itrn)
 
-        self.noise_lower = addition_convergence_decision(self.bgd, self.bis, self.fit_state, itrn, self.SAET_m, self.wc, self.period_list, self.const_only, self.noise_lower, self.noise_upper, self.n_const_force, self.const_converge_change_thresh, self.smooth_lengthf_fix)
+        noise_safe_lower = addition_convergence_decision(self.bis, self.fit_state, itrn, self.n_const_force, self.const_converge_change_thresh)
+
+        self.noise_upper, self.noise_lower = new_noise_helper(noise_safe_upper, noise_safe_lower, self.noise_upper, self.noise_lower, itrn, self.n_cyclo_switch, self.const_only, self.SAET_m, self.wc, self.ic, self.bgd, self.period_list, self.smooth_lengthf_fix)
 
         self._state_check(itrn)
 

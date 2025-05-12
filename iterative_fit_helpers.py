@@ -232,7 +232,8 @@ def decide_coadd_helper(brights, faints_old, faints_cur, itrn, itrb, bgd, wavefo
 
 
 
-def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, period_list, const_only, noise_upper, n_cyclo_switch):
+def subtraction_convergence_decision(bis, fit_state, itrn):
+    noise_safe = True
 
     # short circuit if we have previously decided subtraction is converged
     if fit_state.bright_converged[itrn]:
@@ -240,7 +241,7 @@ def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, 
         fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn]
         fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn]
         bis.n_brights_cur[itrn+1] = bis.n_brights_cur[itrn]
-        return noise_upper
+        return noise_safe
 
     bis.n_brights_cur[itrn+1] = bis.brights[itrn].sum()
 
@@ -264,38 +265,34 @@ def subtraction_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, ic, 
             fit_state.bright_converged[itrn+1] = False
             fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn]
 
-        return noise_upper
-
+        return noise_safe
 
     # subtraction has not converged, get a new noise model
+    noise_safe = False
     fit_state.switch_next[itrn+1] = False
     fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn]
     fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn]
 
-    # don't use cyclostationary model until specified iteration
-    if itrn < n_cyclo_switch:
-        filter_periods = False
-    else:
-        filter_periods = not const_only
-
-    # use higher estimate of galactic bg
-    SAET_tot_upper = bgd.get_S_below_high(SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods, period_list)
-    noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_upper, wc, prune=True)
-
-    SAET_tot_upper = None
-
-    return noise_upper
+    return noise_safe
 
 
-def addition_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, period_list, const_only, noise_lower, noise_upper, n_const_force, const_converge_change_thresh, smooth_lengthf_targ):
-    if not fit_state.faint_converged[itrn+1] or fit_state.switch_next[itrn+1]:
-        if itrn < n_const_force:
-            fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn+1]
+def new_noise_helper(noise_safe_upper, noise_safe_lower, noise_upper, noise_lower, itrn, n_cyclo_switch, const_only, SAET_m, wc, ic, bgd, period_list, smooth_lengthf_targ):
+    if not noise_safe_upper:
+        assert not noise_safe_lower
+
+        # don't use cyclostationary model until specified iteration
+        if itrn < n_cyclo_switch:
+            filter_periods = False
         else:
-            fit_state.faint_converged[itrn+1] = True
-            # need to disable adaption of constant here because after this point the convergence isn't guaranteed to be monotonic
-            print('disabled constant adaptation at ' + str(itrn))
+            filter_periods = not const_only
 
+        # use higher estimate of galactic bg
+        SAET_tot_upper = bgd.get_S_below_high(SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods, period_list)
+        noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_upper, wc, prune=True)
+
+        SAET_tot_upper = None
+
+    if not noise_safe_lower:
         # make sure this will always predict >= snrs to the actual spectrum in use
         # use lower estimate of galactic bg
         filter_periods = not const_only
@@ -303,6 +300,21 @@ def addition_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, period_
         SAET_tot_lower = np.min([SAET_tot_lower, noise_upper.SAET], axis=0)
         noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_lower, wc, prune=True)
         SAET_tot_lower = None
+
+    return noise_upper, noise_lower
+
+
+def addition_convergence_decision(bis, fit_state, itrn, n_const_force, const_converge_change_thresh):
+
+    if not fit_state.faint_converged[itrn+1] or fit_state.switch_next[itrn+1]:
+        noise_safe = False
+        if itrn < n_const_force:
+            fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn+1]
+        else:
+            fit_state.faint_converged[itrn+1] = True
+            # need to disable adaption of constant here because after this point the convergence isn't guaranteed to be monotonic
+            print('disabled constant adaptation at ' + str(itrn))
+
 
         bis.n_faints_cur[itrn+1] = bis.faints_cur[itrn].sum()
         if fit_state.switch_next[itrn+1] and fit_state.faint_converged[itrn+1]:
@@ -346,10 +358,11 @@ def addition_convergence_decision(bgd, bis, fit_state, itrn, SAET_m, wc, period_
             fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
 
     else:
+        noise_safe = True
         fit_state.switchf_next[itrn+1] = False
         fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn+1]
         fit_state.switch_next[itrn+1] = fit_state.switch_next[itrn+1]
         fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
         bis.n_faints_cur[itrn+1] = bis.n_faints_cur[itrn]
 
-    return noise_lower
+    return noise_safe
