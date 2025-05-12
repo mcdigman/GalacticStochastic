@@ -207,7 +207,7 @@ def decide_coadd_helper(brights, faints_old, faints_cur, itrn, itrb, bgd, wavefo
     # the same binary cannot be decided as both bright and faint
     assert not (brights[itrn, itrb] and  faints_cur[itrn, itrb])
 
-    # don't add to anything if the subtraction is already converged and this binary would not require addition
+    # don't add to anything if the bright adaptation is already converged and this binary would not be faint
     if bright_converged[itrn] and not faints_cur[itrn, itrb]:
         return
 
@@ -232,10 +232,10 @@ def decide_coadd_helper(brights, faints_old, faints_cur, itrn, itrb, bgd, wavefo
 
 
 
-def subtraction_convergence_decision(bis, fit_state, itrn):
+def bright_convergence_decision(bis, fit_state, itrn):
     noise_safe = True
 
-    # short circuit if we have previously decided subtraction is converged
+    # short circuit if we have previously decided bright adaptation is converged
     if fit_state.bright_converged[itrn]:
         fit_state.do_faint_check[itrn+1] = False
         fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn]
@@ -247,12 +247,12 @@ def subtraction_convergence_decision(bis, fit_state, itrn):
 
     # don't check for convergence in first iteration
     if itrn > 1:
-        # subtraction is either converged or oscillating
+        # bright adaptation is either converged or oscillating
         cycling, converged_or_cycling, old_match = bis.oscillation_check_helper(itrn)
         if fit_state.force_converge[itrn] or converged_or_cycling:
             assert bis.n_brights_cur[itrn] == bis.n_brights_cur[itrn+1] or fit_state.force_converge[itrn] or old_match
             if fit_state.do_faint_check[itrn]:
-                print('subtraction converged at ' + str(itrn))
+                print('bright adaptation converged at ' + str(itrn))
                 fit_state.do_faint_check[itrn+1] = False
                 fit_state.bright_converged[itrn+1] = True
                 fit_state.faint_converged[itrn+1] = True
@@ -260,14 +260,14 @@ def subtraction_convergence_decision(bis, fit_state, itrn):
                 if cycling:
                     print('cycling detected at ' + str(itrn) + ', doing final check iteration aborting')
                     fit_state.force_converge[itrn+1] = True
-                print('subtraction predicted initial converged at ' + str(itrn) + ' next iteration will be check iteration')
+                print('bright adaptation predicted initial converged at ' + str(itrn) + ' next iteration will be check iteration')
                 fit_state.do_faint_check[itrn+1] = True
                 fit_state.bright_converged[itrn+1] = False
                 fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn]
 
             return noise_safe
 
-    # subtraction has not converged, get a new noise model
+    # bright adaptation has not converged, get a new noise model
     noise_safe = False
     fit_state.do_faint_check[itrn+1] = False
     fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn]
@@ -276,7 +276,7 @@ def subtraction_convergence_decision(bis, fit_state, itrn):
     return noise_safe
 
 
-def new_noise_helper(noise_safe_upper, noise_safe_lower, noise_upper, noise_lower, itrn, n_cyclo_switch, const_only, SAET_m, wc, ic, bgd, period_list, smooth_lengthf_targ):
+def new_noise_helper(noise_safe_upper, noise_safe_lower, noise_upper, noise_lower, itrn, n_cyclo_switch, stat_only, SAET_m, wc, ic, bgd, period_list, smooth_lengthf_targ):
     if not noise_safe_upper:
         assert not noise_safe_lower
 
@@ -284,7 +284,7 @@ def new_noise_helper(noise_safe_upper, noise_safe_lower, noise_upper, noise_lowe
         if itrn < n_cyclo_switch:
             filter_periods = False
         else:
-            filter_periods = not const_only
+            filter_periods = not stat_only
 
         # use higher estimate of galactic bg
         SAET_tot_upper = bgd.get_S_below_high(SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods, period_list)
@@ -295,7 +295,7 @@ def new_noise_helper(noise_safe_upper, noise_safe_lower, noise_upper, noise_lowe
     if not noise_safe_lower:
         # make sure this will always predict >= snrs to the actual spectrum in use
         # use lower estimate of galactic bg
-        filter_periods = not const_only
+        filter_periods = not stat_only
         SAET_tot_lower = bgd.get_S_below_low(SAET_m, wc, smooth_lengthf_targ, filter_periods, period_list)
         SAET_tot_lower = np.min([SAET_tot_lower, noise_upper.SAET], axis=0)
         noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_lower, wc, prune=True)
@@ -304,21 +304,21 @@ def new_noise_helper(noise_safe_upper, noise_safe_lower, noise_upper, noise_lowe
     return noise_upper, noise_lower
 
 
-def addition_convergence_decision(bis, fit_state, itrn, n_const_force, const_converge_change_thresh):
+def faint_convergence_decision(bis, fit_state, itrn, n_min_faint_adapt, faint_converge_change_thresh):
 
     if not fit_state.faint_converged[itrn+1] or fit_state.do_faint_check[itrn+1]:
         noise_safe = False
-        if itrn < n_const_force:
+        if itrn < n_min_faint_adapt:
             fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn+1]
         else:
             fit_state.faint_converged[itrn+1] = True
-            # need to disable adaption of constant here because after this point the convergence isn't guaranteed to be monotonic
-            print('disabled constant adaptation at ' + str(itrn))
+            # need to disable adaption of faint component here because after this point the convergence isn't guaranteed to be monotonic
+            print('disabled faint component adaptation at ' + str(itrn))
 
 
         bis.n_faints_cur[itrn+1] = bis.faints_cur[itrn].sum()
         if fit_state.do_faint_check[itrn+1] and fit_state.faint_converged[itrn+1]:
-            print('overriding constant convergence to check background model')
+            print('overriding faint convergence to check background model')
             fit_state.do_faint_check[itrn+1] = fit_state.do_faint_check[itrn+1]
             fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
             fit_state.do_bright_check[itrn+1] = False
@@ -332,22 +332,22 @@ def addition_convergence_decision(bis, fit_state, itrn, n_const_force, const_con
                 fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
             fit_state.do_bright_check[itrn+1] = False
             fit_state.faint_converged[itrn+1] = False
-            print('addition removed values at ' + str(itrn) + ', repeating check iteration')
+            print('faint adaptation removed values at ' + str(itrn) + ', repeating check iteration')
 
-        elif itrn != 1 and np.abs(bis.n_faints_cur[itrn+1] - bis.n_faints_cur[itrn]) < const_converge_change_thresh:
+        elif itrn != 1 and np.abs(bis.n_faints_cur[itrn+1] - bis.n_faints_cur[itrn]) < faint_converge_change_thresh:
             if fit_state.do_bright_check[itrn+1]:
                 fit_state.faint_converged[itrn+1] = True
                 fit_state.do_bright_check[itrn+1] = False
-                print('addition converged at ' + str(itrn))
+                print('faint adaptation converged at ' + str(itrn))
             else:
-                print('near convergence in constant adaption at '+str(itrn), ' doing check iteration')
+                print('near convergence in faint adaption at '+str(itrn), ' doing check iteration')
                 fit_state.do_bright_check[itrn+1] = False
                 fit_state.faint_converged[itrn+1] = False
             fit_state.do_faint_check[itrn+1] = fit_state.do_faint_check[itrn+1]
             fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
         else:
             if fit_state.bright_converged[itrn+1]:
-                print('addition convergence continuing beyond subtraction, try check iteration')
+                print('faint adaptation convergence continuing beyond bright adaptation, try check iteration')
                 fit_state.do_bright_check[itrn+1] = False
                 fit_state.faint_converged[itrn+1] = False
             else:

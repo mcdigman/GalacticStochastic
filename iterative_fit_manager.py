@@ -7,16 +7,16 @@ import numpy as np
 import global_const as gc
 from instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
 from iterative_fit_helpers import (BGDecomposition,
-                                   addition_convergence_decision,
+                                   faint_convergence_decision,
                                    run_binary_coadd2,
-                                   subtraction_convergence_decision,
+                                   bright_convergence_decision,
                                    new_noise_helper)
 from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 
 
 
 class IterativeFitManager():
-    def __init__(self, lc, wc, ic, SAET_m, n_iterations, galactic_below_in, snr_tots_in, snr_min_in, params_gb, period_list, nt_min, nt_max, n_cyclo_switch, const_only, n_const_force, const_converge_change_thresh, smooth_lengthf_fix):
+    def __init__(self, lc, wc, ic, SAET_m, n_iterations, galactic_below_in, snr_tots_in, snr_min_in, params_gb, period_list, nt_min, nt_max, n_cyclo_switch, stat_only, n_min_faint_adapt, faint_converge_change_thresh, smooth_lengthf_fix):
 
         self.wc = wc
         self.lc = lc
@@ -27,9 +27,9 @@ class IterativeFitManager():
         self.nt_max = nt_max
         self.smooth_lengthf_fix = smooth_lengthf_fix
         self.n_cyclo_switch = n_cyclo_switch
-        self.const_only = const_only
-        self.n_const_force = n_const_force
-        self.const_converge_change_thresh = const_converge_change_thresh
+        self.stat_only = stat_only
+        self.n_min_faint_adapt = n_min_faint_adapt
+        self.faint_converge_change_thresh = faint_converge_change_thresh
         self.n_tot = params_gb.shape[0]
 
 
@@ -51,10 +51,10 @@ class IterativeFitManager():
         self.SAET_fin = np.zeros((wc.Nt, wc.Nf, 3))
 
 
-        self.parseval_const = np.zeros(n_iterations)
-        self.parseval_bg = np.zeros(n_iterations)
-        self.parseval_sup = np.zeros(n_iterations)
-        self.parseval_tot = np.zeros(n_iterations)
+        self.parseval_below_low = np.zeros(n_iterations)
+        self.parseval_below_high = np.zeros(n_iterations)
+        self.parseval_bright = np.zeros(n_iterations)
+        self.parseval_total = np.zeros(n_iterations)
 
 
         params0 = self.params_gb[0].copy()
@@ -134,11 +134,11 @@ class IterativeFitManager():
 
         t1n = perf_counter()
 
-        noise_safe_upper = subtraction_convergence_decision(self.bis, self.fit_state, itrn)
+        noise_safe_upper = bright_convergence_decision(self.bis, self.fit_state, itrn)
 
-        noise_safe_lower = addition_convergence_decision(self.bis, self.fit_state, itrn, self.n_const_force, self.const_converge_change_thresh)
+        noise_safe_lower = faint_convergence_decision(self.bis, self.fit_state, itrn, self.n_min_faint_adapt, self.faint_converge_change_thresh)
 
-        self.noise_upper, self.noise_lower = new_noise_helper(noise_safe_upper, noise_safe_lower, self.noise_upper, self.noise_lower, itrn, self.n_cyclo_switch, self.const_only, self.SAET_m, self.wc, self.ic, self.bgd, self.period_list, self.smooth_lengthf_fix)
+        self.noise_upper, self.noise_lower = new_noise_helper(noise_safe_upper, noise_safe_lower, self.noise_upper, self.noise_lower, itrn, self.n_cyclo_switch, self.stat_only, self.SAET_m, self.wc, self.ic, self.bgd, self.period_list, self.smooth_lengthf_fix)
 
         self._state_check(itrn)
 
@@ -221,10 +221,10 @@ class IterativeFitManager():
             assert not self.fit_state.bright_converged[itrn+1]
 
     def _parseval_store(self,itrn):
-        self.parseval_tot[itrn] = np.sum((self.bgd.get_galactic_total()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
-        self.parseval_bg[itrn] = np.sum((self.bgd.get_galactic_below_high()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
-        self.parseval_const[itrn] = np.sum((self.bgd.get_galactic_below_low()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
-        self.parseval_sup[itrn] = np.sum((self.bgd.get_galactic_coadd_resolvable()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
+        self.parseval_total[itrn] = np.sum((self.bgd.get_galactic_total()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
+        self.parseval_below_high[itrn] = np.sum((self.bgd.get_galactic_below_high()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
+        self.parseval_below_low[itrn] = np.sum((self.bgd.get_galactic_below_low()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
+        self.parseval_bright[itrn] = np.sum((self.bgd.get_galactic_coadd_resolvable()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
 
 class BinaryInclusionState():
     def __init__(self, n_iterations, n_bin_use, wc):
@@ -264,7 +264,7 @@ class BinaryInclusionState():
 
         converged_or_cycling = osc1 or osc2 or osc3
         old_match = osc2 or osc3
-        cycling = osc_old and not osc1
+        cycling = old_match and not osc1
         return cycling, converged_or_cycling, old_match
 
 class IterativeFitState():

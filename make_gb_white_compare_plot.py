@@ -79,23 +79,23 @@ if __name__ == '__main__':
     noise_realization = gfi.get_noise_common(galaxy_dir, snr_thresh, wc, lc)
 
     _, galactic_cyclo = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, False)
-    _, galactic_const = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, True)
+    _, galactic_stat = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, True)
 
     signal_full_cyclo = galactic_cyclo + noise_realization
-    signal_full_const = galactic_const + noise_realization
+    signal_full_stat = galactic_stat + noise_realization
 
     SAET_m = instrument_noise_AET_wdm_m(lc, wc)
 
     SAET_model, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_cyclo, SAET_m, wc, 0, filter_periods=True, period_list=np.array([1, 2, 3, 4, 5]))
-    #SAET_model_const, _, _ = get_SAET_cyclostationary_mean(galactic_const, SAET_m, wc, 0, filter_periods=True, period_list=np.array([]))
+    #SAET_model_stat, _, _ = get_SAET_cyclostationary_mean(galactic_stat, SAET_m, wc, 0, filter_periods=True, period_list=np.array([]))
 
     fs = np.arange(1, wc.Nf)*wc.DF
 
     nf_min = np.argmax(fs > 8.e-5)
     nf_max = np.argmax(fs > 4.e-3)
 
-    signal_white_resid = result_normality_battery(signal_full_cyclo)
-    signal_white_resid_const = result_normality_battery(signal_full_const)
+    signal_white_resid_cyclo = result_normality_battery(signal_full_cyclo)
+    signal_white_resid_stat = result_normality_battery(signal_full_stat)
 
 
 extent = (nt_min_report*wc.DT/gc.SECSYEAR, nt_max_report*wc.DT/gc.SECSYEAR, nf_min*wc.DF, nf_max*wc.DF)
@@ -125,8 +125,8 @@ if do_2plot:
     fig.subplots_adjust(wspace=0., hspace=0., left=0.085, top=0.91, right=1.075, bottom=0.18)
 
     aspect = 'auto'
-    im = white_plot_ax(ax[0], r"Constant", (signal_white_resid_const[nt_min:nt_max, :, 0:2]**2).sum(axis=2))
-    im = white_plot_ax(ax[1], r"Cyclostationary", (signal_white_resid[nt_min:nt_max, :, 0:2]**2).sum(axis=2))
+    im = white_plot_ax(ax[0], r"Constant", (signal_white_resid_stat[nt_min:nt_max, :, 0:2]**2).sum(axis=2))
+    im = white_plot_ax(ax[1], r"Cyclostationary", (signal_white_resid_cyclo[nt_min:nt_max, :, 0:2]**2).sum(axis=2))
 
     cbar = fig.colorbar(im, ax=ax[0:2], shrink=1., pad=0.01, orientation='vertical')
     cbar.set_ticks([0, 2, 4])
@@ -144,8 +144,8 @@ if do_3plot:
     fig.subplots_adjust(wspace=0., hspace=0., left=0.055, top=0.91, right=1.110, bottom=0.18)
 
     aspect = 'auto'
-    im = white_plot_ax(ax[0], r"Constant", (signal_white_resid_const[nt_min:nt_max, :, 0:2]**2).sum(axis=2))
-    im = white_plot_ax(ax[1], r"Cyclostationary", (signal_white_resid[nt_min:nt_max, :, 0:2]**2).sum(axis=2))
+    im = white_plot_ax(ax[0], r"Constant", (signal_white_resid_stat[nt_min:nt_max, :, 0:2]**2).sum(axis=2))
+    im = white_plot_ax(ax[1], r"Cyclostationary", (signal_white_resid_cyclo[nt_min:nt_max, :, 0:2]**2).sum(axis=2))
     im = white_plot_ax(ax[2], r"Galactic Residual", signal_white_2[nt_min:nt_max])
 
     cbar = fig.colorbar(im, ax=ax[0:3], shrink=1., pad=0.01, orientation='vertical')

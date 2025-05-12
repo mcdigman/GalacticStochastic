@@ -29,10 +29,10 @@ if __name__ == '__main__':
     galactic_below_in, _, snr_tots_in, SAET_m, _, _, snr_min_in = gfi.load_init_galactic_file(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
 
     for itrm in range(0,1):
-        const_only = False
+        stat_only = False
         nt_min = 256*(7-itrm)
         nt_max = nt_min+512*(itrm+1)
-        print(nt_min, nt_max, wc.Nt, wc.Nf, const_only)
+        print(nt_min, nt_max, wc.Nt, wc.Nf, stat_only)
 
         params_gb, _, _, _, _ = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
 
@@ -56,9 +56,9 @@ if __name__ == '__main__':
         snr_low_mult = 0.999
 
         n_iterations = 40
-        n_const_force = 6
+        n_min_faint_adapt = 6
 
-        const_converge_change_thresh = 3
+        faint_converge_change_thresh = 3
 
         snr_cut_bright = np.zeros(n_iterations) + snr_high_fix
         for itrn in range(snr_high_fix_itr):
@@ -79,7 +79,7 @@ if __name__ == '__main__':
         snr_min[0] = snr_low_initial               # for first iteration set to thresh because spectrum is just instrument noise
         snr_min[1:] = snr_low_mult * snr_high_fix  # for subsequent, choose value to ensure almost nothing gets decided as constant because of its own power alone
 
-        if const_only:
+        if stat_only:
             period_list = np.array([])
         else:
             period_list = np.array([1, 2, 3, 4, 5])
@@ -89,7 +89,7 @@ if __name__ == '__main__':
 
         ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_cut_bright, smooth_lengthfs)
 
-        ifm = IterativeFitManager(lc, wc, ic, SAET_m, n_iterations, galactic_below_in, snr_tots_in, snr_min_in, params_gb, period_list, nt_min, nt_max, n_cyclo_switch, const_only, n_const_force, const_converge_change_thresh, smooth_lengthf_fix)
+        ifm = IterativeFitManager(lc, wc, ic, SAET_m, n_iterations, galactic_below_in, snr_tots_in, snr_min_in, params_gb, period_list, nt_min, nt_max, n_cyclo_switch, stat_only, n_min_faint_adapt, faint_converge_change_thresh, smooth_lengthf_fix)
 
         params_gb = None
 
@@ -97,15 +97,15 @@ if __name__ == '__main__':
 
         do_hf_out = True
         if do_hf_out:
-            gfi.store_processed_gb_file(galaxy_dir, galaxy_file, ifm.wc, ifm.lc, ifm.ic, ifm.nt_min, ifm.nt_max, ifm.bgd, ifm.period_list, ifm.n_bin_use, ifm.SAET_m, ifm.SAET_fin, ifm.const_only, ifm.bis.snrs_tot_upper, ifm.n_full_converged, ifm.argbinmap, ifm.faints_old, ifm.bis.faints_cur, ifm.bis.brights, snr_min_in)
+            gfi.store_processed_gb_file(galaxy_dir, galaxy_file, ifm.wc, ifm.lc, ifm.ic, ifm.nt_min, ifm.nt_max, ifm.bgd, ifm.period_list, ifm.n_bin_use, ifm.SAET_m, ifm.SAET_fin, ifm.stat_only, ifm.bis.snrs_tot_upper, ifm.n_full_converged, ifm.argbinmap, ifm.faints_old, ifm.bis.faints_cur, ifm.bis.brights, snr_min_in)
 
 
 
 do_parseval_plot = False
 if do_parseval_plot:
-    plt.plot(ifm.parseval_const[1:itrn+1]/ifm.parseval_tot[1:itrn+1])
-    plt.plot(ifm.parseval_bg[1:itrn+1]/ifm.parseval_tot[1:itrn+1])
-    plt.plot(ifm.parseval_sup[1:itrn+1]/ifm.parseval_tot[1:itrn+1])
+    plt.plot(ifm.parseval_below_low[1:itrn+1]/ifm.parseval_total[1:itrn+1])
+    plt.plot(ifm.parseval_below_high[1:itrn+1]/ifm.parseval_total[1:itrn+1])
+    plt.plot(ifm.parseval_bright[1:itrn+1]/ifm.parseval_total[1:itrn+1])
     plt.show()
 
 plot_noise_spectrum_ambiguity = True

@@ -31,7 +31,7 @@ if __name__ == '__main__':
     fs = np.arange(0,wc.Nf)*wc.DF
 
 
-    const_only = False
+    stat_only = False
     idx_use = [0,1,3,7]
     nt_mins = np.array([256*7,256*6,256*5,256*4,256*3,256*2,256*1,256*0])[idx_use]
     nt_maxs = np.array([512*1,512*2,512*3,512*4,512*5,512*6,512*7,512*8])[idx_use]+nt_mins
@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
     itrl_fit = 0
 
-    if not const_only:
+    if not stat_only:
         period_list = np.array([1,2,3,4,5])
     else:
         period_list = np.array([],dtype=np.int64)
@@ -56,12 +56,12 @@ if __name__ == '__main__':
     r_tots = np.zeros((nk,wc.Nt,wc.NC))
 
     for itrk in range(0,nk):
-        _, galactic_below_high = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_mins[itrk], nt_maxs[itrk], const_only)
+        _, galactic_below_high = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_mins[itrk], nt_maxs[itrk], stat_only)
         SAET_gal[itrk] = np.mean(galactic_below_high,axis=0)
 
         SAET_gal_smooth[itrk,0,:] = SAET_gal[itrk,0,:]
 
-        _, r_tots[itrk], SAET_mean_cur, _ ,_ = get_SAET_cyclostationary_mean(galactic_below_high,SAET_m,wc, smooth_targ_length,filter_periods=not const_only,period_list=period_list,Nt_loc=wc.Nt)
+        _, r_tots[itrk], SAET_mean_cur, _ ,_ = get_SAET_cyclostationary_mean(galactic_below_high,SAET_m,wc, smooth_targ_length,filter_periods=not stat_only,period_list=period_list,Nt_loc=wc.Nt)
         SAET_gal_smooth[itrk] = SAET_mean_cur
 
         for itrc in range(0,2):
