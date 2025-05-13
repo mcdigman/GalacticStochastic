@@ -6,7 +6,7 @@ from warnings import warn
 
 import numpy as np
 
-import global_const as gc
+import GalacticStochastic.global_const as gc
 
 LISAConstants = namedtuple('LISAConstants', ['Larm', 'Sps', 'Sacc', 'kappa0', 'lambda0', 'fstr', 'ec', 'fm'])
 

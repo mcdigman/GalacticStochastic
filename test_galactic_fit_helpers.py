@@ -7,10 +7,10 @@ import pytest
 import scipy.ndimage
 from scipy.interpolate import InterpolatedUnivariateSpline
 
-import global_const as gc
-from galactic_fit_helpers import (filter_periods_fft,
-                                  get_SAET_cyclostationary_mean)
-from wdm_config import get_wavelet_model
+import GalacticStochastic.global_const as gc
+from GalacticStochastic.galactic_fit_helpers import (
+    filter_periods_fft, get_SAET_cyclostationary_mean)
+from WaveletWaveforms.wdm_config import get_wavelet_model
 
 # we  can use the same baise noise for most things and modulate it as necessary
 config = configparser.ConfigParser()

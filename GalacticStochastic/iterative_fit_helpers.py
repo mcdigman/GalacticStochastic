@@ -5,8 +5,10 @@ from time import perf_counter
 
 import numpy as np
 
-from galactic_fit_helpers import get_SAET_cyclostationary_mean
-from instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
+from GalacticStochastic.galactic_fit_helpers import \
+    get_SAET_cyclostationary_mean
+from LisaWaveformTools.instrument_noise import \
+    DiagonalNonstationaryDenseInstrumentNoiseModel
 
 IterationConfig = namedtuple('IterationConfig', ['n_iterations', 'snr_thresh', 'snr_min', 'snr_cut_bright', 'smooth_lengthf'])
 

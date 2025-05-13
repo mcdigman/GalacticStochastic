@@ -4,14 +4,15 @@ import configparser
 
 import numpy as np
 
-import global_const as gc
-import global_file_index as gfi
-from instrument_noise import (DiagonalStationaryDenseInstrumentNoiseModel,
-                              instrument_noise_AET_wdm_m)
-from iterative_fit_helpers import IterationConfig, do_preliminary_loop
-from lisa_config import get_lisa_constants
-from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
-from wdm_config import get_wavelet_model
+import GalacticStochastic.global_const as gc
+import GalacticStochastic.global_file_index as gfi
+from GalacticStochastic.iterative_fit_helpers import (IterationConfig,
+                                                      do_preliminary_loop)
+from LisaWaveformTools.instrument_noise import (
+    DiagonalStationaryDenseInstrumentNoiseModel, instrument_noise_AET_wdm_m)
+from LisaWaveformTools.lisa_config import get_lisa_constants
+from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
+from WaveletWaveforms.wdm_config import get_wavelet_model
 
 if __name__ == '__main__':
     config = configparser.ConfigParser()

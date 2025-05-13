@@ -3,7 +3,10 @@
 import numpy as np
 from numba import njit, prange
 
-import global_const as gc
+CLIGHT = 2.99792458e8     # Speed of light in m/s
+AU = 1.4959787e11         # Astronomical Unit in meters
+
+#TODO eliminate need for constants by storing e.g. Larm_AU
 
 
 @njit(fastmath=True)
@@ -50,8 +53,8 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
     cbs = np.zeros(3)
     for itrc in range(0, 3):
         betas[itrc] = 2/3*np.pi*itrc+lc.lambda0
-        sbs[itrc] = (gc.AU/lc.Larm*lc.ec)*np.sin(betas[itrc])
-        cbs[itrc] = (gc.AU/lc.Larm*lc.ec)*np.cos(betas[itrc])
+        sbs[itrc] = (AU/lc.Larm*lc.ec)*np.sin(betas[itrc])
+        cbs[itrc] = (AU/lc.Larm*lc.ec)*np.cos(betas[itrc])
 
     cosps = np.cos(2*psi)
     sinps = np.sin(2*psi)
@@ -68,14 +71,14 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
         sa = np.sin(alpha)
         ca = np.cos(alpha)
         for itrc in range(0, 3):
-            x[itrc] = (gc.AU/lc.Larm)*ca + sa*ca*sbs[itrc] - (1. + sa*sa)*cbs[itrc]
-            y[itrc] = (gc.AU/lc.Larm)*sa + sa*ca*cbs[itrc] - (1. + ca*ca)*sbs[itrc]
+            x[itrc] = (AU/lc.Larm)*ca + sa*ca*sbs[itrc] - (1. + sa*sa)*cbs[itrc]
+            y[itrc] = (AU/lc.Larm)*sa + sa*ca*cbs[itrc] - (1. + ca*ca)*sbs[itrc]
             z[itrc] = -np.sqrt(3)*(ca*cbs[itrc] + sa*sbs[itrc])
 
         xa = (x[0]+x[1]+x[2])/3
         ya = (y[0]+y[1]+y[2])/3
         za = (z[0]+z[1]+z[2])/3
-        kdotx[n] = (lc.Larm/gc.CLIGHT)*(xa*kv[0]+ya*kv[1]+za*kv[2])
+        kdotx[n] = (lc.Larm/CLIGHT)*(xa*kv[0]+ya*kv[1]+za*kv[2])
 
         fr = 1/(2*lc.fstr)*FFs[n+nf_low]
 
@@ -226,7 +229,7 @@ def get_tensor_basis(phi, costh):
 @njit()
 def get_xis_inplace(kv, ts, xas, yas, zas, xis, lc):
     """get time adjusted to guiding center for tensor basis"""
-    kdotx = (xas*kv[0]+yas*kv[1]+zas*kv[2])*lc.Larm/gc.CLIGHT
+    kdotx = (xas*kv[0]+yas*kv[1]+zas*kv[2])*lc.Larm/CLIGHT
     xis[:] = ts-kdotx
 
 
@@ -245,9 +248,9 @@ def spacecraft_vec(ts, lc):
         beta = i*2/3*np.pi+lc.lambda0
         sb = np.sin(beta)
         cb = np.cos(beta)
-        xs[i] = gc.AU/lc.Larm*ca + gc.AU/lc.Larm*lc.ec*(sa*ca*sb - (1. + sa*sa)*cb)
-        ys[i] = gc.AU/lc.Larm*sa + gc.AU/lc.Larm*lc.ec*(sa*ca*cb - (1. + ca*ca)*sb)
-        zs[i] = -np.sqrt(3)*gc.AU/lc.Larm*lc.ec*(ca*cb + sa*sb)
+        xs[i] = AU/lc.Larm*ca + AU/lc.Larm*lc.ec*(sa*ca*sb - (1. + sa*sa)*cb)
+        ys[i] = AU/lc.Larm*sa + AU/lc.Larm*lc.ec*(sa*ca*cb - (1. + ca*ca)*sb)
+        zs[i] = -np.sqrt(3)*AU/lc.Larm*lc.ec*(ca*cb + sa*sb)
 
     # guiding center
     xas = (xs[0]+xs[1]+xs[2])/3

@@ -1,6 +1,6 @@
 import h5py
 
-import global_file_index as gfi
+import GalacticStochastic.global_file_index as gfi
 
 galaxy_file = 'LDC2_sangria_training_v2.h5'
 ldc_dir = 'LDC/'

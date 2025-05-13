@@ -7,8 +7,9 @@ import numpy as np
 import scipy as sp
 from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 
-import global_const as gc
-from coefficientsWDM_time_funcs import get_ev_t_full, wavelet
+from WaveletWaveforms.coefficientsWDM_time_funcs import get_ev_t_full, wavelet
+
+SECSYEAR = 24*365*3600    # Number of seconds in a calendar year
 
 
 def get_evTs(wc, check_cache=True, hf_out=False):
@@ -16,7 +17,7 @@ def get_evTs(wc, check_cache=True, hf_out=False):
     t0 = time()
 
     print("Filter length (seconds) %e" % wc.Tw)
-    print("dt="+str(wc.dt)+"s Tobs="+str(wc.Tobs/gc.SECSYEAR))
+    print("dt="+str(wc.dt)+"s Tobs="+str(wc.Tobs/SECSYEAR))
 
     print("full filter bandwidth %e  samples %d" % ((wc.A+wc.B)/np.pi, (wc.A+wc.B)/np.pi*wc.Tw))
     cache_good = False

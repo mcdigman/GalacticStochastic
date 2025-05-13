@@ -8,7 +8,7 @@ import WDMWaveletTransforms.fft_funcs as fft
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.optimize import dual_annealing
 
-import global_const as gc
+import GalacticStochastic.global_const as gc
 
 
 def SAE_gal_model(f, log10A, log10f2, log10f1, log10fknee, alpha):

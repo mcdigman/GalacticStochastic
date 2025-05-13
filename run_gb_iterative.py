@@ -5,12 +5,12 @@ import configparser
 import matplotlib.pyplot as plt
 import numpy as np
 
-import global_file_index as gfi
-from iterative_fit_helpers import IterationConfig
-from iterative_fit_manager import IterativeFitManager
-from lisa_config import get_lisa_constants
-from testing_tools import unit_normal_battery
-from wdm_config import get_wavelet_model
+import GalacticStochastic.global_file_index as gfi
+from GalacticStochastic.iterative_fit_helpers import IterationConfig
+from GalacticStochastic.iterative_fit_manager import IterativeFitManager
+from GalacticStochastic.testing_tools import unit_normal_battery
+from LisaWaveformTools.lisa_config import get_lisa_constants
+from WaveletWaveforms.wdm_config import get_wavelet_model
 
 if __name__ == '__main__':
 

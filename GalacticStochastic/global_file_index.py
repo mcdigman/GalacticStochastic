@@ -2,9 +2,9 @@
 import h5py
 import numpy as np
 
-import lisa_config
-import wdm_config
-from instrument_noise import instrument_noise_AET_wdm_m
+from LisaWaveformTools import lisa_config
+from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
+from WaveletWaveforms import wdm_config
 
 n_par_gb = 8
 labels_gb = ['Amplitude', 'EclipticLatitude', 'EclipticLongitude', 'Frequency', 'FrequencyDerivative', 'Inclination', 'InitialPhase', 'Polarization']

@@ -1,9 +1,9 @@
 """subroutines for running lisa binary monte carlo search"""
 import numpy as np
 
-from coefficientsWDM_time_helpers import get_evTs
-from ra_waveform_time import BinaryTimeWaveformAmpFreqD
-from taylor_wdm_funcs import wavemaket_multi_inplace
+from LisaWaveformTools.ra_waveform_time import BinaryTimeWaveformAmpFreqD
+from WaveletWaveforms.coefficientsWDM_time_helpers import get_evTs
+from WaveletWaveforms.taylor_wdm_funcs import wavemaket_multi_inplace
 
 
 class BinaryWaveletAmpFreqDT():

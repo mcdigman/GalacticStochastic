@@ -3,11 +3,11 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
-import config_helper
-import global_file_index as gfi
-from galactic_fit_helpers import (fit_gb_spectrum_evolve,
-                                  get_SAET_cyclostationary_mean)
-from instrument_noise import instrument_noise_AET_wdm_m
+import GalacticStochastic.global_file_index as gfi
+from GalacticStochastic import config_helper
+from GalacticStochastic.galactic_fit_helpers import (
+    fit_gb_spectrum_evolve, get_SAET_cyclostationary_mean)
+from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
 
 mpl.rcParams['axes.linewidth'] = 1.2
 mpl.rcParams['xtick.major.size'] = 7

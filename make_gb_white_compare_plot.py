@@ -7,11 +7,12 @@ import scipy.ndimage
 import scipy.special
 import scipy.stats
 
-import config_helper
-import global_const as gc
-import global_file_index as gfi
-from galactic_fit_helpers import get_SAET_cyclostationary_mean
-from instrument_noise import instrument_noise_AET_wdm_m
+import GalacticStochastic.config_helper
+import GalacticStochastic.global_const as gc
+import GalacticStochastic.global_file_index as gfi
+from GalacticStochastic.galactic_fit_helpers import \
+    get_SAET_cyclostationary_mean
+from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
 
 mpl.rcParams['axes.linewidth'] = 1.2
 mpl.rcParams['xtick.major.size'] = 7

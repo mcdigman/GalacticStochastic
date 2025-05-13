@@ -4,13 +4,13 @@ from time import perf_counter
 
 import numpy as np
 
-import global_const as gc
-from instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
-from iterative_fit_helpers import (BGDecomposition,
-                                   bright_convergence_decision,
-                                   faint_convergence_decision,
-                                   new_noise_helper)
-from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
+import GalacticStochastic.global_const as gc
+from GalacticStochastic.iterative_fit_helpers import (
+    BGDecomposition, bright_convergence_decision, faint_convergence_decision,
+    new_noise_helper)
+from LisaWaveformTools.instrument_noise import \
+    DiagonalNonstationaryDenseInstrumentNoiseModel
+from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 
 
 class IterativeFitManager():
