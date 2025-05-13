@@ -7,9 +7,9 @@ import scipy.ndimage
 import scipy.special
 import scipy.stats
 
-import GalacticStochastic.config_helper
 import GalacticStochastic.global_const as gc
 import GalacticStochastic.global_file_index as gfi
+from GalacticStochastic import config_helper
 from GalacticStochastic.galactic_fit_helpers import \
     get_SAET_cyclostationary_mean
 from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
