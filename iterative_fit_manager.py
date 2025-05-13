@@ -79,8 +79,6 @@ class IterativeFitManager():
 
         self.fit_state = IterativeFitState(self.ic)
 
-        self.galactic_total = np.zeros((wc.Nt*wc.Nf, wc.NC))
-
         galactic_floor = galactic_below_in.copy()
         galactic_below_in = None
         galactic_below = np.zeros_like(galactic_floor)
@@ -283,6 +281,16 @@ class IterativeFitState():
         self.do_faint_check = np.zeros(ic.n_iterations+1, dtype=np.bool_)
         self.force_converge = np.zeros(ic.n_iterations+1, dtype=np.bool_)
 
+        self.bright_converged_bright = np.zeros(ic.n_iterations+1, dtype=np.bool_)
+        self.faint_converged_bright = np.zeros(ic.n_iterations+1, dtype=np.bool_)
+        self.do_faint_check_bright = np.zeros(ic.n_iterations+1, dtype=np.bool_)
+        self.force_converge_bright = np.zeros(ic.n_iterations+1, dtype=np.bool_)
+
+        self.bright_converged_faint = np.zeros(ic.n_iterations+1, dtype=np.bool_)
+        self.faint_converged_faint = np.zeros(ic.n_iterations+1, dtype=np.bool_)
+        self.do_faint_check_faint = np.zeros(ic.n_iterations+1, dtype=np.bool_)
+        self.force_converge_faint = np.zeros(ic.n_iterations+1, dtype=np.bool_)
+
         self.bright_state_request = (False, False, False, False)
         self.faint_state_request = (False, False, False, False)
         self.current_state = (False, False, False, False)
@@ -307,7 +315,22 @@ class IterativeFitState():
 
     def log_state(self, itrn):
         (do_faint_check, bright_converged, faint_converged, force_converge) = self.current_state
+
         self.bright_converged[itrn] = bright_converged
         self.faint_converged[itrn] = faint_converged
         self.do_faint_check[itrn] = do_faint_check
         self.force_converge[itrn] = force_converge
+
+        (do_faint_check, bright_converged, faint_converged, force_converge) = self.faint_state_request
+
+        self.bright_converged_faint[itrn] = bright_converged
+        self.faint_converged_faint[itrn] = faint_converged
+        self.do_faint_check_faint[itrn] = do_faint_check
+        self.force_converge_faint[itrn] = force_converge
+
+        (do_faint_check, bright_converged, faint_converged, force_converge) = self.bright_state_request
+
+        self.bright_converged_bright[itrn] = bright_converged
+        self.faint_converged_bright[itrn] = faint_converged
+        self.do_faint_check_bright[itrn] = do_faint_check
+        self.force_converge_bright[itrn] = force_converge
