@@ -5,6 +5,7 @@ from time import perf_counter
 
 import numpy as np
 import h5py
+import pandas as pd
 
 from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 
@@ -23,8 +24,13 @@ if __name__=='__main__':
     Nt = 4096
     dt = 30.0750732421875
 
-    params_gb, n_dgb, n_igb, n_vgb, n_tot = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
-
+    #params_gb, n_dgb, n_igb, n_vgb, n_tot = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
+    dat = pd.read_hdf('Galaxies/LISA_band_FZ_alpha25_Z.hdf')
+    n_dgb = len(dat) 
+    n_igb = 0
+    n_vgb = 0
+    n_tot = n_dgb + n_igb + n_vgb
+    params_gb = gfi.create_dat_in(dat)
     params0 = params_gb[0].copy()
 
     waveT_ini = BinaryWaveletAmpFreqDT(params0.copy(), wc, lc)

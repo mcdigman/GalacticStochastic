@@ -4,7 +4,7 @@ from time import perf_counter
 
 import numpy as np
 import h5py
-
+import pandas as pd
 import scipy.stats
 
 from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
@@ -50,11 +50,13 @@ if __name__ == '__main__':
     galaxy_file = 'galaxy_binaries.hdf5'
     galaxy_dir = 'Galaxies/Galaxy1/'
 
+
+    
     snr_thresh = 7
 
     Nf = 2048
     Nt = 4096
-    dt = 30.0750732421875
+    dt = 30.08
 
 
     filename_gb_init, snr_min_got, galactic_bg_const_in, noise_realization_got, smooth_lengthf_got, smooth_lengtht_got, n_iterations_got, snr_tots_in, SAET_m, wc, lc = gfi.load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt)
@@ -66,8 +68,21 @@ if __name__ == '__main__':
         nt_min = 256*6
         nt_max = nt_min+2*512
         print(nt_min, nt_max, wc.Nt, wc.Nf, const_only)
+        
+        #params_gb, n_dgb, n_igb, n_vgb, n_tot = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
 
-        params_gb, n_dgb, n_igb, n_vgb, n_tot = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
+        Nf = 2048
+        Nt = 4096
+        dt = 30.0750732421875
+    
+        #params_gb, n_dgb, n_igb, n_vgb, n_tot = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
+        dat = pd.read_hdf('Galaxies/LISA_band_FZ_alpha25_Z.hdf')
+        n_dgb = len(dat) 
+        n_igb = 0
+        n_vgb = 0
+        n_tot = n_dgb + n_igb + n_vgb
+        params_gb = gfi.create_dat_in(dat)
+        params0 = params_gb[0].copy()
 
 
         smooth_lengthf = 6

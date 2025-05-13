@@ -2,6 +2,10 @@
 import numpy as np
 import h5py
 from instrument_noise import instrument_noise_AET_wdm_m
+import astropy.constants as const
+import astropy.units as u
+from astropy.coordinates import Galactocentric, ICRS, CartesianRepresentation, GeocentricTrueEcliptic
+from astropy.coordinates import SkyCoord
 
 import wdm_const
 
@@ -50,6 +54,8 @@ def get_noise_common(galaxy_dir, snr_thresh, wc, lc):
 
 def get_full_galactic_params(galaxy_file, galaxy_dir, fmin=0.00001, fmax=0.1, use_dgb=True, use_igb=True, use_vgb=True):
     """get the galaxy dataset binaries"""
+    import pdb
+    pdb.set_trace()
     full_galactic_params_filename = get_galaxy_filename(galaxy_file, galaxy_dir)
     filename = full_galactic_params_filename
 
@@ -151,3 +157,41 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
     hf_in.close()
 
     return filename_gb_init, snr_min_got, galactic_bg_const_in, noise_realization_got, smooth_lengthf_got, smooth_lengtht_got, n_iterations_got, snr_tots_in, SAET_m, wc, lc
+
+
+def get_amplitude(dat):
+    mc = (dat.mass_1.values*dat.mass_2.values)**(3/5) / (dat.mass_1.values + dat.mass_2.values)**(1/5) * u.Msun
+    term1 = 64/5 * (const.G * mc)**(10/3)
+    term2 = (np.pi*dat.f_gw.values*u.s**(-1))**(4/3)
+    denom1 = const.c**8*(dat.dist_sun.values*u.kpc)**2
+    amplitude = np.sqrt(term1.to(u.m**10/u.s**(20/3)) * term2 / denom1.to(u.m**10/u.s**8))
+    return amplitude
+
+def get_Gx_positions(dat):
+    galcen = Galactocentric(x=dat.xGx.values*u.kpc, y=dat.yGx.values*u.kpc, z=dat.zGx.values*u.kpc)
+    icrs = galcen.transform_to(ICRS())
+    ecl = icrs.transform_to(GeocentricTrueEcliptic())
+    return ecl.lon.to(u.rad), ecl.lat.to(u.rad)
+
+def get_chirp(dat):
+    mc = (dat.mass_1.values*dat.mass_2.values)**(3/5) / (dat.mass_1.values + dat.mass_2.values)**(1/5) * u.Msun
+    fgw = dat.f_gw.values*u.s**(-1)
+    term1 = (const.G * mc)**(5/3) / (const.c)**5
+    term2 = (np.pi * fgw)**(11/3)
+    chirp = 96/(5*np.pi) * term1 * term2
+    return chirp.to(u.s**(-2))
+
+def get_inc_phase_pol(dat):
+    inc = np.arccos(np.random.uniform(0, 1, len(dat)))
+    phase = np.random.uniform(0, np.pi, len(dat))
+    pol = np.random.uniform(0, np.pi, len(dat))
+    return inc, phase, pol
+
+def create_dat_in(dat):
+    h = get_amplitude(dat)
+    lon, lat = get_Gx_positions(dat)
+    chirp = get_chirp(dat)
+    inc, phase, pol = get_inc_phase_pol(dat)
+    dat_in = np.vstack([h.value, lon.value, lat.value, dat.f_gw.values, chirp.value, inc, phase, pol]).T
+
+    return dat_in
