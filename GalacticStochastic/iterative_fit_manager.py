@@ -7,8 +7,7 @@ import numpy as np
 import GalacticStochastic.global_const as gc
 from GalacticStochastic.background_decomposition import BGDecomposition
 from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
-from GalacticStochastic.iterative_fit_helpers import (
-    bright_convergence_decision, faint_convergence_decision, new_noise_helper)
+from GalacticStochastic.iterative_fit_helpers import new_noise_helper
 from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
 from LisaWaveformTools.instrument_noise import \
     DiagonalNonstationaryDenseInstrumentNoiseModel
@@ -138,8 +137,8 @@ class IterativeFitManager():
 
         t1n = perf_counter()
 
-        noise_safe_upper = bright_convergence_decision(self.bis, self.fit_state, itrn)
-        noise_safe_lower = faint_convergence_decision(self.bis, self.fit_state, itrn, self.n_min_faint_adapt, self.faint_converge_change_thresh)
+        noise_safe_upper = self.fit_state.bright_convergence_decision(self.bis, itrn)
+        noise_safe_lower = self.fit_state.faint_convergence_decision(self.bis, itrn, self.n_min_faint_adapt, self.faint_converge_change_thresh)
 
         (do_faint_check_in, bright_converged_in, faint_converged_in, force_converge_in) = self.fit_state.get_faint_state_request()
 
