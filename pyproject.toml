@@ -1,0 +1,20 @@
+[project]
+name = "GalacticStochastic"
+version = "0.0.1"
+description = "Tool for getting galactic stochastic background for a given galaxy"
+readme = "README.md"
+authors = [
+  { name="Matthew C. Digman", email="matthew.digman@vanderbilt.edu" }
+]
+license = { file = "LICENSE" }
+dependencies = [
+    "numpy",
+    "scipy",
+    "numba",
+    "pytest"
+]
+requires-python = ">=3.7"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
