@@ -149,85 +149,6 @@ def run_binary_coadd(itrb, faints_in, waveform_model, noise_upper, snrs_upper, s
             brights[itrn, itrb] = True
 
 
-# TODO consolidate with the other run_binary_coadd
-def run_binary_coadd2(waveform_model, params_gb, bis, itrn, itrb, noise_upper, noise_lower, ic, fit_state, nt_min, nt_max, bgd):
-    waveform_model.update_params(params_gb[itrb].copy())
-
-    bis.brights[itrn, itrb], bis.faints_cur[itrn, itrb] = decision_helper(bis, itrn, itrb, waveform_model, noise_upper, noise_lower, ic, fit_state, nt_min, nt_max)
-    decide_coadd_helper(bis, itrn, itrb, bgd, waveform_model, fit_state)
-
-
-def decision_helper(bis, itrn, itrb, waveform_model, noise_upper, noise_lower, ic, fit_state, nt_min, nt_max):
-    listT_temp, waveT_temp, NUTs_temp = waveform_model.get_unsorted_coeffs()
-    if not fit_state.faint_converged[itrn]:
-        bis.snrs_lower[itrn, itrb] = noise_lower.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp, nt_min, nt_max)
-        bis.snrs_tot_lower[itrn, itrb] = np.linalg.norm(bis.snrs_lower[itrn, itrb])
-        faint_candidate = bis.snrs_tot_lower[itrn, itrb] < ic.snr_min[itrn]
-    else:
-        bis.snrs_lower[itrn, itrb] = bis.snrs_lower[itrn-1, itrb]
-        bis.snrs_tot_lower[itrn, itrb] = bis.snrs_tot_lower[itrn-1, itrb]
-        faint_candidate = False
-
-    if not fit_state.bright_converged[itrn]:
-        bis.snrs_upper[itrn, itrb] = noise_upper.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp, nt_min, nt_max)
-        bis.snrs_tot_upper[itrn, itrb] = np.linalg.norm(bis.snrs_upper[itrn, itrb])
-        bright_candidate = bis.snrs_tot_upper[itrn, itrb] >= ic.snr_cut_bright[itrn]
-    else:
-        bis.snrs_upper[itrn, itrb] = bis.snrs_upper[itrn-1, itrb]
-        bis.snrs_tot_upper[itrn, itrb] = bis.snrs_tot_upper[itrn-1, itrb]
-        bright_candidate = False
-
-    if np.isnan(bis.snrs_tot_upper[itrn, itrb]) or np.isnan(bis.snrs_tot_lower[itrn, itrb]):
-        raise ValueError('nan detected in snr at ' + str(itrn) + ', ' + str(itrb))
-    elif bright_candidate and faint_candidate:
-        # satifisfied conditions to be eliminated in both directions so just keep it
-        bright_loc = False
-        faint_loc = False
-    elif bright_candidate:
-        if bis.snrs_tot_upper[itrn, itrb] > bis.snrs_tot_lower[itrn, itrb]:
-            # handle case where snr ordering is wrong to prevent oscillation
-            bright_loc = False
-        else:
-            bright_loc = True
-        faint_loc = False
-    elif faint_candidate:
-        bright_loc = False
-        faint_loc = True
-    else:
-        bright_loc = False
-        faint_loc = False
-
-    return bright_loc, faint_loc
-
-
-def decide_coadd_helper(bis, itrn, itrb, bgd, waveform_model, fit_state):
-    """add each binary to the correct part of the galactic spectrum, depending on whether it is bright or faint"""
-    # the same binary cannot be decided as both bright and faint
-    assert not (bis.brights[itrn, itrb] and bis.faints_cur[itrn, itrb])
-
-    # don't add to anything if the bright adaptation is already converged and this binary would not be faint
-    if fit_state.bright_converged[itrn] and not bis.faints_cur[itrn, itrb]:
-        return
-
-    listT_temp, waveT_temp, NUTs_temp = waveform_model.get_unsorted_coeffs()
-
-    if not bis.faints_cur[itrn, itrb]:
-        if bis.brights[itrn, itrb]:
-            # binary is bright enough to decide
-            bgd.add_bright(listT_temp, NUTs_temp, waveT_temp)
-        else:
-            # binary neither faint nor bright enough to decide
-            bgd.add_undecided(listT_temp, NUTs_temp, waveT_temp)
-    else:
-        # binary is faint enough to decide
-        if itrn == 1:
-            bis.faints_cur[itrn, itrb] = False
-            bis.faints_old[itrb] = True
-            bgd.add_floor(listT_temp, NUTs_temp, waveT_temp)
-        else:
-            bgd.add_faint(listT_temp, NUTs_temp, waveT_temp)
-
-
 def bright_convergence_decision(bis, fit_state, itrn):
     (do_faint_check_in, bright_converged_in, faint_converged_in, force_converge_in) = fit_state.get_state()
     noise_safe = True
@@ -246,7 +167,7 @@ def bright_convergence_decision(bis, fit_state, itrn):
         cycling, converged_or_cycling, old_match = bis.oscillation_check_helper(itrn)
         if force_converge_in or converged_or_cycling:
             assert bis.n_brights_cur[itrn] == bis.n_brights_cur[itrn+1] or force_converge_in or old_match
-            if fit_state.do_faint_check[itrn]:
+            if do_faint_check_in:
                 print('bright adaptation converged at ' + str(itrn))
                 fit_state.set_bright_state_request(False, True, True, False)
             else:

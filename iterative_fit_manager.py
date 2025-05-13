@@ -9,7 +9,7 @@ from instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
 from iterative_fit_helpers import (BGDecomposition,
                                    bright_convergence_decision,
                                    faint_convergence_decision,
-                                   new_noise_helper, run_binary_coadd2)
+                                   new_noise_helper)
 from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 
 
@@ -168,7 +168,7 @@ class IterativeFitManager():
         idxbs = np.argwhere(~self.bis.decided[itrn]).flatten()
         for itrb in idxbs:
             if not self.bis.decided[itrn, itrb]:
-                run_binary_coadd2(self.waveform_manager, self.params_gb, self.bis, itrn, itrb, self.noise_upper, self.noise_lower, self.ic, self.fit_state, self.nt_min, self.nt_max, self.bgd)
+                self.bis.run_binary_coadd(self.waveform_manager, self.params_gb, itrn, itrb, self.noise_upper, self.noise_lower, self.ic, self.fit_state, self.nt_min, self.nt_max, self.bgd)
 
     def _iteration_cleanup(self, itrn):
         if self.itr_save < self.idx_SAET_save.size and itrn == self.idx_SAET_save[self.itr_save]:
@@ -273,6 +273,91 @@ class BinaryInclusionState():
         cycling = old_match and not osc1
         return cycling, converged_or_cycling, old_match
 
+    def run_binary_coadd(self, waveform_model, params_gb, itrn, itrb, noise_upper, noise_lower, ic, fit_state, nt_min, nt_max, bgd):
+        waveform_model.update_params(params_gb[itrb].copy())
+
+        self.snr_storage_helper(itrn, itrb, waveform_model, noise_upper, noise_lower, fit_state, nt_min, nt_max)
+        self.brights[itrn, itrb], self.faints_cur[itrn, itrb] = self.decision_helper(itrn, itrb, ic, fit_state)
+        self.decide_coadd_helper(itrn, itrb, bgd, waveform_model, fit_state)
+
+    def snr_storage_helper(self, itrn, itrb, waveform_model, noise_upper, noise_lower, fit_state, nt_min, nt_max):
+        listT_temp, waveT_temp, NUTs_temp = waveform_model.get_unsorted_coeffs()
+
+        if not fit_state.get_faint_converged():
+            self.snrs_lower[itrn, itrb] = noise_lower.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp, nt_min, nt_max)
+            self.snrs_tot_lower[itrn, itrb] = np.linalg.norm(self.snrs_lower[itrn, itrb])
+        else:
+            self.snrs_lower[itrn, itrb] = self.snrs_lower[itrn-1, itrb]
+            self.snrs_tot_lower[itrn, itrb] = self.snrs_tot_lower[itrn-1, itrb]
+
+        if not fit_state.get_bright_converged():
+            self.snrs_upper[itrn, itrb] = noise_upper.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp, nt_min, nt_max)
+            self.snrs_tot_upper[itrn, itrb] = np.linalg.norm(self.snrs_upper[itrn, itrb])
+        else:
+            self.snrs_upper[itrn, itrb] = self.snrs_upper[itrn-1, itrb]
+            self.snrs_tot_upper[itrn, itrb] = self.snrs_tot_upper[itrn-1, itrb]
+
+        if np.isnan(self.snrs_tot_upper[itrn, itrb]) or np.isnan(self.snrs_tot_lower[itrn, itrb]):
+            raise ValueError('nan detected in snr at ' + str(itrn) + ', ' + str(itrb))
+
+    def decision_helper(self, itrn, itrb, ic, fit_state):
+        if not fit_state.get_faint_converged():
+            faint_candidate = self.snrs_tot_lower[itrn, itrb] < ic.snr_min[itrn]
+        else:
+            faint_candidate = False
+
+        if not fit_state.get_bright_converged():
+            bright_candidate = self.snrs_tot_upper[itrn, itrb] >= ic.snr_cut_bright[itrn]
+        else:
+            bright_candidate = False
+
+        if bright_candidate and faint_candidate:
+            # satifisfied conditions to be eliminated in both directions so just keep it
+            bright_loc = False
+            faint_loc = False
+        elif bright_candidate:
+            if self.snrs_tot_upper[itrn, itrb] > self.snrs_tot_lower[itrn, itrb]:
+                # handle case where snr ordering is wrong to prevent oscillation
+                bright_loc = False
+            else:
+                bright_loc = True
+            faint_loc = False
+        elif faint_candidate:
+            bright_loc = False
+            faint_loc = True
+        else:
+            bright_loc = False
+            faint_loc = False
+
+        return bright_loc, faint_loc
+
+    def decide_coadd_helper(self, itrn, itrb, bgd, waveform_model, fit_state):
+        """add each binary to the correct part of the galactic spectrum, depending on whether it is bright or faint"""
+        # the same binary cannot be decided as both bright and faint
+        assert not (self.brights[itrn, itrb] and self.faints_cur[itrn, itrb])
+
+        # don't add to anything if the bright adaptation is already converged and this binary would not be faint
+        if fit_state.bright_converged[itrn] and not self.faints_cur[itrn, itrb]:
+            return
+
+        listT_temp, waveT_temp, NUTs_temp = waveform_model.get_unsorted_coeffs()
+
+        if not self.faints_cur[itrn, itrb]:
+            if self.brights[itrn, itrb]:
+                # binary is bright enough to decide
+                bgd.add_bright(listT_temp, NUTs_temp, waveT_temp)
+            else:
+                # binary neither faint nor bright enough to decide
+                bgd.add_undecided(listT_temp, NUTs_temp, waveT_temp)
+        else:
+            # binary is faint enough to decide
+            if itrn == 1:
+                self.faints_cur[itrn, itrb] = False
+                self.faints_old[itrb] = True
+                bgd.add_floor(listT_temp, NUTs_temp, waveT_temp)
+            else:
+                bgd.add_faint(listT_temp, NUTs_temp, waveT_temp)
+
 
 class IterativeFitState():
     def __init__(self, ic):
@@ -312,6 +397,18 @@ class IterativeFitState():
 
     def get_state(self):
         return self.current_state
+
+    def get_faint_converged(self):
+        return self.current_state[2]
+
+    def get_bright_converged(self):
+        return self.current_state[1]
+
+    def get_do_faint_check(self):
+        return self.current_state[0]
+
+    def get_force_converge(self):
+        return self.current_state[3]
 
     def log_state(self, itrn):
         (do_faint_check, bright_converged, faint_converged, force_converge) = self.current_state
