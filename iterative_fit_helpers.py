@@ -229,14 +229,12 @@ def decide_coadd_helper(bis, itrn, itrb, bgd, waveform_model, fit_state):
 
 
 def bright_convergence_decision(bis, fit_state, itrn):
+    (do_faint_check_in, bright_converged_in, faint_converged_in, force_converge_in) = fit_state.get_state()
     noise_safe = True
 
     # short circuit if we have previously decided bright adaptation is converged
-    if fit_state.bright_converged[itrn]:
-        fit_state.do_faint_check[itrn+1] = False
-        fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn]
-        fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn]
-        fit_state.set_bright_state_request(False, fit_state.bright_converged[itrn], fit_state.faint_converged[itrn])
+    if bright_converged_in:
+        fit_state.set_bright_state_request(False, bright_converged_in, faint_converged_in, False)
         bis.n_brights_cur[itrn+1] = bis.n_brights_cur[itrn]
         return noise_safe
 
@@ -246,90 +244,65 @@ def bright_convergence_decision(bis, fit_state, itrn):
     if itrn > 1:
         # bright adaptation is either converged or oscillating
         cycling, converged_or_cycling, old_match = bis.oscillation_check_helper(itrn)
-        if fit_state.force_converge[itrn] or converged_or_cycling:
-            assert bis.n_brights_cur[itrn] == bis.n_brights_cur[itrn+1] or fit_state.force_converge[itrn] or old_match
+        if force_converge_in or converged_or_cycling:
+            assert bis.n_brights_cur[itrn] == bis.n_brights_cur[itrn+1] or force_converge_in or old_match
             if fit_state.do_faint_check[itrn]:
                 print('bright adaptation converged at ' + str(itrn))
-                fit_state.do_faint_check[itrn+1] = False
-                fit_state.bright_converged[itrn+1] = True
-                fit_state.faint_converged[itrn+1] = True
-                fit_state.set_bright_state_request(False, True, True)
+                fit_state.set_bright_state_request(False, True, True, False)
             else:
                 if cycling:
                     print('cycling detected at ' + str(itrn) + ', doing final check iteration aborting')
-                    fit_state.force_converge[itrn+1] = True
+                    force_converge_loc = True
+                else:
+                    force_converge_loc = False
                 print('bright adaptation predicted initial converged at ' + str(itrn) + ' next iteration will be check iteration')
-                fit_state.do_faint_check[itrn+1] = True
-                fit_state.bright_converged[itrn+1] = False
-                fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn]
-                fit_state.set_bright_state_request(True, False, fit_state.faint_converged[itrn])
+                fit_state.set_bright_state_request(True, False, faint_converged_in, force_converge_loc)
 
             return noise_safe
 
     # bright adaptation has not converged, get a new noise model
     noise_safe = False
-    fit_state.do_faint_check[itrn+1] = False
-    fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn]
-    fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn]
-    fit_state.set_bright_state_request(False, fit_state.bright_converged[itrn], fit_state.faint_converged[itrn])
+    fit_state.set_bright_state_request(False, bright_converged_in, faint_converged_in, False)
 
     return noise_safe
 
 
 def faint_convergence_decision(bis, fit_state, itrn, n_min_faint_adapt, faint_converge_change_thresh):
-    (do_faint_check_in, bright_converged_in, faint_converged_in) = fit_state.get_bright_state_request()
-    assert fit_state.do_faint_check[itrn+1] == do_faint_check_in
-    assert fit_state.faint_converged[itrn+1] == faint_converged_in
-    assert fit_state.bright_converged[itrn+1] == bright_converged_in
+    (do_faint_check_in, bright_converged_in, faint_converged_in, force_converge_in) = fit_state.get_bright_state_request()
 
-    if not fit_state.faint_converged[itrn+1] or fit_state.do_faint_check[itrn+1]:
+    if not faint_converged_in or do_faint_check_in:
         noise_safe = False
         if itrn < n_min_faint_adapt:
-            fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn+1]
+            faint_converged_loc = faint_converged_in
         else:
-            fit_state.faint_converged[itrn+1] = True
+            faint_converged_loc = True
             # need to disable adaption of faint component here because after this point the convergence isn't guaranteed to be monotonic
             print('disabled faint component adaptation at ' + str(itrn))
 
         bis.n_faints_cur[itrn+1] = bis.faints_cur[itrn].sum()
-        if fit_state.do_faint_check[itrn+1] and fit_state.faint_converged[itrn+1]:
+        delta_faints = bis.n_faints_cur[itrn+1] - bis.n_faints_cur[itrn]
+        if do_faint_check_in and faint_converged_loc:
             print('overriding faint convergence to check background model')
-            fit_state.do_faint_check[itrn+1] = fit_state.do_faint_check[itrn+1]
-            fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
-            fit_state.faint_converged[itrn+1] = False
-        elif bis.n_faints_cur[itrn+1] - bis.n_faints_cur[itrn] < 0:
-            if fit_state.bright_converged[itrn+1]:
-                fit_state.do_faint_check[itrn+1] = True
-                fit_state.bright_converged[itrn+1] = False
-                fit_state.faint_converged[itrn+1] = False
+            fit_state.set_faint_state_request(do_faint_check_in, bright_converged_in, False, force_converge_in)
+        elif delta_faints < 0:
+            if bright_converged_in:
+                fit_state.set_faint_state_request(True, False, False, force_converge_in)
             else:
-                fit_state.do_faint_check[itrn+1] = fit_state.do_faint_check[itrn+1]
-                fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
-                fit_state.faint_converged[itrn+1] = False
+                fit_state.set_faint_state_request(do_faint_check_in, bright_converged_in, False, force_converge_in)
             print('faint adaptation removed values at ' + str(itrn) + ', repeating check iteration')
 
-        elif itrn != 1 and np.abs(bis.n_faints_cur[itrn+1] - bis.n_faints_cur[itrn]) < faint_converge_change_thresh:
+        elif itrn != 1 and np.abs(delta_faints) < faint_converge_change_thresh:
             print('near convergence in faint adaption at '+str(itrn), ' doing check iteration')
-            fit_state.do_faint_check[itrn+1] = fit_state.do_faint_check[itrn+1]
-            fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
-            fit_state.faint_converged[itrn+1] = False
+            fit_state.set_faint_state_request(do_faint_check_in, bright_converged_in, False, force_converge_in)
+        elif bright_converged_in:
+            print('faint adaptation convergence continuing beyond bright adaptation, try check iteration')
+            fit_state.set_faint_state_request(do_faint_check_in, bright_converged_in, False, force_converge_in)
         else:
-            if fit_state.bright_converged[itrn+1]:
-                print('faint adaptation convergence continuing beyond bright adaptation, try check iteration')
-                fit_state.do_faint_check[itrn+1] = fit_state.do_faint_check[itrn+1]
-                fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
-                fit_state.faint_converged[itrn+1] = False
-            else:
-                fit_state.do_faint_check[itrn+1] = fit_state.do_faint_check[itrn+1]
-                fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
-                fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn+1]
-
+            fit_state.set_faint_state_request(do_faint_check_in, bright_converged_in, faint_converged_loc, force_converge_in)
 
     else:
         noise_safe = True
-        fit_state.do_faint_check[itrn+1] = fit_state.do_faint_check[itrn+1]
-        fit_state.bright_converged[itrn+1] = fit_state.bright_converged[itrn+1]
-        fit_state.faint_converged[itrn+1] = fit_state.faint_converged[itrn+1]
+        fit_state.set_faint_state_request(do_faint_check_in, bright_converged_in, faint_converged_in, force_converge_in)
         bis.n_faints_cur[itrn+1] = bis.n_faints_cur[itrn]
 
     return noise_safe

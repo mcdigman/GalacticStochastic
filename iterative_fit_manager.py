@@ -112,6 +112,18 @@ class IterativeFitManager():
         self.print_report(itrn)
 
     def do_iteration(self, itrn):
+        (do_faint_check_in, bright_converged_in, faint_converged_in, force_converge_in) = self.fit_state.get_faint_state_request()
+        assert do_faint_check_in == self.fit_state.do_faint_check[itrn]
+        assert bright_converged_in == self.fit_state.bright_converged[itrn]
+        assert faint_converged_in == self.fit_state.faint_converged[itrn]
+        assert force_converge_in == self.fit_state.force_converge[itrn]
+
+        (do_faint_check_in, bright_converged_in, faint_converged_in, force_converge_in) = self.fit_state.get_state()
+        assert do_faint_check_in == self.fit_state.do_faint_check[itrn]
+        assert bright_converged_in == self.fit_state.bright_converged[itrn]
+        assert faint_converged_in == self.fit_state.faint_converged[itrn]
+        assert force_converge_in == self.fit_state.force_converge[itrn]
+
         t0n = perf_counter()
 
         self._state_update(itrn)
@@ -127,8 +139,17 @@ class IterativeFitManager():
         t1n = perf_counter()
 
         noise_safe_upper = bright_convergence_decision(self.bis, self.fit_state, itrn)
-
         noise_safe_lower = faint_convergence_decision(self.bis, self.fit_state, itrn, self.n_min_faint_adapt, self.faint_converge_change_thresh)
+
+        (do_faint_check_in, bright_converged_in, faint_converged_in, force_converge_in) = self.fit_state.get_faint_state_request()
+
+        self.fit_state.advance_state()
+        self.fit_state.log_state(itrn+1)
+
+        assert do_faint_check_in == self.fit_state.do_faint_check[itrn+1]
+        assert bright_converged_in == self.fit_state.bright_converged[itrn+1]
+        assert faint_converged_in == self.fit_state.faint_converged[itrn+1]
+        assert force_converge_in == self.fit_state.force_converge[itrn+1]
 
         self.noise_upper, self.noise_lower = new_noise_helper(noise_safe_upper, noise_safe_lower, self.noise_upper, self.noise_lower, itrn, self.n_cyclo_switch, self.stat_only, self.SAET_m, self.wc, self.ic, self.bgd, self.period_list, self.smooth_lengthf_fix)
 
@@ -262,17 +283,31 @@ class IterativeFitState():
         self.do_faint_check = np.zeros(ic.n_iterations+1, dtype=np.bool_)
         self.force_converge = np.zeros(ic.n_iterations+1, dtype=np.bool_)
 
-        self.bright_state_request = (False, False, False)
-        self.faint_state_request = (False, False, False)
+        self.bright_state_request = (False, False, False, False)
+        self.faint_state_request = (False, False, False, False)
+        self.current_state = (False, False, False, False)
 
-    def set_bright_state_request(self, do_faint_check, bright_converged, faint_converged):
-        self.bright_state_request = (do_faint_check, bright_converged, faint_converged)
+    def set_bright_state_request(self, do_faint_check, bright_converged, faint_converged, force_converge):
+        self.bright_state_request = (do_faint_check, bright_converged, faint_converged, force_converge)
 
     def get_bright_state_request(self):
         return self.bright_state_request
 
-    def set_faint_state_request(self, do_faint_check, bright_converged, faint_converged):
-        self.faint_state_request = (do_faint_check, bright_converged, faint_converged)
+    def set_faint_state_request(self, do_faint_check, bright_converged, faint_converged, force_converge):
+        self.faint_state_request = (do_faint_check, bright_converged, faint_converged, force_converge)
 
     def get_faint_state_request(self):
         return self.faint_state_request
+
+    def advance_state(self):
+        self.current_state = self.faint_state_request
+
+    def get_state(self):
+        return self.current_state
+
+    def log_state(self, itrn):
+        (do_faint_check, bright_converged, faint_converged, force_converge) = self.current_state
+        self.bright_converged[itrn] = bright_converged
+        self.faint_converged[itrn] = faint_converged
+        self.do_faint_check[itrn] = do_faint_check
+        self.force_converge[itrn] = force_converge
