@@ -32,15 +32,13 @@ if __name__ == '__main__':
 
     params0 = params_gb[0].copy()
 
-    galactic_below_in, noise_realization_common, snrs_tot_upper_in, _, lc = gfi.load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
+    galactic_below_in, snrs_tot_upper_in, _, lc = gfi.load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
 
     waveT_ini = BinaryWaveletAmpFreqDT(params0.copy(), wc, lc)
     listT_temp, waveT_temp, NUTs_temp = waveT_ini.get_unsorted_coeffs()
 
     SAET_m = instrument_noise_AET_wdm_m(lc, wc)
     noise_floor = DiagonalStationaryDenseInstrumentNoiseModel(SAET_m, wc, prune=False)
-
-    noise_realization = noise_realization_common[:wc.Nt, :, :].copy()
 
     n_bin_use = n_tot
 
@@ -66,11 +64,11 @@ if __name__ == '__main__':
 
     faints_in = snrs_tot_upper_in < ic.snr_min[0]
 
-    galactic_below_high, galactic_below, signal_full, SAET_tot, brights, snrs_upper, snrs_tot_upper, noise_upper = do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveT_ini, params_gb, snrs_tot_upper, galactic_below, noise_realization, SAET_m)
+    galactic_below_high, galactic_below, SAET_tot, brights, snrs_upper, snrs_tot_upper, noise_upper = do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveT_ini, params_gb, snrs_tot_upper, galactic_below, SAET_m)
 
     do_hf_write = True
     if do_hf_write:
-        gfi.store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, noise_realization, n_bin_use, SAET_m, snrs_tot_upper)
+        gfi.store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, n_bin_use, SAET_m, snrs_tot_upper)
 
     plot_noise_spectrum_evolve = True
     if plot_noise_spectrum_evolve:

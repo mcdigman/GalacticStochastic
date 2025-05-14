@@ -13,7 +13,7 @@ from LisaWaveformTools.instrument_noise import \
 IterationConfig = namedtuple('IterationConfig', ['max_iterations', 'snr_thresh', 'snr_min', 'snr_cut_bright', 'smooth_lengthf'])
 
 
-def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveform_model, params_gb, snrs_tot_upper, galactic_below, noise_realization, SAET_m):
+def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveform_model, params_gb, snrs_tot_upper, galactic_below, SAET_m):
     # TODO make snr_cut_bright and smooth_lengthf an array as a function of iteration
     # TODO make NC controllable; probably not much point in getting T channel snrs
     snrs_upper = np.zeros((ic.max_iterations, n_bin_use, wc.NC))
@@ -40,11 +40,10 @@ def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveform_model, 
 
         galactic_below_high = (galactic_undecided + galactic_below).reshape((wc.Nt, wc.Nf, wc.NC))
 
-        signal_full = galactic_below_high + noise_realization
 
         SAET_tot[itrn+1], _, _, _, _ = get_SAET_cyclostationary_mean(galactic_below_high, SAET_m, wc, smooth_lengthf=ic.smooth_lengthf[itrn], filter_periods=False, period_list=())
 
-    return galactic_below_high, galactic_below, signal_full, SAET_tot, brights, snrs_upper, snrs_tot_upper, noise_upper
+    return galactic_below_high, galactic_below, SAET_tot, brights, snrs_upper, snrs_tot_upper, noise_upper
 
 
 def run_binary_coadd(itrb, faints_in, waveform_model, noise_upper, snrs_upper, snrs_tot_upper, itrn, galactic_below, galactic_undecided, brights, wc, params_gb, snr_min, snr_cut_bright):

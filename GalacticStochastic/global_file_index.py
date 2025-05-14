@@ -108,14 +108,14 @@ def load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, Nf, Nt, 
     except KeyError:
         galactic_below_in = np.asarray(hf_in['SAET']['galactic_bg_const'])
 
-    noise_realization_common = np.asarray(hf_in['SAET']['noise_realization'])
+    #noise_realization_common = np.asarray(hf_in['SAET']['noise_realization'])
     try:
         snrs_tot_upper_in = np.asarray(hf_in['SAET']['snrs_tot_upper'])
     except KeyError:
         snrs_tot_upper_in = np.asarray(hf_in['SAET']['snrs_tot'])
 
     hf_in.close()
-    return galactic_below_in, noise_realization_common, snrs_tot_upper_in, wc, lc
+    return galactic_below_in, snrs_tot_upper_in, wc, lc
 
 
 def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
@@ -135,7 +135,7 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
     except KeyError:
         galactic_below_in = np.asarray(hf_in['SAET']['galactic_bg_const'])
 
-    noise_realization_got = np.asarray(hf_in['SAET']['noise_realization'])
+    #noise_realization_got = np.asarray(hf_in['SAET']['noise_realization'])
 
     try:
         snr_tots_in = np.asarray(hf_in['SAET']['snrs_tot_upper'])
@@ -150,7 +150,7 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
 
     hf_in.close()
 
-    return galactic_below_in, noise_realization_got, snr_tots_in, SAET_m, wc, lc, snr_min
+    return galactic_below_in, snr_tots_in, SAET_m, wc, lc, snr_min
 
 
 def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, stat_only):
@@ -180,7 +180,7 @@ def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, stat_
     return argbinmap, (galactic_below + galactic_undecided).reshape((wc.Nt, wc.Nf, wc.NC))
 
 
-def store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, noise_realization, n_bin_use, SAET_m, snrs_tot_upper):
+def store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, n_bin_use, SAET_m, snrs_tot_upper):
     Nf = wc.Nf
     Nt = wc.Nt
     dt = wc.dt
@@ -188,7 +188,7 @@ def store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_belo
     hf_out = h5py.File(filename_out, 'w')
     hf_out.create_group('SAET')
     hf_out['SAET'].create_dataset('galactic_below', data=galactic_below, compression='gzip')
-    hf_out['SAET'].create_dataset('noise_realization', data=noise_realization, compression='gzip')
+    #hf_out['SAET'].create_dataset('noise_realization', data=noise_realization, compression='gzip')
     hf_out['SAET'].create_dataset('smooth_lengthf', data=ic.smooth_lengthf)
     hf_out['SAET'].create_dataset('snr_thresh', data=ic.snr_thresh)
     hf_out['SAET'].create_dataset('snr_min', data=ic.snr_min)

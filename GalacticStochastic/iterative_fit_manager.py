@@ -161,9 +161,15 @@ class IterativeFitManager():
         self.bis.decided[itrn] = self.bis.brights[itrn] | self.bis.faints_cur[itrn] | self.bis.faints_old
 
         idxbs = np.argwhere(~self.bis.decided[itrn]).flatten()
+
+        tib = perf_counter()
+
         for itrb in idxbs:
-            if not self.bis.decided[itrn, itrb]:
-                self.bis.run_binary_coadd(self.waveform_manager, self.params_gb, itrn, itrb, self.noise_upper, self.noise_lower, self.ic, self.fit_state, self.nt_min, self.nt_max, self.bgd)
+            if itrb % 10000 == 0:
+                tcb = perf_counter()
+                print("Starting binary # %11d of %11d to consider at t=%9.2f s of iteration %4d" % (itrb, idxbs.size, (tcb - tib), itrn))
+
+            self.bis.run_binary_coadd(self.waveform_manager, self.params_gb, itrn, itrb, self.noise_upper, self.noise_lower, self.ic, self.fit_state, self.nt_min, self.nt_max, self.bgd)
 
     def _iteration_cleanup(self, itrn):
         if self.itr_save < self.idx_SAET_save.size and itrn == self.idx_SAET_save[self.itr_save]:

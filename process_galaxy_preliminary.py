@@ -35,10 +35,6 @@ if __name__ == '__main__':
     SAET_m = instrument_noise_AET_wdm_m(lc, wc)
     noise_floor = DiagonalStationaryDenseInstrumentNoiseModel(SAET_m, wc, prune=True)
 
-    noise_seed = int(config['noise realization']['noise_realization_seed'])
-    assert noise_seed >= 0
-    noise_realization = noise_floor.generate_dense_noise(seed=noise_seed)
-
     n_bin_use = n_tot
 
     max_iterations = 2
@@ -59,11 +55,11 @@ if __name__ == '__main__':
 
     ic = IterationConfig(max_iterations, snr_thresh, snr_min, snr_cut_bright, smooth_lengthf)
 
-    galactic_below_high, galactic_below, signal_full, SAET_tot, brights, snrs_upper, snrs_tot_upper, noise_upper = do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveT_ini, params_gb, snrs_tot_upper, galactic_below, noise_realization, SAET_m)
+    galactic_below_high, galactic_below, SAET_tot, brights, snrs_upper, snrs_tot_upper, noise_upper = do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveT_ini, params_gb, snrs_tot_upper, galactic_below, SAET_m)
 
     do_hf_write = True
     if do_hf_write:
-        gfi.store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, noise_realization, n_bin_use, SAET_m, snrs_tot_upper)
+        gfi.store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, n_bin_use, SAET_m, snrs_tot_upper)
 
     plot_noise_spectrum_evolve = True
     if plot_noise_spectrum_evolve:
