@@ -8,7 +8,6 @@ import numpy as np
 import GalacticStochastic.global_file_index as gfi
 from GalacticStochastic.iteration_config import get_iteration_config
 from GalacticStochastic.iterative_fit_manager import IterativeFitManager
-from GalacticStochastic.testing_tools import unit_normal_battery
 from LisaWaveformTools.lisa_config import get_lisa_constants
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
@@ -58,7 +57,6 @@ if plot_noise_spectrum_ambiguity:
     ax.loglog(np.arange(1, wc.Nf)*wc.DF, np.mean(ifm.noise_lower.SAET[:, 1:, 0:2], axis=0).mean(axis=1).T)
     ax.loglog(np.arange(1, wc.Nf)*wc.DF, SAET_m_shift[1:, 0], 'k--', zorder=-100)
     ax.tick_params(axis='both', direction='in', which='both', top=True, right=True)
-    # TODO handle if not all iterations complete
     plt.legend(['upper estimate', 'lower estimate', 'base'])
     plt.ylim([2.e-44, 4.e-43])
     plt.xlim([3.e-4, 6.e-3])
@@ -85,12 +83,3 @@ if plot_noise_spectrum_evolve:
     plt.xlabel('f (Hz)')
     plt.ylabel(r"$\langle S^{AE}_{m} \rangle$")
     plt.show()
-
-
-res_mask = (ifm.noise_upper.SAET[:, :, 0]-SAET_m[:, 0]).mean(axis=0) > 0.1*SAET_m[:, 0]
-galactic_below_high = ifm.bgd.get_galactic_below_high()
-unit_normal_res, _, _, _ = unit_normal_battery((galactic_below_high.reshape(wc.Nt, wc.Nf, wc.NC)[nt_min:nt_max, res_mask, 0:2]/np.sqrt(ifm.noise_upper.SAET[nt_min:nt_max, res_mask, 0:2]-SAET_m[res_mask, 0:2])).flatten(), A2_cut=10., sig_thresh=10., do_assert=False)
-if unit_normal_res:
-    print('After iteration, final background PASSES normality tests')
-else:
-    print('After iteration, final background FAILS  normality tests')

@@ -9,6 +9,7 @@ from GalacticStochastic.background_decomposition import BGDecomposition
 from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
 from GalacticStochastic.iterative_fit_helpers import new_noise_helper
 from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
+from GalacticStochastic.testing_tools import unit_normal_battery
 from LisaWaveformTools.instrument_noise import \
     DiagonalNonstationaryDenseInstrumentNoiseModel
 from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
@@ -194,6 +195,21 @@ class IterativeFitManager():
         print('       %10d undecided (presumed undetectable)' % n_ambiguous)
         print('       %10d total undetectable' % (self.n_tot - n_bright))
         print('       %10d total detectable' % n_bright)
+
+        res_mask = ((self.noise_upper.SAET[:, :, 0]-self.SAET_m[:, 0]).mean(axis=0) > 0.1*self.SAET_m[:, 0]) & (self.SAET_m[:,0] > 0.)
+        galactic_below_high = self.bgd.get_galactic_below_high()
+        noise_divide = np.sqrt(self.noise_upper.SAET[self.nt_min:self.nt_max, res_mask, :2] - self.SAET_m[res_mask, :2])
+        points_res = galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.wc.NC)[self.nt_min:self.nt_max, res_mask, :2] / noise_divide
+        noise_divide = None
+        galactic_below_high = None
+        res_mask = None
+        unit_normal_res, a2score, mean_rat, std_rat = unit_normal_battery(points_res.flatten(), A2_cut=2.28, sig_thresh=5., do_assert=False)
+        points_res = None
+        if unit_normal_res:
+            print('Background PASSES normality: A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f' % (a2score, mean_rat, std_rat))
+        else:
+            print('Background FAILS  normality: A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f' % (a2score, mean_rat, std_rat))
+
         assert n_ambiguous + n_bright + n_faint + n_faint2 == n_consider
 
     def _state_update(self, itrn):
