@@ -102,9 +102,18 @@ def load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, Nf, Nt, 
     gb_file_source = hf_in['SAET']['source_gb_file'][()].decode()
     full_galactic_params_filename = get_galaxy_filename(galaxy_file, galaxy_dir)
     assert gb_file_source == full_galactic_params_filename
-    galactic_below_in = np.asarray(hf_in['SAET']['galactic_bg_const'])
+    # preserving ability to read some files some legacy key names
+    try:
+        galactic_below_in = np.asarray(hf_in['SAET']['galactic_below'])
+    except KeyError:
+        galactic_below_in = np.asarray(hf_in['SAET']['galactic_bg_const'])
+
     noise_realization_common = np.asarray(hf_in['SAET']['noise_realization'])
-    snrs_tot_upper_in = np.asarray(hf_in['SAET']['snrs_tot'])
+    try:
+        snrs_tot_upper_in = np.asarray(hf_in['SAET']['snrs_tot_upper'])
+    except KeyError:
+        snrs_tot_upper_in = np.asarray(hf_in['SAET']['snrs_tot'])
+
     hf_in.close()
     return galactic_below_in, noise_realization_common, snrs_tot_upper_in, wc, lc
 
@@ -121,10 +130,18 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
     snr_min = hf_in['preliminary_ic']['snr_min'][()]
 
     # TODO add check for wc and lc match expectations
-    galactic_below_in = np.asarray(hf_in['SAET']['galactic_bg_const'])
+    try:
+        galactic_below_in = np.asarray(hf_in['SAET']['galactic_below'])
+    except KeyError:
+        galactic_below_in = np.asarray(hf_in['SAET']['galactic_bg_const'])
+
     noise_realization_got = np.asarray(hf_in['SAET']['noise_realization'])
 
-    snr_tots_in = np.asarray(hf_in['SAET']['snrs_tot'])
+    try:
+        snr_tots_in = np.asarray(hf_in['SAET']['snrs_tot_upper'])
+    except KeyError:
+        snr_tots_in = np.asarray(hf_in['SAET']['snrs_tot'])
+
     SAET_m = np.asarray(hf_in['SAET']['SAET_m'])
 
     # check input SAET makes sense, first value not checked as it may not be consistent
@@ -149,17 +166,12 @@ def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, stat_
     assert lc2 == lc
 
     galactic_below = np.asarray(hf_in['SAET']['galactic_below'])
-    galactic_undecided = np.asarray(hf_in['SAET']['galactic_bg'])
+    try:
+        galactic_undecided = np.asarray(hf_in['SAET']['galactic_undecided'])
+    except ImportError:
+        galactic_undecided = np.asarray(hf_in['SAET']['galactic_bg'])
 
     SAET_m = np.asarray(hf_in['SAET']['SAET_m'])
-
-    SAETf_got = np.zeros((wc.Nt, wc.Nf, wc.NC))
-    SAET1_got = np.zeros((wc.Nt, wc.Nf, wc.NC))
-
-    SAETf_got[:, :, :2] = np.asarray(hf_in['SAET']['SAEf'])
-
-    SAETf_got[:, :, 2] = SAET_m[:, 2]
-    SAET1_got[:, :, 2] = SAET_m[:, 2]
 
     argbinmap = np.asarray(hf_in['SAET']['argbinmap'])
 
@@ -183,7 +195,7 @@ def store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_belo
     hf_out['SAET'].create_dataset('Nt', data=wc.Nt)
     hf_out['SAET'].create_dataset('Nf', data=wc.Nf)
     hf_out['SAET'].create_dataset('dt', data=wc.dt)
-    hf_out['SAET'].create_dataset('n_iterations', data=ic.n_iterations)
+    hf_out['SAET'].create_dataset('max_iterations', data=ic.max_iterations)
     hf_out['SAET'].create_dataset('n_bin_use', data=n_bin_use)
     hf_out['SAET'].create_dataset('SAET_m', data=SAET_m)
     hf_out['SAET'].create_dataset('snrs_tot_upper', data=snrs_tot_upper[0], compression='gzip')

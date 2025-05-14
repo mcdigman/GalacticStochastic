@@ -33,29 +33,31 @@ if __name__ == '__main__':
     listT_temp, waveT_temp, NUTs_temp = waveT_ini.get_unsorted_coeffs()
 
     SAET_m = instrument_noise_AET_wdm_m(lc, wc)
-    noise_floor = DiagonalStationaryDenseInstrumentNoiseModel(SAET_m, wc, prune=False)
+    noise_floor = DiagonalStationaryDenseInstrumentNoiseModel(SAET_m, wc, prune=True)
 
-    noise_realization = noise_floor.generate_dense_noise()
+    noise_seed = int(config['noise realization']['noise_realization_seed'])
+    assert noise_seed >= 0
+    noise_realization = noise_floor.generate_dense_noise(seed=noise_seed)
 
     n_bin_use = n_tot
 
-    n_iterations = 2
-    SAET_tot = np.zeros((n_iterations+1, wc.Nt, wc.Nf, wc.NC))
+    max_iterations = 2
+    SAET_tot = np.zeros((max_iterations+1, wc.Nt, wc.Nf, wc.NC))
     SAET_tot[0] = noise_floor.SAET.copy()
 
     snr_thresh = 7.
-    snr_min = np.full(n_iterations, snr_thresh)
-    snr_cut_bright = np.full(n_iterations, snr_thresh)
+    snr_min = np.full(max_iterations, snr_thresh)
+    snr_cut_bright = np.full(max_iterations, snr_thresh)
     snr_cut_bright[0] = 500.
-    snrs_tot_upper = np.zeros((n_iterations, n_bin_use))
+    snrs_tot_upper = np.zeros((max_iterations, n_bin_use))
 
     faints_in = np.zeros(n_bin_use, dtype=np.bool_)
 
     galactic_below = np.zeros((wc.Nt*wc.Nf, wc.NC))
 
-    smooth_lengthf = np.full(n_iterations, 8)
+    smooth_lengthf = np.full(max_iterations, 8)
 
-    ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_cut_bright, smooth_lengthf)
+    ic = IterationConfig(max_iterations, snr_thresh, snr_min, snr_cut_bright, smooth_lengthf)
 
     galactic_below_high, galactic_below, signal_full, SAET_tot, brights, snrs_upper, snrs_tot_upper, noise_upper = do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveT_ini, params_gb, snrs_tot_upper, galactic_below, noise_realization, SAET_m)
 

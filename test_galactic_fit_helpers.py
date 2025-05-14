@@ -28,24 +28,24 @@ def test_filter_periods_fft_full(sign_low, sign_high):
     """test filtering max period with ffts for fixed fourier amplitude"""
     np.random.seed(442)
 
-    period_list = np.arange(0, np.int64(gc.SECSYEAR//wc.DT)//2+1/int(wc.Tobs/gc.SECSYEAR), 1/int(wc.Tobs/gc.SECSYEAR))
+    period_list = tuple(np.arange(0, np.int64(gc.SECSYEAR//wc.DT)//2+1/int(wc.Tobs/gc.SECSYEAR), 1/int(wc.Tobs/gc.SECSYEAR)))
 
-    amp_exp = np.zeros((period_list.size, wc.NC))
+    amp_exp = np.zeros((len(period_list), wc.NC))
 
-    amp_exp[:, 0] = np.random.uniform(0., 1., period_list.size)
-    amp_exp[:, 1] = np.random.uniform(0., 1., period_list.size)
-    amp_exp[:, 2] = np.random.uniform(0., 1., period_list.size)
+    amp_exp[:, 0] = np.random.uniform(0., 1., len(period_list))
+    amp_exp[:, 1] = np.random.uniform(0., 1., len(period_list))
+    amp_exp[:, 2] = np.random.uniform(0., 1., len(period_list))
 
-    angle_exp = np.zeros((period_list.size, wc.NC))
+    angle_exp = np.zeros((len(period_list), wc.NC))
 
-    angle_exp[:, 0] = np.random.uniform(0., 2*np.pi, period_list.size)
-    angle_exp[:, 1] = np.random.uniform(0., 2*np.pi, period_list.size)
-    angle_exp[:, 2] = np.random.uniform(0., 2*np.pi, period_list.size)
+    angle_exp[:, 0] = np.random.uniform(0., 2*np.pi, len(period_list))
+    angle_exp[:, 1] = np.random.uniform(0., 2*np.pi, len(period_list))
+    angle_exp[:, 2] = np.random.uniform(0., 2*np.pi, len(period_list))
 
     ts = np.arange(0, wc.Nt)*wc.DT
     xs = np.zeros((wc.Nt, wc.NC))
     for itrc in range(wc.NC):
-        for itrp in range(0, period_list.size):
+        for itrp in range(0, len(period_list)):
             if period_list[itrp] == 0.:
                 angle_exp[itrp, itrc] = 0.
                 amp_exp[itrp, itrc] *= sign_low
@@ -71,7 +71,7 @@ def test_filter_periods_fft_full2():
     """test filtering max period with ffts for random data"""
     np.random.seed(442)
 
-    period_list = np.arange(0, np.int64(gc.SECSYEAR//wc.DT)//2+1/int(wc.Tobs/gc.SECSYEAR), 1/int(wc.Tobs/gc.SECSYEAR))
+    period_list = tuple(np.arange(0, np.int64(gc.SECSYEAR//wc.DT)//2+1/int(wc.Tobs/gc.SECSYEAR), 1/int(wc.Tobs/gc.SECSYEAR)))
 
     xs = np.random.normal(0., 1., (wc.Nt, wc.NC))
 
@@ -86,7 +86,7 @@ def test_filter_periods_fft_full2():
 def test_filter_periods_fft1(itrk):
     """test filtering 1 period with ffts"""
 
-    period_list = np.array([itrk])
+    period_list = (itrk,)
     amp_exp = np.array([[0.1, 0.2, 1.]])
     angle_exp = np.array([[0.6, 0.1, 0.3]])
     ts = np.arange(0, wc.Nt)*wc.DT
@@ -126,8 +126,8 @@ def test_stationary_mean_scramble_invariance():
     SAET_m = np.full((wc.Nf, wc.NC), 1.)
 
     # get both SAETs
-    SAET_got1, _, _, _, _ = get_SAET_cyclostationary_mean(bg_here1, SAET_m, wc, smooth_lengthf=1., filter_periods=False, period_list=np.array([]))
-    SAET_got2, _, _, _, _ = get_SAET_cyclostationary_mean(bg_here2, SAET_m, wc, smooth_lengthf=1., filter_periods=False, period_list=np.array([]))
+    SAET_got1, _, _, _, _ = get_SAET_cyclostationary_mean(bg_here1, SAET_m, wc, smooth_lengthf=1., filter_periods=False, period_list=())
+    SAET_got2, _, _, _, _ = get_SAET_cyclostationary_mean(bg_here2, SAET_m, wc, smooth_lengthf=1., filter_periods=False, period_list=())
 
     # check for expected invariance
     assert np.allclose(SAET_got1, SAET_got2, atol=1.e-14, rtol=1.e-13)
@@ -178,7 +178,7 @@ def stationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, filte
     for itrc in range(0, wc.NC):
         SAET_m[:, itrc] = get_noise_model_helper(noise_models[itrc])
 
-    SAET_got, _, _, _, _ = get_SAET_cyclostationary_mean(bg_here, SAET_m, wc, smooth_lengthf=smooth_lengthf, filter_periods=filter_periods, period_list=np.array([]))
+    SAET_got, _, _, _, _ = get_SAET_cyclostationary_mean(bg_here, SAET_m, wc, smooth_lengthf=smooth_lengthf, filter_periods=filter_periods, period_list=())
 
     # replicate expected smoothed multiplier
     f_mult_smooth = np.zeros_like(f_mult)
@@ -221,7 +221,7 @@ def test_nonstationary_mean_faint_alternate(amp2_mult):
     amp2 = amp1*np.sqrt(amp2_mult)
     phase2 = 0.7
 
-    period_list = np.arange(0, np.int64(gc.SECSYEAR//wc.DT)//2+1/int(wc.Tobs/gc.SECSYEAR), 1/int(wc.Tobs/gc.SECSYEAR))
+    period_list = tuple(np.arange(0, np.int64(gc.SECSYEAR//wc.DT)//2+1/int(wc.Tobs/gc.SECSYEAR), 1/int(wc.Tobs/gc.SECSYEAR)))
 
     f_mult1 = np.full((wc.Nf, wc.NC), 0.)
     f_mult2 = np.full((wc.Nf, wc.NC), 0.)
@@ -332,12 +332,12 @@ def nonstationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, fi
     """helper to test stationary mean with several lengths of spectral smoothing can reproduce injected input spectrum"""
 
     # input periods, amplitudes, phases
-    period_list1 = np.array([itrk1])
+    period_list1 = (itrk1,)
     amp_list1 = np.array([amp1])
     phase_list1 = np.array([phase1])
 
     # periods, amplitudes, phases to record
-    period_list2 = np.array([0, itrk1, 2*itrk1])
+    period_list2 = (0, itrk1, 2*itrk1)
 
     # expected results after processing
     # note that the expected results contains a harmonic because t_mult is squared
@@ -352,7 +352,7 @@ def nonstationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, fi
     ts = np.arange(0, wc.Nt)*wc.DT
     t_mult = np.full((wc.Nt, wc.NC), 1.)
     for itrc in range(0, wc.NC):
-        for itrp in range(0, period_list1.size):
+        for itrp in range(0, len(period_list1)):
             t_mult[:, itrc] += amp_list1[itrp]*np.cos(2*np.pi/gc.SECSYEAR*ts*period_list1[itrp] - phase_list1[itrp])
 
     # checks for closeness can be much stricter if bg_here is 1, but may not cover all variations
@@ -374,7 +374,7 @@ def nonstationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, fi
     assert np.all(rec_got > 0.)
 
     for itrc in range(wc.NC):
-        for itrp in range(period_list1.size):
+        for itrp in range(len(period_list1)):
             assert np.isclose(amp_got[itrp, itrc], amp_exp[itrp], atol=1.e-2, rtol=1.e-1)
             assert np.isclose((angle_got[itrp, itrc] - phase_exp[itrp] + np.pi) % (2*np.pi) + phase_exp[itrp] - np.pi, phase_exp[itrp], atol=1.e-2/(amp_got[itrp, itrc]+0.001), rtol=1.e-1)
 

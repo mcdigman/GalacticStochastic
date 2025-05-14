@@ -3,7 +3,6 @@
 import numpy as np
 #import numba as nb
 from numba import njit
-from numpy.random import normal
 from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 
 #from numba.experimental import jitclass
@@ -116,7 +115,7 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel:
     a class to handle the fully diagonal nonstationary
     instrument noise model to feed to snr and fisher matrix calculations
     """
-    def __init__(self, SAET, wc, prune):
+    def __init__(self, SAET, wc, prune, seed=-1):
         """
         initialize the fully diagonal, nonstationary instrument noise model
 
@@ -131,22 +130,35 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel:
         prune : bool
             if prune=True, cut the 1st and last values,
             which may not be calculated correctly
+        seed : int
+            non-negative integer random seed for the noise generator;
+            if set, generate_dense_noise will always produce the same result
+            if -1, generate_dense_noise will get a new seed every time
 
         Returns
         -------
         DiagonalNonstationaryDenseInstrumentNoiseModel : class
         """
         self.prune = prune
+        assert prune
         self.SAET = SAET
         self.wc = wc
+        self.seed = seed
+        if self.seed < -1:
+            raise ValueError('random seed cannot be negative; use -1 to use a different seed each time')
+
         self.inv_SAET = np.zeros((self.wc.Nt, self.wc.Nf, self.wc.NC))
         self.inv_chol_SAET = np.zeros((self.wc.Nt, self.wc.Nf, self.wc.NC))
         self.chol_SAET = np.zeros((self.wc.Nt, self.wc.Nf, self.wc.NC))
+        if self.prune:
+            i_offset = 1
+        else:
+            i_offset = 0
         for j in range(0, self.wc.Nt):
             for itrc in range(0, self.wc.NC):
-                self.chol_SAET[j, :, itrc] = np.sqrt(self.SAET[j, :, itrc])
-                self.inv_chol_SAET[j, :, itrc] = 1./self.chol_SAET[j, :, itrc]
-                self.inv_SAET[j, :, itrc] = self.inv_chol_SAET[j, :, itrc]**2
+                self.chol_SAET[j, i_offset:, itrc] = np.sqrt(self.SAET[j, i_offset:, itrc])
+                self.inv_chol_SAET[j, i_offset:, itrc] = 1./self.chol_SAET[j, i_offset:, itrc]
+                self.inv_SAET[j, i_offset:, itrc] = self.inv_chol_SAET[j, i_offset:, itrc]**2
         if self.prune:
             self.chol_SAET[:, 0, :] = 0.
             self.inv_chol_SAET[:, 0, :] = 0.
@@ -167,8 +179,13 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel:
             Freq layers, Number of TDI channels. All specified by wdm_config.py
         """
         noise_res = np.zeros((self.wc.Nt, self.wc.Nf, self.wc.NC))
+        if self.seed == -1:
+            rng = np.random.default_rng()
+        else:
+            rng = np.random.default_rng(self.seed)
+
         for j in range(0, self.wc.Nt):
-            noise_res[j, :, :] = normal(0., 1., (self.wc.Nf, self.wc.NC))*self.chol_SAET[j, :, :]
+            noise_res[j, :, :] = rng.normal(0., 1., (self.wc.Nf, self.wc.NC))*self.chol_SAET[j, :, :]
         return noise_res
 
     def get_sparse_snrs(self, NUs, lists_pixels, wavelet_data, nt_min=0, nt_max=-1):
@@ -176,11 +193,11 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel:
         return get_sparse_snr_helper(NUs, lists_pixels, wavelet_data, nt_min, nt_max, self.wc, self.inv_chol_SAET)
 
 
-#@jitclass([('prune', nb.b1), ('SAET_m', nb.float64[:, :]), ('inv_SAET_m', nb.float64[:, :]), ('inv_chol_SAET_m', nb.float64[:, :]), ('SAET', nb.float64[:, :, :]), ('inv_SAET', nb.float64[:, :, :]), ('inv_chol_SAET', nb.float64[:, :, :]), ('chol_SAET_m', nb.float64[:, :]), ('chol_SAET', nb.float64[:, :, :]), ('mean_SAE', nb.float64[:]), ('inv_chol_mean_SAE', nb.float64[:])])
+#@jitclass([('prune', nb.b1), ('SAET_m', nb.float64[:, :]), ('inv_SAET_m', nb.float64[:, :]), ('inv_chol_SAET_m', nb.float64[:, :]), ('SAET', nb.float64[:, :, :]), ('inv_SAET', nb.float64[:, :, :]), ('inv_chol_SAET', nb.float64[:, :, :]), ('chol_SAET_m', nb.float64[:, :]), ('chol_SAET', nb.float64[:, :, :]), ('mean_SAE', nb.float64[:]), ('inv_chol_mean_SAE', nb.float64[:]), ('seed', nb.int64)])
 class DiagonalStationaryDenseInstrumentNoiseModel:
     """a class to handle the fully diagonal stationary
     instrument noise model to feed to snr and fisher matrix calculations"""
-    def __init__(self, SAET_m, wc, prune):
+    def __init__(self, SAET_m, wc, prune, seed=-1):
         """initialize the stationary instrument noise model
 
         Parameters
@@ -194,17 +211,28 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
         prune : bool
             if prune=True, cut the 1st and last values,
             which may not be calculated correctly
+        seed : int
+            non-negative integer random seed for the noise generator;
+            if set, generate_dense_noise will always produce the same result
+            if -1, generate_dense_noise will get a new seed every time
 
         Returns
         -------
         DiagonalStationaryDenseInstrumentNoiseModel : class
         """
         self.prune = prune
+        assert prune
         self.SAET_m = SAET_m
         self.wc = wc
+        self.seed = seed
+        if self.seed < -1:
+            raise ValueError('random seed cannot be negative; use -1 to use a different seed each time')
+
         self.inv_SAET_m = np.zeros((self.wc.Nf, self.wc.NC))
         self.inv_chol_SAET_m = np.zeros((self.wc.Nf, self.wc.NC))
         self.chol_SAET_m = np.zeros((self.wc.Nf, self.wc.NC))
+
+
         for m in range(0, self.wc.Nf):
             if self.prune and (m == 0 or m == wc.Nf):
                 # currently m can't be Nf but that is the value that should be pruned
@@ -253,8 +281,13 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
             Freq layers, Number of TDI channels. All specified by wdm_config.py
         """
         noise_res = np.zeros((self.wc.Nt, self.wc.Nf, self.wc.NC))
+        if self.seed == -1:
+            rng = np.random.default_rng()
+        else:
+            rng = np.random.default_rng(self.seed)
+
         for j in range(0, self.wc.Nt):
-            noise_res[j, :, :] = normal(0., 1., (self.wc.Nf, self.wc.NC))*self.chol_SAET[j, :, :]
+            noise_res[j, :, :] = rng.normal(0., 1., (self.wc.Nf, self.wc.NC))*self.chol_SAET[j, :, :]
         return noise_res
 
     def get_sparse_snrs(self, NUs, lists_pixels, wavelet_data, nt_min=0, nt_max=-1):
@@ -324,4 +357,4 @@ def get_sparse_snr_helper(NUs, lists_pixels, wavelet_data, nt_min, nt_max, wc, i
             if nt_min <= j_itrs[mm] < nt_max:
                 mult = inv_chol_SAET[j_itrs[mm], i_itrs[mm], itrc]*wavelet_data[itrc, mm]
                 snr2s[itrc] += mult*mult
-        return np.sqrt(snr2s)
+    return np.sqrt(snr2s)

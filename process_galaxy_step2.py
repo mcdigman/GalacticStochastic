@@ -44,25 +44,25 @@ if __name__ == '__main__':
 
     n_bin_use = n_tot
 
-    n_iterations = 2
-    SAET_tot = np.zeros((n_iterations+1, wc.Nt, wc.Nf, wc.NC))
+    max_iterations = 2
+    SAET_tot = np.zeros((max_iterations+1, wc.Nt, wc.Nf, wc.NC))
     SAET_tot[0] = noise_floor.SAET.copy()
 
-    snr_min = np.full(n_iterations, snr_thresh)
+    snr_min = np.full(max_iterations, snr_thresh)
 
-    snr_cut_bright = np.full(n_iterations, snr_thresh)
+    snr_cut_bright = np.full(max_iterations, snr_thresh)
     snr_cut_bright[0] = 500.
 
-    snrs_tot_upper = np.zeros((n_iterations, n_bin_use))
+    snrs_tot_upper = np.zeros((max_iterations, n_bin_use))
     snrs_tot_upper[:] = snrs_tot_upper_in
 
     galactic_below = galactic_below_in.reshape(wc.Nt, wc.Nf, wc.NC)[:wc.Nt].reshape(wc.Nt*wc.Nf, wc.NC)
 
     galactic_below_in = None
 
-    smooth_lengthf = np.full(n_iterations, 8)
+    smooth_lengthf = np.full(max_iterations, 8)
 
-    ic = IterationConfig(n_iterations, snr_thresh, snr_min, snr_cut_bright, smooth_lengthf)
+    ic = IterationConfig(max_iterations, snr_thresh, snr_min, snr_cut_bright, smooth_lengthf)
 
     faints_in = snrs_tot_upper_in < ic.snr_min[0]
 

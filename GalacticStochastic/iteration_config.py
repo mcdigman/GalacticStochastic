@@ -6,24 +6,102 @@ from collections import namedtuple
 
 import numpy as np
 
-IterationConfig = namedtuple('IterationConfig', ['n_iterations', 'snr_thresh', 'snr_min', 'snr_cut_bright', 'smooth_lengthf'])
+IterationConfig = namedtuple('IterationConfig', ['max_iterations', 'snr_thresh', 'snr_min', 'snr_cut_bright', 'smooth_lengthf', 'period_list', 'n_cyclo_switch', 'n_min_faint_adapt', 'faint_converge_change_thresh', 'smooth_lengthf_fix'])
 
 def get_iteration_config(config):
     """Get lisa constant object from config file"""
 
-    # Mean arm length of the LISA detector (meters)
-    n_iterations = int(ast.literal_eval(config['iterative fit constants']['n_iterations']))
-    assert n_iterations >= 0
+    # maximum number of iterations to allow
+    max_iterations = int(ast.literal_eval(config['iterative fit constants']['max_iterations']))
+    assert max_iterations >= 0
+
+    # iteration to permit use of cyclostationary noise model
+    n_cyclo_switch = int(ast.literal_eval(config['iterative fit constants']['n_cyclo_switch']))
+    assert n_cyclo_switch >= 0
+
+    # minimum iterations to adapt the faint background
+    n_min_faint_adapt = int(ast.literal_eval(config['iterative fit constants']['n_min_faint_adapt']))
+    assert n_min_faint_adapt >= 0
+
+    # minimum iterations to adapt the faint background
+    faint_converge_change_thresh = int(ast.literal_eval(config['iterative fit constants']['faint_converge_change_thresh']))
+    assert faint_converge_change_thresh >= 0
 
     snr_thresh = float(ast.literal_eval(config['iterative fit constants']['snr_thresh']))
     assert snr_thresh >= 0.
 
-    snr_min = float(ast.literal_eval(config['iterative fit constants']['snr_min']))
-    assert snr_min >= 0.
+    # starting faint cutoff snr
+    snr_low_initial = float(ast.literal_eval(config['iterative fit constants']['snr_low_initial']))
+    assert snr_low_initial >= 0.
 
-    #period_list = np.array(json.loads(config.get('iterative fit constants','period_list'))),dtype=np.float64)
+    # multiplier for faint cutoff snr in iterations after the zeroth
+    snr_low_mult = float(ast.literal_eval(config['iterative fit constants']['snr_low_mult']))
+    assert snr_low_mult >= 0.
+
+    #  the faint cutoff snr
+    snr_min = np.zeros(max_iterations)
+    snr_min[0] = snr_low_initial
+    snr_min[1:] = snr_low_mult * snr_low_initial
+
+    # the list of periods to allow in the cyclostationary model
+    period_list = np.array(json.loads(config.get('iterative fit constants','period_list')),dtype=float)
     assert np.all(period_list >= 0.)
+    period_list = tuple(period_list)
+
+    # final frequency smoothing length for galactic spectrum in log frequency bins
+    smooth_lengthf_fix = float(ast.literal_eval(config['iterative fit constants']['smooth_lengthf_fix']))
+    assert smooth_lengthf_fix >= 0.
+
+    fsmooth_settle_mult = float(ast.literal_eval(config['iterative fit constants']['fsmooth_settle_mult']))
+
+    fsmooth_settle_scale = float(ast.literal_eval(config['iterative fit constants']['fsmooth_settle_scale']))
+
+    fsmooth_settle_offset = float(ast.literal_eval(config['iterative fit constants']['fsmooth_settle_offset']))
+
+    fsmooth_fix_itr = int(ast.literal_eval(config['iterative fit constants']['fsmooth_fix_itr']))
+    assert fsmooth_fix_itr >= 0
+    if fsmooth_fix_itr > max_iterations:
+        fsmooth_fix_itr = max_iterations
+
+    # phase in the frequency smoothing length gradually
+    # give absorbing constants a relative advantage on early iterations
+    # because for the first iteration we included no galactic background
+
+    smooth_lengthf = np.zeros(max_iterations) + smooth_lengthf_fix
+    for itrn in range(fsmooth_fix_itr):
+        smooth_lengthf[itrn] += fsmooth_settle_mult*np.exp(-fsmooth_settle_scale*itrn - fsmooth_settle_offset)
+        assert smooth_lengthf[itrn] >= 0.
+
+    #smooth_lengthf[0] = 8.
+
+    # final bright snr cutoff
+    snr_high_fix = float(ast.literal_eval(config['iterative fit constants']['snr_high_fix']))
+    assert snr_high_fix >= 0.
+
+    snr_high_initial = float(ast.literal_eval(config['iterative fit constants']['snr_high_initial']))
+    assert snr_high_initial >= 0.
+
+    # phase in bright snr cutoff gradually
+    snr_high_settle_mult = float(ast.literal_eval(config['iterative fit constants']['snr_high_settle_mult']))
+
+    snr_high_settle_scale = float(ast.literal_eval(config['iterative fit constants']['snr_high_settle_scale']))
+
+    snr_high_settle_offset = float(ast.literal_eval(config['iterative fit constants']['snr_high_settle_offset']))
+
+    snr_high_fix_itr = int(ast.literal_eval(config['iterative fit constants']['snr_high_fix_itr']))
+    assert snr_high_fix_itr >= 0
+    if snr_high_fix_itr > max_iterations:
+        snr_high_fix_itr = max_iterations
+
+    snr_cut_bright = np.zeros(max_iterations) + snr_high_fix
+    for itrn in range(snr_high_fix_itr):
+        snr_cut_bright[itrn] += snr_high_settle_mult*np.exp(-snr_high_settle_scale*itrn - snr_high_settle_offset)
+        assert snr_cut_bright[itrn] >= 0.
+
+    #snr_cut_bright[0] = snr_high_initial
+
 
     #TODO also need ways to read in snr_cut_bright, smooth_lengthf
 
-    return IterationConfig(n_iterations, snr_thresh, snr_min, snr_cut_bright, smooth_lengthf)
+    # make arrays into tuples to ensure the configuration is immutable
+    return IterationConfig(max_iterations, snr_thresh, tuple(snr_min), tuple(snr_cut_bright), tuple(smooth_lengthf), period_list, n_cyclo_switch, n_min_faint_adapt, faint_converge_change_thresh, smooth_lengthf_fix)

@@ -33,8 +33,8 @@ def filter_periods_fft(r_mean, Nt_loc, period_list, wc):
 
     # places to store results
     r = np.zeros((wc.Nt, wc.NC))
-    amp_got = np.zeros((period_list.size, wc.NC))
-    angle_got = np.zeros((period_list.size, wc.NC))
+    amp_got = np.zeros((len(period_list), wc.NC))
+    angle_got = np.zeros((len(period_list), wc.NC))
 
     # iterate over input frequencies
     for itrc in range(NC):
@@ -97,7 +97,11 @@ def get_SAET_cyclostationary_mean(
         smooth_lengthf=4,
         filter_periods=False,
         period_list=None,
-        Nt_loc=-1
+        Nt_loc=-1,
+        faint_cutoff_thresh=0.1,
+        t_stabilizer_mult=1.e-13,
+        r_cutoff_mult=1.e-6,
+        log_S_stabilizer=1.e-50,
         ):
     """
     note the smoothing length is the length in *log* frequency,
@@ -119,21 +123,24 @@ def get_SAET_cyclostationary_mean(
     else:
         r_mean = np.zeros((wc.Nt, NC_loc))
         # whitened mean galaxy power
-        Sw_in = np.abs(S_in_mean/SAET_m)
+        Sw_in_mean = np.zeros_like(S_in_mean)
+        Sw_in_mean[SAET_m > 0.] = np.abs(S_in_mean[SAET_m > 0.]/SAET_m[SAET_m > 0.])
 
         for itrc in range(NC_loc):
             # completely cut out faint frequencies for calculating the envelope modulation
             # faint frequencies are different and noisier, so just weighting may not work
-            mask = Sw_in[:, itrc] > 0.1*np.max(Sw_in[:, itrc])
-            r_mean[:, itrc] = np.mean(
-                                      S_in[:, mask, itrc]
-                                      / (
-                                          S_in_mean[mask, itrc]
-                                          + 1.e-13*np.max(S_in_mean[mask, itrc])
-                                        ), axis=1
-            )
+            mask = Sw_in_mean[:, itrc] > faint_cutoff_thresh*np.max(Sw_in_mean[:, itrc])
+            stabilizer = t_stabilizer_mult*np.max(S_in_mean[mask, itrc])
+            Sw_in = S_in[:, mask, itrc]/(S_in_mean[mask, itrc] + stabilizer)
+            r_mean[:, itrc] = np.mean(Sw_in, axis=1)
+
+            Sw_in = None
+            stabilizer = None
+            mask = None
 
             assert np.all(r_mean[:, itrc] >= 0.)
+
+        Sw_in_mean = None
 
         # input ratio can't be negative except due to numerical noise (will enforce nonzero later)
         r_mean = np.abs(r_mean)
@@ -141,7 +148,7 @@ def get_SAET_cyclostationary_mean(
         if period_list is None:
             # if no period list is given, do every possible period
             min_step = 1/int(wc.Tobs/gc.SECSYEAR)
-            period_list = np.arange(0, int(gc.SECSYEAR//wc.DT)//2 + min_step, min_step)
+            period_list = tuple(np.arange(0, int(gc.SECSYEAR//wc.DT)//2 + min_step, min_step))
 
         r_smooth, amp_got, angle_got = filter_periods_fft(r_mean, Nt_loc, period_list, wc)
 
@@ -149,18 +156,20 @@ def get_SAET_cyclostationary_mean(
         # but due to noise/numerical inaccuracy in the fft it could be slightly negative
         # it also appears in a division, so we will lose numerical stability if it is too small.
         # add a numerical cutoff to small values scaled to the largest
-        r_smooth[r_smooth < 1.e-6*np.max(r_smooth)] = 1.e-6*np.max(r_smooth)
+        r_smooth[r_smooth < r_cutoff_mult*np.max(r_smooth)] = r_cutoff_mult*np.max(r_smooth)
 
         # absolute value should have no effect here unless r_smooth was entirely negative
         r_smooth = np.abs(r_smooth)
 
-    # get demodulated spectrum as a function of time with time variation removed
-    S_demod = S_in.copy()
-    for itrc in range(NC_loc):
-        S_demod[:, :, itrc] = np.abs((S_demod[:, :, itrc].T/r_smooth[:, itrc]).T)
+    # get mean of demodulated spectrum as a function of time with time variation removed
+    S_demod_mean = np.zeros((wc.Nf, NC_loc))
 
-    # get mean spectrum with time variation removed
-    S_demod_mean = np.abs(np.mean(S_demod, axis=0))
+    for itrc in range(NC_loc):
+        S_demod_mean[:, itrc] = np.mean(np.abs(S_in[:, :, itrc].T/r_smooth[:, itrc]), axis=1)
+
+    S_in = None
+
+    S_demod_mean = np.abs(S_demod_mean)
 
     S_demod_smooth = np.zeros((wc.Nf, NC_loc))
     S_demod_smooth[0, :] = S_demod_mean[0, :]
@@ -178,12 +187,12 @@ def get_SAET_cyclostationary_mean(
     for itrc in range(NC_loc):
         # add and later remove a small numerical stabilizer for cases where the S is zero
         # better behaved to interpolate in log(SAE) as well
-        log_S_demod_mean = np.log10(S_demod_mean[1:, itrc] + 1.e-50)
+        log_S_demod_mean = np.log10(S_demod_mean[1:, itrc] + log_S_stabilizer)
         log_S_interp = InterpolatedUnivariateSpline(log_f, log_S_demod_mean, ext=2)(log_f_interp)
         log_S_interp_smooth = scipy.ndimage.gaussian_filter(log_S_interp, smooth_sigma)
         log_S_smooth = InterpolatedUnivariateSpline(log_f_interp, log_S_interp_smooth, ext=2)(log_f)
         # remove the numerical stabilizer
-        S_demod_smooth[1:, itrc] = 10**log_S_smooth - 1.e-50
+        S_demod_smooth[1:, itrc] = 10**log_S_smooth - log_S_stabilizer
 
     # enforce positive just in case subtraction misbheaved
     S_demod_smooth = np.abs(S_demod_smooth)

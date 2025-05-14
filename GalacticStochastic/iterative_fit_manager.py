@@ -15,20 +15,15 @@ from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 
 
 class IterativeFitManager():
-    def __init__(self, lc, wc, ic, SAET_m, n_iterations, galactic_below_in, snr_tots_in, snr_min_in, params_gb, period_list, nt_min, nt_max, n_cyclo_switch, stat_only, n_min_faint_adapt, faint_converge_change_thresh, smooth_lengthf_fix):
+    def __init__(self, lc, wc, ic, SAET_m, galactic_below_in, snr_tots_in, snr_min_in, params_gb, nt_min, nt_max, stat_only):
 
         self.wc = wc
         self.lc = lc
         self.ic = ic
-        self.period_list = period_list
         self.SAET_m = SAET_m
         self.nt_min = nt_min
         self.nt_max = nt_max
-        self.smooth_lengthf_fix = smooth_lengthf_fix
-        self.n_cyclo_switch = n_cyclo_switch
         self.stat_only = stat_only
-        self.n_min_faint_adapt = n_min_faint_adapt
-        self.faint_converge_change_thresh = faint_converge_change_thresh
         self.n_tot = params_gb.shape[0]
 
         # iteration to switch to fitting spectrum fully
@@ -36,26 +31,23 @@ class IterativeFitManager():
         faints_in = (snr_tots_in < snr_min_in[0]) | (params_gb[:, 3] >= (wc.Nf-1)*wc.DF)
         self.argbinmap = np.argwhere(~faints_in).flatten()
         faints_old = faints_in[self.argbinmap]
+        assert faints_old.sum() == 0.
         self.params_gb = params_gb[self.argbinmap]
         self.n_bin_use = self.argbinmap.size
 
         params_gb = None
         faints_in = None
 
-        self.bis = BinaryInclusionState(ic.n_iterations, self.n_bin_use, self.wc, faints_old)
+        self.bis = BinaryInclusionState(ic.max_iterations, self.n_bin_use, self.wc, faints_old)
 
         faints_old = None
 
-        self.idx_SAET_save = np.hstack([np.arange(0, min(10, n_iterations)), np.arange(min(10, n_iterations), 4), n_iterations-1])
+        self.idx_SAET_save = np.hstack([np.arange(0, min(10, ic.max_iterations)), np.arange(min(10, ic.max_iterations), 4), ic.max_iterations-1])
         self.itr_save = 0
 
-        self.SAET_tots = np.zeros((self.idx_SAET_save.size, wc.Nt, wc.Nf, 3))
+        self.SAET_tots_upper = np.zeros((self.idx_SAET_save.size, wc.Nt, wc.Nf, 3))
+        self.SAET_tots_lower = np.zeros((self.idx_SAET_save.size, wc.Nt, wc.Nf, 3))
         self.SAET_fin = np.zeros((wc.Nt, wc.Nf, 3))
-
-        self.parseval_below_low = np.zeros(n_iterations)
-        self.parseval_below_high = np.zeros(n_iterations)
-        self.parseval_bright = np.zeros(n_iterations)
-        self.parseval_total = np.zeros(n_iterations)
 
         params0 = self.params_gb[0].copy()
         self.waveform_manager = BinaryWaveletAmpFreqDT(params0.copy(), wc, self.lc)
@@ -66,7 +58,8 @@ class IterativeFitManager():
         SAET_tot_lower = np.zeros((wc.Nt, wc.Nf, wc.NC))
         SAET_tot_lower[:] = self.SAET_m
         if self.idx_SAET_save[self.itr_save] == 0:
-            self.SAET_tots[0] = SAET_tot_upper[:, :, :]
+            self.SAET_tots_upper[0] = SAET_tot_upper[:, :, :]
+            self.SAET_tots_lower[0] = SAET_tot_lower[:, :, :]
             self.itr_save += 1
         SAET_tot_lower = np.min([SAET_tot_lower, SAET_tot_upper], axis=0)
 
@@ -76,7 +69,7 @@ class IterativeFitManager():
         SAET_tot_upper = None
         SAET_tot_lower = None
 
-        self.n_full_converged = ic.n_iterations-1
+        self.n_full_converged = ic.max_iterations-1
 
         self.fit_state = IterativeFitState(self.ic)
 
@@ -96,7 +89,7 @@ class IterativeFitManager():
     def do_loop(self):
         print('entered loop')
         ti = perf_counter()
-        for itrn in range(1, self.ic.n_iterations):
+        for itrn in range(0, self.ic.max_iterations):
 
             self.do_iteration(itrn)
 
@@ -138,7 +131,7 @@ class IterativeFitManager():
         t1n = perf_counter()
 
         noise_safe_upper = self.fit_state.bright_convergence_decision(self.bis, itrn)
-        noise_safe_lower = self.fit_state.faint_convergence_decision(self.bis, itrn, self.n_min_faint_adapt, self.faint_converge_change_thresh)
+        noise_safe_lower = self.fit_state.faint_convergence_decision(self.bis, itrn, self.ic)
 
         (do_faint_check_in, bright_converged_in, faint_converged_in, force_converge_in) = self.fit_state.get_faint_state_request()
 
@@ -150,11 +143,11 @@ class IterativeFitManager():
         assert faint_converged_in == self.fit_state.faint_converged[itrn+1]
         assert force_converge_in == self.fit_state.force_converge[itrn+1]
 
-        self.noise_upper, self.noise_lower = new_noise_helper(noise_safe_upper, noise_safe_lower, self.noise_upper, self.noise_lower, itrn, self.n_cyclo_switch, self.stat_only, self.SAET_m, self.wc, self.ic, self.bgd, self.period_list, self.smooth_lengthf_fix)
+        self.noise_upper, self.noise_lower = new_noise_helper(noise_safe_upper, noise_safe_lower, self.noise_upper, self.noise_lower, itrn, self.stat_only, self.SAET_m, self.wc, self.ic, self.bgd)
 
         self._state_check(itrn)
 
-        self._parseval_store(itrn)
+        self.bgd.log_tracking(self.wc, self.SAET_m)
 
         self._iteration_cleanup(itrn)
 
@@ -173,7 +166,8 @@ class IterativeFitManager():
 
     def _iteration_cleanup(self, itrn):
         if self.itr_save < self.idx_SAET_save.size and itrn == self.idx_SAET_save[self.itr_save]:
-            self.SAET_tots[self.itr_save] = self.noise_upper.SAET[:, :, :]
+            self.SAET_tots_upper[self.itr_save] = self.noise_upper.SAET[:, :, :]
+            self.SAET_tots_lower[self.itr_save] = self.noise_lower.SAET[:, :, :]
             self.itr_save += 1
 
     def _loop_cleanup(self):
@@ -192,16 +186,25 @@ class IterativeFitManager():
         n_faint = self.bis.faints_old.sum()
         n_faint2 = self.bis.faints_cur[itrn].sum()
         n_bright = self.bis.brights[itrn].sum()
-        n_ambiguous = (~(self.bis.faints_old[itrn] | self.bis.brights[itrn])).sum()
+        n_ambiguous = (~(self.bis.faints_old | self.bis.brights[itrn] | self.bis.faints_cur[itrn])).sum()
         print('Out of %10d total binaries, %10d were deemed undetectable by a previous evaluation, %10d were considered here.' % (self.n_tot, self.n_tot - n_consider, n_consider))
         print('The iterative procedure deemed (%5.3f yr observation at threshold snr=%5.3f):' % (Tobs_consider_yr, self.ic.snr_thresh))
         print('       %10d undetectable due to instrument noise' % n_faint)
-        print('       %10d undetectable dut to galactic confusion' % n_faint2)
+        print('       %10d undetectable due to galactic confusion' % n_faint2)
         print('       %10d undecided (presumed undetectable)' % n_ambiguous)
         print('       %10d total undetectable' % (self.n_tot - n_bright))
         print('       %10d total detectable' % n_bright)
+        assert n_ambiguous + n_bright + n_faint + n_faint2 == n_consider
 
     def _state_update(self, itrn):
+        if itrn == 0:
+            self.bis.faints_cur[itrn] = False
+            self.bis.brights[itrn] = False
+            self.bgd.galactic_undecided[:] = 0.
+            self.bgd.galactic_above[:] = 0.
+            #assert np.all(self.bis.faints_cur[itrn-1] == False)
+            #assert np.all(self.bis.brights[itrn-1] == False)
+            return
         self.bis.faints_cur[itrn] = self.bis.faints_cur[itrn-1]
 
         if self.fit_state.bright_converged[itrn]:
@@ -223,9 +226,3 @@ class IterativeFitManager():
 
         if self.fit_state.do_faint_check[itrn+1]:
             assert not self.fit_state.bright_converged[itrn+1]
-
-    def _parseval_store(self, itrn):
-        self.parseval_total[itrn] = np.sum((self.bgd.get_galactic_total()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
-        self.parseval_below_high[itrn] = np.sum((self.bgd.get_galactic_below_high()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
-        self.parseval_below_low[itrn] = np.sum((self.bgd.get_galactic_below_low()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])
-        self.parseval_bright[itrn] = np.sum((self.bgd.get_galactic_coadd_resolvable()).reshape((self.wc.Nt, self.wc.Nf, self.wc.NC))[:, 1:, 0:2]**2/self.SAET_m[1:, 0:2])

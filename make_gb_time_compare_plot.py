@@ -42,9 +42,9 @@ if __name__ == '__main__':
     itrl_fit = 0
 
     if not stat_only:
-        period_list = np.array([1, 2, 3, 4, 5])
+        period_list = (1, 2, 3, 4, 5)
     else:
-        period_list = np.array([], dtype=np.int64)
+        period_list = ()
 
     SAET_gal = np.zeros((nk, wc.Nf, 3))
     SAET_gal_smooth = np.zeros((nk, wc.Nf, 3))

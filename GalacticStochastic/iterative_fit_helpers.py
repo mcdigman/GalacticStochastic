@@ -10,27 +10,29 @@ from GalacticStochastic.galactic_fit_helpers import \
 from LisaWaveformTools.instrument_noise import \
     DiagonalNonstationaryDenseInstrumentNoiseModel
 
-IterationConfig = namedtuple('IterationConfig', ['n_iterations', 'snr_thresh', 'snr_min', 'snr_cut_bright', 'smooth_lengthf'])
+IterationConfig = namedtuple('IterationConfig', ['max_iterations', 'snr_thresh', 'snr_min', 'snr_cut_bright', 'smooth_lengthf'])
 
 
 def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveform_model, params_gb, snrs_tot_upper, galactic_below, noise_realization, SAET_m):
     # TODO make snr_cut_bright and smooth_lengthf an array as a function of iteration
     # TODO make NC controllable; probably not much point in getting T channel snrs
-    snrs_upper = np.zeros((ic.n_iterations, n_bin_use, wc.NC))
-    brights = np.zeros((ic.n_iterations, n_bin_use), dtype=np.bool_)
+    snrs_upper = np.zeros((ic.max_iterations, n_bin_use, wc.NC))
+    brights = np.zeros((ic.max_iterations, n_bin_use), dtype=np.bool_)
 
-    for itrn in range(ic.n_iterations):
+    for itrn in range(ic.max_iterations):
         galactic_undecided = np.zeros((wc.Nt*wc.Nf, wc.NC))
-        noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot[itrn], wc, prune=False)
+        noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot[itrn], wc, prune=True)
 
         t0n = perf_counter()
 
         for itrb in range(n_bin_use):
             if itrb % 10000 == 0 and itrn == 0:
                 tin = perf_counter()
-                print("Starting binary # %11d at t=%9.2f s at iteration %4d" % (itrb, (tin - t0n), itrn))
+                print("Starting binary # %11d of %11d at t=%9.2f s at iteration %4d" % (itrb, n_bin_use, (tin - t0n), itrn))
 
             run_binary_coadd(itrb, faints_in, waveform_model, noise_upper, snrs_upper, snrs_tot_upper, itrn, galactic_below, galactic_undecided, brights, wc, params_gb, ic.snr_min[itrn], ic.snr_cut_bright[itrn])
+
+            assert np.all(np.isfinite(snrs_upper[itrn,itrb]))
 
         t1n = perf_counter()
 
@@ -40,7 +42,7 @@ def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveform_model, 
 
         signal_full = galactic_below_high + noise_realization
 
-        SAET_tot[itrn+1], _, _, _, _ = get_SAET_cyclostationary_mean(galactic_below_high, SAET_m, wc, smooth_lengthf=ic.smooth_lengthf[itrn], filter_periods=False, period_list=np.array([]))
+        SAET_tot[itrn+1], _, _, _, _ = get_SAET_cyclostationary_mean(galactic_below_high, SAET_m, wc, smooth_lengthf=ic.smooth_lengthf[itrn], filter_periods=False, period_list=())
 
     return galactic_below_high, galactic_below, signal_full, SAET_tot, brights, snrs_upper, snrs_tot_upper, noise_upper
 
@@ -62,15 +64,21 @@ def run_binary_coadd(itrb, faints_in, waveform_model, noise_upper, snrs_upper, s
             brights[itrn, itrb] = True
 
 
-def new_noise_helper(noise_safe_upper, noise_safe_lower, noise_upper, noise_lower, itrn, n_cyclo_switch, stat_only, SAET_m, wc, ic, bgd, period_list, smooth_lengthf_targ):
+def new_noise_helper(noise_safe_upper, noise_safe_lower, noise_upper, noise_lower, itrn, stat_only, SAET_m, wc, ic, bgd):
+    if not stat_only:
+        period_list = ic.period_list
+    else:
+        period_list = ()
+
     if not noise_safe_upper:
-        assert not noise_safe_lower
+        #assert not noise_safe_lower
 
         # don't use cyclostationary model until specified iteration
-        if itrn < n_cyclo_switch:
+        if itrn < ic.n_cyclo_switch:
             filter_periods = False
         else:
             filter_periods = not stat_only
+
 
         # use higher estimate of galactic bg
         SAET_tot_upper = bgd.get_S_below_high(SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods, period_list)
@@ -82,7 +90,7 @@ def new_noise_helper(noise_safe_upper, noise_safe_lower, noise_upper, noise_lowe
         # make sure this will always predict >= snrs to the actual spectrum in use
         # use lower estimate of galactic bg
         filter_periods = not stat_only
-        SAET_tot_lower = bgd.get_S_below_low(SAET_m, wc, smooth_lengthf_targ, filter_periods, period_list)
+        SAET_tot_lower = bgd.get_S_below_low(SAET_m, wc, ic.smooth_lengthf_fix, filter_periods, period_list)
         SAET_tot_lower = np.min([SAET_tot_lower, noise_upper.SAET], axis=0)
         noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_lower, wc, prune=True)
         SAET_tot_lower = None

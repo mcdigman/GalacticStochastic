@@ -83,8 +83,8 @@ if __name__ == '__main__':
 
     SAET_m = instrument_noise_AET_wdm_m(lc, wc)
 
-    SAET_model, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_cyclo, SAET_m, wc, 0, filter_periods=True, period_list=np.array([1, 2, 3, 4, 5]))
-    # SAET_model_stat, _, _ = get_SAET_cyclostationary_mean(galactic_stat, SAET_m, wc, 0, filter_periods=True, period_list=np.array([]))
+    SAET_model, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_cyclo, SAET_m, wc, 0, filter_periods=True, period_list=(1, 2, 3, 4, 5))
+    # SAET_model_stat, _, _ = get_SAET_cyclostationary_mean(galactic_stat, SAET_m, wc, 0, filter_periods=True, period_list=())
 
     fs = np.arange(1, wc.Nf)*wc.DF
 
