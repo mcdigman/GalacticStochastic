@@ -3,7 +3,7 @@ import numpy as np
 import scipy.stats
 
 
-def unit_normal_battery(signal, mult=1., sig_thresh=5., A2_cut=2.28, do_assert=True):
+def unit_normal_battery(signal, mult=1., sig_thresh=5., A2_cut=2.28, do_assert=True, verbose=False):
     """
     battery of tests for checking if signal is unit normal white noise
     default anderson darling cutoff of 2.28 is hand selected to
@@ -13,7 +13,7 @@ def unit_normal_battery(signal, mult=1., sig_thresh=5., A2_cut=2.28, do_assert=T
     """
     n_sig = signal.size
     if n_sig == 0:
-        return False, 0., 0., 0.
+        return True, 0., 0., 0.
 
     sig_adjust = signal/mult
     mean_wave = np.mean(sig_adjust)
@@ -23,12 +23,16 @@ def unit_normal_battery(signal, mult=1., sig_thresh=5., A2_cut=2.28, do_assert=T
     # anderson darling test statistic assuming true mean and variance are unknown
     sig_sort = np.sort((sig_adjust-mean_wave)/std_wave)
     phis = scipy.stats.norm.cdf(sig_sort)
-    A2 = -n_sig-1/n_sig*np.sum((2*np.arange(1, n_sig+1)-1)*np.log(phis)+(2*(n_sig-np.arange(1, n_sig+1))+1)*np.log(1-phis))
-    A2Star = A2*(1+4/n_sig-25/n_sig**2)
-    print(A2Star, A2_cut)
+    xs = np.arange(1, n_sig+1)
+    A2 = -n_sig - 1/n_sig*np.sum((2*xs - 1)*np.log(phis) + (2*(n_sig - xs) + 1)*np.log(1 - phis))
+    A2Star = A2*(1 + 4/n_sig - 25/n_sig**2)
+    if verbose:
+        print(A2Star, A2_cut)
 
-    test1 = np.abs(mean_wave)/std_wave < sig_thresh
-    test2 = np.abs(std_wave-1.)/std_std_wave < sig_thresh
+    mean_stat = np.abs(mean_wave)/std_wave*np.sqrt(n_sig)
+    std_stat = np.abs(std_wave - 1.)/std_std_wave
+    test1 = mean_stat  < sig_thresh
+    test2 = std_stat < sig_thresh
     test3 = A2Star < A2_cut  # should be less than cutoff value
 
     # check mean and variance
@@ -37,4 +41,4 @@ def unit_normal_battery(signal, mult=1., sig_thresh=5., A2_cut=2.28, do_assert=T
         assert test2
         assert test3
 
-    return test1 and test2 and test3, A2Star, np.abs(mean_wave)/std_wave, np.abs(std_wave-1.)/std_std_wave
+    return test1 and test2 and test3, A2Star, mean_stat, std_stat
