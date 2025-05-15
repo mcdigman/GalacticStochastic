@@ -101,7 +101,7 @@ class NoiseModelManager(StateManager):
 
 
             # use higher estimate of galactic bg
-            SAET_tot_upper = self.bgd.get_S_below_high(self.SAET_m, self.wc, self.ic.smooth_lengthf[self.itrn], filter_periods, period_list)
+            SAET_tot_upper = self.bgd.get_S_below_high(self.SAET_m, self.ic.smooth_lengthf[self.itrn], filter_periods, period_list)
             self.noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_upper, self.wc, prune=True)
 
             SAET_tot_upper = None
@@ -110,7 +110,7 @@ class NoiseModelManager(StateManager):
             # make sure this will always predict >= snrs to the actual spectrum in use
             # use lower estimate of galactic bg
             filter_periods = not self.stat_only
-            SAET_tot_lower = self.bgd.get_S_below_low(self.SAET_m, self.wc, self.ic.smooth_lengthf_fix, filter_periods, period_list)
+            SAET_tot_lower = self.bgd.get_S_below_low(self.SAET_m, self.ic.smooth_lengthf_fix, filter_periods, period_list)
             SAET_tot_lower = np.min([SAET_tot_lower, self.noise_upper.SAET], axis=0)
             self.noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_lower, self.wc, prune=True)
             SAET_tot_lower = None

@@ -143,14 +143,16 @@ class BGDecomposition():
         """
         self.galactic_below[:] = 0.
 
-    def get_S_below_high(self, S_mean, wc, smooth_lengthf, filter_periods, period_list, bypass_check=False):
+    def get_S_below_high(self, S_mean, smooth_lengthf, filter_periods, period_list):
         """get the upper estimate of the galactic power spectrum"""
-        S, _, _, _, _ = get_SAET_cyclostationary_mean(self.get_galactic_below_high(bypass_check=bypass_check), S_mean, wc, smooth_lengthf=smooth_lengthf, filter_periods=filter_periods, period_list=period_list)
+        galactic_loc = self.get_galactic_below_high(bypass_check=True)
+        S, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_loc, S_mean, self.wc, smooth_lengthf, filter_periods, period_list=period_list)
         return S
 
-    def get_S_below_low(self, S_mean, wc, smooth_lengthf, filter_periods, period_list, bypass_check=False):
+    def get_S_below_low(self, S_mean, smooth_lengthf, filter_periods, period_list):
         """get the lower estimate of the galactic power spectrum"""
-        S, _, _, _, _ = get_SAET_cyclostationary_mean(self.get_galactic_below_low(bypass_check=bypass_check), S_mean, wc, smooth_lengthf=smooth_lengthf, filter_periods=filter_periods, period_list=period_list)
+        galactic_loc = self.get_galactic_below_low(bypass_check=True)
+        S, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_loc, S_mean, self.wc, smooth_lengthf, filter_periods, period_list=period_list)
         return S
 
     def add_undecided(self, listT_temp, NUTs_temp, waveT_temp):
