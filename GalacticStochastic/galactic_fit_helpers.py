@@ -25,19 +25,19 @@ def filter_periods_fft(r_mean, Nt_loc, period_list, wc):
     """filter to a specific set of periods using an fft, period_list is in multiples of wc.Tobs/gc.SECSYEAR"""
 
     # get the same number of frequencies as the input r
-    NC = r_mean.shape[1]
+    NC_loc = r_mean.shape[1]
 
     # time and angular frequency grids
     ts = np.arange(0, Nt_loc)*wc.DT
     wts = 2*np.pi/gc.SECSYEAR*ts
 
     # places to store results
-    r = np.zeros((wc.Nt, wc.NC))
-    amp_got = np.zeros((len(period_list), wc.NC))
-    angle_got = np.zeros((len(period_list), wc.NC))
+    r = np.zeros((wc.Nt, NC_loc))
+    amp_got = np.zeros((len(period_list), NC_loc))
+    angle_got = np.zeros((len(period_list), NC_loc))
 
     # iterate over input frequencies
-    for itrc in range(NC):
+    for itrc in range(NC_loc):
         res_fft = fft.rfft(r_mean[:, itrc]-1.)*2/Nt_loc
         abs_fft = np.abs(res_fft)
         angle_fft = -np.angle(res_fft)

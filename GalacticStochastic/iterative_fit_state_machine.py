@@ -1,4 +1,4 @@
-"""run iterative processing of galactic background"""
+"""State machine that handles the state of the iterator, deciding whether it has converged or not"""
 
 import numpy as np
 
@@ -6,9 +6,12 @@ from GalacticStochastic.state_manager import StateManager
 
 
 class IterativeFitState(StateManager):
+    """State machine that handles the state of the iterator"""
     def __init__(self, ic):
+        """create the state machine object"""
         self.ic = ic
 
+        #for storing past states
         self.bright_converged = np.zeros(ic.max_iterations+1, dtype=np.bool_)
         self.faint_converged = np.zeros(ic.max_iterations+1, dtype=np.bool_)
         self.do_faint_check = np.zeros(ic.max_iterations+1, dtype=np.bool_)
@@ -38,43 +41,56 @@ class IterativeFitState(StateManager):
         self.itrn = 0
 
     def set_bright_state_request(self, do_faint_check, bright_converged, faint_converged, force_converge):
+        """Set what we want the state to be after bright_convergence_decision"""
         self.bright_state_request = (do_faint_check, bright_converged, faint_converged, force_converge)
 
     def get_bright_state_request(self):
+        """Get what we wanted the state to be after bright_convergence_decision"""
         return self.bright_state_request
 
     def set_faint_state_request(self, do_faint_check, bright_converged, faint_converged, force_converge):
+        """Set what we want the state to be after faint_convergence_decision"""
         self.faint_state_request = (do_faint_check, bright_converged, faint_converged, force_converge)
 
     def get_faint_state_request(self):
+        """Get what we want the state to be after faint_convergence_decision"""
         return self.faint_state_request
 
     def get_noise_safe_lower(self):
+        """ Get whether the lower noise background would need to be updated to handle the most recent state change"""
         return self.noise_safe_lower
 
     def get_noise_safe_upper(self):
+        """ Get whether the upper noise background would need to be updated to handle the most recent state change"""
         return self.noise_safe_upper
 
     def advance_state(self):
+        """Set the current state for the next iteration to be the state requested after faint_convergence_decision"""
         self.current_state = self.faint_state_request
         self.itrn += 1
 
     def get_state(self):
+        """Get the current state of the state machine"""
         return self.current_state
 
     def get_faint_converged(self):
+        """Get whether the faint binaries are converged"""
         return self.current_state[2]
 
     def get_bright_converged(self):
+        """Get whether the bright binaries are converged"""
         return self.current_state[1]
 
     def get_do_faint_check(self):
+        """Get whether the next iteration is a check iteration for the faint background"""
         return self.current_state[0]
 
     def get_force_converge(self):
+        """Get whether we are trying to force convergence"""
         return self.current_state[3]
 
     def log_state(self):
+        """store the state in arrays for diagnostic purposes"""
         (do_faint_check, bright_converged, faint_converged, force_converge) = self.current_state
 
         self.bright_converged[self.itrn] = bright_converged
@@ -100,6 +116,7 @@ class IterativeFitState(StateManager):
         self.noise_safe_upper_log[self.itrn] = self.noise_safe_lower
 
     def bright_convergence_decision(self, bis):
+        """Make a decision about whether the bright binaries are converged; needs a BinaryInclusionState object"""
         (do_faint_check_in, bright_converged_in, faint_converged_in, force_converge_in) = self.get_state()
         noise_safe = True
 
@@ -138,6 +155,7 @@ class IterativeFitState(StateManager):
         return noise_safe
 
     def faint_convergence_decision(self, bis):
+        """Make a decision about whether the faint binaries are converged; needs a BinaryInclusionState object"""
         (do_faint_check_in, bright_converged_in, faint_converged_in, force_converge_in) = self.get_bright_state_request()
 
         if not faint_converged_in or do_faint_check_in:
@@ -176,7 +194,7 @@ class IterativeFitState(StateManager):
         return noise_safe
 
     def state_check(self):
-        """anything that needs to be checked about the state"""
+        """check some things we expect to be true about the state given current rules"""
         assert self.get_do_faint_check() == self.do_faint_check[self.itrn]
         assert self.get_bright_converged() == self.bright_converged[self.itrn]
         if self.do_faint_check[self.itrn]:
@@ -184,8 +202,8 @@ class IterativeFitState(StateManager):
 
     def loop_finalize(self):
         """Perform any logic desired after convergence has been achieved and the loop ends"""
-        pass
+        return
 
     def print_report(self):
         """Do any printing desired after convergence has been achieved and the loop ends"""
-        pass
+        return

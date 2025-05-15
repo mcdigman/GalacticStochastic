@@ -52,7 +52,7 @@ if __name__ == '__main__':
     SAET_m = instrument_noise_AET_wdm_m(lc, wc)
     SAE_offset = 1.*SAET_m[:, 0]
 
-    r_tots = np.zeros((nk, wc.Nt, wc.NC))
+    r_tots = np.zeros((nk, wc.Nt, SAET_m.shape[-1]))
 
     for itrk in range(0, nk):
         _, galactic_below_high = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_mins[itrk], nt_maxs[itrk], stat_only)

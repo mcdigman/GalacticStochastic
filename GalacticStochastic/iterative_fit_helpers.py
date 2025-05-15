@@ -12,6 +12,23 @@ from LisaWaveformTools.instrument_noise import \
 IterationConfig = namedtuple('IterationConfig', ['max_iterations', 'snr_thresh', 'snr_min', 'snr_cut_bright', 'smooth_lengthf'])
 
 
+def run_binary_coadd(itrb, faints_in, waveform_model, noise_upper, snrs_upper, snrs_tot_upper, itrn, galactic_below, galactic_undecided, brights, wc, params_gb, snr_min, snr_cut_bright):
+    if not faints_in[itrb]:
+        waveform_model.update_params(params_gb[itrb].copy())
+        listT_temp, waveT_temp, NUTs_temp = waveform_model.get_unsorted_coeffs()
+        snrs_upper[itrn, itrb] = noise_upper.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp)
+        snrs_tot_upper[itrn, itrb] = np.linalg.norm(snrs_upper[itrn, itrb])
+        if itrn == 0 and snrs_tot_upper[0, itrb] < snr_min:
+            faints_in[itrb] = True
+            for itrc in range(wc.NC):
+                galactic_below[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+        elif snrs_tot_upper[itrn, itrb] < snr_cut_bright:
+            for itrc in range(wc.NC):
+                galactic_undecided[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+        else:
+            brights[itrn, itrb] = True
+
+
 def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveform_model, params_gb, snrs_tot_upper, galactic_below, SAET_m):
     # TODO make snr_cut_bright and smooth_lengthf an array as a function of iteration
     # TODO make NC controllable; probably not much point in getting T channel snrs
@@ -43,20 +60,3 @@ def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveform_model, 
         SAET_tot[itrn+1], _, _, _, _ = get_S_cyclo(galactic_below_high, SAET_m, wc, ic.smooth_lengthf[itrn], False, period_list=())
 
     return galactic_below_high, galactic_below, SAET_tot, brights, snrs_upper, snrs_tot_upper, noise_upper
-
-
-def run_binary_coadd(itrb, faints_in, waveform_model, noise_upper, snrs_upper, snrs_tot_upper, itrn, galactic_below, galactic_undecided, brights, wc, params_gb, snr_min, snr_cut_bright):
-    if not faints_in[itrb]:
-        waveform_model.update_params(params_gb[itrb].copy())
-        listT_temp, waveT_temp, NUTs_temp = waveform_model.get_unsorted_coeffs()
-        snrs_upper[itrn, itrb] = noise_upper.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp)
-        snrs_tot_upper[itrn, itrb] = np.linalg.norm(snrs_upper[itrn, itrb])
-        if itrn == 0 and snrs_tot_upper[0, itrb] < snr_min:
-            faints_in[itrb] = True
-            for itrc in range(wc.NC):
-                galactic_below[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
-        elif snrs_tot_upper[itrn, itrb] < snr_cut_bright:
-            for itrc in range(wc.NC):
-                galactic_undecided[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
-        else:
-            brights[itrn, itrb] = True

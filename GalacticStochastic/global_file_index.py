@@ -177,7 +177,7 @@ def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, stat_
 
     hf_in.close()
 
-    return argbinmap, (galactic_below + galactic_undecided).reshape((wc.Nt, wc.Nf, wc.NC))
+    return argbinmap, (galactic_below + galactic_undecided).reshape((wc.Nt, wc.Nf, galactic_below.shape[-1]))
 
 
 def store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, n_bin_use, SAET_m, snrs_tot_upper):
@@ -218,7 +218,7 @@ def store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_belo
     hf_out.close()
 
 
-def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max, bgd, period_list, n_bin_use, SAET_m, SAE_fin, stat_only, snrs_tot_upper, n_full_converged, argbinmap, faints_old, faints_cur, brights, snr_min_in):
+def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max, bgd, period_list, n_bin_use, SAET_m, SAE_fin, stat_only, snrs_tot_upper, n_full_converged, argbinmap, faints_old, faints_cur, brights):
     filename_gb_init = get_preliminary_filename(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
     filename_gb_common = get_common_noise_filename(galaxy_dir, ic.snr_thresh, wc)
     filename_out = get_processed_gb_filename(galaxy_dir, stat_only, ic.snr_thresh, wc, nt_min, nt_max)
@@ -258,8 +258,8 @@ def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max,
     for key in ic._fields:
         hf_out['ic'].create_dataset(key, data=getattr(ic, key))
 
-    hf_out.create_group('ic_preliminary')
-    hf_out['ic_preliminary'].create_dataset('snr_min', data=snr_min_in)
+    #hf_out.create_group('ic_preliminary')
+    #hf_out['ic_preliminary'].create_dataset('snr_min', data=snr_min_in)
 
     #for key in ic_preliminary._fields:
     #    hf_out['ic_preliminary'].create_dataset(key, data=getattr(ic_preliminary, key))

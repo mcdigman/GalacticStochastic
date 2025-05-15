@@ -20,6 +20,8 @@ class NoiseModelManager(StateManager):
         self.stat_only = stat_only
         self.nt_min = nt_min
         self.nt_max = nt_max
+
+
         self.itrn = 0
 
         self.idx_SAET_save = np.hstack([np.arange(0, min(10, ic.max_iterations)), np.arange(min(10, ic.max_iterations), 4), ic.max_iterations-1])
@@ -29,10 +31,10 @@ class NoiseModelManager(StateManager):
         self.SAET_tots_lower = np.zeros((self.idx_SAET_save.size, wc.Nt, wc.Nf, 3))
         self.SAET_fin = np.zeros((wc.Nt, wc.Nf, 3))
 
-        SAET_tot_upper = np.zeros((wc.Nt, wc.Nf, wc.NC))
+        SAET_tot_upper = np.zeros((wc.Nt, wc.Nf, self.bgd.NC_gal))
         SAET_tot_upper[:] = self.SAET_m
 
-        SAET_tot_lower = np.zeros((wc.Nt, wc.Nf, wc.NC))
+        SAET_tot_lower = np.zeros((wc.Nt, wc.Nf, self.bgd.NC_gal))
         SAET_tot_lower[:] = self.SAET_m
         if self.idx_SAET_save[self.itr_save] == 0:
             self.SAET_tots_upper[0] = SAET_tot_upper[:, :, :]
@@ -61,14 +63,14 @@ class NoiseModelManager(StateManager):
     def state_check(self):
         """Perform any sanity checks that should be performed at the end of each iteration"""
         self.bgd.state_check()
-        pass
+        return
 
     def print_report(self):
         """Do any printing desired after convergence has been achieved and the loop ends"""
         res_mask = ((self.noise_upper.SAET[:, :, 0]-self.SAET_m[:, 0]).mean(axis=0) > 0.1*self.SAET_m[:, 0]) & (self.SAET_m[:,0] > 0.)
         galactic_below_high = self.bgd.get_galactic_below_high()
         noise_divide = np.sqrt(self.noise_upper.SAET[self.nt_min:self.nt_max, res_mask, :2] - self.SAET_m[res_mask, :2])
-        points_res = galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.wc.NC)[self.nt_min:self.nt_max, res_mask, :2] / noise_divide
+        points_res = galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.bgd.NC_gal)[self.nt_min:self.nt_max, res_mask, :2] / noise_divide
         n_points = points_res.size
         noise_divide = None
         galactic_below_high = None

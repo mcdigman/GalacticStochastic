@@ -52,6 +52,34 @@ def instrument_noise_AET(f, lc, wc):
 
 
 #@njit()
+def instrument_noise_AET_wdm_loop(phif, lc, wc):
+    """helper to get the instrument noise for wdm"""
+    # realistically this really only needs run once and is fast enough without jit
+    # TODO check normalization
+    # TODO get first and last bins correct
+    #nrm =   np.sqrt(2*wc.Nf*wc.dt)*np.linalg.norm(phif)
+    #nrm =   2*np.sqrt(2*wc.dt)*np.linalg.norm(phif)
+    nrm = np.sqrt(12318/wc.Nf)*np.linalg.norm(phif)
+    print('nrm instrument', nrm)
+    phif /= nrm
+    phif2 = phif**2
+
+    SAET_M = np.zeros((wc.Nf, wc.NC))
+    half_Nt = wc.Nt//2
+    fs_long = np.arange(-half_Nt, half_Nt+wc.Nf*half_Nt)/wc.Tobs
+    # prevent division by 0
+    fs_long[half_Nt] = fs_long[half_Nt+1]
+    SAET_long = instrument_noise_AET(fs_long, lc, wc)
+    # excise the f=0 point
+    SAET_long[half_Nt, :] = 0.
+    # apply window in loop
+    for m in range(0, wc.Nf):
+        SAET_M[m] = np.dot(phif2, SAET_long[m*half_Nt:(m+2)*half_Nt])
+
+    return SAET_M
+
+
+#@njit()
 def instrument_noise_AET_wdm_m(lc, wc):
     """
     get the instrument noise curve as a function of frequency for the wdm
@@ -81,32 +109,40 @@ def instrument_noise_AET_wdm_m(lc, wc):
     return SAET_m
 
 
-#@njit()
-def instrument_noise_AET_wdm_loop(phif, lc, wc):
-    """helper to get the instrument noise for wdm"""
-    # realistically this really only needs run once and is fast enough without jit
-    # TODO check normalization
-    # TODO get first and last bins correct
-    #nrm =   np.sqrt(2*wc.Nf*wc.dt)*np.linalg.norm(phif)
-    #nrm =   2*np.sqrt(2*wc.dt)*np.linalg.norm(phif)
-    nrm = np.sqrt(12318/wc.Nf)*np.linalg.norm(phif)
-    print('nrm instrument', nrm)
-    phif /= nrm
-    phif2 = phif**2
+@njit()
+def get_sparse_snr_helper(NUs, lists_pixels, wavelet_data, nt_min, nt_max, wc, inv_chol_SAET):
+    """
+    calculates the S/N ratio for each TDI channel for a given waveform.
 
-    SAET_M = np.zeros((wc.Nf, wc.NC))
-    half_Nt = wc.Nt//2
-    fs_long = np.arange(-half_Nt, half_Nt+wc.Nf*half_Nt)/wc.Tobs
-    # prevent division by 0
-    fs_long[half_Nt] = fs_long[half_Nt+1]
-    SAET_long = instrument_noise_AET(fs_long, lc, wc)
-    # excise the f=0 point
-    SAET_long[half_Nt, :] = 0.
-    # apply window in loop
-    for m in range(0, wc.Nf):
-        SAET_M[m] = np.dot(phif2, SAET_long[m*half_Nt:(m+2)*half_Nt])
+    Parameters
+    ----------
+    NUs : numpy.ndarray
+        number of wavelet coefficients used in sparse representation
+        shape: number of TDI channels
+    lists_pixels
+    wavelet_data
+    nt_min
+    nt_max
+    wc : namedtuple
+        constants for WDM wavelet basis also from wdm_config.py
+    inv_chol_SAET :
 
-    return SAET_M
+
+    Returns
+    -------
+
+    """
+    if nt_max == -1:
+        nt_max = wc.Nt
+    snr2s = np.zeros(wc.NC)
+    for itrc in range(0, wc.NC):
+        i_itrs = np.mod(lists_pixels[itrc, 0:NUs[itrc]], wc.Nf).astype(np.int64)
+        j_itrs = (lists_pixels[itrc, 0:NUs[itrc]]-i_itrs)//wc.Nf
+        for mm in range(0, NUs[itrc]):
+            if nt_min <= j_itrs[mm] < nt_max:
+                mult = inv_chol_SAET[j_itrs[mm], i_itrs[mm], itrc]*wavelet_data[itrc, mm]
+                snr2s[itrc] += mult*mult
+    return np.sqrt(snr2s)
 
 
 #@jitclass([('prune', nb.b1), ('SAET', nb.float64[:, :, :]), ('inv_SAET', nb.float64[:, :, :]), ('inv_chol_SAET', nb.float64[:, :, :]), ('chol_SAET', nb.float64[:, :, :])])
@@ -322,39 +358,3 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
         if nt_max == -1:
             nt_max = self.wc.Nt
         return get_sparse_snr_helper(NUs, lists_pixels, wavelet_data, nt_min, nt_max, self.wc, self.inv_chol_SAET)
-
-
-@njit()
-def get_sparse_snr_helper(NUs, lists_pixels, wavelet_data, nt_min, nt_max, wc, inv_chol_SAET):
-    """
-    calculates the S/N ratio for each TDI channel for a given waveform.
-
-    Parameters
-    ----------
-    NUs : numpy.ndarray
-        number of wavelet coefficients used in sparse representation
-        shape: number of TDI channels
-    lists_pixels
-    wavelet_data
-    nt_min
-    nt_max
-    wc : namedtuple
-        constants for WDM wavelet basis also from wdm_config.py
-    inv_chol_SAET :
-
-
-    Returns
-    -------
-
-    """
-    if nt_max == -1:
-        nt_max = wc.Nt
-    snr2s = np.zeros(wc.NC)
-    for itrc in range(0, wc.NC):
-        i_itrs = np.mod(lists_pixels[itrc, 0:NUs[itrc]], wc.Nf).astype(np.int64)
-        j_itrs = (lists_pixels[itrc, 0:NUs[itrc]]-i_itrs)//wc.Nf
-        for mm in range(0, NUs[itrc]):
-            if nt_min <= j_itrs[mm] < nt_max:
-                mult = inv_chol_SAET[j_itrs[mm], i_itrs[mm], itrc]*wavelet_data[itrc, mm]
-                snr2s[itrc] += mult*mult
-    return np.sqrt(snr2s)

@@ -9,24 +9,24 @@ class StateManager(ABC):
     @abstractmethod
     def advance_state(self):
         """Handle any logic necessary to advance the state of the object to the next iteration"""
-        pass
+        return
 
     @abstractmethod
     def log_state(self):
         """Perform any internal logging that should be done after advance_state is run for all objects for the iteration"""
-        pass
+        return
 
     @abstractmethod
     def state_check(self):
         """Perform any sanity checks that should be performed at the end of each iteration"""
-        pass
+        return
 
     @abstractmethod
     def loop_finalize(self):
         """Perform any logic desired after convergence has been achieved and the loop ends"""
-        pass
+        return
 
     @abstractmethod
     def print_report(self):
         """Do any printing desired after convergence has been achieved and the loop ends"""
-        pass
+        return

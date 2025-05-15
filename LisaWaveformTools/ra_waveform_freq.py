@@ -6,6 +6,40 @@ from numba import njit, prange
 CLIGHT = 2.99792458e8     # Speed of light in m/s
 AU = 1.4959787e11         # Astronomical Unit in meters
 
+
+@njit()
+def get_tensor_basis(phi, costh):
+    """get tensor basis"""
+    # Calculate cos and sin of sky position, inclination, polarization
+    sinth = np.sqrt(1.0-costh**2)
+    cosph = np.cos(phi)
+    sinph = np.sin(phi)
+
+    kv = np.zeros(3)
+    u = np.zeros(3)
+    v = np.zeros(3)
+
+    kv[0] = -sinth*cosph
+    kv[1] = -sinth*sinph
+    kv[2] = -costh
+
+    u[0] =  sinph
+    u[1] = -cosph
+    u[2] =  0.
+
+    v[0] =  -costh*cosph
+    v[1] =  -costh*sinph
+    v[2] = sinth
+
+    eplus = np.zeros((3, 3))
+    ecross = np.zeros((3, 3))
+
+    for i in range(0, 3):
+        for j in range(0, 3):
+            eplus[i, j]  = u[i]*u[j] - v[i]*v[j]
+            ecross[i, j] = u[i]*v[j] + v[i]*u[j]
+    return kv, eplus, ecross
+
 #TODO eliminate need for constants by storing e.g. Larm_AU
 
 
@@ -190,40 +224,6 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
         for itrc in range(0, 3):
             RRs[itrc, n] = FpRs[itrc] - FcIs[itrc]
             IIs[itrc, n] = FcRs[itrc] + FpIs[itrc]
-
-
-@njit()
-def get_tensor_basis(phi, costh):
-    """get tensor basis"""
-    # Calculate cos and sin of sky position, inclination, polarization
-    sinth = np.sqrt(1.0-costh**2)
-    cosph = np.cos(phi)
-    sinph = np.sin(phi)
-
-    kv = np.zeros(3)
-    u = np.zeros(3)
-    v = np.zeros(3)
-
-    kv[0] = -sinth*cosph
-    kv[1] = -sinth*sinph
-    kv[2] = -costh
-
-    u[0] =  sinph
-    u[1] = -cosph
-    u[2] =  0.
-
-    v[0] =  -costh*cosph
-    v[1] =  -costh*sinph
-    v[2] = sinth
-
-    eplus = np.zeros((3, 3))
-    ecross = np.zeros((3, 3))
-
-    for i in range(0, 3):
-        for j in range(0, 3):
-            eplus[i, j]  = u[i]*u[j] - v[i]*v[j]
-            ecross[i, j] = u[i]*v[j] + v[i]*u[j]
-    return kv, eplus, ecross
 
 
 @njit()

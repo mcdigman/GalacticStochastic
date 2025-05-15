@@ -15,91 +15,6 @@ StationaryWaveformTime = namedtuple('StationaryWaveformTime', ['T', 'PT', 'FT', 
 SpacecraftChannels = namedtuple('SpacecraftChannels', ['T', 'RR', 'II', 'dRR', 'dII'])
 
 
-# TODO do consistency checks
-class BinaryTimeWaveformAmpFreqD():
-    """class to store a binary waveform in time domain and update for search
-        assuming input binary format based on amplitude, frequency, and frequency derivative"""
-    def __init__(self, params, NT_min, NT_max, lc, wc, n_pad_T, freeze_limits=False):
-        """initalize the object"""
-        self.params = params
-        self.n_pad_T = n_pad_T
-        self.NT_min = NT_min-self.n_pad_T
-        self.NT_max = NT_max+self.n_pad_T
-        self.NT = self.NT_max-self.NT_min
-        self.freeze_limits = freeze_limits
-        self.lc = lc
-        self.wc = wc
-
-        # TODO ensure this handles padding self consistently
-        self.nt_low = self.NT_min
-        self.nt_high = self.NT_max
-
-        self.nt_range = self.nt_high-self.nt_low
-
-        self.TTs = self.wc.DT*np.arange(self.nt_low, self.nt_high)
-
-        AmpTs = np.zeros(self.NT)
-        PPTs = np.zeros(self.NT)
-        FTs = np.zeros(self.NT)
-        FTds = np.zeros(self.NT)
-
-        self.waveform = StationaryWaveformTime(self.TTs, PPTs, FTs, FTds, AmpTs)
-
-        RRs = np.zeros((self.wc.NC, self.NT))
-        IIs = np.zeros((self.wc.NC, self.NT))
-        dRRs = np.zeros((self.wc.NC, self.NT))
-        dIIs = np.zeros((self.wc.NC, self.NT))
-
-        self.spacecraft_channels = SpacecraftChannels(self.TTs, RRs, IIs, dRRs, dIIs)
-
-        self.xas = np.zeros(self.NT)
-        self.yas = np.zeros(self.NT)
-        self.zas = np.zeros(self.NT)
-        self.xis = np.zeros(self.NT)
-        self.kdotx = np.zeros(self.NT)
-
-        _, _, _, self.xas[:], self.yas[:], self.zas[:] = spacecraft_vec(self.TTs, self.lc)
-
-        AET_AmpTs = np.zeros((self.wc.NC, self.NT))
-        AET_PPTs = np.zeros((self.wc.NC, self.NT))
-        AET_FTs = np.zeros((self.wc.NC, self.NT))
-        AET_FTds = np.zeros((self.wc.NC, self.NT))
-
-        self.AET_waveform = StationaryWaveformTime(self.TTs, AET_PPTs, AET_FTs, AET_FTds, AET_AmpTs)
-
-        self.update_params(params)
-
-    def update_params(self, params):
-        self.params = params
-        self.update_intrinsic()
-        self.update_extrinsic()
-
-    def update_intrinsic(self):
-        """get amplitude and phase for taylorT3"""
-        amp = self.params[0]
-        costh = np.cos(np.pi/2 - self.params[1])  # TODO check
-        phi = self.params[2]
-        freq0 = self.params[3]
-        freqD = self.params[4]
-        phi0 = self.params[6] + np.pi
-
-        kv, _, _ = get_tensor_basis(phi, costh)  # TODO check intrinsic extrinsic separation here
-        get_xis_inplace(kv, self.TTs, self.xas, self.yas, self.zas, self.xis, self.lc)
-
-        AmpFreqDeriv_inplace(self.waveform, amp, phi0, freq0, freqD, self.xis)
-
-    def update_extrinsic(self):
-        # Calculate cos and sin of sky position, inclination, polarization
-        costh = np.cos(np.pi/2-self.params[1])
-        phi = self.params[2]
-        cosi = np.cos(self.params[5])
-        psi = self.params[7]
-
-        # TODO fix F_min and nf_range
-        RAantenna_inplace(self.spacecraft_channels, cosi, psi, phi, costh, self.TTs, self.waveform.FT, 0, self.NT, self.kdotx, self.lc)
-        ExtractAmpPhase_inplace(self.spacecraft_channels, self.AET_waveform, self.waveform, self.NT, self.lc, self.wc)
-
-
 @njit(fastmath=True)
 def ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, NT, lc, wc):
     """get the amplitude and phase for LISA"""
@@ -189,3 +104,88 @@ def AmpFreqDeriv_inplace(waveform, Amp, phi0, FI, FD0, TS):
         FDS[n] = FD0
         PS[n] = -phi0+2*np.pi*FI*t+np.pi*FD0*t**2
         AS[n] = Amp
+
+
+# TODO do consistency checks
+class BinaryTimeWaveformAmpFreqD():
+    """class to store a binary waveform in time domain and update for search
+        assuming input binary format based on amplitude, frequency, and frequency derivative"""
+    def __init__(self, params, NT_min, NT_max, lc, wc, n_pad_T, freeze_limits=False):
+        """initalize the object"""
+        self.params = params
+        self.n_pad_T = n_pad_T
+        self.NT_min = NT_min-self.n_pad_T
+        self.NT_max = NT_max+self.n_pad_T
+        self.NT = self.NT_max-self.NT_min
+        self.freeze_limits = freeze_limits
+        self.lc = lc
+        self.wc = wc
+
+        # TODO ensure this handles padding self consistently
+        self.nt_low = self.NT_min
+        self.nt_high = self.NT_max
+
+        self.nt_range = self.nt_high-self.nt_low
+
+        self.TTs = self.wc.DT*np.arange(self.nt_low, self.nt_high)
+
+        AmpTs = np.zeros(self.NT)
+        PPTs = np.zeros(self.NT)
+        FTs = np.zeros(self.NT)
+        FTds = np.zeros(self.NT)
+
+        self.waveform = StationaryWaveformTime(self.TTs, PPTs, FTs, FTds, AmpTs)
+
+        RRs = np.zeros((self.wc.NC, self.NT))
+        IIs = np.zeros((self.wc.NC, self.NT))
+        dRRs = np.zeros((self.wc.NC, self.NT))
+        dIIs = np.zeros((self.wc.NC, self.NT))
+
+        self.spacecraft_channels = SpacecraftChannels(self.TTs, RRs, IIs, dRRs, dIIs)
+
+        self.xas = np.zeros(self.NT)
+        self.yas = np.zeros(self.NT)
+        self.zas = np.zeros(self.NT)
+        self.xis = np.zeros(self.NT)
+        self.kdotx = np.zeros(self.NT)
+
+        _, _, _, self.xas[:], self.yas[:], self.zas[:] = spacecraft_vec(self.TTs, self.lc)
+
+        AET_AmpTs = np.zeros((self.wc.NC, self.NT))
+        AET_PPTs = np.zeros((self.wc.NC, self.NT))
+        AET_FTs = np.zeros((self.wc.NC, self.NT))
+        AET_FTds = np.zeros((self.wc.NC, self.NT))
+
+        self.AET_waveform = StationaryWaveformTime(self.TTs, AET_PPTs, AET_FTs, AET_FTds, AET_AmpTs)
+
+        self.update_params(params)
+
+    def update_params(self, params):
+        self.params = params
+        self.update_intrinsic()
+        self.update_extrinsic()
+
+    def update_intrinsic(self):
+        """get amplitude and phase for taylorT3"""
+        amp = self.params[0]
+        costh = np.cos(np.pi/2 - self.params[1])  # TODO check
+        phi = self.params[2]
+        freq0 = self.params[3]
+        freqD = self.params[4]
+        phi0 = self.params[6] + np.pi
+
+        kv, _, _ = get_tensor_basis(phi, costh)  # TODO check intrinsic extrinsic separation here
+        get_xis_inplace(kv, self.TTs, self.xas, self.yas, self.zas, self.xis, self.lc)
+
+        AmpFreqDeriv_inplace(self.waveform, amp, phi0, freq0, freqD, self.xis)
+
+    def update_extrinsic(self):
+        # Calculate cos and sin of sky position, inclination, polarization
+        costh = np.cos(np.pi/2-self.params[1])
+        phi = self.params[2]
+        cosi = np.cos(self.params[5])
+        psi = self.params[7]
+
+        # TODO fix F_min and nf_range
+        RAantenna_inplace(self.spacecraft_channels, cosi, psi, phi, costh, self.TTs, self.waveform.FT, 0, self.NT, self.kdotx, self.lc)
+        ExtractAmpPhase_inplace(self.spacecraft_channels, self.AET_waveform, self.waveform, self.NT, self.lc, self.wc)

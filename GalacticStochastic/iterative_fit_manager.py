@@ -1,50 +1,29 @@
-"""run iterative processing of galactic background"""
+"""object to run everything related to the iterative processing of galactic background"""
 
 from time import perf_counter
 
 import numpy as np
 
-import GalacticStochastic.global_const as gc
-from GalacticStochastic.background_decomposition import BGDecomposition
-from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
-from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
-from GalacticStochastic.noise_manager import NoiseModelManager
 from GalacticStochastic.state_manager import StateManager
 
 
 class IterativeFitManager(StateManager):
-    def __init__(self, lc, wc, ic, SAET_m, galactic_below_in, snr_tots_in, snr_min_in, params_gb, nt_min, nt_max, stat_only):
+    """Iterative fit object that runs the iterative fitting procedure"""
+    def __init__(self, ic, fit_state, noise_manager, bis):
+        """"Create the iterative fit object"""
 
-        self.wc = wc
-        self.lc = lc
         self.ic = ic
-        self.SAET_m = SAET_m
 
         self.itrn = 0  # current iteration counter
 
         self.n_full_converged = ic.max_iterations-1
 
-        self.fit_state = IterativeFitState(self.ic)
-
-        galactic_floor = galactic_below_in.copy()
-        galactic_below_in = None
-        galactic_below = np.zeros_like(galactic_floor)
-        galactic_above = np.zeros((wc.Nt*wc.Nf, wc.NC))
-        galactic_undecided = np.zeros((wc.Nt*wc.Nf, wc.NC))
-
-        self.bgd = BGDecomposition(wc, wc.NC, galactic_floor, galactic_below, galactic_undecided, galactic_above)
-
-        galactic_below = None
-        galactic_floor = None
-        galactic_above = None
-        galactic_undecided = None
-
-        self.noise_manager = NoiseModelManager(ic, wc, self.fit_state, self.bgd, SAET_m, stat_only, nt_min, nt_max)
-
-        self.bis = BinaryInclusionState(self.wc, self.ic, self.lc, params_gb, snr_tots_in, snr_min_in, self.noise_manager, self.fit_state)
-
+        self.fit_state = fit_state
+        self.noise_manager = noise_manager
+        self.bis = bis
 
     def do_loop(self):
+        """Do the entire iterative fitting loop"""
         print('entered loop')
         ti = perf_counter()
         for itrn_loc in range(0, self.ic.max_iterations):
@@ -101,6 +80,7 @@ class IterativeFitManager(StateManager):
         self.noise_manager.loop_finalize()
 
     def check_done(self):
+        """Check whether the fitting procedure can bet stopped"""
         if self.fit_state.get_bright_converged() and self.fit_state.get_faint_converged():
             print('result fully converged at '+str(self.itrn)+', no further iterations needed')
             self.n_full_converged = self.itrn
