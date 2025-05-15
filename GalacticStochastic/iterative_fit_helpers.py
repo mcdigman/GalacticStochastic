@@ -5,8 +5,7 @@ from time import perf_counter
 
 import numpy as np
 
-from GalacticStochastic.galactic_fit_helpers import \
-    get_SAET_cyclostationary_mean
+from GalacticStochastic.galactic_fit_helpers import get_S_cyclo
 from LisaWaveformTools.instrument_noise import \
     DiagonalNonstationaryDenseInstrumentNoiseModel
 
@@ -41,7 +40,7 @@ def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveform_model, 
         galactic_below_high = (galactic_undecided + galactic_below).reshape((wc.Nt, wc.Nf, wc.NC))
 
 
-        SAET_tot[itrn+1], _, _, _, _ = get_SAET_cyclostationary_mean(galactic_below_high, SAET_m, wc, smooth_lengthf=ic.smooth_lengthf[itrn], filter_periods=False, period_list=())
+        SAET_tot[itrn+1], _, _, _, _ = get_S_cyclo(galactic_below_high, SAET_m, wc, ic.smooth_lengthf[itrn], False, period_list=())
 
     return galactic_below_high, galactic_below, SAET_tot, brights, snrs_upper, snrs_tot_upper, noise_upper
 

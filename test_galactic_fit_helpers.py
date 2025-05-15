@@ -8,8 +8,8 @@ import scipy.ndimage
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 import GalacticStochastic.global_const as gc
-from GalacticStochastic.galactic_fit_helpers import (
-    filter_periods_fft, get_SAET_cyclostationary_mean)
+from GalacticStochastic.galactic_fit_helpers import (filter_periods_fft,
+                                                     get_S_cyclo)
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
 # we  can use the same baise noise for most things and modulate it as necessary
@@ -126,8 +126,8 @@ def test_stationary_mean_scramble_invariance():
     SAET_m = np.full((wc.Nf, wc.NC), 1.)
 
     # get both SAETs
-    SAET_got1, _, _, _, _ = get_SAET_cyclostationary_mean(bg_here1, SAET_m, wc, 1., False, period_list=())
-    SAET_got2, _, _, _, _ = get_SAET_cyclostationary_mean(bg_here2, SAET_m, wc, 1., False, period_list=())
+    SAET_got1, _, _, _, _ = get_S_cyclo(bg_here1, SAET_m, wc, 1., False, period_list=())
+    SAET_got2, _, _, _, _ = get_S_cyclo(bg_here2, SAET_m, wc, 1., False, period_list=())
 
     # check for expected invariance
     assert np.allclose(SAET_got1, SAET_got2, atol=1.e-14, rtol=1.e-13)
@@ -178,7 +178,7 @@ def stationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, filte
     for itrc in range(0, wc.NC):
         SAET_m[:, itrc] = get_noise_model_helper(noise_models[itrc])
 
-    SAET_got, _, _, _, _ = get_SAET_cyclostationary_mean(bg_here, SAET_m, wc, smooth_lengthf, filter_periods, period_list=())
+    SAET_got, _, _, _, _ = get_S_cyclo(bg_here, SAET_m, wc, smooth_lengthf, filter_periods, period_list=())
 
     # replicate expected smoothed multiplier
     f_mult_smooth = np.zeros_like(f_mult)
@@ -247,7 +247,7 @@ def test_nonstationary_mean_faint_alternate(amp2_mult):
     for itrc in range(0, wc.NC):
         SAET_m[:, itrc] = get_noise_model_helper('white_equal')
 
-    _, _, _, amp_got, _ = get_SAET_cyclostationary_mean(bg_here, SAET_m, wc, smooth_lengthf, filter_periods, period_list=None)
+    _, _, _, amp_got, _ = get_S_cyclo(bg_here, SAET_m, wc, smooth_lengthf, filter_periods, period_list=None)
 
     _, amp_got1, _ = filter_periods_fft(t_mult1**2+1., wc.Nt, period_list, wc)
 
@@ -302,7 +302,7 @@ def test_nonstationary_mean_zero_case():
     for itrc in range(0, wc.NC):
         SAET_m[:, itrc] = get_noise_model_helper('white_faint')
 
-    SAET_got, rec_got, _, _, _ = get_SAET_cyclostationary_mean(bg_here, SAET_m, wc, smooth_lengthf, filter_periods, period_list=None)
+    SAET_got, rec_got, _, _, _ = get_S_cyclo(bg_here, SAET_m, wc, smooth_lengthf, filter_periods, period_list=None)
 
     assert np.all(rec_got > 0.)
 
@@ -369,7 +369,7 @@ def nonstationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, fi
     for itrc in range(0, wc.NC):
         SAET_m[:, itrc] = get_noise_model_helper(noise_models[itrc])
 
-    SAET_got, rec_got, _, amp_got, angle_got = get_SAET_cyclostationary_mean(bg_here, SAET_m, wc, smooth_lengthf, filter_periods, period_list=period_list2)
+    SAET_got, rec_got, _, amp_got, angle_got = get_S_cyclo(bg_here, SAET_m, wc, smooth_lengthf, filter_periods, period_list=period_list2)
 
     assert np.all(rec_got > 0.)
 

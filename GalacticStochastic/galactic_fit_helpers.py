@@ -90,7 +90,7 @@ def filter_periods_fft(r_mean, Nt_loc, period_list, wc):
     return r, amp_got, angle_got
 
 
-def get_SAET_cyclostationary_mean(
+def get_S_cyclo(
         galactic_below,
         SAET_m,
         wc,

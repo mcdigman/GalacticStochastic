@@ -2,8 +2,7 @@
 
 import numpy as np
 
-from GalacticStochastic.galactic_fit_helpers import \
-    get_SAET_cyclostationary_mean
+from GalacticStochastic.galactic_fit_helpers import get_S_cyclo
 
 
 class BGDecomposition():
@@ -146,13 +145,13 @@ class BGDecomposition():
     def get_S_below_high(self, S_mean, smooth_lengthf, filter_periods, period_list):
         """get the upper estimate of the galactic power spectrum"""
         galactic_loc = self.get_galactic_below_high(bypass_check=True)
-        S, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_loc, S_mean, self.wc, smooth_lengthf, filter_periods, period_list=period_list)
+        S, _, _, _, _ = get_S_cyclo(galactic_loc, S_mean, self.wc, smooth_lengthf, filter_periods, period_list=period_list)
         return S
 
     def get_S_below_low(self, S_mean, smooth_lengthf, filter_periods, period_list):
         """get the lower estimate of the galactic power spectrum"""
         galactic_loc = self.get_galactic_below_low(bypass_check=True)
-        S, _, _, _, _ = get_SAET_cyclostationary_mean(galactic_loc, S_mean, self.wc, smooth_lengthf, filter_periods, period_list=period_list)
+        S, _, _, _, _ = get_S_cyclo(galactic_loc, S_mean, self.wc, smooth_lengthf, filter_periods, period_list=period_list)
         return S
 
     def add_undecided(self, listT_temp, NUTs_temp, waveT_temp):

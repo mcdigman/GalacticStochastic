@@ -5,8 +5,8 @@ import numpy as np
 
 import GalacticStochastic.global_file_index as gfi
 from GalacticStochastic import config_helper
-from GalacticStochastic.galactic_fit_helpers import (
-    fit_gb_spectrum_evolve, get_SAET_cyclostationary_mean)
+from GalacticStochastic.galactic_fit_helpers import (fit_gb_spectrum_evolve,
+                                                     get_S_cyclo)
 from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
 
 mpl.rcParams['axes.linewidth'] = 1.2
@@ -60,7 +60,7 @@ if __name__ == '__main__':
 
         SAET_gal_smooth[itrk, 0, :] = SAET_gal[itrk, 0, :]
 
-        _, r_tots[itrk], SAET_mean_cur, _, _ = get_SAET_cyclostationary_mean(galactic_below_high, SAET_m, wc, smooth_targ_length, not stat_only, period_list=period_list, Nt_loc=wc.Nt)
+        _, r_tots[itrk], SAET_mean_cur, _, _ = get_S_cyclo(galactic_below_high, SAET_m, wc, smooth_targ_length, not stat_only, period_list=period_list, Nt_loc=wc.Nt)
         SAET_gal_smooth[itrk] = SAET_mean_cur
 
         for itrc in range(0, 2):
