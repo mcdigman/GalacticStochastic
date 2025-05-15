@@ -7,11 +7,8 @@ import numpy as np
 import GalacticStochastic.global_const as gc
 from GalacticStochastic.background_decomposition import BGDecomposition
 from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
-from GalacticStochastic.iterative_fit_helpers import new_noise_helper
 from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
-from GalacticStochastic.testing_tools import unit_normal_battery
-from LisaWaveformTools.instrument_noise import \
-    DiagonalNonstationaryDenseInstrumentNoiseModel
+from GalacticStochastic.noise_manager import NoiseModelManager
 from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 
 
@@ -29,6 +26,8 @@ class IterativeFitManager():
 
         # iteration to switch to fitting spectrum fully
 
+        # TODO make the input snr check optional and use controllable maximum and minimum frequencies
+        # TODO take BinaryInclusionState, BinaryWaveletAmpFreqDT, IterativeFitState, BGDecomposition, and DiagonalNonstationaryDenseInstrumentNoiseModel as arguments for modularity
         faints_in = (snr_tots_in < snr_min_in[0]) | (params_gb[:, 3] >= (wc.Nf-1)*wc.DF)
         self.argbinmap = np.argwhere(~faints_in).flatten()
         faints_old = faints_in[self.argbinmap]
@@ -43,32 +42,9 @@ class IterativeFitManager():
 
         faints_old = None
 
-        self.idx_SAET_save = np.hstack([np.arange(0, min(10, ic.max_iterations)), np.arange(min(10, ic.max_iterations), 4), ic.max_iterations-1])
-        self.itr_save = 0
-
-        self.SAET_tots_upper = np.zeros((self.idx_SAET_save.size, wc.Nt, wc.Nf, 3))
-        self.SAET_tots_lower = np.zeros((self.idx_SAET_save.size, wc.Nt, wc.Nf, 3))
-        self.SAET_fin = np.zeros((wc.Nt, wc.Nf, 3))
 
         params0 = self.params_gb[0].copy()
         self.waveform_manager = BinaryWaveletAmpFreqDT(params0.copy(), wc, self.lc)
-
-        SAET_tot_upper = np.zeros((wc.Nt, wc.Nf, wc.NC))
-        SAET_tot_upper[:] = self.SAET_m
-
-        SAET_tot_lower = np.zeros((wc.Nt, wc.Nf, wc.NC))
-        SAET_tot_lower[:] = self.SAET_m
-        if self.idx_SAET_save[self.itr_save] == 0:
-            self.SAET_tots_upper[0] = SAET_tot_upper[:, :, :]
-            self.SAET_tots_lower[0] = SAET_tot_lower[:, :, :]
-            self.itr_save += 1
-        SAET_tot_lower = np.min([SAET_tot_lower, SAET_tot_upper], axis=0)
-
-        self.noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_upper, wc, prune=True)
-        self.noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_lower, wc, prune=True)
-
-        SAET_tot_upper = None
-        SAET_tot_lower = None
 
         self.n_full_converged = ic.max_iterations-1
 
@@ -82,10 +58,13 @@ class IterativeFitManager():
 
         self.bgd = BGDecomposition(galactic_floor, galactic_below, galactic_undecided, galactic_above)
 
+
         galactic_below = None
         galactic_floor = None
         galactic_above = None
         galactic_undecided = None
+
+        self.noise_manager = NoiseModelManager(ic, wc, self.bgd, SAET_m)
 
     def do_loop(self):
         print('entered loop')
@@ -144,7 +123,8 @@ class IterativeFitManager():
         assert faint_converged_in == self.fit_state.faint_converged[itrn+1]
         assert force_converge_in == self.fit_state.force_converge[itrn+1]
 
-        self.noise_upper, self.noise_lower = new_noise_helper(noise_safe_upper, noise_safe_lower, self.noise_upper, self.noise_lower, itrn, self.stat_only, self.SAET_m, self.wc, self.ic, self.bgd)
+        #self.noise_manager.noise_upper, self.noise_manager.noise_lower = new_noise_helper(noise_safe_upper, noise_safe_lower, self.noise_manager.noise_upper, self.noise_manager.noise_lower, itrn, self.stat_only, self.noise_manager.SAET_m, self.wc, self.ic, self.bgd)
+        self.noise_manager.advance_state(noise_safe_upper, noise_safe_lower, itrn, self.stat_only)
 
         self._state_check(itrn)
 
@@ -169,18 +149,17 @@ class IterativeFitManager():
                 tcb = perf_counter()
                 print("Starting binary # %11d of %11d to consider at t=%9.2f s of iteration %4d" % (itrb, idxbs.size, (tcb - tib), itrn))
 
-            self.bis.run_binary_coadd(self.waveform_manager, self.params_gb, itrn, itrb, self.noise_upper, self.noise_lower, self.ic, self.fit_state, self.nt_min, self.nt_max, self.bgd)
+            self.bis.run_binary_coadd(self.waveform_manager, self.params_gb, itrn, itrb, self.noise_manager.noise_upper, self.noise_manager.noise_lower, self.ic, self.fit_state, self.nt_min, self.nt_max, self.bgd)
 
     def _iteration_cleanup(self, itrn):
-        if self.itr_save < self.idx_SAET_save.size and itrn == self.idx_SAET_save[self.itr_save]:
-            self.SAET_tots_upper[self.itr_save] = self.noise_upper.SAET[:, :, :]
-            self.SAET_tots_lower[self.itr_save] = self.noise_lower.SAET[:, :, :]
-            self.itr_save += 1
+        self.noise_manager.iteration_cleanup(itrn)
 
     def _loop_cleanup(self):
-        self.SAET_fin[:] = self.noise_upper.SAET[:, :, :]
+        self.noise_manager.loop_cleanup()
 
     def check_done(self, itrn):
+        assert self.fit_state.get_faint_converged() == self.fit_state.faint_converged[itrn+1]
+        assert self.fit_state.get_bright_converged() == self.fit_state.bright_converged[itrn+1]
         if self.fit_state.bright_converged[itrn+1] and self.fit_state.faint_converged[itrn+1]:
             print('result fully converged at '+str(itrn)+', no further iterations needed')
             self.n_full_converged = itrn
@@ -202,21 +181,10 @@ class IterativeFitManager():
         print('       %10d total undetectable' % (self.n_tot - n_bright))
         print('       %10d total detectable' % n_bright)
 
-        res_mask = ((self.noise_upper.SAET[:, :, 0]-self.SAET_m[:, 0]).mean(axis=0) > 0.1*self.SAET_m[:, 0]) & (self.SAET_m[:,0] > 0.)
-        galactic_below_high = self.bgd.get_galactic_below_high()
-        noise_divide = np.sqrt(self.noise_upper.SAET[self.nt_min:self.nt_max, res_mask, :2] - self.SAET_m[res_mask, :2])
-        points_res = galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.wc.NC)[self.nt_min:self.nt_max, res_mask, :2] / noise_divide
-        noise_divide = None
-        galactic_below_high = None
-        res_mask = None
-        unit_normal_res, a2score, mean_rat, std_rat = unit_normal_battery(points_res.flatten(), A2_cut=2.28, sig_thresh=5., do_assert=False)
-        points_res = None
-        if unit_normal_res:
-            print('Background PASSES normality: A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f' % (a2score, mean_rat, std_rat))
-        else:
-            print('Background FAILS  normality: A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f' % (a2score, mean_rat, std_rat))
-
         assert n_ambiguous + n_bright + n_faint + n_faint2 == n_consider
+
+        self.noise_manager.print_report(self.nt_min, self.nt_max)
+
 
     def _state_update(self, itrn):
         if itrn == 0:
@@ -240,11 +208,7 @@ class IterativeFitManager():
                 self.bis.brights[itrn] = self.bis.brights[itrn-1]
 
     def _state_check(self, itrn):
-        if self.fit_state.bright_converged[itrn]:
-            assert np.all(self.bis.brights[itrn] == self.bis.brights[itrn-1])
-
-        if self.fit_state.faint_converged[itrn]:
-            assert np.all(self.bis.faints_cur[itrn] == self.bis.faints_cur[itrn-1])
+        self.bis.state_check(itrn, self.fit_state)
 
         if self.fit_state.do_faint_check[itrn+1]:
             assert not self.fit_state.bright_converged[itrn+1]

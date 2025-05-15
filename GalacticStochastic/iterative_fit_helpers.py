@@ -61,37 +61,3 @@ def run_binary_coadd(itrb, faints_in, waveform_model, noise_upper, snrs_upper, s
                 galactic_undecided[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
         else:
             brights[itrn, itrb] = True
-
-
-def new_noise_helper(noise_safe_upper, noise_safe_lower, noise_upper, noise_lower, itrn, stat_only, SAET_m, wc, ic, bgd):
-    if not stat_only:
-        period_list = ic.period_list
-    else:
-        period_list = ()
-
-    if not noise_safe_upper:
-        #assert not noise_safe_lower
-
-        # don't use cyclostationary model until specified iteration
-        if itrn < ic.n_cyclo_switch:
-            filter_periods = False
-        else:
-            filter_periods = not stat_only
-
-
-        # use higher estimate of galactic bg
-        SAET_tot_upper = bgd.get_S_below_high(SAET_m, wc, ic.smooth_lengthf[itrn], filter_periods, period_list)
-        noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_upper, wc, prune=True)
-
-        SAET_tot_upper = None
-
-    if not noise_safe_lower:
-        # make sure this will always predict >= snrs to the actual spectrum in use
-        # use lower estimate of galactic bg
-        filter_periods = not stat_only
-        SAET_tot_lower = bgd.get_S_below_low(SAET_m, wc, ic.smooth_lengthf_fix, filter_periods, period_list)
-        SAET_tot_lower = np.min([SAET_tot_lower, noise_upper.SAET], axis=0)
-        noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_lower, wc, prune=True)
-        SAET_tot_lower = None
-
-    return noise_upper, noise_lower

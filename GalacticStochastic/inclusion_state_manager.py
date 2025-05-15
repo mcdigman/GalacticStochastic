@@ -137,3 +137,11 @@ class BinaryInclusionState():
                 bgd.add_floor(listT_temp, NUTs_temp, waveT_temp)
             else:
                 bgd.add_faint(listT_temp, NUTs_temp, waveT_temp)
+
+    def state_check(self, itrn, fit_state):
+        """do any self consistency checks based on the current state"""
+        if fit_state.bright_converged[itrn]:
+            assert np.all(self.brights[itrn] == self.brights[itrn-1])
+
+        if fit_state.faint_converged[itrn]:
+            assert np.all(self.faints_cur[itrn] == self.faints_cur[itrn-1])

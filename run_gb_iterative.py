@@ -44,7 +44,7 @@ if __name__ == '__main__':
 
         do_hf_out = True
         if do_hf_out:
-            gfi.store_processed_gb_file(galaxy_dir, galaxy_file, ifm.wc, ifm.lc, ifm.ic, ifm.nt_min, ifm.nt_max, ifm.bgd, ic.period_list, ifm.n_bin_use, ifm.SAET_m, ifm.SAET_fin, ifm.stat_only, ifm.bis.snrs_tot_upper, ifm.n_full_converged, ifm.argbinmap, ifm.bis.faints_old, ifm.bis.faints_cur, ifm.bis.brights, snr_min_in)
+            gfi.store_processed_gb_file(galaxy_dir, galaxy_file, ifm.wc, ifm.lc, ifm.ic, ifm.nt_min, ifm.nt_max, ifm.bgd, ic.period_list, ifm.n_bin_use, ifm.SAET_m, ifm.noise_manager.SAET_fin, ifm.stat_only, ifm.bis.snrs_tot_upper, ifm.n_full_converged, ifm.argbinmap, ifm.bis.faints_old, ifm.bis.faints_cur, ifm.bis.brights, snr_min_in)
 
     do_plot_noise_spectrum_ambiguity = True
     if do_plot_noise_spectrum_ambiguity:
