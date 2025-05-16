@@ -109,16 +109,13 @@ def instrument_noise_AET_wdm_m(lc, wc):
 
 
 @njit()
-def get_sparse_snr_helper(NUs, lists_pixels, wavelet_data, nt_min, nt_max, wc, inv_chol_SAET):
+def get_sparse_snr_helper(wavelet_waveform, nt_min, nt_max, wc, inv_chol_SAET):
     """Calculates the S/N ratio for each TDI channel for a given waveform.
 
     Parameters
     ----------
-    NUs : numpy.ndarray
-        number of wavelet coefficients used in sparse representation
-        shape: number of TDI channels
-    lists_pixels
-    wavelet_data
+    wavelet_waveform: namedtuple SparseTaylorTimeWaveform
+        a sparse wavelet domain waveform
     nt_min
     nt_max
     wc : namedtuple
@@ -130,6 +127,9 @@ def get_sparse_snr_helper(NUs, lists_pixels, wavelet_data, nt_min, nt_max, wc, i
     -------
 
     """
+    NUs = wavelet_waveform.N_set
+    lists_pixels = wavelet_waveform.pixel_index
+    wavelet_data = wavelet_waveform.wave_value
     if nt_max == -1:
         nt_max = wc.Nt
     snr2s = np.zeros(wc.NC)
@@ -220,9 +220,9 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel:
             noise_res[j, :, :] = rng.normal(0., 1., (self.wc.Nf, self.wc.NC)) * self.chol_SAET[j, :, :]
         return noise_res
 
-    def get_sparse_snrs(self, NUs, lists_pixels, wavelet_data, nt_min=0, nt_max=-1):
+    def get_sparse_snrs(self, wavelet_waveform, nt_min=0, nt_max=-1):
         """Get snr of waveform in each channel"""
-        return get_sparse_snr_helper(NUs, lists_pixels, wavelet_data, nt_min, nt_max, self.wc, self.inv_chol_SAET)
+        return get_sparse_snr_helper(wavelet_waveform, nt_min, nt_max, self.wc, self.inv_chol_SAET)
 
 
 # @jitclass([('prune', nb.b1), ('SAET_m', nb.float64[:, :]), ('inv_SAET_m', nb.float64[:, :]), ('inv_chol_SAET_m', nb.float64[:, :]), ('SAET', nb.float64[:, :, :]), ('inv_SAET', nb.float64[:, :, :]), ('inv_chol_SAET', nb.float64[:, :, :]), ('chol_SAET_m', nb.float64[:, :]), ('chol_SAET', nb.float64[:, :, :]), ('mean_SAE', nb.float64[:]), ('inv_chol_mean_SAE', nb.float64[:]), ('seed', nb.int64)])
@@ -322,24 +322,15 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
             noise_res[j, :, :] = rng.normal(0., 1., (self.wc.Nf, self.wc.NC)) * self.chol_SAET[j, :, :]
         return noise_res
 
-    def get_sparse_snrs(self, NUs, lists_pixels, wavelet_data, nt_min=0, nt_max=-1):
+    def get_sparse_snrs(self, wavelet_waveform, nt_min=0, nt_max=-1):
         """Get s/n of waveform in each TDI channel. parameters usually come from
         BinaryWaveletAmpFreqDT.get_unsorted_coeffs() from
         wavelet_detector_waveforms.
 
         Parameters
         ----------
-        NUs : numpy.ndarray
-            number of wavelet coefficients used in sparse representation
-            shape: number of TDI channels
-        lists_pixels : numpy.ndarray
-            stores the index of x,y coordinates of the pixels that
-            shape: (NC, ____) number of TDI channels x total possible wavelet
-            basis. Total possible wavelet basis is specified in
-            wavelet_detector_waveforms.py
-        wavelet_data : numpy.ndarray
-            stores the value of the pixels specified by lists_pixels.
-            Shape is the same as lists_pixels: shape: (NC, ____)
+        wavelet_waveform: namedtuple SparseTaylorTimeWaveform
+            a sparse wavelet domain waveform
         nt_min : int, default=0
             time pixels that are start/end of slice for evaluating.
             Used for selecting a subset of time pixels
@@ -352,4 +343,4 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
         """
         if nt_max == -1:
             nt_max = self.wc.Nt
-        return get_sparse_snr_helper(NUs, lists_pixels, wavelet_data, nt_min, nt_max, self.wc, self.inv_chol_SAET)
+        return get_sparse_snr_helper(wavelet_waveform, nt_min, nt_max, self.wc, self.inv_chol_SAET)

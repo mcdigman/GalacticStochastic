@@ -117,7 +117,7 @@ class IterativeFitState(StateManager):
 
     def bright_convergence_decision(self, bis):
         """Make a decision about whether the bright binaries are converged; needs a BinaryInclusionState object"""
-        (do_faint_check_in, bright_converged_in, faint_converged_in, force_converge_in) = self.get_state()
+        (do_faint_check_in, bright_converged_in, faint_converged_in, _force_converge_in) = self.get_state()
         noise_safe = True
 
         # short circuit if we have previously decided bright adaptation is converged

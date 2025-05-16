@@ -33,7 +33,6 @@ if __name__ == '__main__':
     galactic_below_in, snrs_tot_upper_in, _, lc = gfi.load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
 
     waveT_ini = BinaryWaveletAmpFreqDT(params0.copy(), wc, lc)
-    listT_temp, waveT_temp, NUTs_temp = waveT_ini.get_unsorted_coeffs()
 
     SAET_m = instrument_noise_AET_wdm_m(lc, wc)
     noise_floor = DiagonalStationaryDenseInstrumentNoiseModel(SAET_m, wc, prune=False)

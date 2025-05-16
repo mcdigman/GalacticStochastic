@@ -28,7 +28,6 @@ if __name__ == '__main__':
     params0 = params_gb[0].copy()
 
     waveT_ini = BinaryWaveletAmpFreqDT(params0.copy(), wc, lc)
-    listT_temp, waveT_temp, NUTs_temp = waveT_ini.get_unsorted_coeffs()
 
     SAET_m = instrument_noise_AET_wdm_m(lc, wc)
     noise_floor = DiagonalStationaryDenseInstrumentNoiseModel(SAET_m, wc, prune=True)

@@ -114,10 +114,10 @@ class BinaryInclusionState(StateManager):
     def snr_storage_helper(self, itrb):
         """Helper to store the snrs of the current binary"""
         itrn = self.itrn
-        listT_temp, waveT_temp, NUTs_temp = self.waveform_manager.get_unsorted_coeffs()
+        wavelet_waveform = self.waveform_manager.get_unsorted_coeffs()
 
         if not self.fit_state.get_faint_converged():
-            self.snrs_lower[itrn, itrb] = self.noise_manager.noise_lower.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp, self.noise_manager.nt_min, self.noise_manager.nt_max)
+            self.snrs_lower[itrn, itrb] = self.noise_manager.noise_lower.get_sparse_snrs(wavelet_waveform, self.noise_manager.nt_min, self.noise_manager.nt_max)
             self.snrs_tot_lower[itrn, itrb] = np.linalg.norm(self.snrs_lower[itrn, itrb])
         else:
             assert itrn > 1
@@ -125,7 +125,7 @@ class BinaryInclusionState(StateManager):
             self.snrs_tot_lower[itrn, itrb] = self.snrs_tot_lower[itrn - 1, itrb]
 
         if not self.fit_state.get_bright_converged():
-            self.snrs_upper[itrn, itrb] = self.noise_manager.noise_upper.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp, self.noise_manager.nt_min, self.noise_manager.nt_max)
+            self.snrs_upper[itrn, itrb] = self.noise_manager.noise_upper.get_sparse_snrs(wavelet_waveform, self.noise_manager.nt_min, self.noise_manager.nt_max)
             self.snrs_tot_upper[itrn, itrb] = np.linalg.norm(self.snrs_upper[itrn, itrb])
         else:
             assert itrn > 1
@@ -181,23 +181,23 @@ class BinaryInclusionState(StateManager):
         if self.fit_state.get_bright_converged() and not self.faints_cur[itrn, itrb]:
             return
 
-        listT_temp, waveT_temp, NUTs_temp = self.waveform_manager.get_unsorted_coeffs()
+        wavelet_waveform = self.waveform_manager.get_unsorted_coeffs()
 
         if not self.faints_cur[itrn, itrb]:
             if self.brights[itrn, itrb]:
                 # binary is bright enough to decide
-                self.noise_manager.bgd.add_bright(listT_temp, NUTs_temp, waveT_temp)
+                self.noise_manager.bgd.add_bright(wavelet_waveform)
             else:
                 # binary neither faint nor bright enough to decide
-                self.noise_manager.bgd.add_undecided(listT_temp, NUTs_temp, waveT_temp)
+                self.noise_manager.bgd.add_undecided(wavelet_waveform)
         else:
             # binary is faint enough to decide
             if itrn == 0:
                 self.faints_cur[itrn, itrb] = False
                 self.faints_old[itrb] = True
-                self.noise_manager.bgd.add_floor(listT_temp, NUTs_temp, waveT_temp)
+                self.noise_manager.bgd.add_floor(wavelet_waveform)
             else:
-                self.noise_manager.bgd.add_faint(listT_temp, NUTs_temp, waveT_temp)
+                self.noise_manager.bgd.add_faint(wavelet_waveform)
 
     def advance_state(self):
         """Handle any logic necessary to advance the state of the object to the next iteration"""

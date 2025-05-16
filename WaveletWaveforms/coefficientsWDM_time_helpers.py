@@ -1,6 +1,7 @@
 """C 2023 Matthew C. Digman
 test the wdm time functions
 """
+from collections import namedtuple
 from time import time
 
 import h5py
@@ -11,6 +12,76 @@ from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 from WaveletWaveforms.coefficientsWDM_time_funcs import get_ev_t_full, wavelet
 
 SECSYEAR = 24 * 365 * 3600    # Number of seconds in a calendar year
+
+WaveletTaylorTimeCoeffs = namedtuple('WaveletTaylorTimeCoeffs', ['Nfsam', 'evcs', 'evss'])
+
+SparseTaylorTimeWaveform = namedtuple('SparseTaylorTimeWaveform', ['wave_value', 'pixel_index', 'N_set', 'N_max'])
+
+SparseTaylorTimeWaveform.__doc__ = """
+namedtuple object that contains a sparse representation of a wavelet waveform,
+as computed using the taylor approximation in e.g. wavemaket_multi_inplace
+because the actual array size needed isn't known in advance,
+it internally stores arrays that are the maximum size possible in
+the approximation, and records the number of pixels that are actually set in
+N_set. In pixel_index, it additionally uses indicator values of -1 to indicate pixels
+which are not set. The pixel indices don't need to be listed in any particular order,
+Although for some applications it could be convenient for them to be sorted.
+wave_value : numpy.ndarray
+    stores the actual waveform as the values of the wavelet pixels
+    at the pixel indices specified by lists_pixels.
+    All values with index >= N_set should be set to 0.
+    Shape is the same as lists_pixels: shape: (NC, N_max)
+pixel_index : numpy.ndarray
+    stores the indices of x,y coordinates of all pixels that are
+    currently set. All values with index >= N_set should be set to -1
+    shape: (NC, N_max) number of TDI channels x maximum number
+    of pixels possible in sparse representation.
+N_set : numpy.ndarray of integers
+    number of wavelet coefficients that are *currently* set
+    all values must be <= N_max.
+    shape: number of TDI channels
+N_max: integer
+    the maximum number of wavelet pixels that could possibly
+    be set in the sparse representation,
+    which is determined by the shape of the interpolation table
+"""
+
+
+
+def get_empty_sparse_taylor_time_waveform(NC_in, wc):
+    """Get a blank SparseTaylorTimeWaveform object with arrays of the correct sizes"""
+    # need the frequency derivatives to calculate the maximum possible size
+    fds = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)
+    # calculate maximum possible number of pixels
+    N_max = np.int64(np.ceil((wc.BW + fds[wc.Nfd - 1] * wc.Tw) / wc.DF)) * wc.Nt
+    # array of wavelet coefficients
+    wave_value = np.zeros((NC_in, N_max))
+    # aray of pixel indices
+    pixel_index = np.full((NC_in, N_max), -1, dtype=np.int64)
+    # number of pixel indices that are set
+    N_set = np.zeros(NC_in, dtype=np.int64)
+
+    return SparseTaylorTimeWaveform(wave_value, pixel_index, N_set, N_max)
+
+def sparse_addition_helper(sparse_waveform, dense_representation):
+    """Take a sparse wavelet representation from e.g. SparseTaylorTimeWaveform
+    and add it to a dense wavelet representation
+    sparse_waveform: namedtuple SparseTaylorTimeWaveform
+        the sparse representation of waveform, with
+        at least as many channels as dense_representation
+    dense_representation: nd.ndarray
+        the dense wavelet representation
+        shape: (Nf*Nt, N channels)
+    """
+    NC_waveform = sparse_waveform.wave_value.shape[0]
+    NC_rep = dense_representation.shape[-1]
+    pixel_index = sparse_waveform.pixel_index
+    N_set = sparse_waveform.N_set
+    wave_value = sparse_waveform.wave_value
+
+    assert NC_rep <= NC_waveform
+    for itrc in range(NC_rep):
+        dense_representation[pixel_index[itrc, :N_set[itrc]], itrc] += wave_value[itrc, :N_set[itrc]]
 
 
 def get_evTs(wc, check_cache=True, hf_out=False):
@@ -111,4 +182,4 @@ def get_evTs(wc, check_cache=True, hf_out=False):
         t3 = time()
         print("output time", t3 - tf, "s")
 
-    return Nfsam, evcs, evss
+    return WaveletTaylorTimeCoeffs(Nfsam, evcs, evss)

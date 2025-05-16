@@ -3,6 +3,7 @@
 import numpy as np
 
 from GalacticStochastic.galactic_fit_helpers import get_S_cyclo
+from WaveletWaveforms.coefficientsWDM_time_helpers import sparse_addition_helper
 
 
 class BGDecomposition:
@@ -137,22 +138,18 @@ class BGDecomposition:
         S, _, _, _, _ = get_S_cyclo(galactic_loc, S_mean, self.wc, smooth_lengthf, filter_periods, period_list=period_list)
         return S
 
-    def add_undecided(self, listT_temp, NUTs_temp, waveT_temp):
+    def add_undecided(self, wavelet_waveform):
         """Add a binary to the undecided component of the galactic background"""
-        for itrc in range(self.NC_gal):
-            self.galactic_undecided[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+        sparse_addition_helper(wavelet_waveform, self.galactic_undecided)
 
-    def add_floor(self, listT_temp, NUTs_temp, waveT_temp):
+    def add_floor(self, wavelet_waveform):
         """Add a binary to the floor component of the galactic background"""
-        for itrc in range(self.NC_gal):
-            self.galactic_floor[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+        sparse_addition_helper(wavelet_waveform, self.galactic_floor)
 
-    def add_faint(self, listT_temp, NUTs_temp, waveT_temp):
+    def add_faint(self, wavelet_waveform):
         """Add a binary to the faint component of the galactic background"""
-        for itrc in range(self.NC_gal):
-            self.galactic_below[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+        sparse_addition_helper(wavelet_waveform, self.galactic_below)
 
-    def add_bright(self, listT_temp, NUTs_temp, waveT_temp):
+    def add_bright(self, wavelet_waveform):
         """Add a binary to the bright component of the galactic background"""
-        for itrc in range(self.NC_gal):
-            self.galactic_above[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+        sparse_addition_helper(wavelet_waveform, self.galactic_above)

@@ -109,51 +109,43 @@ class BinaryTimeWaveformAmpFreqD:
     assuming input binary format based on amplitude, frequency, and frequency derivative
     """
 
-    def __init__(self, params, NT_min, NT_max, lc, wc, n_pad_T, freeze_limits=False):
+    def __init__(self, params, nt_min, nt_max, lc, wc):
         """Initalize the object"""
         self.params = params
-        self.n_pad_T = n_pad_T
-        self.NT_min = NT_min - self.n_pad_T
-        self.NT_max = NT_max + self.n_pad_T
-        self.NT = self.NT_max - self.NT_min
-        self.freeze_limits = freeze_limits
+        self.nt_min = nt_min
+        self.nt_max = nt_max
+        self.nt_range = self.nt_max - self.nt_min
         self.lc = lc
         self.wc = wc
 
-        # TODO ensure this handles padding self consistently
-        self.nt_low = self.NT_min
-        self.nt_high = self.NT_max
+        self.TTs = self.wc.DT * np.arange(self.nt_min, self.nt_max)
 
-        self.nt_range = self.nt_high - self.nt_low
-
-        self.TTs = self.wc.DT * np.arange(self.nt_low, self.nt_high)
-
-        AmpTs = np.zeros(self.NT)
-        PPTs = np.zeros(self.NT)
-        FTs = np.zeros(self.NT)
-        FTds = np.zeros(self.NT)
+        AmpTs = np.zeros(self.nt_range)
+        PPTs = np.zeros(self.nt_range)
+        FTs = np.zeros(self.nt_range)
+        FTds = np.zeros(self.nt_range)
 
         self.waveform = StationaryWaveformTime(self.TTs, PPTs, FTs, FTds, AmpTs)
 
-        RRs = np.zeros((self.wc.NC, self.NT))
-        IIs = np.zeros((self.wc.NC, self.NT))
-        dRRs = np.zeros((self.wc.NC, self.NT))
-        dIIs = np.zeros((self.wc.NC, self.NT))
+        RRs = np.zeros((self.wc.NC, self.nt_range))
+        IIs = np.zeros((self.wc.NC, self.nt_range))
+        dRRs = np.zeros((self.wc.NC, self.nt_range))
+        dIIs = np.zeros((self.wc.NC, self.nt_range))
 
         self.spacecraft_channels = SpacecraftChannels(self.TTs, RRs, IIs, dRRs, dIIs)
 
-        self.xas = np.zeros(self.NT)
-        self.yas = np.zeros(self.NT)
-        self.zas = np.zeros(self.NT)
-        self.xis = np.zeros(self.NT)
-        self.kdotx = np.zeros(self.NT)
+        self.xas = np.zeros(self.nt_range)
+        self.yas = np.zeros(self.nt_range)
+        self.zas = np.zeros(self.nt_range)
+        self.xis = np.zeros(self.nt_range)
+        self.kdotx = np.zeros(self.nt_range)
 
         _, _, _, self.xas[:], self.yas[:], self.zas[:] = spacecraft_vec(self.TTs, self.lc)
 
-        AET_AmpTs = np.zeros((self.wc.NC, self.NT))
-        AET_PPTs = np.zeros((self.wc.NC, self.NT))
-        AET_FTs = np.zeros((self.wc.NC, self.NT))
-        AET_FTds = np.zeros((self.wc.NC, self.NT))
+        AET_AmpTs = np.zeros((self.wc.NC, self.nt_range))
+        AET_PPTs = np.zeros((self.wc.NC, self.nt_range))
+        AET_FTs = np.zeros((self.wc.NC, self.nt_range))
+        AET_FTds = np.zeros((self.wc.NC, self.nt_range))
 
         self.AET_waveform = StationaryWaveformTime(self.TTs, AET_PPTs, AET_FTs, AET_FTds, AET_AmpTs)
 
@@ -186,5 +178,5 @@ class BinaryTimeWaveformAmpFreqD:
         psi = self.params[7]
 
         # TODO fix F_min and nf_range
-        RAantenna_inplace(self.spacecraft_channels, cosi, psi, phi, costh, self.TTs, self.waveform.FT, 0, self.NT, self.kdotx, self.lc)
-        ExtractAmpPhase_inplace(self.spacecraft_channels, self.AET_waveform, self.waveform, self.NT, self.lc, self.wc)
+        RAantenna_inplace(self.spacecraft_channels, cosi, psi, phi, costh, self.TTs, self.waveform.FT, 0, self.nt_range, self.kdotx, self.lc)
+        ExtractAmpPhase_inplace(self.spacecraft_channels, self.AET_waveform, self.waveform, self.nt_range, self.lc, self.wc)

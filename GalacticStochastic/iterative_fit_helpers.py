@@ -14,16 +14,16 @@ IterationConfig = namedtuple('IterationConfig', ['max_iterations', 'snr_thresh',
 def run_binary_coadd(itrb, faints_in, waveform_model, noise_upper, snrs_upper, snrs_tot_upper, itrn, galactic_below, galactic_undecided, brights, wc, params_gb, snr_min, snr_cut_bright):
     if not faints_in[itrb]:
         waveform_model.update_params(params_gb[itrb].copy())
-        listT_temp, waveT_temp, NUTs_temp = waveform_model.get_unsorted_coeffs()
-        snrs_upper[itrn, itrb] = noise_upper.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp)
+        wavelet_waveform = waveform_model.get_unsorted_coeffs()
+        snrs_upper[itrn, itrb] = noise_upper.get_sparse_snrs(wavelet_waveform)
         snrs_tot_upper[itrn, itrb] = np.linalg.norm(snrs_upper[itrn, itrb])
         if itrn == 0 and snrs_tot_upper[0, itrb] < snr_min:
             faints_in[itrb] = True
             for itrc in range(wc.NC):
-                galactic_below[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+                galactic_below[wavelet_waveform.pixel_index[itrc, :wavelet_waveform.N_set[itrc]], itrc] += wavelet_waveform.wave_value[itrc, :wavelet_waveform.N_set[itrc]]
         elif snrs_tot_upper[itrn, itrb] < snr_cut_bright:
             for itrc in range(wc.NC):
-                galactic_undecided[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
+                galactic_undecided[wavelet_waveform.pixel_index[itrc, :wavelet_waveform.N_set[itrc]], itrc] += wavelet_waveform.wave_value[itrc, :wavelet_waveform.N_set[itrc]]
         else:
             brights[itrn, itrb] = True
 
