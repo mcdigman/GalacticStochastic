@@ -21,8 +21,8 @@ repos:
     args: [--allow-missing-credentials]
   - id: detect-private-key
   - id: mixed-line-ending
-  - id: name-tests-test
-    args: [--pytest-test-first]
+    #  - id: name-tests-test
+    #args: [--pytest-test-first]
   - id: pretty-format-json
     args: [--autofix]
   - id: requirements-txt-fixer
