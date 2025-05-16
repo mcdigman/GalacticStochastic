@@ -11,8 +11,9 @@ from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 
 class BinaryInclusionState(StateManager):
     """Stores all the binaries under consideration in the galaxy"""
+
     def __init__(self, wc, ic, lc, params_gb_in, noise_manager, fit_state, NC_snr, snrs_tot_in=None):
-        """class that stores information about the binaries in the background, and which component they are assigned to"""
+        """Class that stores information about the binaries in the background, and which component they are assigned to"""
         self.wc = wc
         self.ic = ic
         self.lc = lc
@@ -21,9 +22,8 @@ class BinaryInclusionState(StateManager):
         self.fit_state = fit_state
 
         self.n_tot = params_gb_in.shape[0]
-        # TODO take BinaryInclusionState, BinaryWaveletAmpFreqDT, IterativeFitState, BGDecomposition, and DiagonalNonstationaryDenseInstrumentNoiseModel as arguments for modularity
         self.fmin_binary = max(0., ic.fmin_binary)
-        self.fmax_binary = min((wc.Nf-1)*wc.DF, ic.fmax_binary)
+        self.fmax_binary = min((wc.Nf - 1) * wc.DF, ic.fmax_binary)
 
         if snrs_tot_in is not None:
             faints_in = (snrs_tot_in < ic.snr_min_preprocess) | (params_gb_in[:, 3] >= self.fmax_binary) | (params_gb_in[:, 3] < self.fmin_binary)
@@ -52,34 +52,34 @@ class BinaryInclusionState(StateManager):
 
         self.itrn = 0
 
-        self.n_faints_cur = np.zeros(ic.max_iterations+1, dtype=np.int64)
-        self.n_brights_cur = np.zeros(ic.max_iterations+1, dtype=np.int64)
+        self.n_faints_cur = np.zeros(ic.max_iterations + 1, dtype=np.int64)
+        self.n_brights_cur = np.zeros(ic.max_iterations + 1, dtype=np.int64)
 
     def sustain_snr_helper(self):
-        """helper to carry forward any other snr values we know from a previous iteration"""
+        """Helper to carry forward any other snr values we know from a previous iteration"""
         itrn = self.itrn
         if self.fit_state.get_faint_converged():
             assert itrn > 1
-            self.snrs_tot_lower[itrn, self.decided[itrn]] = self.snrs_tot_lower[itrn-1, self.decided[itrn]]
-            self.snrs_lower[itrn, self.decided[itrn]] = self.snrs_lower[itrn-1, self.decided[itrn]]
+            self.snrs_tot_lower[itrn, self.decided[itrn]] = self.snrs_tot_lower[itrn - 1, self.decided[itrn]]
+            self.snrs_lower[itrn, self.decided[itrn]] = self.snrs_lower[itrn - 1, self.decided[itrn]]
 
         if self.fit_state.get_bright_converged():
             assert itrn > 1
-            self.snrs_tot_upper[itrn, self.decided[itrn]] = self.snrs_tot_upper[itrn-1, self.decided[itrn]]
-            self.snrs_upper[itrn, self.decided[itrn]] = self.snrs_upper[itrn-1, self.decided[itrn]]
+            self.snrs_tot_upper[itrn, self.decided[itrn]] = self.snrs_tot_upper[itrn - 1, self.decided[itrn]]
+            self.snrs_upper[itrn, self.decided[itrn]] = self.snrs_upper[itrn - 1, self.decided[itrn]]
 
     def oscillation_check_helper(self):
-        """helper used by fit_state to decide if the bright binaries are oscillating without converging"""
+        """Helper used by fit_state to decide if the bright binaries are oscillating without converging"""
         osc1 = False
         osc2 = False
         osc3 = False
 
         if self.itrn > 1:
-            osc1 = np.all(self.brights[self.itrn-1] == self.brights[self.itrn-2])
+            osc1 = np.all(self.brights[self.itrn - 1] == self.brights[self.itrn - 2])
         if self.itrn > 2:
-            osc2 = np.all(self.brights[self.itrn-1] == self.brights[self.itrn-3])
+            osc2 = np.all(self.brights[self.itrn - 1] == self.brights[self.itrn - 3])
         if self.itrn > 3:
-            osc3 = np.all(self.brights[self.itrn-1] == self.brights[self.itrn-4])
+            osc3 = np.all(self.brights[self.itrn - 1] == self.brights[self.itrn - 4])
 
         converged_or_cycling = osc1 or osc2 or osc3
         old_match = osc2 or osc3
@@ -87,23 +87,23 @@ class BinaryInclusionState(StateManager):
         return cycling, converged_or_cycling, old_match
 
     def delta_faint_check_helper(self):
-        """get the difference in the number of faint binaries between the last two iterations"""
+        """Get the difference in the number of faint binaries between the last two iterations"""
         if self.itrn - 1 == 0:
-            delta_faints = self.n_faints_cur[self.itrn-1]
+            delta_faints = self.n_faints_cur[self.itrn - 1]
         else:
-            delta_faints = self.n_faints_cur[self.itrn-1] - self.n_faints_cur[self.itrn-2]
+            delta_faints = self.n_faints_cur[self.itrn - 1] - self.n_faints_cur[self.itrn - 2]
         return delta_faints
 
     def delta_bright_check_helper(self):
-        """get the difference in the number of bright binaries between the last two iterations"""
+        """Get the difference in the number of bright binaries between the last two iterations"""
         if self.itrn - 1 == 0:
-            delta_brights = self.n_brights_cur[self.itrn-1]
+            delta_brights = self.n_brights_cur[self.itrn - 1]
         else:
-            delta_brights = self.n_brights_cur[self.itrn-1] - self.n_brights_cur[self.itrn-2]
+            delta_brights = self.n_brights_cur[self.itrn - 1] - self.n_brights_cur[self.itrn - 2]
         return delta_brights
 
     def run_binary_coadd(self, itrb):
-        """get the waveform for a binary, store its snr, decide whether it is faint, and coadd it to the appropriate spectrum"""
+        """Get the waveform for a binary, store its snr, decide whether it is faint, and coadd it to the appropriate spectrum"""
         itrn = self.itrn
         self.waveform_manager.update_params(self.params_gb[itrb].copy())
 
@@ -112,7 +112,7 @@ class BinaryInclusionState(StateManager):
         self.decide_coadd_helper(itrb)
 
     def snr_storage_helper(self, itrb):
-        """helper to store the snrs of the current binary"""
+        """Helper to store the snrs of the current binary"""
         itrn = self.itrn
         listT_temp, waveT_temp, NUTs_temp = self.waveform_manager.get_unsorted_coeffs()
 
@@ -121,16 +121,16 @@ class BinaryInclusionState(StateManager):
             self.snrs_tot_lower[itrn, itrb] = np.linalg.norm(self.snrs_lower[itrn, itrb])
         else:
             assert itrn > 1
-            self.snrs_lower[itrn, itrb] = self.snrs_lower[itrn-1, itrb]
-            self.snrs_tot_lower[itrn, itrb] = self.snrs_tot_lower[itrn-1, itrb]
+            self.snrs_lower[itrn, itrb] = self.snrs_lower[itrn - 1, itrb]
+            self.snrs_tot_lower[itrn, itrb] = self.snrs_tot_lower[itrn - 1, itrb]
 
         if not self.fit_state.get_bright_converged():
             self.snrs_upper[itrn, itrb] = self.noise_manager.noise_upper.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp, self.noise_manager.nt_min, self.noise_manager.nt_max)
             self.snrs_tot_upper[itrn, itrb] = np.linalg.norm(self.snrs_upper[itrn, itrb])
         else:
             assert itrn > 1
-            self.snrs_upper[itrn, itrb] = self.snrs_upper[itrn-1, itrb]
-            self.snrs_tot_upper[itrn, itrb] = self.snrs_tot_upper[itrn-1, itrb]
+            self.snrs_upper[itrn, itrb] = self.snrs_upper[itrn - 1, itrb]
+            self.snrs_tot_upper[itrn, itrb] = self.snrs_tot_upper[itrn - 1, itrb]
 
         if np.isnan(self.snrs_tot_upper[itrn, itrb]) or np.isnan(self.snrs_tot_lower[itrn, itrb]):
             raise ValueError('nan detected in snr at ' + str(itrn) + ', ' + str(itrb))
@@ -139,7 +139,7 @@ class BinaryInclusionState(StateManager):
             raise ValueError('Non-finite value detected in snr at ' + str(itrn) + ', ' + str(itrb))
 
     def decision_helper(self, itrb):
-        """helper to decide whether a binary is bright or faint by the current noise spectrum"""
+        """Helper to decide whether a binary is bright or faint by the current noise spectrum"""
         itrn = self.itrn
         if not self.fit_state.get_faint_converged():
             faint_candidate = self.snrs_tot_lower[itrn, itrb] < self.ic.snr_min[itrn]
@@ -172,7 +172,7 @@ class BinaryInclusionState(StateManager):
         return bright_loc, faint_loc
 
     def decide_coadd_helper(self, itrb):
-        """add each binary to the correct part of the galactic spectrum, depending on whether it is bright or faint"""
+        """Add each binary to the correct part of the galactic spectrum, depending on whether it is bright or faint"""
         itrn = self.itrn
         # the same binary cannot be decided as both bright and faint
         assert not (self.brights[itrn, itrb] and self.faints_cur[itrn, itrb])
@@ -207,17 +207,17 @@ class BinaryInclusionState(StateManager):
             self.noise_manager.bgd.clear_undecided()
             self.noise_manager.bgd.clear_above()
         else:
-            self.faints_cur[self.itrn] = self.faints_cur[self.itrn-1]
+            self.faints_cur[self.itrn] = self.faints_cur[self.itrn - 1]
 
             if self.fit_state.get_bright_converged():
-                self.brights[self.itrn] = self.brights[self.itrn-1]
+                self.brights[self.itrn] = self.brights[self.itrn - 1]
             else:
                 self.noise_manager.bgd.clear_undecided()
                 if self.fit_state.get_do_faint_check():
                     self.noise_manager.bgd.clear_above()
                     self.brights[self.itrn] = False
                 else:
-                    self.brights[self.itrn] = self.brights[self.itrn-1]
+                    self.brights[self.itrn] = self.brights[self.itrn - 1]
 
         self.decided[self.itrn] = self.brights[self.itrn] | self.faints_cur[self.itrn] | self.faints_old
 
@@ -241,21 +241,21 @@ class BinaryInclusionState(StateManager):
         self.itrn += 1
 
     def state_check(self):
-        """do any self consistency checks based on the current state"""
+        """Do any self consistency checks based on the current state"""
         if self.itrn > 0:
-            #assert self.fit_state.bright_converged[self.itrn-1] == self.fit_state.get_bright_converged()
-            if self.fit_state.bright_converged[self.itrn-1]:
+            # assert self.fit_state.bright_converged[self.itrn-1] == self.fit_state.get_bright_converged()
+            if self.fit_state.bright_converged[self.itrn - 1]:
                 assert self.itrn > 1
-                assert np.all(self.brights[self.itrn-1] == self.brights[self.itrn-2])
+                assert np.all(self.brights[self.itrn - 1] == self.brights[self.itrn - 2])
 
-            #assert self.fit_state.faint_converged[self.itrn-1] == self.fit_state.get_faint_converged()
-            if self.fit_state.faint_converged[self.itrn-1]:
+            # assert self.fit_state.faint_converged[self.itrn-1] == self.fit_state.get_faint_converged()
+            if self.fit_state.faint_converged[self.itrn - 1]:
                 assert self.itrn > 1
-                assert np.all(self.faints_cur[self.itrn-1] == self.faints_cur[self.itrn-2])
+                assert np.all(self.faints_cur[self.itrn - 1] == self.faints_cur[self.itrn - 2])
 
     def print_report(self):
         """Do any printing desired after convergence has been achieved and the loop ends"""
-        Tobs_consider_yr = (self.noise_manager.nt_max - self.noise_manager.nt_min)*self.wc.DT/gc.SECSYEAR
+        Tobs_consider_yr = (self.noise_manager.nt_max - self.noise_manager.nt_min) * self.wc.DT / gc.SECSYEAR
         n_consider = self.n_bin_use
         n_faint = self.faints_old.sum()
         n_faint2 = self.faints_cur[self.itrn].sum()

@@ -2,21 +2,19 @@
 
 from time import perf_counter
 
-import numpy as np
-
 from GalacticStochastic.state_manager import StateManager
 
 
 class IterativeFitManager(StateManager):
     """Iterative fit object that runs the iterative fitting procedure"""
+
     def __init__(self, ic, fit_state, noise_manager, bis):
         """"Create the iterative fit object"""
-
         self.ic = ic
 
         self.itrn = 0  # current iteration counter
 
-        self.n_full_converged = ic.max_iterations-1
+        self.n_full_converged = ic.max_iterations - 1
 
         self.fit_state = fit_state
         self.noise_manager = noise_manager
@@ -26,7 +24,7 @@ class IterativeFitManager(StateManager):
         """Do the entire iterative fitting loop"""
         print('entered loop')
         ti = perf_counter()
-        for itrn_loc in range(0, self.ic.max_iterations):
+        for _ in range(self.ic.max_iterations):
 
             self.do_iteration()
 
@@ -38,18 +36,18 @@ class IterativeFitManager(StateManager):
         self.loop_finalize()
 
         tf = perf_counter()
-        print('loop time = %.3es' % (tf-ti))
+        print('loop time = %.3es' % (tf - ti))
 
         self.print_report()
 
     def do_iteration(self):
-        """advance everything one full iteration"""
+        """Advance everything one full iteration"""
         self.advance_state()
         self.log_state()
         self.state_check()
 
     def advance_state(self):
-        """ advance the state of the iteration and determine whether convergence is achieved"""
+        """Advance the state of the iteration and determine whether convergence is achieved"""
         t0n = perf_counter()
 
         self.bis.advance_state()
@@ -65,7 +63,7 @@ class IterativeFitManager(StateManager):
 
         t2n = perf_counter()
 
-        print('made bg %3d in time %7.3fs fit time %7.3fs' % (self.itrn, t1n-t0n, t2n-t1n))
+        print('made bg %3d in time %7.3fs fit time %7.3fs' % (self.itrn, t1n - t0n, t2n - t1n))
 
     def log_state(self):
         """Perform any internal logging that should be done after advance_state is run for all objects for the iteration"""
@@ -82,7 +80,7 @@ class IterativeFitManager(StateManager):
     def check_done(self):
         """Check whether the fitting procedure can bet stopped"""
         if self.fit_state.get_bright_converged() and self.fit_state.get_faint_converged():
-            print('result fully converged at '+str(self.itrn)+', no further iterations needed')
+            print('result fully converged at ' + str(self.itrn) + ', no further iterations needed')
             self.n_full_converged = self.itrn
             return True
         return False

@@ -6,8 +6,7 @@ from time import perf_counter
 import numpy as np
 
 from GalacticStochastic.galactic_fit_helpers import get_S_cyclo
-from LisaWaveformTools.instrument_noise import \
-    DiagonalNonstationaryDenseInstrumentNoiseModel
+from LisaWaveformTools.instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
 
 IterationConfig = namedtuple('IterationConfig', ['max_iterations', 'snr_thresh', 'snr_min', 'snr_cut_bright', 'smooth_lengthf'])
 
@@ -36,7 +35,7 @@ def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveform_model, 
     brights = np.zeros((ic.max_iterations, n_bin_use), dtype=np.bool_)
 
     for itrn in range(ic.max_iterations):
-        galactic_undecided = np.zeros((wc.Nt*wc.Nf, wc.NC))
+        galactic_undecided = np.zeros((wc.Nt * wc.Nf, wc.NC))
         noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot[itrn], wc, prune=True)
 
         t0n = perf_counter()
@@ -48,15 +47,14 @@ def do_preliminary_loop(wc, ic, SAET_tot, n_bin_use, faints_in, waveform_model, 
 
             run_binary_coadd(itrb, faints_in, waveform_model, noise_upper, snrs_upper, snrs_tot_upper, itrn, galactic_below, galactic_undecided, brights, wc, params_gb, ic.snr_min[itrn], ic.snr_cut_bright[itrn])
 
-            assert np.all(np.isfinite(snrs_upper[itrn,itrb]))
+            assert np.all(np.isfinite(snrs_upper[itrn, itrb]))
 
         t1n = perf_counter()
 
-        print('Finished coadd for iteration %4d at time %9.2f s' % ((itrn, t1n-t0n)))
+        print('Finished coadd for iteration %4d at time %9.2f s' % ((itrn, t1n - t0n)))
 
         galactic_below_high = (galactic_undecided + galactic_below).reshape((wc.Nt, wc.Nf, wc.NC))
 
-
-        SAET_tot[itrn+1], _, _, _, _ = get_S_cyclo(galactic_below_high, SAET_m, wc, ic.smooth_lengthf[itrn], False, period_list=())
+        SAET_tot[itrn + 1], _, _, _, _ = get_S_cyclo(galactic_below_high, SAET_m, wc, ic.smooth_lengthf[itrn], False, period_list=())
 
     return galactic_below_high, galactic_below, SAET_tot, brights, snrs_upper, snrs_tot_upper, noise_upper

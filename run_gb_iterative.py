@@ -2,7 +2,6 @@
 
 import configparser
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 import GalacticStochastic.global_file_index as gfi
@@ -18,6 +17,8 @@ from WaveletWaveforms.wdm_config import get_wavelet_model
 
 if __name__ == '__main__':
 
+    a = np.array([])
+
     config = configparser.ConfigParser()
     config.read('default_parameters.ini')
 
@@ -32,10 +33,10 @@ if __name__ == '__main__':
 
     galactic_below_in, snrs_tot_in, SAET_m, _, _, _ = gfi.load_init_galactic_file(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
 
-    for itrm in range(0, 1):
+    for itrm in range(1):
         stat_only = False
-        nt_min = 256*(7-itrm)
-        nt_max = nt_min+512*(itrm+1)
+        nt_min = 256 * (7 - itrm)
+        nt_max = nt_min + 512 * (itrm + 1)
         print(nt_min, nt_max, wc.Nt, wc.Nf, stat_only)
 
         params_gb, _, _, _, _ = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)

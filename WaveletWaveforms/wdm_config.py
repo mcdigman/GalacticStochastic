@@ -45,63 +45,65 @@ def get_wavelet_model(config):
     # number of time steps used to compute the interpolation table; must be an integer times mult
     Nst = int(ast.literal_eval(config['wavelet constants']['Nst']))
 
-    dkstep = int(Nst//mult)
-    if dkstep*mult != Nst:
-        raise ValueError('ratio of Nst and mult must be an integer')
+    dkstep = int(Nst // mult)
+    if dkstep * mult != Nst:
+        msg = 'ratio of Nst and mult must be an integer'
+        raise ValueError(msg)
 
     # filter steepness of wavelet transform
     nx = float(ast.literal_eval(config['wavelet constants']['nx']))
 
     # reduced filter length; must be a power of 2
     L = int(ast.literal_eval(config['wavelet constants']['L']))
-    assert L > 0 and (L & (L - 1)) == 0  # check power of 2
+    assert L > 0
+    assert (L & (L - 1)) == 0  # check power of 2
 
     # derived constants
 
     # total number of points
-    N = Nt*Nf
+    N = Nt * Nf
 
     # total observation duration (same units as dt)
-    Tobs = dt*N
+    Tobs = dt * N
 
     # width of wavelet pixel in time (units of time, same as dt)
-    DT = dt*Nf
+    DT = dt * Nf
 
     # width of wavelet pixel in frequency (cycles/time)
-    DF = 1./(2*dt*Nf)
+    DF = 1. / (2 * dt * Nf)
 
     # dimensionless filter legnth
-    K = mult*2*Nf
+    K = mult * 2 * Nf
 
     # filter duration (time; same units as dt)
-    Tw = dt*K
+    Tw = dt * K
 
     # angular frequency spacing (radians per time)
-    dom = 2.*np.pi/Tw
+    dom = 2. * np.pi / Tw
 
     # Nyquist angular frequency (Radians per time)
-    OM = np.pi/dt
+    OM = np.pi / dt
 
     # 2 pi times DF (radians/time)
-    DOM = OM/Nf
+    DOM = OM / Nf
 
     # inverse square root of DOM (sqrt(time/radian))
-    insDOM = 1./np.sqrt(DOM)
+    insDOM = 1. / np.sqrt(DOM)
 
     # wavelet parameter A
-    B = OM/(2*Nf)
+    B = OM / (2 * Nf)
 
     # wavelet parameter B
-    A = (DOM-B)/2
+    A = (DOM - B) / 2
 
     # total width of wavelet in frequency
-    BW = (A+B)/np.pi
+    BW = (A + B) / np.pi
 
     # nonzero terms in phi transform (only need 0 and positive)
-    df = BW/Nsf
+    df = BW / Nsf
 
     # step size in FTd
-    dfd = DF/Tw*dfdot
+    dfd = DF / Tw * dfdot
 
     # number of TDI channels to use
     # TODO move this some place else

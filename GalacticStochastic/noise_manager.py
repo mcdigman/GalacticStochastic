@@ -4,14 +4,14 @@ import numpy as np
 
 from GalacticStochastic.state_manager import StateManager
 from GalacticStochastic.testing_tools import unit_normal_battery
-from LisaWaveformTools.instrument_noise import \
-    DiagonalNonstationaryDenseInstrumentNoiseModel
+from LisaWaveformTools.instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
 
 
 class NoiseModelManager(StateManager):
     """object to manage the noise models used in the iterative fit"""
+
     def __init__(self, ic, wc, fit_state, bgd, SAET_m, stat_only, nt_min, nt_max):
-        """create the noise model manager"""
+        """Create the noise model manager"""
         self.ic = ic
         self.wc = wc
         self.bgd = bgd
@@ -21,10 +21,9 @@ class NoiseModelManager(StateManager):
         self.nt_min = nt_min
         self.nt_max = nt_max
 
-
         self.itrn = 0
 
-        self.idx_SAET_save = np.hstack([np.arange(0, min(10, ic.max_iterations)), np.arange(min(10, ic.max_iterations), 4), ic.max_iterations-1])
+        self.idx_SAET_save = np.hstack([np.arange(0, min(10, ic.max_iterations)), np.arange(min(10, ic.max_iterations), 4), ic.max_iterations - 1])
         self.itr_save = 0
 
         self.SAET_tots_upper = np.zeros((self.idx_SAET_save.size, wc.Nt, wc.Nf, 3))
@@ -63,11 +62,10 @@ class NoiseModelManager(StateManager):
     def state_check(self):
         """Perform any sanity checks that should be performed at the end of each iteration"""
         self.bgd.state_check()
-        return
 
     def print_report(self):
         """Do any printing desired after convergence has been achieved and the loop ends"""
-        res_mask = ((self.noise_upper.SAET[:, :, 0]-self.SAET_m[:, 0]).mean(axis=0) > 0.1*self.SAET_m[:, 0]) & (self.SAET_m[:,0] > 0.)
+        res_mask = ((self.noise_upper.SAET[:, :, 0] - self.SAET_m[:, 0]).mean(axis=0) > 0.1 * self.SAET_m[:, 0]) & (self.SAET_m[:, 0] > 0.)
         galactic_below_high = self.bgd.get_galactic_below_high()
         noise_divide = np.sqrt(self.noise_upper.SAET[self.nt_min:self.nt_max, res_mask, :2] - self.SAET_m[res_mask, :2])
         points_res = galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.bgd.NC_gal)[self.nt_min:self.nt_max, res_mask, :2] / noise_divide
@@ -93,14 +91,13 @@ class NoiseModelManager(StateManager):
             period_list = ()
 
         if not noise_safe_upper:
-            #assert not noise_safe_lower
+            # assert not noise_safe_lower
 
             # don't use cyclostationary model until specified iteration
             if self.itrn < self.ic.n_cyclo_switch:
                 filter_periods = False
             else:
                 filter_periods = not self.stat_only
-
 
             # use higher estimate of galactic bg
             SAET_tot_upper = self.bgd.get_S_below_high(self.SAET_m, self.ic.smooth_lengthf[self.itrn], filter_periods, period_list)
