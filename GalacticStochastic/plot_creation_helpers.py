@@ -6,8 +6,8 @@ import numpy as np
 
 def plot_noise_spectrum_ambiguity(ifm):
     """make a plot of the difference between the upper and lower estimates of the spectrum"""
-    SAET_m = ifm.SAET_m
-    wc = ifm.wc
+    SAET_m = ifm.noise_manager.SAET_m
+    wc = ifm.noise_manager.wc
     fig = plt.figure(figsize=(5.4, 3.5))
     ax = fig.subplots(1)
     fig.subplots_adjust(wspace=0., hspace=0., left=0.13, top=0.99, right=0.99, bottom=0.12)
