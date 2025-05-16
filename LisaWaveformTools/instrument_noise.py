@@ -173,7 +173,6 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel:
         DiagonalNonstationaryDenseInstrumentNoiseModel : class
         """
         self.prune = prune
-        assert prune
         self.SAET = SAET
         self.wc = wc
         self.seed = seed
@@ -256,7 +255,6 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
         DiagonalStationaryDenseInstrumentNoiseModel : class
         """
         self.prune = prune
-        assert prune
         self.SAET_m = SAET_m
         self.wc = wc
         self.seed = seed
