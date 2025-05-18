@@ -8,28 +8,42 @@ from GalacticStochastic.state_manager import StateManager
 class IterativeFitState(StateManager):
     """State machine that handles the state of the iterator"""
 
-    def __init__(self, ic):
+    def __init__(self, ic, preprocess_mode=0):
         """Create the state machine object"""
         self.ic = ic
+        self.preprocess_mode = preprocess_mode
+
+        if self.preprocess_mode == 0:
+            # do not do preprocess mode
+            self.n_itr_cut = ic.max_iterations
+        elif self.preprocess_mode == 1:
+            # do standard preprocessing
+            self.n_itr_cut = 1
+        elif self.preprocess_mode == 2:
+            # reprocess a background that has already been process with a new snr
+            self.n_itr_cut = 1
+        else:
+            msg = 'Unrecognized option for preprocessing mode'
+            raise ValueError(msg)
 
         # for storing past states
-        self.bright_converged = np.zeros(ic.max_iterations + 1, dtype=np.bool_)
-        self.faint_converged = np.zeros(ic.max_iterations + 1, dtype=np.bool_)
-        self.do_faint_check = np.zeros(ic.max_iterations + 1, dtype=np.bool_)
-        self.force_converge = np.zeros(ic.max_iterations + 1, dtype=np.bool_)
+        self.bright_converged = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.faint_converged = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.do_faint_check = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.force_converge = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
 
-        self.bright_converged_bright = np.zeros(ic.max_iterations + 1, dtype=np.bool_)
-        self.faint_converged_bright = np.zeros(ic.max_iterations + 1, dtype=np.bool_)
-        self.do_faint_check_bright = np.zeros(ic.max_iterations + 1, dtype=np.bool_)
-        self.force_converge_bright = np.zeros(ic.max_iterations + 1, dtype=np.bool_)
+        self.bright_converged_bright = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.faint_converged_bright = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.do_faint_check_bright = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.force_converge_bright = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
 
-        self.bright_converged_faint = np.zeros(ic.max_iterations + 1, dtype=np.bool_)
-        self.faint_converged_faint = np.zeros(ic.max_iterations + 1, dtype=np.bool_)
-        self.do_faint_check_faint = np.zeros(ic.max_iterations + 1, dtype=np.bool_)
-        self.force_converge_faint = np.zeros(ic.max_iterations + 1, dtype=np.bool_)
+        self.bright_converged_faint = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.faint_converged_faint = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.do_faint_check_faint = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.force_converge_faint = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
 
-        self.noise_safe_lower_log = np.zeros(ic.max_iterations + 1, dtype=np.bool_)
-        self.noise_safe_upper_log = np.zeros(ic.max_iterations + 1, dtype=np.bool_)
+        self.noise_safe_lower_log = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.noise_safe_upper_log = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
 
         self.bright_state_request = (False, False, False, False)
         self.faint_state_request = (False, False, False, False)
@@ -63,6 +77,14 @@ class IterativeFitState(StateManager):
     def get_noise_safe_upper(self):
         """Get whether the upper noise background would need to be updated to handle the most recent state change"""
         return self.noise_safe_upper
+
+    def get_n_itr_cut(self):
+        """Get the maximum number of iterations that are currently allowed"""
+        return self.n_itr_cut
+
+    def get_preprocess_mode(self):
+        """Get whether we are currently in pre-processing mode"""
+        return self.preprocess_mode
 
     def advance_state(self):
         """Set the current state for the next iteration to be the state requested after faint_convergence_decision"""

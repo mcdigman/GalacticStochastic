@@ -23,7 +23,7 @@ class NoiseModelManager(StateManager):
 
         self.itrn = 0
 
-        self.idx_SAET_save = np.hstack([np.arange(0, min(10, ic.max_iterations)), np.arange(min(10, ic.max_iterations), 4), ic.max_iterations - 1])
+        self.idx_SAET_save = np.hstack([np.arange(0, min(10, self.fit_state.get_n_itr_cut())), np.arange(min(10, self.fit_state.get_n_itr_cut()), 4), self.fit_state.get_n_itr_cut() - 1])
         self.itr_save = 0
 
         self.SAET_tots_upper = np.zeros((self.idx_SAET_save.size, wc.Nt, wc.Nf, 3))

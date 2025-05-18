@@ -39,21 +39,21 @@ class BinaryInclusionState(StateManager):
         params_gb_in = None
         faints_in = None
 
-        self.snrs_upper = np.zeros((ic.max_iterations, self.n_bin_use, NC_snr))
-        self.snrs_lower = np.zeros((ic.max_iterations, self.n_bin_use, NC_snr))
-        self.snrs_tot_lower = np.zeros((ic.max_iterations, self.n_bin_use))
-        self.snrs_tot_upper = np.zeros((ic.max_iterations, self.n_bin_use))
-        self.brights = np.zeros((ic.max_iterations, self.n_bin_use), dtype=np.bool_)
-        self.decided = np.zeros((ic.max_iterations, self.n_bin_use), dtype=np.bool_)
-        self.faints_cur = np.zeros((ic.max_iterations, self.n_bin_use), dtype=np.bool_)
+        self.snrs_upper = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use, NC_snr))
+        self.snrs_lower = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use, NC_snr))
+        self.snrs_tot_lower = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use))
+        self.snrs_tot_upper = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use))
+        self.brights = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use), dtype=np.bool_)
+        self.decided = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use), dtype=np.bool_)
+        self.faints_cur = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use), dtype=np.bool_)
 
         params0 = self.params_gb[0].copy()
         self.waveform_manager = BinaryWaveletAmpFreqDT(params0.copy(), wc, self.lc)
 
         self.itrn = 0
 
-        self.n_faints_cur = np.zeros(ic.max_iterations + 1, dtype=np.int64)
-        self.n_brights_cur = np.zeros(ic.max_iterations + 1, dtype=np.int64)
+        self.n_faints_cur = np.zeros(self.fit_state.get_n_itr_cut() + 1, dtype=np.int64)
+        self.n_brights_cur = np.zeros(self.fit_state.get_n_itr_cut() + 1, dtype=np.int64)
 
     def sustain_snr_helper(self):
         """Helper to carry forward any other snr values we know from a previous iteration"""
@@ -141,8 +141,15 @@ class BinaryInclusionState(StateManager):
     def decision_helper(self, itrb):
         """Helper to decide whether a binary is bright or faint by the current noise spectrum"""
         itrn = self.itrn
+        if self.fit_state.get_preprocess_mode() == 1:
+            snr_cut_faint_loc = self.ic.snr_min_preprocess
+        elif self.fit_state.get_preprocess_mode() == 2:
+            snr_cut_faint_loc = self.ic.snr_min_reprocess
+        else:
+            snr_cut_faint_loc = self.ic.snr_min[itrn]
+
         if not self.fit_state.get_faint_converged():
-            faint_candidate = self.snrs_tot_lower[itrn, itrb] < self.ic.snr_min[itrn]
+            faint_candidate = self.snrs_tot_lower[itrn, itrb] < snr_cut_faint_loc
         else:
             faint_candidate = False
 
@@ -240,15 +247,14 @@ class BinaryInclusionState(StateManager):
 
         self.itrn += 1
 
+
     def state_check(self):
         """Do any self consistency checks based on the current state"""
         if self.itrn > 0:
-            # assert self.fit_state.bright_converged[self.itrn-1] == self.fit_state.get_bright_converged()
             if self.fit_state.bright_converged[self.itrn - 1]:
                 assert self.itrn > 1
                 assert np.all(self.brights[self.itrn - 1] == self.brights[self.itrn - 2])
 
-            # assert self.fit_state.faint_converged[self.itrn-1] == self.fit_state.get_faint_converged()
             if self.fit_state.faint_converged[self.itrn - 1]:
                 assert self.itrn > 1
                 assert np.all(self.faints_cur[self.itrn - 1] == self.faints_cur[self.itrn - 2])
@@ -258,9 +264,9 @@ class BinaryInclusionState(StateManager):
         Tobs_consider_yr = (self.noise_manager.nt_max - self.noise_manager.nt_min) * self.wc.DT / gc.SECSYEAR
         n_consider = self.n_bin_use
         n_faint = self.faints_old.sum()
-        n_faint2 = self.faints_cur[self.itrn].sum()
-        n_bright = self.brights[self.itrn].sum()
-        n_ambiguous = (~(self.faints_old | self.brights[self.itrn] | self.faints_cur[self.itrn])).sum()
+        n_faint2 = self.faints_cur[self.itrn - 1].sum()
+        n_bright = self.brights[self.itrn - 1].sum()
+        n_ambiguous = (~(self.faints_old | self.brights[self.itrn - 1] | self.faints_cur[self.itrn - 1])).sum()
         print('Out of %10d total binaries, %10d were deemed undetectable by a previous evaluation, %10d were considered here.' % (self.n_tot, self.n_tot - n_consider, n_consider))
         print('The iterative procedure deemed (%5.3f yr observation at threshold snr=%5.3f):' % (Tobs_consider_yr, self.ic.snr_thresh))
         print('       %10d undetectable due to instrument noise' % n_faint)

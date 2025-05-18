@@ -11,20 +11,20 @@ class IterativeFitManager(StateManager):
     def __init__(self, ic, fit_state, noise_manager, bis):
         """"Create the iterative fit object"""
         self.ic = ic
-
-        self.itrn = 0  # current iteration counter
-
-        self.n_full_converged = ic.max_iterations - 1
-
         self.fit_state = fit_state
         self.noise_manager = noise_manager
         self.bis = bis
+
+        self.itrn = 0  # current iteration counter
+
+        self.n_full_converged = self.fit_state.get_n_itr_cut() - 1
+
 
     def do_loop(self):
         """Do the entire iterative fitting loop"""
         print('entered loop')
         ti = perf_counter()
-        for _ in range(self.ic.max_iterations):
+        for _ in range(self.fit_state.get_n_itr_cut()):
 
             self.do_iteration()
 
