@@ -20,8 +20,9 @@ if __name__ == '__main__':
 
     a = np.array([])
 
+    config_file = 'default_parameters.ini'
     config = configparser.ConfigParser()
-    config.read('default_parameters.ini')
+    config.read(config_file)
 
     galaxy_file = config['files']['galaxy_file']
     galaxy_dir = config['files']['galaxy_dir']
@@ -57,7 +58,7 @@ if __name__ == '__main__':
 
     do_hf_out = True
     if do_hf_out:
-        gfi.store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, bgd.get_galactic_below_low(), bis.n_bin_use, noise_manager.SAET_m, bis.snrs_tot_lower)
+        gfi.store_preliminary_gb_file(config_file, galaxy_dir, galaxy_file, wc, lc, ic, bgd.get_galactic_below_low(), noise_manager.SAET_m, bis.snrs_tot_lower)
 
     do_plot_noise_spectrum_ambiguity = True
 

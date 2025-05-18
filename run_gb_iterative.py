@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     ic = get_iteration_config(config)
 
-    galactic_below_in, snrs_tot_in, SAET_m, _, _, _ = gfi.load_init_galactic_file(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
+    galactic_below_in, snrs_tot_in, SAET_m, wc, lc = gfi.load_preliminary_galactic_file(galaxy_file, galaxy_dir, ic.snr_thresh, wc, lc)
 
     for itrm in range(1):
         stat_only = False

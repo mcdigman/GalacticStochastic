@@ -1,4 +1,6 @@
 """index for loading the current versions of files"""
+from pathlib import Path
+
 import h5py
 import numpy as np
 
@@ -11,15 +13,15 @@ labels_gb = ['Amplitude', 'EclipticLatitude', 'EclipticLongitude', 'Frequency', 
 
 
 def get_common_noise_filename(galaxy_dir, snr_thresh, wc):
-    return galaxy_dir + ('gb8_full_abbrev_snr=%.2f' % snr_thresh) + '_Nf=' + str(wc.Nf) + '_Nt=' + str(wc.Nt) + '_dt=%.2f.hdf5' % wc.dt
+    return galaxy_dir + ('preprocessed_background=%.2f' % snr_thresh) + '_Nf=' + str(wc.Nf) + '_Nt=' + str(wc.Nt) + '_dt=%.2f.hdf5' % wc.dt
 
 
 def get_init_filename(galaxy_dir, snr_thresh, Nf, Nt, dt):
-    return galaxy_dir + ('gb8_full_abbrev_snr=%.2f' % snr_thresh) + '_Nf=' + str(Nf) + '_Nt=' + str(Nt) + '_dt=%.2f.hdf5' % dt
+    return galaxy_dir + ('preprocessed_background=%.2f' % snr_thresh) + '_Nf=' + str(Nf) + '_Nt=' + str(Nt) + '_dt=%.2f.hdf5' % dt
 
 
 def get_preliminary_filename(galaxy_dir, snr_thresh, Nf, Nt, dt):
-    return galaxy_dir + ('gb8_full_abbrev_snr=%.2f' % snr_thresh) + '_Nf=' + str(Nf) + '_Nt=' + str(Nt) + '_dt=%.2f.hdf5' % dt
+    return galaxy_dir + ('preprocessed_background=%.2f' % snr_thresh) + '_Nf=' + str(Nf) + '_Nt=' + str(Nt) + '_dt=%.2f.hdf5' % dt
 
 
 def get_galaxy_filename(galaxy_file, galaxy_dir):
@@ -90,8 +92,42 @@ def get_full_galactic_params(galaxy_file, galaxy_dir, fmin=0.00001, fmax=0.1, us
     hf_in.close()
     return params_gb, n_dgb, n_igb, n_vgb, n_tot
 
+def load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, wc, lc):
+    preliminary_gb_filename = get_preliminary_filename(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
 
-def load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, Nf, Nt, dt):
+    hf_in = h5py.File(preliminary_gb_filename, 'r')
+
+    # check the stored file matches necessary current parameters
+
+    # load the wavelet constants
+    wc_in = wdm_config.WDMWaveletConstants(**{key: hf_in['configuration']['wc'][key][()] for key in hf_in['configuration']['wc'].keys()})
+    assert wc_in == wc
+
+    # load the lisa constants
+    lc_in = lisa_config.LISAConstants(**{key: hf_in['configuration']['lc'][key][()] for key in hf_in['configuration']['lc'].keys()})
+    assert lc_in == lc
+
+    # check the galaxy filename matches
+    gb_file_source = hf_in['galaxy']['binaries']['galaxy_file'][()].decode()
+    full_galactic_params_filename = get_galaxy_filename(galaxy_file, galaxy_dir)
+    assert gb_file_source == full_galactic_params_filename
+
+    galactic_below_in = np.asarray(hf_in['galaxy']['signal']['galactic_below'])
+
+    snrs_tot_upper_in = np.asarray(hf_in['galaxy']['binaries']['snrs_tot_upper'])
+
+    SAET_m = np.asarray(hf_in['noise_model']['S_instrument'])
+
+    # check input SAET makes sense, first value not checked as it may not be consistent
+    SAET_m_alt = instrument_noise_AET_wdm_m(lc, wc)
+    assert np.allclose(SAET_m[1:], SAET_m_alt[1:], atol=1.e-80, rtol=1.e-13)
+
+    hf_in.close()
+
+    return galactic_below_in, snrs_tot_upper_in, SAET_m, wc, lc
+
+
+def load_preliminary_galactic_file_old(galaxy_file, galaxy_dir, snr_thresh, Nf, Nt, dt):
     preliminary_gb_filename = get_preliminary_filename(galaxy_dir, snr_thresh, Nf, Nt, dt)
 
     hf_in = h5py.File(preliminary_gb_filename, 'r')
@@ -178,40 +214,59 @@ def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, stat_
     return argbinmap, (galactic_below + galactic_undecided).reshape((wc.Nt, wc.Nf, galactic_below.shape[-1]))
 
 
-def store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, n_bin_use, SAET_m, snrs_tot_upper):
-    Nf = wc.Nf
-    Nt = wc.Nt
-    dt = wc.dt
-    filename_out = get_preliminary_filename(galaxy_dir, ic.snr_thresh, Nf, Nt, dt)
+def store_preliminary_gb_file(config_filename, galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, SAET_m, snrs_tot_upper):
+    filename_out = get_preliminary_filename(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
     hf_out = h5py.File(filename_out, 'w')
-    hf_out.create_group('SAET')
-    hf_out['SAET'].create_dataset('galactic_below', data=galactic_below, compression='gzip')
-    # hf_out['SAET'].create_dataset('noise_realization', data=noise_realization, compression='gzip')
-    hf_out['SAET'].create_dataset('smooth_lengthf', data=ic.smooth_lengthf)
-    hf_out['SAET'].create_dataset('snr_thresh', data=ic.snr_thresh)
-    hf_out['SAET'].create_dataset('snr_min', data=ic.snr_min)
-    hf_out['SAET'].create_dataset('Nt', data=wc.Nt)
-    hf_out['SAET'].create_dataset('Nf', data=wc.Nf)
-    hf_out['SAET'].create_dataset('dt', data=wc.dt)
-    hf_out['SAET'].create_dataset('max_iterations', data=ic.max_iterations)
-    hf_out['SAET'].create_dataset('n_bin_use', data=n_bin_use)
-    hf_out['SAET'].create_dataset('SAET_m', data=SAET_m)
-    hf_out['SAET'].create_dataset('snrs_tot_upper', data=snrs_tot_upper[0], compression='gzip')
-    hf_out['SAET'].create_dataset('source_gb_file', data=get_galaxy_filename(galaxy_file, galaxy_dir))
-    # TODO I think the stored preliminary filename needs to handle second calls to this differently
-    hf_out['SAET'].create_dataset('preliminary_gb_file', data=get_preliminary_filename(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt))
 
-    hf_out.create_group('preliminary_ic')
-    for key in ic._fields:
-        hf_out['preliminary_ic'].create_dataset(key, data=getattr(ic, key))
+    # store results related to the input galaxy
+    hf_out.create_group('galaxy')
 
-    hf_out.create_group('wc')
+    hf_out['galaxy'].create_group('signal')
+    hf_out['galaxy'].create_group('binaries')
+
+    # the faint part of the galactic signal
+    hf_out['galaxy']['signal'].create_dataset('galactic_below', data=galactic_below, compression='gzip')
+
+    # the filename of the file with the galaxy in it
+    hf_out['galaxy']['binaries'].create_dataset('galaxy_file', data=get_galaxy_filename(galaxy_file, galaxy_dir))
+
+    # the initial computed snr
+    hf_out['galaxy']['binaries'].create_dataset('snrs_tot_upper', data=snrs_tot_upper[0], compression='gzip')
+
+    # store parameters related to the noise model
+    hf_out.create_group('noise_model')
+
+    hf_out['noise_model'].create_dataset('S_instrument', data=SAET_m)
+
+    # store configuration parameters
+    hf_out.create_group('configuration')
+    hf_out['configuration'].create_group('wc')
+    hf_out['configuration'].create_group('ic')
+    hf_out['configuration'].create_group('lc')
+    hf_out['configuration'].create_group('config_text')
+
+    # store all the configuration objects to the file
+
+    # the wavelet constants
     for key in wc._fields:
-        hf_out['wc'].create_dataset(key, data=getattr(wc, key))
+        hf_out['configuration']['wc'].create_dataset(key, data=getattr(wc, key))
 
-    hf_out.create_group('lc')
+    # lisa related constants
     for key in lc._fields:
-        hf_out['lc'].create_dataset(key, data=getattr(lc, key))
+        hf_out['configuration']['lc'].create_dataset(key, data=getattr(lc, key))
+
+    # iterative fit related constants
+    for key in ic._fields:
+        hf_out['configuration']['ic'].create_dataset(key, data=getattr(ic, key))
+
+    # archive the entire raw text of the configuration file to the hdf5 file as well
+    with Path.open(config_filename) as file:
+        file_content = file.read()
+
+    hf_out['configuration']['config_text'].create_dataset(config_filename, data=file_content)
+
+
+
 
     hf_out.close()
 
