@@ -1,0 +1,5 @@
+.DS_store
+**/__pycache__/
+wavelet/
+pylint_log.txt
+vulture_log.txt

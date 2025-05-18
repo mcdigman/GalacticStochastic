@@ -1,0 +1,20 @@
+[MASTER]
+init-hook='import sys; sys.path.append(".")'
+[MESSAGES CONTROL]
+disable=C0209, C0301,C0103,no-else-return,no-else-raise
+[TYPECHECK]
+ignored-modules=numpy,scipy.linalg.blas,scipy.linalg.lapack,scipy.special,astropy.io,numpy.random,mpl_toolkits,numpy.random_intel
+ignored-classes=HDUList
+[DESIGN]
+max-args=15
+max-locals=35
+max-returns=15
+max-statements=200
+max-attributes=21
+min-public-methods=0
+max-branches=40
+[SIMILARITIES]
+#min-similiarity-lines=6
+ignore-comments=yes
+ignore-docstrings=yes
+ignore-imports=yes
