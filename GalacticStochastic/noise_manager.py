@@ -4,7 +4,7 @@ import numpy as np
 
 from GalacticStochastic.state_manager import StateManager
 from GalacticStochastic.testing_tools import unit_normal_battery
-from LisaWaveformTools.instrument_noise import DiagonalNonstationaryDenseNoiseModel
+from LisaWaveformTools.noise_model import DiagonalNonstationaryDenseNoiseModel
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 

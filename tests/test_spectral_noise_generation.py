@@ -7,8 +7,9 @@ import WDMWaveletTransforms.fft_funcs as fft
 from WDMWaveletTransforms.wavelet_transforms import inverse_wavelet_freq, inverse_wavelet_time
 
 from GalacticStochastic.testing_tools import unit_normal_battery
-from LisaWaveformTools.instrument_noise import DiagonalNonstationaryDenseNoiseModel, DiagonalStationaryDenseNoiseModel, instrument_noise_AET, instrument_noise_AET_wdm_m
+from LisaWaveformTools.instrument_noise import instrument_noise_AET, instrument_noise_AET_wdm_m
 from LisaWaveformTools.lisa_config import get_lisa_constants
+from LisaWaveformTools.noise_model import DiagonalNonstationaryDenseNoiseModel, DiagonalStationaryDenseNoiseModel
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
 
