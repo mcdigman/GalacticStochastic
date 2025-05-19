@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
         do_hf_out = True
         if do_hf_out:
-            gfi.store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ifm.ic, ifm.noise_manager.nt_min, ifm.noise_manager.nt_max, bgd, ic.period_list, ifm.bis.n_bin_use, ifm.noise_manager.S_stat_m, ifm.noise_manager.S_final, ifm.noise_manager.stat_only, ifm.bis.snrs_tot_upper, ifm.n_full_converged, ifm.bis.argbinmap, ifm.bis.faints_old, ifm.bis.faints_cur, ifm.bis.brights)
+            gfi.store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ifm.ic, ifm.noise_manager.nt_min, ifm.noise_manager.nt_max, bgd, ic.period_list, ifm.bis.n_bin_use, ifm.noise_manager.S_inst_m, ifm.noise_manager.S_final, ifm.noise_manager.stat_only, ifm.bis.snrs_tot_upper, ifm.n_full_converged, ifm.bis.argbinmap, ifm.bis.faints_old, ifm.bis.faints_cur, ifm.bis.brights)
 
     do_plot_noise_spectrum_ambiguity = True
     if do_plot_noise_spectrum_ambiguity:

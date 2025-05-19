@@ -1,5 +1,7 @@
 """get the instrument noise profile"""
 
+from abc import ABC, abstractmethod
+
 import numpy as np
 import numpy.typing as npt
 
@@ -7,7 +9,43 @@ import numpy.typing as npt
 from numba import njit
 from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 
+from WaveletWaveforms.wdm_config import WDMWaveletConstants
+
 # from numba.experimental import jitclass
+
+class DenseNoiseModel(ABC):
+    def __init__(self, wc: WDMWaveletConstants, prune, seed=-1) -> None:
+        self.wc = wc
+        self.prune = prune
+        self.seed = seed
+
+    @abstractmethod
+    def generate_dense_noise(self) -> npt.NDArray[np.float64]:
+        """Generate random noise for full matrix"""
+
+    @abstractmethod
+    def get_sparse_snrs(self, wavelet_waveform, nt_min=0, nt_max=-1) -> npt.NDArray[np.float64]:
+        """Get S/N of waveform in each TDI channel"""
+
+    @abstractmethod
+    def get_S_stat_m(self) -> npt.NDArray[np.float64]:
+        """Get the mean noise covariance matrix as a function of time"""
+
+    @abstractmethod
+    def get_inv_chol_S(self) -> npt.NDArray[np.float64]:
+        """Get the inverse cholesky decomposition of the dense noise covariance matrix"""
+
+    @abstractmethod
+    def get_inv_S(self) -> npt.NDArray[np.float64]:
+        """Get the inverse of the dense noise covariance matrix"""
+
+    @abstractmethod
+    def get_chol_S(self) -> npt.NDArray[np.float64]:
+        """Get the cholesky decomposition of the dense noise covariance matrix"""
+
+    @abstractmethod
+    def get_S(self) -> npt.NDArray[np.float64]:
+        """Get the dense noise covariance matrix"""
 
 
 def instrument_noise1(f, lc):
@@ -142,7 +180,7 @@ def get_sparse_snr_helper(wavelet_waveform, nt_min, nt_max, wc, inv_chol_S):
 
 
 # @jitclass([('prune', nb.b1), ('S', nb.float64[:, :, :]), ('inv_S', nb.float64[:, :, :]), ('inv_chol_S', nb.float64[:, :, :]), ('chol_S', nb.float64[:, :, :])])
-class DiagonalNonstationaryDenseInstrumentNoiseModel:
+class DiagonalNonstationaryDenseInstrumentNoiseModel(DenseNoiseModel):
     """a class to handle the fully diagonal nonstationary
     instrument noise model to feed to snr and fisher matrix calculations
     """
@@ -222,9 +260,30 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel:
         """Get snr of waveform in each channel"""
         return get_sparse_snr_helper(wavelet_waveform, nt_min, nt_max, self.wc, self.inv_chol_S)
 
+    def get_S_stat_m(self):
+        """Get the mean noise covariance matrix as a function of time"""
+        return np.mean(self.S, axis=0)
+
+    def get_inv_chol_S(self):
+        """Get the inverse cholesky decomposition of the dense noise covariance matrix"""
+        return self.inv_chol_S
+
+    def get_inv_S(self):
+        """Get the inverse of the dense noise covariance matrix"""
+        return self.inv_S
+
+    def get_chol_S(self):
+        """Get the cholesky decomposition of the dense noise covariance matrix"""
+        return self.chol_S
+
+    def get_S(self):
+        """Get the dense noise covariance matrix"""
+        return self.chol_S
+
+
 
 # @jitclass([('prune', nb.b1), ('S_stat_m', nb.float64[:, :]), ('inv_S_stat_m', nb.float64[:, :]), ('inv_chol_S_stat_m', nb.float64[:, :]), ('S', nb.float64[:, :, :]), ('inv_S', nb.float64[:, :, :]), ('inv_chol_S', nb.float64[:, :, :]), ('chol_S_stat_m', nb.float64[:, :]), ('chol_S', nb.float64[:, :, :]), ('seed', nb.int64)])
-class DiagonalStationaryDenseInstrumentNoiseModel:
+class DiagonalStationaryDenseInstrumentNoiseModel(DenseNoiseModel):
     """a class to handle the fully diagonal stationary
     instrument noise model to feed to snr and fisher matrix calculations
     """
@@ -336,3 +395,23 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
         if nt_max == -1:
             nt_max = self.wc.Nt
         return get_sparse_snr_helper(wavelet_waveform, nt_min, nt_max, self.wc, self.inv_chol_S)
+
+    def get_S_stat_m(self):
+        """Get the mean noise covariance matrix as a function of time"""
+        return self.S_stat_m
+
+    def get_inv_chol_S(self):
+        """Get the inverse cholesky decomposition of the dense noise covariance matrix"""
+        return self.inv_chol_S
+
+    def get_inv_S(self):
+        """Get the inverse of the dense noise covariance matrix"""
+        return self.inv_S
+
+    def get_chol_S(self):
+        """Get the cholesky decomposition of the dense noise covariance matrix"""
+        return self.chol_S
+
+    def get_S(self):
+        """Get the dense noise covariance matrix"""
+        return self.chol_S

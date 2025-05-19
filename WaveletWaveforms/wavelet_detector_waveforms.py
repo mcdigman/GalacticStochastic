@@ -21,7 +21,7 @@ class BinaryWaveletAmpFreqDT:
         self.params = params
 
         # interpolation for wavelet taylor expansion
-        self.taylor_time_table = get_evTs(self.wc, check_cache='skip', hf_out='skip')
+        self.taylor_time_table = get_evTs(self.wc, cache_mode='skip', output_mode='skip')
 
         # get the waveform in frequency space
         self.fwt = BinaryTimeWaveformAmpFreqD(self.params, self.nt_min, self.nt_max, self.lc, self.wc)

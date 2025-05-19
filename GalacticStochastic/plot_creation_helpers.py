@@ -6,7 +6,7 @@ import numpy as np
 
 def plot_noise_spectrum_ambiguity(ifm) -> None:
     """Make a plot of the difference between the upper and lower estimates of the spectrum"""
-    S_stat_m = ifm.noise_manager.S_stat_m
+    S_stat_m = ifm.noise_manager.S_inst_m
     wc = ifm.noise_manager.wc
     fig = plt.figure(figsize=(5.4, 3.5))
     ax = fig.subplots(1)
@@ -25,7 +25,7 @@ def plot_noise_spectrum_ambiguity(ifm) -> None:
 
 def plot_noise_spectrum_evolve(ifm) -> None:
     """Plot the evolution of the noise power spectrum with iteration"""
-    S_stat_m = ifm.noise_manager.S_stat_m
+    S_stat_m = ifm.noise_manager.S_inst_m
     wc = ifm.noise_manager.wc
     fig = plt.figure(figsize=(5.4, 3.5))
     ax = fig.subplots(1)
