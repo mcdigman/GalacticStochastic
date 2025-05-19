@@ -17,12 +17,12 @@ from scipy.optimize import dual_annealing
 import GalacticStochastic.global_const as gc
 
 
-def SAE_gal_model(f, log10A, log10f2, log10f1, log10fknee, alpha):
+def S_gal_model(f, log10A, log10f2, log10f1, log10fknee, alpha):
     """Model from arXiv:2103.14598 for galactic binary confusion noise amplitude"""
     return 10**log10A / 2 * f**(5 / 3) * np.exp(-(f / 10**log10f1)**alpha) * (1 + np.tanh((10**log10fknee - f) / 10**log10f2))
 
 
-def SAE_gal_model_alt(f, A, alpha, beta, kappa, gamma, fknee):
+def S_gal_model_alt(f, A, alpha, beta, kappa, gamma, fknee):
     """Model from arXiv:1703.09858 for galactic binary confusion noise amplitude"""
     return A * f**(7 / 3) * np.exp(-f**alpha + beta * f * np.sin(kappa * f)) * (1 + np.tanh(gamma * (fknee - f)))
 
@@ -99,7 +99,7 @@ def filter_periods_fft(r_mean, Nt_loc, period_list, wc):
 
 def get_S_cyclo(
         galactic_below,
-        SAET_m,
+        S_inst_m,
         wc,
         smooth_lengthf,
         filter_periods,
@@ -116,7 +116,7 @@ def get_S_cyclo(
     if Nt_loc == -1:
         Nt_loc = wc.Nt
 
-    NC_loc = SAET_m.shape[1]
+    NC_loc = S_inst_m.shape[1]
 
     S_in = (galactic_below[..., :NC_loc].reshape((wc.Nt, wc.Nf, NC_loc)))**2
     S_in_mean = np.mean(S_in, axis=0)
@@ -130,7 +130,7 @@ def get_S_cyclo(
         r_mean = np.zeros((wc.Nt, NC_loc))
         # whitened mean galaxy power
         Sw_in_mean = np.zeros_like(S_in_mean)
-        Sw_in_mean[SAET_m > 0.] = np.abs(S_in_mean[SAET_m > 0.] / SAET_m[SAET_m > 0.])
+        Sw_in_mean[S_inst_m > 0.] = np.abs(S_in_mean[S_inst_m > 0.] / S_inst_m[S_inst_m > 0.])
 
         for itrc in range(NC_loc):
             # completely cut out faint frequencies for calculating the envelope modulation
@@ -192,7 +192,7 @@ def get_S_cyclo(
 
     for itrc in range(NC_loc):
         # add and later remove a small numerical stabilizer for cases where the S is zero
-        # better behaved to interpolate in log(SAE) as well
+        # better behaved to interpolate in log(S) as well
         log_S_demod_mean = np.log10(S_demod_mean[1:, itrc] + log_S_stabilizer)
         log_S_interp = InterpolatedUnivariateSpline(log_f, log_S_demod_mean, ext=2)(log_f_interp)
         log_S_interp_smooth = scipy.ndimage.gaussian_filter(log_S_interp, smooth_sigma)
@@ -203,7 +203,7 @@ def get_S_cyclo(
     # enforce positive just in case subtraction misbehaved
     S_demod_smooth = np.abs(S_demod_smooth)
 
-    S_res = np.zeros((wc.Nt, wc.Nf, NC_loc)) + SAET_m
+    S_res = np.zeros((wc.Nt, wc.Nf, NC_loc)) + S_inst_m
     for itrc in range(NC_loc):
         S_res[:, :, itrc] += np.outer(r_smooth[:, itrc], S_demod_smooth[:, itrc])
 
@@ -214,7 +214,7 @@ def get_S_cyclo(
     return S_res, r_smooth, S_demod_smooth, amp_got, angle_got
 
 
-def fit_gb_spectrum_evolve(SAET_goals, fs, fs_report, nt_ranges, offset, wc):
+def fit_gb_spectrum_evolve(S_goals, fs, fs_report, nt_ranges, offset, wc):
     # TODO take NC in this function properly
     a1 = -0.25
     b1 = -2.70
@@ -225,11 +225,11 @@ def fit_gb_spectrum_evolve(SAET_goals, fs, fs_report, nt_ranges, offset, wc):
     alpha = 1.6
 
     TobsYEAR_locs = nt_ranges * wc.DT / gc.SECSYEAR
-    n_spect = SAET_goals.shape[0]
+    n_spect = S_goals.shape[0]
 
-    log_SAE_goals = np.log10(SAET_goals[:, :, 0:2])
+    log_S_goals = np.log10(S_goals[:, :, 0:2])
 
-    def SAE_func_temp(tpl):
+    def S_func_temp(tpl):
         resid = 0.
         a1 = tpl[0]
         ak = tpl[1]
@@ -242,8 +242,8 @@ def fit_gb_spectrum_evolve(SAET_goals, fs, fs_report, nt_ranges, offset, wc):
             log10f1 = a1 * np.log10(TobsYEAR_locs[itry]) + b1
             log10fknee = ak * np.log10(TobsYEAR_locs[itry]) + bk
             resid += np.sum((
-                             np.log10(np.abs(SAE_gal_model(fs, log10A, log10f2, log10f1, log10fknee, alpha)) + offset)
-                             - log_SAE_goals[itry, :, :].T
+                             np.log10(np.abs(S_gal_model(fs, log10A, log10f2, log10f1, log10fknee, alpha)) + offset)
+                             - log_S_goals[itry, :, :].T
                             ).flatten()**2
                             )
         return resid
@@ -264,7 +264,7 @@ def fit_gb_spectrum_evolve(SAET_goals, fs, fs_report, nt_ranges, offset, wc):
     bounds[6, 0] = 1.35
     bounds[6, 1] = 2.25
 
-    res_found = dual_annealing(SAE_func_temp, bounds, maxiter=2000)
+    res_found = dual_annealing(S_func_temp, bounds, maxiter=2000)
 
     res = res_found['x']
     print(res_found)
@@ -277,10 +277,10 @@ def fit_gb_spectrum_evolve(SAET_goals, fs, fs_report, nt_ranges, offset, wc):
     log10f2 = res[5]
     alpha = res[6]
 
-    SAE_res = np.zeros((n_spect, fs_report.size))
+    S_res = np.zeros((n_spect, fs_report.size))
     for itry in range(n_spect):
         log10f1 = a1 * np.log10(TobsYEAR_locs[itry]) + b1
         log10fknee = ak * np.log10(TobsYEAR_locs[itry]) + bk
-        SAE_res[itry, :] = SAE_gal_model(fs_report, log10A, log10f2, log10f1, log10fknee, alpha)
+        S_res[itry, :] = S_gal_model(fs_report, log10A, log10f2, log10f1, log10fknee, alpha)
 
-    return SAE_res, res
+    return S_res, res

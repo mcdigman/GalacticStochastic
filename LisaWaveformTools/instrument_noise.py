@@ -223,7 +223,7 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel:
         return get_sparse_snr_helper(wavelet_waveform, nt_min, nt_max, self.wc, self.inv_chol_S)
 
 
-# @jitclass([('prune', nb.b1), ('S_stat_m', nb.float64[:, :]), ('inv_S_stat_m', nb.float64[:, :]), ('inv_chol_S_stat_m', nb.float64[:, :]), ('S', nb.float64[:, :, :]), ('inv_S', nb.float64[:, :, :]), ('inv_chol_S', nb.float64[:, :, :]), ('chol_S_stat_m', nb.float64[:, :]), ('chol_S', nb.float64[:, :, :]), ('mean_SAE', nb.float64[:]), ('inv_chol_mean_SAE', nb.float64[:]), ('seed', nb.int64)])
+# @jitclass([('prune', nb.b1), ('S_stat_m', nb.float64[:, :]), ('inv_S_stat_m', nb.float64[:, :]), ('inv_chol_S_stat_m', nb.float64[:, :]), ('S', nb.float64[:, :, :]), ('inv_S', nb.float64[:, :, :]), ('inv_chol_S', nb.float64[:, :, :]), ('chol_S_stat_m', nb.float64[:, :]), ('chol_S', nb.float64[:, :, :]), ('seed', nb.int64)])
 class DiagonalStationaryDenseInstrumentNoiseModel:
     """a class to handle the fully diagonal stationary
     instrument noise model to feed to snr and fisher matrix calculations
@@ -290,13 +290,6 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
                     self.inv_S[j, 0, itrc] = self.inv_S_stat_m[0, itrc]
                     self.inv_chol_S[j, 0, itrc] = self.inv_chol_S_stat_m[0, itrc]
                     self.chol_S[j, 0, itrc] = self.chol_S_stat_m[0, itrc]
-
-        self.mean_SAE = self.S_stat_m[:, 0]
-        self.inv_chol_mean_SAE = 1. / np.sqrt(self.mean_SAE)
-        if self.prune:
-            self.mean_SAE[0] = 0.
-            self.inv_chol_mean_SAE[0] = 0.
-            # currently not right size for pruning
 
     def generate_dense_noise(self):
         """Generate random noise for full matrix

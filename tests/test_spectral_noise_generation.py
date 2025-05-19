@@ -25,8 +25,8 @@ def test_unit_noise_generation_stat(scale_mult) -> None:
 
     NC_loc = 3
 
-    SAET_m_one = np.full((wc.Nf, NC_loc), scale_mult)
-    noise_model_stat = DiagonalStationaryDenseInstrumentNoiseModel(SAET_m_one, wc, prune=False)
+    S_inst_m_one = np.full((wc.Nf, NC_loc), scale_mult)
+    noise_model_stat = DiagonalStationaryDenseInstrumentNoiseModel(S_inst_m_one, wc, prune=False)
 
     noise_realization = noise_model_stat.generate_dense_noise()
 
@@ -118,12 +118,12 @@ def test_noise_normalization_match() -> None:
     fs_fft = np.arange(0, ND // 2 + 1) / Tobs
     NC_loc = 3
 
-    SAET_m = instrument_noise_AET_wdm_m(lc, wc)
+    S_inst_m = instrument_noise_AET_wdm_m(lc, wc)
     spectra_need = np.zeros((ND // 2 + 1, NC_loc))
     spectra_need[1:, :] = np.sqrt(ND // 2) * np.sqrt(instrument_noise_AET(fs_fft[1:], lc, wc))
 
     # check whitened noise matches correct spectrum
-    noise_model_stat = DiagonalStationaryDenseInstrumentNoiseModel(SAET_m, wc, prune=True)
+    noise_model_stat = DiagonalStationaryDenseInstrumentNoiseModel(S_inst_m, wc, prune=True)
     noise_wave = noise_model_stat.generate_dense_noise()
     noise_realization_freq = np.zeros((ND // 2 + 1, NC_loc), dtype=np.complex128)
     for itrc in range(NC_loc):
