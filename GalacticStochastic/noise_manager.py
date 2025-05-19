@@ -10,7 +10,7 @@ from LisaWaveformTools.instrument_noise import DiagonalNonstationaryDenseInstrum
 class NoiseModelManager(StateManager):
     """object to manage the noise models used in the iterative fit"""
 
-    def __init__(self, ic, wc, fit_state, bgd, SAET_m, stat_only, nt_min, nt_max):
+    def __init__(self, ic, wc, fit_state, bgd, SAET_m, stat_only, nt_min, nt_max) -> None:
         """Create the noise model manager"""
         self.ic = ic
         self.wc = wc
@@ -47,7 +47,7 @@ class NoiseModelManager(StateManager):
         SAET_tot_upper = None
         SAET_tot_lower = None
 
-    def log_state(self):
+    def log_state(self) -> None:
         """Perform any internal logging that should be done after advance_state is run for all objects for the iteration"""
         if self.itr_save < self.idx_SAET_save.size and self.itrn - 1 == self.idx_SAET_save[self.itr_save]:
             self.SAET_tots_upper[self.itr_save] = self.noise_upper.SAET[:, :, :]
@@ -55,15 +55,15 @@ class NoiseModelManager(StateManager):
             self.itr_save += 1
         self.bgd.log_state(self.SAET_m)
 
-    def loop_finalize(self):
+    def loop_finalize(self) -> None:
         """Perform any logic desired after convergence has been achieved and the loop ends"""
         self.SAET_fin[:] = self.noise_upper.SAET[:, :, :]
 
-    def state_check(self):
+    def state_check(self) -> None:
         """Perform any sanity checks that should be performed at the end of each iteration"""
         self.bgd.state_check()
 
-    def print_report(self):
+    def print_report(self) -> None:
         """Do any printing desired after convergence has been achieved and the loop ends"""
         res_mask = ((self.noise_upper.SAET[:, :, 0] - self.SAET_m[:, 0]).mean(axis=0) > 0.1 * self.SAET_m[:, 0]) & (self.SAET_m[:, 0] > 0.)
         galactic_below_high = self.bgd.get_galactic_below_high()
@@ -80,7 +80,7 @@ class NoiseModelManager(StateManager):
         else:
             print('Background FAILS  normality: points=%12d A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f' % (n_points, a2score, mean_rat, std_rat))
 
-    def advance_state(self):
+    def advance_state(self) -> None:
         """Handle any logic necessary to advance the state of the object to the next iteration"""
         noise_safe_upper = self.fit_state.get_noise_safe_upper()
         noise_safe_lower = self.fit_state.get_noise_safe_lower()

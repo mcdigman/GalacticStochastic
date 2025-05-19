@@ -11,7 +11,7 @@ from LisaWaveformTools.instrument_noise import DiagonalNonstationaryDenseInstrum
 IterationConfig = namedtuple('IterationConfig', ['max_iterations', 'snr_thresh', 'snr_min', 'snr_cut_bright', 'smooth_lengthf'])
 
 
-def run_binary_coadd(itrb, faints_in, waveform_model, noise_upper, snrs_upper, snrs_tot_upper, itrn, galactic_below, galactic_undecided, brights, wc, params_gb, snr_min, snr_cut_bright):
+def run_binary_coadd(itrb, faints_in, waveform_model, noise_upper, snrs_upper, snrs_tot_upper, itrn, galactic_below, galactic_undecided, brights, wc, params_gb, snr_min, snr_cut_bright) -> None:
     if not faints_in[itrb]:
         waveform_model.update_params(params_gb[itrb].copy())
         wavelet_waveform = waveform_model.get_unsorted_coeffs()

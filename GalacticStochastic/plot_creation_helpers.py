@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_noise_spectrum_ambiguity(ifm):
+def plot_noise_spectrum_ambiguity(ifm) -> None:
     """Make a plot of the difference between the upper and lower estimates of the spectrum"""
     SAET_m = ifm.noise_manager.SAET_m
     wc = ifm.noise_manager.wc
@@ -23,7 +23,7 @@ def plot_noise_spectrum_ambiguity(ifm):
     plt.show()
 
 
-def plot_noise_spectrum_evolve(ifm):
+def plot_noise_spectrum_evolve(ifm) -> None:
     """Plot the evolution of the noise power spectrum with iteration"""
     SAET_m = ifm.noise_manager.SAET_m
     wc = ifm.noise_manager.wc

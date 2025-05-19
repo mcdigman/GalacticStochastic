@@ -9,7 +9,7 @@ from WaveletWaveforms.coefficientsWDM_time_helpers import sparse_addition_helper
 class BGDecomposition:
     """class to handle the internal decomposition of the galactic background"""
 
-    def __init__(self, wc, NC_gal, galactic_floor=None, galactic_below=None, galactic_undecided=None, galactic_above=None, do_total_track=True):
+    def __init__(self, wc, NC_gal, galactic_floor=None, galactic_below=None, galactic_undecided=None, galactic_above=None, do_total_track=True) -> None:
         self.wc = wc
         self.NC_gal = NC_gal
         self.shape1 = (wc.Nt * wc.Nf, self.NC_gal)
@@ -46,7 +46,7 @@ class BGDecomposition:
         self.power_galactic_total = []
 
     def get_galactic_total(self, bypass_check=False):
-        """Get the sum of all components of the galactic signal, detectable or not"""
+        """Get the sum of the entire galactic signal, including detectable binaries"""
         if not bypass_check:
             self.state_check()
         return self.get_galactic_below_high(bypass_check=True) + self.galactic_above
@@ -85,7 +85,7 @@ class BGDecomposition:
             self.state_check()
         return self.galactic_floor
 
-    def state_check(self):
+    def state_check(self) -> None:
         """If we have previously cached the total recorded galactic signal,
         check that the total not changed much.
         Otherwise, cache the current total so future runs can check if it has changed
@@ -98,7 +98,7 @@ class BGDecomposition:
                 # check all contributions to the total signal are tracked accurately
                 assert np.allclose(self.galactic_total_cache, self.get_galactic_total(bypass_check=True), atol=1.e-300, rtol=1.e-6)
 
-    def log_state(self, S_mean):
+    def log_state(self, S_mean) -> None:
         """Record any diagnostics we want to track about this iteration"""
         power_undecided = np.sum(np.sum((self.galactic_undecided**2).reshape(self.shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0)
         power_above = np.sum(np.sum((self.galactic_above**2).reshape(self.shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0)
@@ -114,15 +114,15 @@ class BGDecomposition:
         self.power_galactic_below_high.append(power_below_high)
         self.power_galactic_below_low.append(power_below_low)
 
-    def clear_undecided(self):
+    def clear_undecided(self) -> None:
         """Clear the undecided part of the galactic spectrum"""
         self.galactic_undecided[:] = 0.
 
-    def clear_above(self):
+    def clear_above(self) -> None:
         """Clear the bright part of the galactic spectrum"""
         self.galactic_above[:] = 0.
 
-    def clear_below(self):
+    def clear_below(self) -> None:
         """Clear the faint part of the galactic spectrum"""
         self.galactic_below[:] = 0.
 
@@ -138,18 +138,18 @@ class BGDecomposition:
         S, _, _, _, _ = get_S_cyclo(galactic_loc, S_mean, self.wc, smooth_lengthf, filter_periods, period_list=period_list)
         return S
 
-    def add_undecided(self, wavelet_waveform):
+    def add_undecided(self, wavelet_waveform) -> None:
         """Add a binary to the undecided component of the galactic background"""
         sparse_addition_helper(wavelet_waveform, self.galactic_undecided)
 
-    def add_floor(self, wavelet_waveform):
+    def add_floor(self, wavelet_waveform) -> None:
         """Add a binary to the floor component of the galactic background"""
         sparse_addition_helper(wavelet_waveform, self.galactic_floor)
 
-    def add_faint(self, wavelet_waveform):
+    def add_faint(self, wavelet_waveform) -> None:
         """Add a binary to the faint component of the galactic background"""
         sparse_addition_helper(wavelet_waveform, self.galactic_below)
 
-    def add_bright(self, wavelet_waveform):
+    def add_bright(self, wavelet_waveform) -> None:
         """Add a binary to the bright component of the galactic background"""
         sparse_addition_helper(wavelet_waveform, self.galactic_above)

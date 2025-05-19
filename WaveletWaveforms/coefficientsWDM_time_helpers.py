@@ -47,7 +47,6 @@ N_max: integer
 """
 
 
-
 def get_empty_sparse_taylor_time_waveform(NC_in, wc):
     """Get a blank SparseTaylorTimeWaveform object with arrays of the correct sizes"""
     # need the frequency derivatives to calculate the maximum possible size
@@ -63,7 +62,8 @@ def get_empty_sparse_taylor_time_waveform(NC_in, wc):
 
     return SparseTaylorTimeWaveform(wave_value, pixel_index, N_set, N_max)
 
-def sparse_addition_helper(sparse_waveform, dense_representation):
+
+def sparse_addition_helper(sparse_waveform, dense_representation) -> None:
     """Take a sparse wavelet representation from e.g. SparseTaylorTimeWaveform
     and add it to a dense wavelet representation
     sparse_waveform: namedtuple SparseTaylorTimeWaveform

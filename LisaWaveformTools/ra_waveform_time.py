@@ -13,7 +13,7 @@ SpacecraftChannels = namedtuple('SpacecraftChannels', ['T', 'RR', 'II', 'dRR', '
 
 
 @njit(fastmath=True)
-def ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, NT, lc, wc):
+def ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, NT, lc, wc) -> None:
     """Get the amplitude and phase for LISA"""
     AA = waveform.AT
     PP = waveform.PT
@@ -86,7 +86,7 @@ def ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, NT, lc,
 
 # TODO check factor of 2pi
 @njit()
-def AmpFreqDeriv_inplace(waveform, Amp, phi0, FI, FD0, TS):
+def AmpFreqDeriv_inplace(waveform, Amp, phi0, FI, FD0, TS) -> None:
     """Get time domain waveform to lowest order, simple constant fdot"""
     AS = waveform.AT
     PS = waveform.PT
@@ -109,7 +109,7 @@ class BinaryTimeWaveformAmpFreqD:
     assuming input binary format based on amplitude, frequency, and frequency derivative
     """
 
-    def __init__(self, params, nt_min, nt_max, lc, wc):
+    def __init__(self, params, nt_min, nt_max, lc, wc) -> None:
         """Initalize the object"""
         self.params = params
         self.nt_min = nt_min
@@ -151,12 +151,12 @@ class BinaryTimeWaveformAmpFreqD:
 
         self.update_params(params)
 
-    def update_params(self, params):
+    def update_params(self, params) -> None:
         self.params = params
         self.update_intrinsic()
         self.update_extrinsic()
 
-    def update_intrinsic(self):
+    def update_intrinsic(self) -> None:
         """Get amplitude and phase for taylorT3"""
         amp = self.params[0]
         costh = np.cos(np.pi / 2 - self.params[1])  # TODO check
@@ -170,7 +170,7 @@ class BinaryTimeWaveformAmpFreqD:
 
         AmpFreqDeriv_inplace(self.waveform, amp, phi0, freq0, freqD, self.xis)
 
-    def update_extrinsic(self):
+    def update_extrinsic(self) -> None:
         # Calculate cos and sin of sky position, inclination, polarization
         costh = np.cos(np.pi / 2 - self.params[1])
         phi = self.params[2]

@@ -44,7 +44,7 @@ def get_tensor_basis(phi, costh):
 
 
 @njit(fastmath=True)
-def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_low, NTs, kdotx, lc):
+def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_low, NTs, kdotx, lc) -> None:
     """Get the waveform for LISA given polarization angle, spacecraft, tensor basis and Fs, channel order AET"""
     RRs = spacecraft_channels.RR
     IIs = spacecraft_channels.II
@@ -227,7 +227,7 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
 
 
 @njit()
-def get_xis_inplace(kv, ts, xas, yas, zas, xis, lc):
+def get_xis_inplace(kv, ts, xas, yas, zas, xis, lc) -> None:
     """Get time adjusted to guiding center for tensor basis"""
     kdotx = (xas * kv[0] + yas * kv[1] + zas * kv[2]) * lc.Larm / CLIGHT
     xis[:] = ts - kdotx

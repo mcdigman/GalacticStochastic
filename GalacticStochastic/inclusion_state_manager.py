@@ -12,7 +12,7 @@ from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 class BinaryInclusionState(StateManager):
     """Stores all the binaries under consideration in the galaxy"""
 
-    def __init__(self, wc, ic, lc, params_gb_in, noise_manager, fit_state, NC_snr, snrs_tot_in=None):
+    def __init__(self, wc, ic, lc, params_gb_in, noise_manager, fit_state, NC_snr, snrs_tot_in=None) -> None:
         """Class that stores information about the binaries in the background, and which component they are assigned to"""
         self.wc = wc
         self.ic = ic
@@ -55,7 +55,7 @@ class BinaryInclusionState(StateManager):
         self.n_faints_cur = np.zeros(self.fit_state.get_n_itr_cut() + 1, dtype=np.int64)
         self.n_brights_cur = np.zeros(self.fit_state.get_n_itr_cut() + 1, dtype=np.int64)
 
-    def sustain_snr_helper(self):
+    def sustain_snr_helper(self) -> None:
         """Helper to carry forward any other snr values we know from a previous iteration"""
         itrn = self.itrn
         if self.fit_state.get_faint_converged():
@@ -102,7 +102,7 @@ class BinaryInclusionState(StateManager):
             delta_brights = self.n_brights_cur[self.itrn - 1] - self.n_brights_cur[self.itrn - 2]
         return delta_brights
 
-    def run_binary_coadd(self, itrb):
+    def run_binary_coadd(self, itrb) -> None:
         """Get the waveform for a binary, store its snr, decide whether it is faint, and coadd it to the appropriate spectrum"""
         itrn = self.itrn
         self.waveform_manager.update_params(self.params_gb[itrb].copy())
@@ -111,7 +111,7 @@ class BinaryInclusionState(StateManager):
         self.brights[itrn, itrb], self.faints_cur[itrn, itrb] = self.decision_helper(itrb)
         self.decide_coadd_helper(itrb)
 
-    def snr_storage_helper(self, itrb):
+    def snr_storage_helper(self, itrb) -> None:
         """Helper to store the snrs of the current binary"""
         itrn = self.itrn
         wavelet_waveform = self.waveform_manager.get_unsorted_coeffs()
@@ -178,7 +178,7 @@ class BinaryInclusionState(StateManager):
 
         return bright_loc, faint_loc
 
-    def decide_coadd_helper(self, itrb):
+    def decide_coadd_helper(self, itrb) -> None:
         """Add each binary to the correct part of the galactic spectrum, depending on whether it is bright or faint"""
         itrn = self.itrn
         # the same binary cannot be decided as both bright and faint
@@ -206,7 +206,7 @@ class BinaryInclusionState(StateManager):
             else:
                 self.noise_manager.bgd.add_faint(wavelet_waveform)
 
-    def advance_state(self):
+    def advance_state(self) -> None:
         """Handle any logic necessary to advance the state of the object to the next iteration"""
         if self.itrn == 0:
             self.faints_cur[self.itrn] = False
@@ -247,8 +247,7 @@ class BinaryInclusionState(StateManager):
 
         self.itrn += 1
 
-
-    def state_check(self):
+    def state_check(self) -> None:
         """Do any self consistency checks based on the current state"""
         if self.itrn > 0:
             if self.fit_state.bright_converged[self.itrn - 1]:
@@ -259,7 +258,7 @@ class BinaryInclusionState(StateManager):
                 assert self.itrn > 1
                 assert np.all(self.faints_cur[self.itrn - 1] == self.faints_cur[self.itrn - 2])
 
-    def print_report(self):
+    def print_report(self) -> None:
         """Do any printing desired after convergence has been achieved and the loop ends"""
         Tobs_consider_yr = (self.noise_manager.nt_max - self.noise_manager.nt_min) * self.wc.DT / gc.SECSYEAR
         n_consider = self.n_bin_use
@@ -277,10 +276,10 @@ class BinaryInclusionState(StateManager):
 
         assert n_ambiguous + n_bright + n_faint + n_faint2 == n_consider
 
-    def log_state(self):
+    def log_state(self) -> None:
         """Perform any internal logging that should be done after advance_state is run for all objects for the iteration"""
         return
 
-    def loop_finalize(self):
+    def loop_finalize(self) -> None:
         """Perform any logic desired after convergence has been achieved and the loop ends"""
         return

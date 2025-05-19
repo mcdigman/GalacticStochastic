@@ -13,7 +13,7 @@ from WaveletWaveforms.wdm_config import get_wavelet_model
 
 
 @pytest.mark.parametrize('scale_mult', [1., 2.])
-def test_unit_noise_generation_stat(scale_mult):
+def test_unit_noise_generation_stat(scale_mult) -> None:
     """Test unit normal noise for stationary model produced with input spectrum SAET_m = 1"""
     config = configparser.ConfigParser()
     config.read('tests/galactic_fit_test_config1.ini')
@@ -48,7 +48,7 @@ def test_unit_noise_generation_stat(scale_mult):
 
 
 @pytest.mark.parametrize('var_select', ['const1', 'const2', 'cos1'])
-def test_unit_noise_generation_cyclo_time(var_select):
+def test_unit_noise_generation_cyclo_time(var_select) -> None:
     """Test unit normal noise for nonstationary model produced with input spectrum SAET_m = 1"""
     config = configparser.ConfigParser()
     config.read('tests/galactic_fit_test_config1.ini')
@@ -103,7 +103,7 @@ def test_unit_noise_generation_cyclo_time(var_select):
         unit_normal_battery(np.imag(noise_realization_freq), mult=np.sqrt(ND // 2), do_assert=True)
 
 
-def test_noise_normalization_match():
+def test_noise_normalization_match() -> None:
     """Test ability to generate noise matching known spectrum through wavelet methods"""
     config = configparser.ConfigParser()
     config.read('tests/spectral_noise_test_config1.ini')

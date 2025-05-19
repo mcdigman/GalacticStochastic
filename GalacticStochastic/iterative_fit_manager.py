@@ -8,7 +8,7 @@ from GalacticStochastic.state_manager import StateManager
 class IterativeFitManager(StateManager):
     """Iterative fit object that runs the iterative fitting procedure"""
 
-    def __init__(self, ic, fit_state, noise_manager, bis):
+    def __init__(self, ic, fit_state, noise_manager, bis) -> None:
         """"Create the iterative fit object"""
         self.ic = ic
         self.fit_state = fit_state
@@ -19,8 +19,7 @@ class IterativeFitManager(StateManager):
 
         self.n_full_converged = self.fit_state.get_n_itr_cut() - 1
 
-
-    def do_loop(self):
+    def do_loop(self) -> None:
         """Do the entire iterative fitting loop"""
         print('entered loop')
         ti = perf_counter()
@@ -40,13 +39,13 @@ class IterativeFitManager(StateManager):
 
         self.print_report()
 
-    def do_iteration(self):
+    def do_iteration(self) -> None:
         """Advance everything one full iteration"""
         self.advance_state()
         self.log_state()
         self.state_check()
 
-    def advance_state(self):
+    def advance_state(self) -> None:
         """Advance the state of the iteration and determine whether convergence is achieved"""
         t0n = perf_counter()
 
@@ -65,19 +64,19 @@ class IterativeFitManager(StateManager):
 
         print('made bg %3d in time %7.3fs fit time %7.3fs' % (self.itrn, t1n - t0n, t2n - t1n))
 
-    def log_state(self):
+    def log_state(self) -> None:
         """Perform any internal logging that should be done after advance_state is run for all objects for the iteration"""
         self.bis.log_state()
         self.fit_state.log_state()
         self.noise_manager.log_state()
 
-    def loop_finalize(self):
+    def loop_finalize(self) -> None:
         """Perform any logic desired after convergence has been achieved and the loop ends"""
         self.bis.loop_finalize()
         self.fit_state.loop_finalize()
         self.noise_manager.loop_finalize()
 
-    def check_done(self):
+    def check_done(self) -> bool:
         """Check whether the fitting procedure can bet stopped"""
         if self.fit_state.get_bright_converged() and self.fit_state.get_faint_converged():
             print('result fully converged at ' + str(self.itrn) + ', no further iterations needed')
@@ -85,13 +84,13 @@ class IterativeFitManager(StateManager):
             return True
         return False
 
-    def print_report(self):
+    def print_report(self) -> None:
         """Do any printing desired after convergence has been achieved and the loop ends"""
         self.bis.print_report()
         self.fit_state.print_report()
         self.noise_manager.print_report()
 
-    def state_check(self):
+    def state_check(self) -> None:
         """Perform any sanity checks that should be performed at the end of each iteration"""
         self.bis.state_check()
         self.fit_state.state_check()

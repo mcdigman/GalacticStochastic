@@ -8,7 +8,7 @@ from WaveletWaveforms.taylor_wdm_funcs import wavemaket_multi_inplace
 class BinaryWaveletAmpFreqDT:
     """class to store a sparse binary wavelet and update for search"""
 
-    def __init__(self, params, wc, lc, nt_min=0, nt_max=-1):
+    def __init__(self, params, wc, lc, nt_min=0, nt_max=-1) -> None:
         """Construct a binary wavelet object, if NMF_use is not -1 it overrides the default"""
         self.wc = wc
         self.lc = lc
@@ -35,7 +35,7 @@ class BinaryWaveletAmpFreqDT:
         # initialize to input parameters
         self.update_params(params)
 
-    def update_params(self, params_in):
+    def update_params(self, params_in) -> None:
         """Update the internal wavelet representation to match the input parameters"""
         self.consistent = False
         self.params = params_in

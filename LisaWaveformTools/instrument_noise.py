@@ -45,7 +45,6 @@ def instrument_noise_AET(f, lc, wc):
 
     SAET = np.zeros((f.size, wc.NC))
 
-    # SAET[:, 0] = mult_all*(mult_sa*(1+cosfonfs+cosfonfs**2)+mult_sp*(2+cosfonfs))
     SAET[:, 0] = instrument_noise1(f, lc)  # TODO make this all self consistent
     SAET[:, 1] = SAET[:, 0]
     SAET[:, 2] = mult_all * (mult_sa / 2 * (1 - 2 * cosfonfs + cosfonfs**2) + mult_sp * (1 - cosfonfs))
@@ -58,8 +57,6 @@ def instrument_noise_AET_wdm_loop(phif, lc, wc):
     # realistically this really only needs run once and is fast enough without jit
     # TODO check normalization
     # TODO get first and last bins correct
-    # nrm =   np.sqrt(2*wc.Nf*wc.dt)*np.linalg.norm(phif)
-    # nrm =   2*np.sqrt(2*wc.dt)*np.linalg.norm(phif)
     nrm = np.sqrt(12318 / wc.Nf) * np.linalg.norm(phif)
     print('nrm instrument', nrm)
     phif /= nrm
@@ -149,7 +146,7 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel:
     instrument noise model to feed to snr and fisher matrix calculations
     """
 
-    def __init__(self, SAET, wc, prune, seed=-1):
+    def __init__(self, SAET, wc, prune, seed=-1) -> None:
         """Initialize the fully diagonal, nonstationary instrument noise model
 
         Parameters
@@ -231,7 +228,7 @@ class DiagonalStationaryDenseInstrumentNoiseModel:
     instrument noise model to feed to snr and fisher matrix calculations
     """
 
-    def __init__(self, SAET_m, wc, prune, seed=-1):
+    def __init__(self, SAET_m, wc, prune, seed=-1) -> None:
         """Initialize the stationary instrument noise model
 
         Parameters

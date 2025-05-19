@@ -8,7 +8,7 @@ from GalacticStochastic.state_manager import StateManager
 class IterativeFitState(StateManager):
     """State machine that handles the state of the iterator"""
 
-    def __init__(self, ic, preprocess_mode=0):
+    def __init__(self, ic, preprocess_mode=0) -> None:
         """Create the state machine object"""
         self.ic = ic
         self.preprocess_mode = preprocess_mode
@@ -54,7 +54,7 @@ class IterativeFitState(StateManager):
 
         self.itrn = 0
 
-    def set_bright_state_request(self, do_faint_check, bright_converged, faint_converged, force_converge):
+    def set_bright_state_request(self, do_faint_check, bright_converged, faint_converged, force_converge) -> None:
         """Set what we want the state to be after bright_convergence_decision"""
         self.bright_state_request = (do_faint_check, bright_converged, faint_converged, force_converge)
 
@@ -62,7 +62,7 @@ class IterativeFitState(StateManager):
         """Get what we wanted the state to be after bright_convergence_decision"""
         return self.bright_state_request
 
-    def set_faint_state_request(self, do_faint_check, bright_converged, faint_converged, force_converge):
+    def set_faint_state_request(self, do_faint_check, bright_converged, faint_converged, force_converge) -> None:
         """Set what we want the state to be after faint_convergence_decision"""
         self.faint_state_request = (do_faint_check, bright_converged, faint_converged, force_converge)
 
@@ -86,7 +86,7 @@ class IterativeFitState(StateManager):
         """Get whether we are currently in pre-processing mode"""
         return self.preprocess_mode
 
-    def advance_state(self):
+    def advance_state(self) -> None:
         """Set the current state for the next iteration to be the state requested after faint_convergence_decision"""
         self.current_state = self.faint_state_request
         self.itrn += 1
@@ -111,7 +111,7 @@ class IterativeFitState(StateManager):
         """Get whether we are trying to force convergence"""
         return self.current_state[3]
 
-    def log_state(self):
+    def log_state(self) -> None:
         """Store the state in arrays for diagnostic purposes"""
         (do_faint_check, bright_converged, faint_converged, force_converge) = self.get_state()
 
@@ -215,17 +215,17 @@ class IterativeFitState(StateManager):
         self.noise_safe_lower = noise_safe
         return noise_safe
 
-    def state_check(self):
+    def state_check(self) -> None:
         """Check some things we expect to be true about the state given current rules"""
         assert self.get_do_faint_check() == self.do_faint_check[self.itrn]
         assert self.get_bright_converged() == self.bright_converged[self.itrn]
         if self.do_faint_check[self.itrn]:
             assert not self.bright_converged[self.itrn]
 
-    def loop_finalize(self):
+    def loop_finalize(self) -> None:
         """Perform any logic desired after convergence has been achieved and the loop ends"""
         return
 
-    def print_report(self):
+    def print_report(self) -> None:
         """Do any printing desired after convergence has been achieved and the loop ends"""
         return
