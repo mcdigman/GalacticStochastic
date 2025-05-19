@@ -1,4 +1,10 @@
-"""process fits to galactic background"""
+"""This module contains several functions to fit
+realizations of the galactic background from the iterative fit.
+The functions use a cyclostationary model with controllable periodicities.
+get_S_cyclo uses an FFT-based filtering to extract a fit to a smoothed background,
+without using any particular spectral model. fit_gb_spectrum_evolve
+uses a fit to a standard shape for the galactic background spectrum.
+"""
 
 from warnings import warn
 
@@ -22,7 +28,9 @@ def SAE_gal_model_alt(f, A, alpha, beta, kappa, gamma, fknee):
 
 
 def filter_periods_fft(r_mean, Nt_loc, period_list, wc):
-    """Filter to a specific set of periods using an fft, period_list is in multiples of wc.Tobs/gc.SECSYEAR"""
+    """Filter to a specific set of periods using an fft.
+    period_list is in multiples of wc.Tobs/gc.SECSYEAR
+    """
     # get the same number of frequencies as the input r
     NC_loc = r_mean.shape[1]
 
@@ -192,7 +200,7 @@ def get_S_cyclo(
         # remove the numerical stabilizer
         S_demod_smooth[1:, itrc] = 10**log_S_smooth - log_S_stabilizer
 
-    # enforce positive just in case subtraction misbheaved
+    # enforce positive just in case subtraction misbehaved
     S_demod_smooth = np.abs(S_demod_smooth)
 
     S_res = np.zeros((wc.Nt, wc.Nf, NC_loc)) + SAET_m

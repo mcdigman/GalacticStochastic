@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     ic = get_iteration_config(config)
 
-    galactic_below_in, snrs_tot_in, SAET_m, wc, lc = gfi.load_preliminary_galactic_file(galaxy_file, galaxy_dir, ic.snr_thresh, wc, lc)
+    galactic_below_in, snrs_tot_in, S_inst_m, wc, lc = gfi.load_preliminary_galactic_file(galaxy_file, galaxy_dir, ic.snr_thresh, wc, lc)
 
     for itrm in range(1):
         stat_only = False
@@ -46,7 +46,7 @@ if __name__ == '__main__':
         bgd = BGDecomposition(wc, ic.NC_gal, galactic_floor=galactic_below_in.copy())
         galactic_below_in = None
 
-        noise_manager = NoiseModelManager(ic, wc, fit_state, bgd, SAET_m, stat_only, nt_min, nt_max)
+        noise_manager = NoiseModelManager(ic, wc, fit_state, bgd, S_inst_m, stat_only, nt_min, nt_max)
 
         bis = BinaryInclusionState(wc, ic, lc, params_gb, noise_manager, fit_state, ic.NC_snr, snrs_tot_in)
 
@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
         do_hf_out = True
         if do_hf_out:
-            gfi.store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ifm.ic, ifm.noise_manager.nt_min, ifm.noise_manager.nt_max, bgd, ic.period_list, ifm.bis.n_bin_use, ifm.noise_manager.SAET_m, ifm.noise_manager.SAET_fin, ifm.noise_manager.stat_only, ifm.bis.snrs_tot_upper, ifm.n_full_converged, ifm.bis.argbinmap, ifm.bis.faints_old, ifm.bis.faints_cur, ifm.bis.brights)
+            gfi.store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ifm.ic, ifm.noise_manager.nt_min, ifm.noise_manager.nt_max, bgd, ic.period_list, ifm.bis.n_bin_use, ifm.noise_manager.S_stat_m, ifm.noise_manager.S_final, ifm.noise_manager.stat_only, ifm.bis.snrs_tot_upper, ifm.n_full_converged, ifm.bis.argbinmap, ifm.bis.faints_old, ifm.bis.faints_cur, ifm.bis.brights)
 
     do_plot_noise_spectrum_ambiguity = True
     if do_plot_noise_spectrum_ambiguity:

@@ -111,7 +111,7 @@ def test_filter_periods_fft1(itrk) -> None:
 
 
 def test_stationary_mean_scramble_invariance() -> None:
-    """SAET for stationary mean should be independent of time order of the samples; check this is true"""
+    """S for stationary mean should be independent of time order of the samples; check this is true"""
     # get the background
     bg_here1 = 1000 * bg_base.copy()
 
@@ -122,14 +122,14 @@ def test_stationary_mean_scramble_invariance() -> None:
     # get the same background with time indices scrambled
     bg_here2 = bg_here1[idx_sel2].copy()
 
-    SAET_m = np.full((wc.Nf, NC_gal), 1.)
+    S_inst_m = np.full((wc.Nf, NC_gal), 1.)
 
-    # get both SAETs
-    SAET_got1, _, _, _, _ = get_S_cyclo(bg_here1, SAET_m, wc, 1., False, period_list=())
-    SAET_got2, _, _, _, _ = get_S_cyclo(bg_here2, SAET_m, wc, 1., False, period_list=())
+    # get both S matrices
+    S_got1, _, _, _, _ = get_S_cyclo(bg_here1, S_inst_m, wc, 1., False, period_list=())
+    S_got2, _, _, _, _ = get_S_cyclo(bg_here2, S_inst_m, wc, 1., False, period_list=())
 
     # check for expected invariance
-    assert np.allclose(SAET_got1, SAET_got2, atol=1.e-14, rtol=1.e-13)
+    assert np.allclose(S_got1, S_got2, atol=1.e-14, rtol=1.e-13)
 
 
 def get_noise_model_helper(model_name):
@@ -173,11 +173,11 @@ def stationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, filte
     for itrf in range(wc.Nf):
         bg_here[:, itrf, :] *= f_mult[itrf]
 
-    SAET_m = np.full((wc.Nf, NC_gal), 0.)
+    S_inst_m = np.full((wc.Nf, NC_gal), 0.)
     for itrc in range(NC_gal):
-        SAET_m[:, itrc] = get_noise_model_helper(noise_models[itrc])
+        S_inst_m[:, itrc] = get_noise_model_helper(noise_models[itrc])
 
-    SAET_got, _, _, _, _ = get_S_cyclo(bg_here, SAET_m, wc, smooth_lengthf, filter_periods, period_list=())
+    S_got, _, _, _, _ = get_S_cyclo(bg_here, S_inst_m, wc, smooth_lengthf, filter_periods, period_list=())
 
     # replicate expected smoothed multiplier
     f_mult_smooth = np.zeros_like(f_mult)
@@ -193,14 +193,14 @@ def stationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, filte
 
     for itrc in range(NC_gal):
         # check that in constant model the resulting spectrum is indeed constant
-        assert np.all(SAET_got[:, :, itrc] == SAET_got[0, :, itrc])
+        assert np.all(S_got[:, :, itrc] == S_got[0, :, itrc])
 
     # check that adding known noise produces known spectrum
     for itrc in range(NC_gal):
         # check no rows outside ~5 sigma of being consistent with expected result
         for itrf in range(wc.Nf):
-            got_loc = SAET_got[0, itrf, itrc]
-            pred_loc = SAET_m[itrf, itrc] + f_mult_smooth[itrf, itrc]**2
+            got_loc = S_got[0, itrf, itrc]
+            pred_loc = S_inst_m[itrf, itrc] + f_mult_smooth[itrf, itrc]**2
             assert np.allclose(got_loc, pred_loc, atol=5 * (f_mult_smooth[itrf, itrc]**2) / np.sqrt(wc.Nt), rtol=5 * (f_mult_smooth[itrf, itrc]**2) / np.sqrt(wc.Nt))
 
 
@@ -242,11 +242,11 @@ def test_nonstationary_mean_faint_alternate(amp2_mult) -> None:
     for itrc in range(NC_gal):
         bg_here[:, :, itrc] *= np.outer(t_mult1[:, itrc], f_mult1[:, itrc]) + np.outer(t_mult2[:, itrc], f_mult2[:, itrc])
 
-    SAET_m = np.full((wc.Nf, NC_gal), 0.)
+    S_inst_m = np.full((wc.Nf, NC_gal), 0.)
     for itrc in range(NC_gal):
-        SAET_m[:, itrc] = get_noise_model_helper('white_equal')
+        S_inst_m[:, itrc] = get_noise_model_helper('white_equal')
 
-    _, _, _, amp_got, _ = get_S_cyclo(bg_here, SAET_m, wc, smooth_lengthf, filter_periods, period_list=None)
+    _, _, _, amp_got, _ = get_S_cyclo(bg_here, S_inst_m, wc, smooth_lengthf, filter_periods, period_list=None)
 
     _, amp_got1, _ = filter_periods_fft(t_mult1**2 + 1., wc.Nt, period_list, wc)
 
@@ -276,7 +276,7 @@ def test_nonstationary_mean_faint_alternate(amp2_mult) -> None:
 
 
 def test_nonstationary_mean_zero_case() -> None:
-    """Test a case where rec_use is very small/negative for numerical stability/ensure SAET cannot be nan"""
+    """Test a case where rec_use is very small/negative for numerical stability/ensure S cannot be nan"""
     smooth_lengthf = 1.
     filter_periods = True
 
@@ -297,11 +297,11 @@ def test_nonstationary_mean_zero_case() -> None:
     for itrt in range(wc.Nt):
         bg_here[itrt, :, :] *= t_mult[itrt, :]
 
-    SAET_m = np.full((wc.Nf, NC_gal), 0.)
+    S_inst_m = np.full((wc.Nf, NC_gal), 0.)
     for itrc in range(NC_gal):
-        SAET_m[:, itrc] = get_noise_model_helper('white_faint')
+        S_inst_m[:, itrc] = get_noise_model_helper('white_faint')
 
-    SAET_got, rec_got, _, _, _ = get_S_cyclo(bg_here, SAET_m, wc, smooth_lengthf, filter_periods, period_list=None)
+    S_got, rec_got, _, _, _ = get_S_cyclo(bg_here, S_inst_m, wc, smooth_lengthf, filter_periods, period_list=None)
 
     assert np.all(rec_got > 0.)
 
@@ -321,9 +321,9 @@ def test_nonstationary_mean_zero_case() -> None:
     for itrc in range(2):
         # check no rows outside ~5 sigma of being consistent with expected result
         for itrf in range(wc.Nf):
-            got_loc = SAET_got[:, itrf, itrc]
+            got_loc = S_got[:, itrf, itrc]
             bg_loc = f_mult_smooth[itrf, itrc]**2 * t_mult[:, itrc]**2
-            pred_loc = SAET_m[itrf, itrc] + bg_loc
+            pred_loc = S_inst_m[itrf, itrc] + bg_loc
             assert np.allclose(got_loc, pred_loc, atol=5 * (f_mult_smooth[itrf, itrc]**2) / np.sqrt(wc.Nt), rtol=5 * (bg_loc) / np.sqrt(wc.Nt))
 
 
@@ -362,11 +362,11 @@ def nonstationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, fi
     for itrt in range(wc.Nt):
         bg_here[itrt, :, :] *= t_mult[itrt, :]
 
-    SAET_m = np.full((wc.Nf, NC_gal), 0.)
+    S_inst_m = np.full((wc.Nf, NC_gal), 0.)
     for itrc in range(NC_gal):
-        SAET_m[:, itrc] = get_noise_model_helper(noise_models[itrc])
+        S_inst_m[:, itrc] = get_noise_model_helper(noise_models[itrc])
 
-    SAET_got, rec_got, _, amp_got, angle_got = get_S_cyclo(bg_here, SAET_m, wc, smooth_lengthf, filter_periods, period_list=period_list2)
+    S_got, rec_got, _, amp_got, angle_got = get_S_cyclo(bg_here, S_inst_m, wc, smooth_lengthf, filter_periods, period_list=period_list2)
 
     assert np.all(rec_got > 0.)
 
@@ -391,9 +391,9 @@ def nonstationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, fi
     for itrc in range(NC_gal):
         # check no rows outside ~5 sigma of being consistent with expected result
         for itrf in range(wc.Nf):
-            got_loc = SAET_got[:, itrf, itrc]
+            got_loc = S_got[:, itrf, itrc]
             bg_loc = f_mult_smooth[itrf, itrc]**2 * t_mult[:, itrc]**2
-            pred_loc = SAET_m[itrf, itrc] + bg_loc
+            pred_loc = S_inst_m[itrf, itrc] + bg_loc
             assert np.allclose(got_loc, pred_loc, atol=5 * (f_mult_smooth[itrf, itrc]**2) / np.sqrt(wc.Nt), rtol=5 * (bg_loc) / np.sqrt(wc.Nt))
 
 

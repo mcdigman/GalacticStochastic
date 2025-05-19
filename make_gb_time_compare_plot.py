@@ -45,39 +45,38 @@ if __name__ == '__main__':
     else:
         period_list = ()
 
-    SAET_gal = np.zeros((nk, wc.Nf, 3))
-    SAET_gal_smooth = np.zeros((nk, wc.Nf, 3))
+    S_stat_m = np.zeros((nk, wc.Nf, 3))
+    S_stat_smooth_m = np.zeros((nk, wc.Nf, 3))
 
-    SAET_m = instrument_noise_AET_wdm_m(lc, wc)
-    SAE_offset = 1. * SAET_m[:, 0]
+    S_inst_m = instrument_noise_AET_wdm_m(lc, wc)
+    S_stat_offset = 1. * S_inst_m[:, 0]
 
-    r_tots = np.zeros((nk, wc.Nt, SAET_m.shape[-1]))
+    r_tots = np.zeros((nk, wc.Nt, S_inst_m.shape[-1]))
 
     for itrk in range(nk):
         _, galactic_below_high = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_mins[itrk], nt_maxs[itrk], stat_only)
-        SAET_gal[itrk] = np.mean(galactic_below_high, axis=0)
+        S_stat_m[itrk] = np.mean(galactic_below_high, axis=0)
 
-        SAET_gal_smooth[itrk, 0, :] = SAET_gal[itrk, 0, :]
+        S_stat_smooth_m[itrk, 0, :] = S_stat_m[itrk, 0, :]
 
-        _, r_tots[itrk], SAET_mean_cur, _, _ = get_S_cyclo(galactic_below_high, SAET_m, wc, smooth_targ_length, not stat_only, period_list=period_list, Nt_loc=wc.Nt)
-        SAET_gal_smooth[itrk] = SAET_mean_cur
+        (_, r_tots[itrk], S_stat_smooth_m[itrk], _, _) = get_S_cyclo(galactic_below_high, S_inst_m, wc, smooth_targ_length, not stat_only, period_list=period_list, Nt_loc=wc.Nt)
 
         for itrc in range(2):
-            SAET_gal_smooth[itrk, :, itrc] += SAE_offset
+            S_stat_smooth_m[itrk, :, itrc] += S_stat_offset
 
     arg_cut = wc.Nf - 1
     fit_mask = (fs > 1.e-5) & (fs < fs[arg_cut])
 
-    SAE_fit_evolve, _ = fit_gb_spectrum_evolve(SAET_gal_smooth[itrl_fit:, fit_mask, :], fs[fit_mask], fs[1:], nt_ranges[itrl_fit:], SAE_offset[fit_mask], wc)
+    S_fit_evolve_m, _ = fit_gb_spectrum_evolve(S_stat_smooth_m[itrl_fit:, fit_mask, :], fs[fit_mask], fs[1:], nt_ranges[itrl_fit:], S_stat_offset[fit_mask], wc)
 
     fig = plt.figure(figsize=(5.4, 3.5))
     ax = fig.subplots(1)
     fig.subplots_adjust(wspace=0., hspace=0., left=0.13, top=0.99, right=0.99, bottom=0.12)
-    ax.loglog(fs[1:], wc.dt * (SAET_gal_smooth[:, 1:, :2].mean(axis=2) - SAE_offset[1:] + SAET_m[1:, 0]).T, alpha=0.5, label='_nolegend_')
+    ax.loglog(fs[1:], wc.dt * (S_stat_smooth_m[:, 1:, :2].mean(axis=2) - S_stat_offset[1:] + S_inst_m[1:, 0]).T, alpha=0.5, label='_nolegend_')
     ax.set_prop_cycle(None)
-    ax.loglog(fs[1:], wc.dt * (SAE_fit_evolve[:] + SAET_m[1:, 0]).T, linewidth=3)
+    ax.loglog(fs[1:], wc.dt * (S_fit_evolve_m[:] + S_inst_m[1:, 0]).T, linewidth=3)
     ax.set_prop_cycle(None)
-    ax.loglog(fs[1:], wc.dt * (SAET_m[1:, 0]), 'k--')
+    ax.loglog(fs[1:], wc.dt * (S_inst_m[1:, 0]), 'k--')
     ax.tick_params(axis='both', direction='in', which='both', top=True, right=True)
     plt.ylim([wc.dt * 2.e-44, wc.dt * 2.e-43])
     plt.xlim([3.e-4, 6.e-3])

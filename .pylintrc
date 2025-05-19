@@ -14,7 +14,7 @@ max-attributes=21
 min-public-methods=0
 max-branches=40
 [SIMILARITIES]
-#min-similiarity-lines=6
+min-similarity-lines=6
 ignore-comments=yes
 ignore-docstrings=yes
 ignore-imports=yes

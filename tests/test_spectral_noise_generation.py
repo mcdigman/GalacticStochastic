@@ -14,7 +14,7 @@ from WaveletWaveforms.wdm_config import get_wavelet_model
 
 @pytest.mark.parametrize('scale_mult', [1., 2.])
 def test_unit_noise_generation_stat(scale_mult) -> None:
-    """Test unit normal noise for stationary model produced with input spectrum SAET_m = 1"""
+    """Test unit normal noise for stationary model produced with input spectrum S_stat_m = 1"""
     config = configparser.ConfigParser()
     config.read('tests/galactic_fit_test_config1.ini')
 
@@ -49,7 +49,7 @@ def test_unit_noise_generation_stat(scale_mult) -> None:
 
 @pytest.mark.parametrize('var_select', ['const1', 'const2', 'cos1'])
 def test_unit_noise_generation_cyclo_time(var_select) -> None:
-    """Test unit normal noise for nonstationary model produced with input spectrum SAET_m = 1"""
+    """Test unit normal noise for nonstationary model produced with input spectrum S_stat_m = 1"""
     config = configparser.ConfigParser()
     config.read('tests/galactic_fit_test_config1.ini')
 
@@ -135,7 +135,7 @@ def test_noise_normalization_match() -> None:
         unit_normal_battery(np.imag(noise_realization_freq[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]), mult=1., do_assert=True)
 
     # check can generate noise through nonstationary method as well
-    noise_model_cyclo = DiagonalNonstationaryDenseInstrumentNoiseModel(noise_model_stat.SAET, wc, prune=True)
+    noise_model_cyclo = DiagonalNonstationaryDenseInstrumentNoiseModel(noise_model_stat.S, wc, prune=True)
     noise_wave_var = noise_model_cyclo.generate_dense_noise()
     noise_realization_freq_var = np.zeros((ND // 2 + 1, NC_loc), dtype=np.complex128)
     for itrc in range(NC_loc):

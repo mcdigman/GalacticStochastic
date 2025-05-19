@@ -26,7 +26,7 @@ mpl.rcParams['ytick.minor.width'] = 1.5
 
 def result_normality_battery(signal_in):
     ns = signal_in[:, nf_min:nf_max, 0:2].size
-    signal_white_out = signal_in[:, nf_min:nf_max, 0:2] / np.sqrt(SAET_model[:, nf_min:nf_max, 0:2])
+    signal_white_out = signal_in[:, nf_min:nf_max, 0:2] / np.sqrt(S_cyclo_model[:, nf_min:nf_max, 0:2])
     normal_res = scipy.stats.normaltest(signal_white_out.flatten())
     normal_resa = scipy.stats.normaltest(signal_white_out[:, :, 0].flatten())
     normal_rese = scipy.stats.normaltest(signal_white_out[:, :, 1].flatten())
@@ -80,9 +80,9 @@ if __name__ == '__main__':
     signal_full_cyclo = galactic_cyclo + noise_realization
     signal_full_stat = galactic_stat + noise_realization
 
-    SAET_m = instrument_noise_AET_wdm_m(lc, wc)
+    S_inst_m = instrument_noise_AET_wdm_m(lc, wc)
 
-    SAET_model, _, _, _, _ = get_S_cyclo(galactic_cyclo, SAET_m, wc, 0, True, period_list=(1, 2, 3, 4, 5))
+    S_cyclo_model, _, _, _, _ = get_S_cyclo(galactic_cyclo, S_inst_m, wc, 0, True, period_list=(1, 2, 3, 4, 5))
 
     fs = np.arange(1, wc.Nf) * wc.DF
 
@@ -133,7 +133,7 @@ if do_2plot:
 
 do_3plot = True
 if do_3plot:
-    signal_white_2 = (galactic_cyclo[:, nf_min:nf_max, 0:2]**2 / (SAET_model - SAET_m)[:, nf_min:nf_max, 0:2]).sum(axis=2)
+    signal_white_2 = (galactic_cyclo[:, nf_min:nf_max, 0:2] ** 2 / (S_cyclo_model - S_inst_m)[:, nf_min:nf_max, 0:2]).sum(axis=2)
 
     fig, ax = plt.subplots(1, 3, figsize=(8.4, 2.85))
     fig.subplots_adjust(wspace=0., hspace=0., left=0.055, top=0.91, right=1.110, bottom=0.18)

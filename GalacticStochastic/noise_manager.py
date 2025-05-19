@@ -10,54 +10,54 @@ from LisaWaveformTools.instrument_noise import DiagonalNonstationaryDenseInstrum
 class NoiseModelManager(StateManager):
     """object to manage the noise models used in the iterative fit"""
 
-    def __init__(self, ic, wc, fit_state, bgd, SAET_m, stat_only, nt_min, nt_max) -> None:
+    def __init__(self, ic, wc, fit_state, bgd, S_inst_m, stat_only, nt_min, nt_max) -> None:
         """Create the noise model manager"""
         self.ic = ic
         self.wc = wc
         self.bgd = bgd
         self.fit_state = fit_state
-        self.SAET_m = SAET_m
+        self.S_inst_m = S_inst_m
         self.stat_only = stat_only
         self.nt_min = nt_min
         self.nt_max = nt_max
 
         self.itrn = 0
 
-        self.idx_SAET_save = np.hstack([np.arange(0, min(10, self.fit_state.get_n_itr_cut())), np.arange(min(10, self.fit_state.get_n_itr_cut()), 4), self.fit_state.get_n_itr_cut() - 1])
+        self.idx_S_save = np.hstack([np.arange(0, min(10, self.fit_state.get_n_itr_cut())), np.arange(min(10, self.fit_state.get_n_itr_cut()), 4), self.fit_state.get_n_itr_cut() - 1])
         self.itr_save = 0
 
-        self.SAET_tots_upper = np.zeros((self.idx_SAET_save.size, wc.Nt, wc.Nf, 3))
-        self.SAET_tots_lower = np.zeros((self.idx_SAET_save.size, wc.Nt, wc.Nf, 3))
-        self.SAET_fin = np.zeros((wc.Nt, wc.Nf, 3))
+        self.S_record_upper = np.zeros((self.idx_S_save.size, wc.Nt, wc.Nf, 3))
+        self.S_record_lower = np.zeros((self.idx_S_save.size, wc.Nt, wc.Nf, 3))
+        self.S_final = np.zeros((wc.Nt, wc.Nf, 3))
 
-        SAET_tot_upper = np.zeros((wc.Nt, wc.Nf, self.bgd.NC_gal))
-        SAET_tot_upper[:] = self.SAET_m
+        S_upper = np.zeros((wc.Nt, wc.Nf, self.bgd.NC_gal))
+        S_upper[:] = self.S_inst_m
 
-        SAET_tot_lower = np.zeros((wc.Nt, wc.Nf, self.bgd.NC_gal))
-        SAET_tot_lower[:] = self.SAET_m
-        if self.idx_SAET_save[self.itr_save] == 0:
-            self.SAET_tots_upper[0] = SAET_tot_upper[:, :, :]
-            self.SAET_tots_lower[0] = SAET_tot_lower[:, :, :]
+        S_lower = np.zeros((wc.Nt, wc.Nf, self.bgd.NC_gal))
+        S_lower[:] = self.S_inst_m
+        if self.idx_S_save[self.itr_save] == 0:
+            self.S_record_upper[0] = S_upper[:, :, :]
+            self.S_record_lower[0] = S_lower[:, :, :]
             self.itr_save += 1
-        SAET_tot_lower = np.min([SAET_tot_lower, SAET_tot_upper], axis=0)
+        S_lower = np.min([S_lower, S_upper], axis=0)
 
-        self.noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_upper, wc, prune=True)
-        self.noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_lower, wc, prune=True)
+        self.noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(S_upper, wc, prune=True)
+        self.noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(S_lower, wc, prune=True)
 
-        SAET_tot_upper = None
-        SAET_tot_lower = None
+        S_upper = None
+        S_lower = None
 
     def log_state(self) -> None:
         """Perform any internal logging that should be done after advance_state is run for all objects for the iteration"""
-        if self.itr_save < self.idx_SAET_save.size and self.itrn - 1 == self.idx_SAET_save[self.itr_save]:
-            self.SAET_tots_upper[self.itr_save] = self.noise_upper.SAET[:, :, :]
-            self.SAET_tots_lower[self.itr_save] = self.noise_lower.SAET[:, :, :]
+        if self.itr_save < self.idx_S_save.size and self.itrn - 1 == self.idx_S_save[self.itr_save]:
+            self.S_record_upper[self.itr_save] = self.noise_upper.S[:, :, :]
+            self.S_record_lower[self.itr_save] = self.noise_lower.S[:, :, :]
             self.itr_save += 1
-        self.bgd.log_state(self.SAET_m)
+        self.bgd.log_state(self.S_inst_m)
 
     def loop_finalize(self) -> None:
         """Perform any logic desired after convergence has been achieved and the loop ends"""
-        self.SAET_fin[:] = self.noise_upper.SAET[:, :, :]
+        self.S_final[:] = self.noise_upper.S[:, :, :]
 
     def state_check(self) -> None:
         """Perform any sanity checks that should be performed at the end of each iteration"""
@@ -65,9 +65,9 @@ class NoiseModelManager(StateManager):
 
     def print_report(self) -> None:
         """Do any printing desired after convergence has been achieved and the loop ends"""
-        res_mask = ((self.noise_upper.SAET[:, :, 0] - self.SAET_m[:, 0]).mean(axis=0) > 0.1 * self.SAET_m[:, 0]) & (self.SAET_m[:, 0] > 0.)
+        res_mask = ((self.noise_upper.S[:, :, 0] - self.S_inst_m[:, 0]).mean(axis=0) > 0.1 * self.S_inst_m[:, 0]) & (self.S_inst_m[:, 0] > 0.)
         galactic_below_high = self.bgd.get_galactic_below_high()
-        noise_divide = np.sqrt(self.noise_upper.SAET[self.nt_min:self.nt_max, res_mask, :2] - self.SAET_m[res_mask, :2])
+        noise_divide = np.sqrt(self.noise_upper.S[self.nt_min:self.nt_max, res_mask, :2] - self.S_inst_m[res_mask, :2])
         points_res = galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.bgd.NC_gal)[self.nt_min:self.nt_max, res_mask, :2] / noise_divide
         n_points = points_res.size
         noise_divide = None
@@ -100,17 +100,17 @@ class NoiseModelManager(StateManager):
                 filter_periods = not self.stat_only
 
             # use higher estimate of galactic bg
-            SAET_tot_upper = self.bgd.get_S_below_high(self.SAET_m, self.ic.smooth_lengthf[self.itrn], filter_periods, period_list)
-            self.noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_upper, self.wc, prune=True)
+            S_upper = self.bgd.get_S_below_high(self.S_inst_m, self.ic.smooth_lengthf[self.itrn], filter_periods, period_list)
+            self.noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(S_upper, self.wc, prune=True)
 
-            SAET_tot_upper = None
+            S_upper = None
 
         if not noise_safe_lower:
             # make sure this will always predict >= snrs to the actual spectrum in use
             # use lower estimate of galactic bg
             filter_periods = not self.stat_only
-            SAET_tot_lower = self.bgd.get_S_below_low(self.SAET_m, self.ic.smooth_lengthf_fix, filter_periods, period_list)
-            SAET_tot_lower = np.min([SAET_tot_lower, self.noise_upper.SAET], axis=0)
-            self.noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot_lower, self.wc, prune=True)
-            SAET_tot_lower = None
+            S_lower = self.bgd.get_S_below_low(self.S_inst_m, self.ic.smooth_lengthf_fix, filter_periods, period_list)
+            S_lower = np.min([S_lower, self.noise_upper.S], axis=0)
+            self.noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(S_lower, self.wc, prune=True)
+            S_lower = None
         self.itrn += 1

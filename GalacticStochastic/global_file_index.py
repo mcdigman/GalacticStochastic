@@ -35,7 +35,7 @@ def get_processed_gb_filename(galaxy_dir, stat_only, snr_thresh, wc, nt_min, nt_
 def get_noise_common(galaxy_dir, snr_thresh, wc, lc):
     filename_gb_common = get_common_noise_filename(galaxy_dir, snr_thresh, wc)
     hf_in = h5py.File(filename_gb_common, 'r')
-    noise_realization_common = np.asarray(hf_in['SAET']['noise_realization'])
+    noise_realization_common = np.asarray(hf_in['S']['noise_realization'])
 
     wc2 = wdm_config.WDMWaveletConstants(**{key: hf_in['wc'][key][()] for key in hf_in['wc']})
     lc2 = lisa_config.LISAConstants(**{key: hf_in['lc'][key][()] for key in hf_in['lc']})
@@ -117,15 +117,15 @@ def load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, wc, lc):
 
     snrs_tot_upper_in = np.asarray(hf_in['galaxy']['binaries']['snrs_tot_upper'])
 
-    SAET_m = np.asarray(hf_in['noise_model']['S_instrument'])
+    S_inst_m = np.asarray(hf_in['noise_model']['S_instrument'])
 
-    # check input SAET makes sense, first value not checked as it may not be consistent
-    SAET_m_alt = instrument_noise_AET_wdm_m(lc, wc)
-    assert np.allclose(SAET_m[1:], SAET_m_alt[1:], atol=1.e-80, rtol=1.e-13)
+    # check input S makes sense, first value not checked as it may not be consistent
+    S_inst_m_alt = instrument_noise_AET_wdm_m(lc, wc)
+    assert np.allclose(S_inst_m[1:], S_inst_m_alt[1:], atol=1.e-80, rtol=1.e-13)
 
     hf_in.close()
 
-    return galactic_below_in, snrs_tot_upper_in, SAET_m, wc, lc
+    return galactic_below_in, snrs_tot_upper_in, S_inst_m, wc, lc
 
 
 def load_preliminary_galactic_file_old(galaxy_file, galaxy_dir, snr_thresh, Nf, Nt, dt):
@@ -136,19 +136,19 @@ def load_preliminary_galactic_file_old(galaxy_file, galaxy_dir, snr_thresh, Nf, 
     wc = wdm_config.WDMWaveletConstants(**{key: hf_in['wc'][key][()] for key in hf_in['wc']})
     lc = lisa_config.LISAConstants(**{key: hf_in['lc'][key][()] for key in hf_in['lc']})
 
-    gb_file_source = hf_in['SAET']['source_gb_file'][()].decode()
+    gb_file_source = hf_in['S']['source_gb_file'][()].decode()
     full_galactic_params_filename = get_galaxy_filename(galaxy_file, galaxy_dir)
     assert gb_file_source == full_galactic_params_filename
     # preserving ability to read some files some legacy key names
     try:
-        galactic_below_in = np.asarray(hf_in['SAET']['galactic_below'])
+        galactic_below_in = np.asarray(hf_in['S']['galactic_below'])
     except KeyError:
-        galactic_below_in = np.asarray(hf_in['SAET']['galactic_bg_const'])
+        galactic_below_in = np.asarray(hf_in['S']['galactic_bg_const'])
 
     try:
-        snrs_tot_upper_in = np.asarray(hf_in['SAET']['snrs_tot_upper'])
+        snrs_tot_upper_in = np.asarray(hf_in['S']['snrs_tot_upper'])
     except KeyError:
-        snrs_tot_upper_in = np.asarray(hf_in['SAET']['snrs_tot'])
+        snrs_tot_upper_in = np.asarray(hf_in['S']['snrs_tot'])
 
     hf_in.close()
     return galactic_below_in, snrs_tot_upper_in, wc, lc
@@ -166,24 +166,24 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
 
     # TODO add check for wc and lc match expectations
     try:
-        galactic_below_in = np.asarray(hf_in['SAET']['galactic_below'])
+        galactic_below_in = np.asarray(hf_in['S']['galactic_below'])
     except KeyError:
-        galactic_below_in = np.asarray(hf_in['SAET']['galactic_bg_const'])
+        galactic_below_in = np.asarray(hf_in['S']['galactic_bg_const'])
 
     try:
-        snr_tots_in = np.asarray(hf_in['SAET']['snrs_tot_upper'])
+        snr_tots_in = np.asarray(hf_in['S']['snrs_tot_upper'])
     except KeyError:
-        snr_tots_in = np.asarray(hf_in['SAET']['snrs_tot'])
+        snr_tots_in = np.asarray(hf_in['S']['snrs_tot'])
 
-    SAET_m = np.asarray(hf_in['SAET']['SAET_m'])
+    S_inst_m = np.asarray(hf_in['S']['S_stat_m'])
 
-    # check input SAET makes sense, first value not checked as it may not be consistent
-    SAET_m_alt = instrument_noise_AET_wdm_m(lc, wc)
-    assert np.allclose(SAET_m[1:], SAET_m_alt[1:], atol=1.e-80, rtol=1.e-13)
+    # check input S makes sense, first value not checked as it may not be consistent
+    S_inst_m_alt = instrument_noise_AET_wdm_m(lc, wc)
+    assert np.allclose(S_inst_m[1:], S_inst_m_alt[1:], atol=1.e-80, rtol=1.e-13)
 
     hf_in.close()
 
-    return galactic_below_in, snr_tots_in, SAET_m, wc, lc, snr_min
+    return galactic_below_in, snr_tots_in, S_inst_m, wc, lc, snr_min
 
 
 def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, stat_only):
@@ -198,20 +198,20 @@ def load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, stat_
     assert wc2 == wc
     assert lc2 == lc
 
-    galactic_below = np.asarray(hf_in['SAET']['galactic_below'])
+    galactic_below = np.asarray(hf_in['S']['galactic_below'])
     try:
-        galactic_undecided = np.asarray(hf_in['SAET']['galactic_undecided'])
+        galactic_undecided = np.asarray(hf_in['S']['galactic_undecided'])
     except ImportError:
-        galactic_undecided = np.asarray(hf_in['SAET']['galactic_bg'])
+        galactic_undecided = np.asarray(hf_in['S']['galactic_bg'])
 
-    argbinmap = np.asarray(hf_in['SAET']['argbinmap'])
+    argbinmap = np.asarray(hf_in['S']['argbinmap'])
 
     hf_in.close()
 
     return argbinmap, (galactic_below + galactic_undecided).reshape((wc.Nt, wc.Nf, galactic_below.shape[-1]))
 
 
-def store_preliminary_gb_file(config_filename, galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, SAET_m, snrs_tot_upper) -> None:
+def store_preliminary_gb_file(config_filename, galaxy_dir, galaxy_file, wc, lc, ic, galactic_below, S_inst_m, snrs_tot_upper) -> None:
     filename_out = get_preliminary_filename(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
     hf_out = h5py.File(filename_out, 'w')
 
@@ -233,7 +233,7 @@ def store_preliminary_gb_file(config_filename, galaxy_dir, galaxy_file, wc, lc, 
     # store parameters related to the noise model
     hf_out.create_group('noise_model')
 
-    hf_out['noise_model'].create_dataset('S_instrument', data=SAET_m)
+    hf_out['noise_model'].create_dataset('S_instrument', data=S_inst_m)
 
     # store configuration parameters
     hf_out.create_group('configuration')
@@ -265,33 +265,33 @@ def store_preliminary_gb_file(config_filename, galaxy_dir, galaxy_file, wc, lc, 
     hf_out.close()
 
 
-def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max, bgd, period_list, n_bin_use, SAET_m, SAE_fin, stat_only, snrs_tot_upper, n_full_converged, argbinmap, faints_old, faints_cur, brights) -> None:
+def store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, nt_min, nt_max, bgd, period_list, n_bin_use, S_inst_m, SAE_fin, stat_only, snrs_tot_upper, n_full_converged, argbinmap, faints_old, faints_cur, brights) -> None:
     filename_gb_init = get_preliminary_filename(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
     filename_gb_common = get_common_noise_filename(galaxy_dir, ic.snr_thresh, wc)
     filename_out = get_processed_gb_filename(galaxy_dir, stat_only, ic.snr_thresh, wc, nt_min, nt_max)
 
     hf_out = h5py.File(filename_out, 'w')
-    hf_out.create_group('SAET')
-    hf_out['SAET'].create_dataset('galactic_below', data=bgd.get_galactic_below_low(), compression='gzip')
-    hf_out['SAET'].create_dataset('galactic_above', data=bgd.get_galactic_coadd_resolvable(), compression='gzip')
-    hf_out['SAET'].create_dataset('galactic_undecided', data=bgd.get_galactic_coadd_undecided(), compression='gzip')
-    hf_out['SAET'].create_dataset('period_list', data=period_list)
+    hf_out.create_group('S')
+    hf_out['S'].create_dataset('galactic_below', data=bgd.get_galactic_below_low(), compression='gzip')
+    hf_out['S'].create_dataset('galactic_above', data=bgd.get_galactic_coadd_resolvable(), compression='gzip')
+    hf_out['S'].create_dataset('galactic_undecided', data=bgd.get_galactic_coadd_undecided(), compression='gzip')
+    hf_out['S'].create_dataset('period_list', data=period_list)
 
-    hf_out['SAET'].create_dataset('n_bin_use', data=n_bin_use)
-    hf_out['SAET'].create_dataset('SAET_m', data=SAET_m)
-    hf_out['SAET'].create_dataset('snrs_tot_upper', data=snrs_tot_upper[n_full_converged], compression='gzip')
-    hf_out['SAET'].create_dataset('argbinmap', data=argbinmap, compression='gzip')
+    hf_out['S'].create_dataset('n_bin_use', data=n_bin_use)
+    hf_out['S'].create_dataset('S_stat_m', data=S_inst_m)
+    hf_out['S'].create_dataset('snrs_tot_upper', data=snrs_tot_upper[n_full_converged], compression='gzip')
+    hf_out['S'].create_dataset('argbinmap', data=argbinmap, compression='gzip')
 
-    hf_out['SAET'].create_dataset('faints_old', data=faints_old, compression='gzip')
-    hf_out['SAET'].create_dataset('faints_cur', data=faints_cur[n_full_converged], compression='gzip')
+    hf_out['S'].create_dataset('faints_old', data=faints_old, compression='gzip')
+    hf_out['S'].create_dataset('faints_cur', data=faints_cur[n_full_converged], compression='gzip')
 
-    hf_out['SAET'].create_dataset('brights', data=brights[n_full_converged], compression='gzip')
-    hf_out['SAET'].create_dataset('SAEf', data=SAE_fin, compression='gzip')
+    hf_out['S'].create_dataset('brights', data=brights[n_full_converged], compression='gzip')
+    hf_out['S'].create_dataset('SAEf', data=SAE_fin, compression='gzip')
 
-    hf_out['SAET'].create_dataset('source_gb_file', data=get_galaxy_filename(galaxy_file, galaxy_dir))
-    hf_out['SAET'].create_dataset('preliminary_gb_file', data=filename_gb_init)  # TODO these are redundant as constructed
-    hf_out['SAET'].create_dataset('init_gb_file', data=filename_gb_init)
-    hf_out['SAET'].create_dataset('common_gb_noise_file', data=filename_gb_common)
+    hf_out['S'].create_dataset('source_gb_file', data=get_galaxy_filename(galaxy_file, galaxy_dir))
+    hf_out['S'].create_dataset('preliminary_gb_file', data=filename_gb_init)  # TODO these are redundant as constructed
+    hf_out['S'].create_dataset('init_gb_file', data=filename_gb_init)
+    hf_out['S'].create_dataset('common_gb_noise_file', data=filename_gb_common)
 
     hf_out.create_group('wc')
     for key in wc._fields:

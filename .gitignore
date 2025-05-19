@@ -3,3 +3,4 @@
 wavelet/
 pylint_log.txt
 vulture_log.txt
+profiles/

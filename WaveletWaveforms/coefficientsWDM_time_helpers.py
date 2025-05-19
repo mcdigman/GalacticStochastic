@@ -84,8 +84,17 @@ def sparse_addition_helper(sparse_waveform, dense_representation) -> None:
         dense_representation[pixel_index[itrc, :N_set[itrc]], itrc] += wave_value[itrc, :N_set[itrc]]
 
 
-def get_evTs(wc, check_cache=True, hf_out=False):
-    """Helper to get the ev matrices"""
+def get_evTs(wc, cache_mode='skip', output_mode='skip'):
+    """Helper to get the ev matrices
+    cache_mode:
+        'skip':
+            do not check if a cached coefficient table is available
+        'check':
+            check if a cached coefficiient table is available
+    output_mode:
+        'skip': just return, do not output to a file
+        'hf': output to an hdf5 file in the coeffs/ directory
+    """
     t0 = time()
 
     print("Filter length (seconds) %e" % wc.Tw)
@@ -94,7 +103,7 @@ def get_evTs(wc, check_cache=True, hf_out=False):
     print("full filter bandwidth %e  samples %d" % ((wc.A + wc.B) / np.pi, (wc.A + wc.B) / np.pi * wc.Tw))
     cache_good = False
 
-    if check_cache:
+    if cache_mode == 'check':
         coeffTs_in = 'coeffs/WDMcoeffs_Nsf=' + str(wc.Nsf) + '_mult=' + str(wc.mult) + '_Nfd=' + str(wc.Nfd) + '_Nf=' + str(wc.Nf)\
             + '_Nt=' + str(wc.Nt) + '_dt=' + str(wc.dt) + '_dfdot=' + str(wc.dfdot) + '_Nfd_neg' + str(wc.Nfd_negative) + '_fast.h5'
 
@@ -118,6 +127,11 @@ def get_evTs(wc, check_cache=True, hf_out=False):
         except OSError:
             print(coeffTs_in)
             print('cache checked and missed')
+    elif cache_mode == 'skip':
+        pass
+    else:
+        msg = 'Unrecognized option for cache_mode'
+        raise NotImplementedError(msg)
 
     if not cache_good:
         phi = np.zeros(wc.K)
@@ -168,7 +182,7 @@ def get_evTs(wc, check_cache=True, hf_out=False):
         print("got full evcs in %f s" % (tf - t1))
         t1 = time()
 
-    if hf_out:
+    if output_mode == 'hf':
         hf = h5py.File('coeffs/WDMcoeffs_Nsf=' + str(wc.Nsf) + '_mult=' + str(wc.mult) + '_Nfd=' + str(wc.Nfd) + '_Nf=' + str(wc.Nf) +
                        '_Nt=' + str(wc.Nt) + '_dt=' + str(wc.dt) + '_dfdot=' + str(wc.dfdot) + '_Nfd_neg' + str(wc.Nfd_negative) + '_fast.h5', 'w')
         hf.create_group('inds')
@@ -181,5 +195,10 @@ def get_evTs(wc, check_cache=True, hf_out=False):
         hf.close()
         t3 = time()
         print("output time", t3 - tf, "s")
+    elif output_mode == 'skip':
+        pass
+    else:
+        msg = 'unrecognized option for output_mode'
+        raise NotImplementedError(msg)
 
     return WaveletTaylorTimeCoeffs(Nfsam, evcs, evss)

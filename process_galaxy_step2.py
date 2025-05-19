@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
     ic = get_iteration_config(config)
 
-    SAET_m = instrument_noise_AET_wdm_m(lc, wc)
+    S_inst_m = instrument_noise_AET_wdm_m(lc, wc)
 
     stat_only = True
     preprocess_mode = True
@@ -45,7 +45,7 @@ if __name__ == '__main__':
 
     bgd = BGDecomposition(wc, ic.NC_gal)
 
-    noise_manager = NoiseModelManager(ic, wc, fit_state, bgd, SAET_m, stat_only, nt_min, nt_max)
+    noise_manager = NoiseModelManager(ic, wc, fit_state, bgd, S_inst_m, stat_only, nt_min, nt_max)
 
     bis = BinaryInclusionState(wc, ic, lc, params_gb, noise_manager, fit_state, ic.NC_snr)
 
@@ -57,7 +57,7 @@ if __name__ == '__main__':
 
     do_hf_out = True
     if do_hf_out:
-        gfi.store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, bgd.get_galactic_below_low(), bis.n_bin_use, noise_manager.SAET_m, bis.snrs_tot_lower)
+        gfi.store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, bgd.get_galactic_below_low(), bis.n_bin_use, noise_manager.S_inst_m, bis.snrs_tot_lower)
 
     do_plot_noise_spectrum_ambiguity = True
 
