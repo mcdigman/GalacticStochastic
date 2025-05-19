@@ -32,15 +32,16 @@ def ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, NT, lc:
     dRRs = spacecraft_channels.dRR
     dIIs = spacecraft_channels.dII
 
-    # TODO check absolute phase aligns with Extrinsic_inplace
-    polds = np.zeros(wc.NC)
-    js = np.zeros(wc.NC)
+    nc_channel = RRs.shape[0]
 
-    gradient_homog_2d_inplace(RRs, wc.DT, NT, 3, dRRs)
-    gradient_homog_2d_inplace(IIs, wc.DT, NT, 3, dIIs)
+    polds = np.zeros(nc_channel)
+    js = np.zeros(nc_channel)
+
+    gradient_homog_2d_inplace(RRs, dRRs, wc.DT)
+    gradient_homog_2d_inplace(IIs, dIIs, wc.DT)
 
     n = 0
-    for itrc in range(wc.NC):
+    for itrc in range(nc_channel):
         polds[itrc] = np.arctan2(IIs[itrc, n], RRs[itrc, n])
         if polds[itrc] < 0.:
             polds[itrc] += 2 * np.pi
@@ -50,12 +51,11 @@ def ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, NT, lc:
         # including TDI + fractional frequency modifiers
         Ampx = AA[n] * (8 * fonfs * np.sin(fonfs))
         Phase = PP[n]
-        for itrc in range(wc.NC):
+        for itrc in range(nc_channel):
             RR = RRs[itrc, n]
             II = IIs[itrc, n]
 
             if RR == 0. and II == 0.:
-                # TODO is this the correct way to handle both ps being 0?
                 p = 0.
                 AET_FTs[itrc, n] = FT[n]
             else:
@@ -65,7 +65,6 @@ def ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, NT, lc:
             if p < 0.:
                 p += 2 * np.pi
 
-            # TODO implement integral tracking of js
             if p - polds[itrc] > 6.:
                 js[itrc] -= 2 * np.pi
             if polds[itrc] - p > 6.:
@@ -73,16 +72,16 @@ def ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, NT, lc:
             polds[itrc] = p
 
             AET_Amps[itrc, n] = Ampx * np.sqrt(RR**2 + II**2)
-            AET_Phases[itrc, n] = Phase + p + js[itrc]  # +2*np.pi*kdotx[n]*FT[n]
+            AET_Phases[itrc, n] = Phase + p + js[itrc]
 
-    for itrc in range(wc.NC):
+    for itrc in range(nc_channel):
         AET_FTds[itrc, 0] = (AET_FTs[itrc, 1] - AET_FTs[itrc, 0] - FT[1] + FT[0]) / wc.DT + FTd[0]
         AET_FTds[itrc, NT - 1] = (AET_FTs[itrc, NT - 1] - AET_FTs[itrc, NT - 2] - FT[NT - 1] + FT[NT - 2]) / wc.DT + FTd[NT - 1]
 
     for n in range(1, NT - 1):
         FT_shift = -FT[n + 1] + FT[n - 1]
         FTd_shift = FTd[n]
-        for itrc in range(wc.NC):
+        for itrc in range(nc_channel):
             AET_FTds[itrc, n] = (AET_FTs[itrc, n + 1] - AET_FTs[itrc, n - 1] + FT_shift) / (2 * wc.DT) + FTd_shift
 
 
@@ -111,7 +110,7 @@ class BinaryTimeWaveformAmpFreqD:
     assuming input binary format based on amplitude, frequency, and frequency derivative
     """
 
-    def __init__(self, params, nt_min, nt_max, lc: LISAConstants, wc: WDMWaveletConstants) -> None:
+    def __init__(self, params, nt_min, nt_max, lc: LISAConstants, wc: WDMWaveletConstants, nc_waveform) -> None:
         """Initalize the object"""
         self.params = params
         self.nt_min = nt_min
@@ -119,6 +118,7 @@ class BinaryTimeWaveformAmpFreqD:
         self.nt_range = self.nt_max - self.nt_min
         self.lc = lc
         self.wc = wc
+        self.nc_waveform = nc_waveform
 
         self.TTs = self.wc.DT * np.arange(self.nt_min, self.nt_max)
 
@@ -129,10 +129,10 @@ class BinaryTimeWaveformAmpFreqD:
 
         self.waveform = StationaryWaveformTime(self.TTs, PPTs, FTs, FTds, AmpTs)
 
-        RRs = np.zeros((self.wc.NC, self.nt_range))
-        IIs = np.zeros((self.wc.NC, self.nt_range))
-        dRRs = np.zeros((self.wc.NC, self.nt_range))
-        dIIs = np.zeros((self.wc.NC, self.nt_range))
+        RRs = np.zeros((self.nc_waveform, self.nt_range))
+        IIs = np.zeros((self.nc_waveform, self.nt_range))
+        dRRs = np.zeros((self.nc_waveform, self.nt_range))
+        dIIs = np.zeros((self.nc_waveform, self.nt_range))
 
         self.spacecraft_channels = SpacecraftChannels(self.TTs, RRs, IIs, dRRs, dIIs)
 
@@ -144,10 +144,10 @@ class BinaryTimeWaveformAmpFreqD:
 
         _, _, _, self.xas[:], self.yas[:], self.zas[:] = spacecraft_vec(self.TTs, self.lc)
 
-        AET_AmpTs = np.zeros((self.wc.NC, self.nt_range))
-        AET_PPTs = np.zeros((self.wc.NC, self.nt_range))
-        AET_FTs = np.zeros((self.wc.NC, self.nt_range))
-        AET_FTds = np.zeros((self.wc.NC, self.nt_range))
+        AET_AmpTs = np.zeros((self.nc_waveform, self.nt_range))
+        AET_PPTs = np.zeros((self.nc_waveform, self.nt_range))
+        AET_FTs = np.zeros((self.nc_waveform, self.nt_range))
+        AET_FTds = np.zeros((self.nc_waveform, self.nt_range))
 
         self.AET_waveform = StationaryWaveformTime(self.TTs, AET_PPTs, AET_FTs, AET_FTds, AET_AmpTs)
 

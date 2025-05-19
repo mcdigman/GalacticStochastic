@@ -8,7 +8,7 @@ import numpy as np
 
 import GalacticStochastic.global_const as gc
 
-LISAConstants = namedtuple('LISAConstants', ['Larm', 'Sps', 'Sacc', 'kappa0', 'lambda0', 'fstr', 'ec', 'fm'])
+LISAConstants = namedtuple('LISAConstants', ['Larm', 'Sps', 'Sacc', 'kappa0', 'lambda0', 'fstr', 'ec', 'fm', 'nc_waveform', 'nc_snr'])
 
 
 def get_lisa_constants(config) -> LISAConstants:
@@ -46,4 +46,14 @@ def get_lisa_constants(config) -> LISAConstants:
     fm = float(ast.literal_eval(config['lisa constants']['fm']))
     assert fm > 0.
 
-    return LISAConstants(Larm, Sps, Sacc, kappa0, lambda0, fstr, ec, fm)
+    # number of waveform channels that must be evaluated
+    nc_waveform = int(ast.literal_eval(config['lisa constants']['nc_waveform']))
+    assert nc_waveform >= 0
+    assert nc_waveform <= 3
+
+    nc_snr = int(ast.literal_eval(config['lisa constants']['nc_snr']))
+    assert nc_snr >= 0
+    assert nc_snr <= 3
+    assert nc_snr <= nc_waveform
+
+    return LISAConstants(Larm, Sps, Sacc, kappa0, lambda0, fstr, ec, fm, nc_waveform, nc_snr)

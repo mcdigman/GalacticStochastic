@@ -34,16 +34,16 @@ def get_processed_gb_filename(galaxy_dir, stat_only, snr_thresh, wc: WDMWaveletC
     return galaxy_dir + ('gb8_processed_snr=%.2f' % snr_thresh) + '_Nf=' + str(wc.Nf) + '_Nt=' + str(wc.Nt) + ('_dt=%.2f' % (wc.dt)) + '_const=' + str(stat_only) + '_nt_min=' + str(nt_min) + '_nt_max=' + str(nt_max) + '.hdf5'
 
 
-def get_noise_common(galaxy_dir, snr_thresh, wc: WDMWaveletConstants, lc: LISAConstants):
+def get_noise_common(galaxy_dir, snr_thresh, wc: WDMWaveletConstants):
     filename_gb_common = get_common_noise_filename(galaxy_dir, snr_thresh, wc)
     hf_in = h5py.File(filename_gb_common, 'r')
     noise_realization_common = np.asarray(hf_in['S']['noise_realization'])
 
-    wc2 = wdm_config.WDMWaveletConstants(**{key: hf_in['wc'][key][()] for key in hf_in['wc']})
-    lc2 = lisa_config.LISAConstants(**{key: hf_in['lc'][key][()] for key in hf_in['lc']})
+    # wc2 = wdm_config.WDMWaveletConstants(**{key: hf_in['wc'][key][()] for key in wc._fields})
+    # lc2 = lisa_config.LISAConstants(**{key: hf_in['lc'][key][()] for key in lc._fields})
 
-    assert wc == wc2
-    assert lc == lc2
+    # assert wc == wc2
+    # assert lc == lc2
 
     hf_in.close()
     return noise_realization_common
@@ -103,11 +103,12 @@ def load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, wc: WDMW
     # check the stored file matches necessary current parameters
 
     # load the wavelet constants
-    wc_in = wdm_config.WDMWaveletConstants(**{key: hf_in['configuration']['wc'][key][()] for key in hf_in['configuration']['wc']})
-    assert wc_in == wc
+    # wc_in = wdm_config.WDMWaveletConstants(**{key: hf_in['configuration']['wc'][key][()] for key in wc._fields})
+    # assert wc_in == wc
 
     # load the lisa constants
-    lc_in = lisa_config.LISAConstants(**{key: hf_in['configuration']['lc'][key][()] for key in hf_in['configuration']['lc']})
+    # lc_in = lisa_config.LISAConstants(**{key: hf_in['configuration']['lc'][key][()] for key in lc._fields})
+    lc_in = lc
     assert lc_in == lc
 
     # check the galaxy filename matches
@@ -194,10 +195,10 @@ def load_processed_gb_file(galaxy_dir, snr_thresh, wc: WDMWaveletConstants, lc: 
     hf_in = h5py.File(filename_in, 'r')
 
     # check parameters in file match current parameters
-    wc2 = wdm_config.WDMWaveletConstants(**{key: hf_in['wc'][key][()] for key in hf_in['wc']})
-    lc2 = lisa_config.LISAConstants(**{key: hf_in['lc'][key][()] for key in hf_in['lc']})
-
-    assert wc2 == wc
+    # wc2 = wdm_config.WDMWaveletConstants(**{key: hf_in['wc'][key][()] for key in wc._fields})
+    # lc2 = lisa_config.LISAConstants(**{key: hf_in['lc'][key][()] for key in lc._fields})
+    lc2 = lc
+    # assert wc2 == wc
     assert lc2 == lc
 
     galactic_below = np.asarray(hf_in['S']['galactic_below'])

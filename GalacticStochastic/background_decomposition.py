@@ -10,11 +10,11 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 class BGDecomposition:
     """class to handle the internal decomposition of the galactic background"""
 
-    def __init__(self, wc: WDMWaveletConstants, NC_gal, galactic_floor=None, galactic_below=None, galactic_undecided=None, galactic_above=None, do_total_track=True) -> None:
+    def __init__(self, wc: WDMWaveletConstants, nc_galaxy, galactic_floor=None, galactic_below=None, galactic_undecided=None, galactic_above=None, do_total_track=True) -> None:
         self.wc = wc
-        self.NC_gal = NC_gal
-        self.shape1 = (wc.Nt * wc.Nf, self.NC_gal)
-        self.shape2 = (wc.Nt, wc.Nf, self.NC_gal)
+        self.nc_galaxy = nc_galaxy
+        self.shape1 = (wc.Nt * wc.Nf, self.nc_galaxy)
+        self.shape2 = (wc.Nt, wc.Nf, self.nc_galaxy)
 
         if galactic_floor is None:
             self.galactic_floor = np.zeros(self.shape1)

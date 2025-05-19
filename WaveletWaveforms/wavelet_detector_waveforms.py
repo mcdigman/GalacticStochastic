@@ -1,8 +1,8 @@
 """subroutines for running lisa binary monte carlo search"""
 
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.ra_waveform_time import BinaryTimeWaveformAmpFreqD
-from WaveletWaveforms.coefficientsWDM_time_helpers import get_empty_sparse_taylor_time_waveform, get_evTs
+from LisaWaveformTools.ra_waveform_time import BinaryTimeWaveformAmpFreqD, StationaryWaveformTime
+from WaveletWaveforms.coefficientsWDM_time_helpers import WaveletTaylorTimeCoeffs, get_empty_sparse_taylor_time_waveform, get_evTs
 from WaveletWaveforms.taylor_wdm_funcs import wavemaket_multi_inplace
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
@@ -23,14 +23,14 @@ class BinaryWaveletAmpFreqDT:
         self.params = params
 
         # interpolation for wavelet taylor expansion
-        self.taylor_time_table = get_evTs(self.wc, cache_mode='skip', output_mode='skip')
+        self.taylor_time_table: WaveletTaylorTimeCoeffs = get_evTs(self.wc, cache_mode='skip', output_mode='skip')
 
         # get the waveform in frequency space
-        self.fwt = BinaryTimeWaveformAmpFreqD(self.params, self.nt_min, self.nt_max, self.lc, self.wc)
+        self.fwt = BinaryTimeWaveformAmpFreqD(self.params, self.nt_min, self.nt_max, self.lc, self.wc, self.lc.nc_waveform)
 
         # get a blank waveform in the sparse wavelet domain
         # when consistent is set it will be correct
-        self.wavelet_waveform = get_empty_sparse_taylor_time_waveform(self.wc.NC, wc)
+        self.wavelet_waveform: StationaryWaveformTime = get_empty_sparse_taylor_time_waveform(self.lc.nc_waveform, wc)
 
         self.consistent = False
 
@@ -44,7 +44,7 @@ class BinaryWaveletAmpFreqDT:
 
         self.fwt.update_params(params_in)
 
-        self.wavelet_waveform = wavemaket_multi_inplace(self.wavelet_waveform, self.fwt.AET_waveform, self.nt_min, self.nt_max, self.wc, self.taylor_time_table, force_nulls=False)
+        wavemaket_multi_inplace(self.wavelet_waveform, self.fwt.AET_waveform, self.nt_min, self.nt_max, self.wc, self.taylor_time_table, force_nulls=False)
         self.consistent = True
 
     def get_unsorted_coeffs(self):

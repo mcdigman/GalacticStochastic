@@ -43,11 +43,11 @@ if __name__ == '__main__':
 
     fit_state = IterativeFitState(ic, preprocess_mode=2)
 
-    bgd = BGDecomposition(wc, ic.NC_gal)
+    bgd = BGDecomposition(wc, ic.nc_galaxy)
 
-    noise_manager = NoiseModelManager(ic, wc, fit_state, bgd, S_inst_m, stat_only, nt_min, nt_max)
+    noise_manager = NoiseModelManager(ic, wc, lc, fit_state, bgd, S_inst_m, stat_only, nt_min, nt_max)
 
-    bis = BinaryInclusionState(wc, ic, lc, params_gb, noise_manager, fit_state, ic.NC_snr)
+    bis = BinaryInclusionState(wc, ic, lc, params_gb, noise_manager, fit_state)
 
     ifm = IterativeFitManager(ic, fit_state, noise_manager, bis)
 

@@ -14,12 +14,11 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 class BinaryInclusionState(StateManager):
     """Stores all the binaries under consideration in the galaxy"""
 
-    def __init__(self, wc: WDMWaveletConstants, ic, lc: LISAConstants, params_gb_in, noise_manager, fit_state, NC_snr, snrs_tot_in=None) -> None:
+    def __init__(self, wc: WDMWaveletConstants, ic, lc: LISAConstants, params_gb_in, noise_manager, fit_state, snrs_tot_in=None) -> None:
         """Class that stores information about the binaries in the background, and which component they are assigned to"""
         self.wc = wc
         self.ic = ic
         self.lc = lc
-        self.NC_snr = NC_snr
         self.noise_manager = noise_manager
         self.fit_state = fit_state
 
@@ -41,8 +40,8 @@ class BinaryInclusionState(StateManager):
         params_gb_in = None
         faints_in = None
 
-        self.snrs_upper = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use, NC_snr))
-        self.snrs_lower = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use, NC_snr))
+        self.snrs_upper = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use, lc.nc_snr))
+        self.snrs_lower = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use, lc.nc_snr))
         self.snrs_tot_lower = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use))
         self.snrs_tot_upper = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use))
         self.brights = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use), dtype=np.bool_)

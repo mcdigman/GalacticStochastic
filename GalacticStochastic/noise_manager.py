@@ -4,6 +4,7 @@ import numpy as np
 
 from GalacticStochastic.state_manager import StateManager
 from GalacticStochastic.testing_tools import unit_normal_battery
+from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.noise_model import DiagonalNonstationaryDenseNoiseModel
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
@@ -11,9 +12,10 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 class NoiseModelManager(StateManager):
     """object to manage the noise models used in the iterative fit"""
 
-    def __init__(self, ic, wc: WDMWaveletConstants, fit_state, bgd, S_inst_m, stat_only, nt_min, nt_max) -> None:
+    def __init__(self, ic, wc: WDMWaveletConstants, lc: LISAConstants, fit_state, bgd, S_inst_m, stat_only, nt_min, nt_max) -> None:
         """Create the noise model manager"""
         self.ic = ic
+        self.lc = lc
         self.wc = wc
         self.bgd = bgd
         self.fit_state = fit_state
@@ -27,14 +29,14 @@ class NoiseModelManager(StateManager):
         self.idx_S_save = np.hstack([np.arange(0, min(10, self.fit_state.get_n_itr_cut())), np.arange(min(10, self.fit_state.get_n_itr_cut()), 4), self.fit_state.get_n_itr_cut() - 1])
         self.itr_save = 0
 
-        self.S_record_upper = np.zeros((self.idx_S_save.size, wc.Nt, wc.Nf, 3))
-        self.S_record_lower = np.zeros((self.idx_S_save.size, wc.Nt, wc.Nf, 3))
-        self.S_final = np.zeros((wc.Nt, wc.Nf, 3))
+        self.S_record_upper = np.zeros((self.idx_S_save.size, wc.Nt, wc.Nf, self.bgd.nc_galaxy))
+        self.S_record_lower = np.zeros((self.idx_S_save.size, wc.Nt, wc.Nf, self.bgd.nc_galaxy))
+        self.S_final = np.zeros((wc.Nt, wc.Nf, self.bgd.nc_galaxy))
 
-        S_upper = np.zeros((wc.Nt, wc.Nf, self.bgd.NC_gal))
+        S_upper = np.zeros((wc.Nt, wc.Nf, self.bgd.nc_galaxy))
         S_upper[:] = self.S_inst_m
 
-        S_lower = np.zeros((wc.Nt, wc.Nf, self.bgd.NC_gal))
+        S_lower = np.zeros((wc.Nt, wc.Nf, self.bgd.nc_galaxy))
         S_lower[:] = self.S_inst_m
         if self.idx_S_save[self.itr_save] == 0:
             self.S_record_upper[0] = S_upper[:, :, :]
@@ -42,8 +44,8 @@ class NoiseModelManager(StateManager):
             self.itr_save += 1
         S_lower = np.min([S_lower, S_upper], axis=0)
 
-        self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, wc, prune=True)
-        self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, wc, prune=True)
+        self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, wc, prune=True, nc_snr=lc.nc_snr)
+        self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, wc, prune=True, nc_snr=lc.nc_snr)
 
         S_upper = None
         S_lower = None
@@ -69,7 +71,7 @@ class NoiseModelManager(StateManager):
         res_mask = ((self.noise_upper.S[:, :, 0] - self.S_inst_m[:, 0]).mean(axis=0) > 0.1 * self.S_inst_m[:, 0]) & (self.S_inst_m[:, 0] > 0.)
         galactic_below_high = self.bgd.get_galactic_below_high()
         noise_divide = np.sqrt(self.noise_upper.S[self.nt_min:self.nt_max, res_mask, :2] - self.S_inst_m[res_mask, :2])
-        points_res = galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.bgd.NC_gal)[self.nt_min:self.nt_max, res_mask, :2] / noise_divide
+        points_res = galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy)[self.nt_min:self.nt_max, res_mask, :2] / noise_divide
         n_points = points_res.size
         noise_divide = None
         galactic_below_high = None
@@ -102,7 +104,7 @@ class NoiseModelManager(StateManager):
 
             # use higher estimate of galactic bg
             S_upper = self.bgd.get_S_below_high(self.S_inst_m, self.ic.smooth_lengthf[self.itrn], filter_periods, period_list)
-            self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, self.wc, prune=True)
+            self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, self.wc, prune=True, nc_snr=self.lc.nc_snr)
 
             S_upper = None
 
@@ -112,6 +114,6 @@ class NoiseModelManager(StateManager):
             filter_periods = not self.stat_only
             S_lower = self.bgd.get_S_below_low(self.S_inst_m, self.ic.smooth_lengthf_fix, filter_periods, period_list)
             S_lower = np.min([S_lower, self.noise_upper.S], axis=0)
-            self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, self.wc, prune=True)
+            self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, self.wc, prune=True, nc_snr=self.lc.nc_snr)
             S_lower = None
         self.itrn += 1

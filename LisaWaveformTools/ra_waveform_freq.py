@@ -11,15 +11,17 @@ AU = 1.4959787e11         # Astronomical Unit in meters
 
 @njit()
 def get_tensor_basis(phi, costh):
-    """Get tensor basis"""
+    """Get the 3 dimensional tensor basis"""
     # Calculate cos and sin of sky position, inclination, polarization
+    n_space = 3  # number of spatial dimensions (must be 3)
+
     sinth = np.sqrt(1.0 - costh**2)
     cosph = np.cos(phi)
     sinph = np.sin(phi)
 
-    kv = np.zeros(3)
-    u = np.zeros(3)
-    v = np.zeros(3)
+    kv = np.zeros(n_space)
+    u = np.zeros(n_space)
+    v = np.zeros(n_space)
 
     kv[0] = -sinth * cosph
     kv[1] = -sinth * sinph
@@ -33,11 +35,11 @@ def get_tensor_basis(phi, costh):
     v[1] = -costh * sinph
     v[2] = sinth
 
-    eplus = np.zeros((3, 3))
-    ecross = np.zeros((3, 3))
+    eplus = np.zeros((n_space, n_space))
+    ecross = np.zeros((n_space, n_space))
 
-    for i in range(3):
-        for j in range(3):
+    for i in range(n_space):
+        for j in range(n_space):
             eplus[i, j] = u[i] * u[j] - v[i] * v[j]
             ecross[i, j] = u[i] * v[j] + v[i] * u[j]
     return kv, eplus, ecross
@@ -53,48 +55,81 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
 
     kv, eplus, ecross = get_tensor_basis(phi, costh)
 
-    dplus = np.zeros((3, 3))
-    dcross = np.zeros((3, 3))
+    n_space = 3  # number of spatial dimensions (must be 3)
+    assert n_space == 3
 
-    TR = np.zeros((3, 3))
-    TI = np.zeros((3, 3))
+    assert kv.shape == (n_space,)
+    assert eplus.shape == (n_space, n_space)
+    assert ecross.shape == (n_space, n_space)
 
-    x = np.zeros(3)
-    y = np.zeros(3)
-    z = np.zeros(3)
+    n_spacecraft = 3  # number of spacecraft (currently must be 3)
+    assert n_spacecraft == 3
 
-    kdr = np.zeros((3, 3))
+    n_arm = 3  # number of arms (currently must be 3)
+    assert n_arm == 3
 
-    kdg = np.zeros(3)
+    nc_waveform = RRs.shape[0]  # number of channels in the output waveform
+    assert IIs.shape[0] == nc_waveform
 
-    fprs = np.zeros(3)
-    fcrs = np.zeros(3)
-    fpis = np.zeros(3)
-    fcis = np.zeros(3)
+    nc_generate = 3  # number of combinations to generate internally (currently must be 3)
+    assert nc_generate == 3
+    assert nc_generate >= nc_waveform
 
-    FpRs = np.zeros(3)
-    FcRs = np.zeros(3)
-    FpIs = np.zeros(3)
-    FcIs = np.zeros(3)
+    nc_michelson = 3  # number of michelson combinations (currently must be 3)
+    assert nc_michelson == 3
+    assert nc_michelson >= nc_generate
 
-    r12 = np.zeros(3)
-    r13 = np.zeros(3)
-    r23 = np.zeros(3)
-    r10 = np.zeros(3)
-    r20 = np.zeros(3)
-    r30 = np.zeros(3)
+    dplus = np.zeros((n_arm, n_arm))
+    dcross = np.zeros((n_arm, n_arm))
 
-    betas = np.zeros(3)
-    sbs = np.zeros(3)
-    cbs = np.zeros(3)
-    for itrc in range(3):
-        betas[itrc] = 2 / 3 * np.pi * itrc + lc.lambda0
+    TR = np.zeros((n_arm, n_arm))
+    TI = np.zeros((n_arm, n_arm))
+
+    # spacecraft x y and z coordinates
+    x = np.zeros(n_spacecraft)
+    y = np.zeros(n_spacecraft)
+    z = np.zeros(n_spacecraft)
+
+    # for projecting spacecraft arm vectors into tensor basis
+    kdr = np.zeros((n_arm, n_arm))
+    kdg = np.zeros(n_arm)
+
+    # michelson combinations
+    fprs = np.zeros(nc_michelson)
+    fcrs = np.zeros(nc_michelson)
+    fpis = np.zeros(nc_michelson)
+    fcis = np.zeros(nc_michelson)
+
+    # tdi combinations
+    FpRs = np.zeros(nc_generate)
+    FcRs = np.zeros(nc_generate)
+    FpIs = np.zeros(nc_generate)
+    FcIs = np.zeros(nc_generate)
+
+    # spacecraft separation vectors
+    r12 = np.zeros(n_space)
+    r13 = np.zeros(n_space)
+    r23 = np.zeros(n_space)
+
+    # separation vectors of spacecraft and guiding center
+    r10 = np.zeros(n_space)
+    r20 = np.zeros(n_space)
+    r30 = np.zeros(n_space)
+
+    # quantities for computing spacecraft positions
+    betas = np.zeros(n_spacecraft)
+    sbs = np.zeros(n_spacecraft)
+    cbs = np.zeros(n_spacecraft)
+    for itrc in range(n_spacecraft):
+        betas[itrc] = 2. / 3. * np.pi * itrc + lc.lambda0
         sbs[itrc] = (AU / lc.Larm * lc.ec) * np.sin(betas[itrc])
         cbs[itrc] = (AU / lc.Larm * lc.ec) * np.cos(betas[itrc])
 
+    # polarization angle quantities
     cosps = np.cos(2 * psi)
     sinps = np.sin(2 * psi)
 
+    # amplitude multipliers
     Aplus = (1. + cosi**2) / 2
     Across = -cosi
 
@@ -106,19 +141,23 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
         alpha = 2 * np.pi * lc.fm * ts[n + nf_low] + lc.kappa0
         sa = np.sin(alpha)
         ca = np.cos(alpha)
-        for itrc in range(3):
+        for itrc in range(n_spacecraft):
             x[itrc] = (AU / lc.Larm) * ca + sa * ca * sbs[itrc] - (1. + sa * sa) * cbs[itrc]
             y[itrc] = (AU / lc.Larm) * sa + sa * ca * cbs[itrc] - (1. + ca * ca) * sbs[itrc]
-            z[itrc] = -np.sqrt(3) * (ca * cbs[itrc] + sa * sbs[itrc])
+            z[itrc] = -np.sqrt(3.) * (ca * cbs[itrc] + sa * sbs[itrc])
 
-        xa = (x[0] + x[1] + x[2]) / 3
-        ya = (y[0] + y[1] + y[2]) / 3
-        za = (z[0] + z[1] + z[2]) / 3
+        # manually average over n_spacecraft to get coordinates of the guiding center
+        xa = (x[0] + x[1] + x[2]) / n_spacecraft
+        ya = (y[0] + y[1] + y[2]) / n_spacecraft
+        za = (z[0] + z[1] + z[2]) / n_spacecraft
+
+        # manual dot product with n_spacecraft
         kdotx[n] = (lc.Larm / CLIGHT) * (xa * kv[0] + ya * kv[1] + za * kv[2])
 
+        # normalized frequency
         fr = 1 / (2 * lc.fstr) * FFs[n + nf_low]
 
-        # Unit separation vector from spacecraft i to j
+        # Separation vector from spacecraft i to j
         r12[0] = x[1] - x[0]
         r12[1] = y[1] - y[0]
         r12[2] = z[1] - z[0]
@@ -129,7 +168,7 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
         r23[1] = y[2] - y[1]
         r23[2] = z[2] - z[1]
 
-        # These are not unit vectors. Just pulling out the lc.Larm scaling
+        # Separation vector between spacecraft and guiding center (not unit vectors)
         r10[0] = xa - x[0]
         r10[1] = ya - y[0]
         r10[2] = za - z[0]
@@ -142,7 +181,7 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
 
         kdr[:] = 0.
         kdg[:] = 0.
-        for k in range(3):
+        for k in range(n_space):
             kdr[0, 1] += kv[k] * r12[k]
             kdr[0, 2] += kv[k] * r13[k]
             kdr[1, 2] += kv[k] * r23[k]
@@ -150,8 +189,8 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
             kdg[1] += kv[k] * r20[k]
             kdg[2] += kv[k] * r30[k]
 
-        for i in range(2):
-            for j in range(i + 1, 3):
+        for i in range(n_arm - 1):
+            for j in range(i + 1, n_arm):
                 q1 = fr * (1. - kdr[i, j])
                 q2 = fr * (1. + kdr[i, j])
                 q3 = -fr * (3. + kdr[i, j] - 2 * kdg[i])
@@ -171,8 +210,8 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
         dplus[:] = 0.
         dcross[:] = 0.
         # Convenient quantities d+ & dx
-        for i in range(3):
-            for j in range(3):
+        for i in range(n_space):
+            for j in range(n_space):
                 dplus[0, 1] += r12[i] * r12[j] * eplus[i, j]
                 dcross[0, 1] += r12[i] * r12[j] * ecross[i, j]
                 dplus[1, 2] += r23[i] * r23[j] * eplus[i, j]
@@ -187,7 +226,7 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
         dplus[2, 0] = dplus[0, 2]
         dcross[2, 0] = dcross[0, 2]
 
-        for i in range(3):
+        for i in range(nc_michelson):
             fprs[i] = -(
                         + (dplus[i, (i + 1) % 3] * cosps + dcross[i, (i + 1) % 3] * sinps) * TR[i, (i + 1) % 3]
                         - (dplus[i, (i + 2) % 3] * cosps + dcross[i, (i + 2) % 3] * sinps) * TR[i, (i + 2) % 3]
@@ -208,8 +247,8 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
         FpRs[0] = (2 * fprs[0] - fprs[1] - fprs[2]) / 3. * Aplus
         FcRs[0] = (2 * fcrs[0] - fcrs[1] - fcrs[2]) / 3. * Across
 
-        FpRs[1] = (fprs[2] - fprs[1]) / np.sqrt(3) * Aplus
-        FcRs[1] = (fcrs[2] - fcrs[1]) / np.sqrt(3) * Across
+        FpRs[1] = (fprs[2] - fprs[1]) / np.sqrt(3.) * Aplus
+        FcRs[1] = (fcrs[2] - fcrs[1]) / np.sqrt(3.) * Across
 
         FpRs[2] = (fprs[0] + fprs[1] + fprs[2]) / 3. * Aplus
         FcRs[2] = (fcrs[0] + fcrs[1] + fcrs[2]) / 3. * Across
@@ -223,7 +262,7 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
         FpIs[2] = (fpis[0] + fpis[1] + fpis[2]) / 3. * Aplus
         FcIs[2] = (fcis[0] + fcis[1] + fcis[2]) / 3. * Across
 
-        for itrc in range(3):
+        for itrc in range(nc_waveform):
             RRs[itrc, n] = FpRs[itrc] - FcIs[itrc]
             IIs[itrc, n] = FcRs[itrc] + FpIs[itrc]
 
@@ -231,22 +270,24 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
 @njit()
 def get_xis_inplace(kv, ts, xas, yas, zas, xis, lc: LISAConstants) -> None:
     """Get time adjusted to guiding center for tensor basis"""
-    kdotx = (xas * kv[0] + yas * kv[1] + zas * kv[2]) * lc.Larm / CLIGHT
+    kdotx = (xas * kv[0] + yas * kv[1] + zas * kv[2]) * (lc.Larm / CLIGHT)
     xis[:] = ts - kdotx
 
 
 @njit()
 def spacecraft_vec(ts, lc: LISAConstants):
     """Calculate the spacecraft positions as a function of time, with Larm scaling pulled out"""
-    xs = np.zeros((3, ts.size))
-    ys = np.zeros((3, ts.size))
-    zs = np.zeros((3, ts.size))
+    n_spacecraft = 3  # number of spacecraft (currently must be 3)
+
+    xs = np.zeros((n_spacecraft, ts.size))
+    ys = np.zeros((n_spacecraft, ts.size))
+    zs = np.zeros((n_spacecraft, ts.size))
     alpha = 2 * np.pi * lc.fm * ts + lc.kappa0
 
     sa = np.sin(alpha)
     ca = np.cos(alpha)
 
-    for i in range(3):
+    for i in range(n_spacecraft):
         beta = i * 2 / 3 * np.pi + lc.lambda0
         sb = np.sin(beta)
         cb = np.cos(beta)
@@ -255,7 +296,7 @@ def spacecraft_vec(ts, lc: LISAConstants):
         zs[i] = -np.sqrt(3) * AU / lc.Larm * lc.ec * (ca * cb + sa * sb)
 
     # guiding center
-    xas = (xs[0] + xs[1] + xs[2]) / 3
-    yas = (ys[0] + ys[1] + ys[2]) / 3
-    zas = (zs[0] + zs[1] + zs[2]) / 3
+    xas = (xs[0] + xs[1] + xs[2]) / n_spacecraft
+    yas = (ys[0] + ys[1] + ys[2]) / n_spacecraft
+    zas = (zs[0] + zs[1] + zs[2]) / n_spacecraft
     return xs, ys, zs, xas, yas, zas

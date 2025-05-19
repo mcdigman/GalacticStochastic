@@ -2,16 +2,14 @@
 
 
 import numpy as np
-import numpy.typing as npt
-
-# import numba as nb
+from numpy.typing import NDArray
 from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 
 from LisaWaveformTools.lisa_config import LISAConstants
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
-def instrument_noise1(f, lc: LISAConstants):
+def instrument_noise1(f: NDArray[float], lc: LISAConstants) -> NDArray[float]:
     # Power spectral density of the detector noise and transfer frequency
     SAE = np.zeros(f.size)
     Sps = 9.e-24     # should match sangria v2? Should it be backlinknoise or readoutnoise?
@@ -31,11 +29,12 @@ def instrument_noise1(f, lc: LISAConstants):
     return SAE
 
 
-# @njit()
-def instrument_noise_AET(f, lc: LISAConstants, wc: WDMWaveletConstants):
+def instrument_noise_AET(f: NDArray[float], lc: LISAConstants) -> NDArray[float]:
     """Get power spectral density in all 3 channels, assuming identical in all arms"""
     # see arXiv:2005.03610
     # see arXiv:1002.1291
+
+    nc_aet = 3  # the three TDI channels
     fonfs = f / lc.fstr
 
     LC = 64 / (3 * lc.Larm**2)
@@ -45,7 +44,7 @@ def instrument_noise_AET(f, lc: LISAConstants, wc: WDMWaveletConstants):
 
     cosfonfs = np.cos(fonfs)
 
-    S_inst = np.zeros((f.size, wc.NC))
+    S_inst = np.zeros((f.size, nc_aet))
 
     S_inst[:, 0] = instrument_noise1(f, lc)  # TODO make this all self consistent
     S_inst[:, 1] = S_inst[:, 0]
@@ -53,8 +52,7 @@ def instrument_noise_AET(f, lc: LISAConstants, wc: WDMWaveletConstants):
     return S_inst
 
 
-# @njit()
-def instrument_noise_AET_wdm_loop(phif: npt.NDArray[np.float64], lc: LISAConstants, wc: WDMWaveletConstants):
+def instrument_noise_AET_wdm_loop(phif: NDArray[np.float64], lc: LISAConstants, wc: WDMWaveletConstants) -> NDArray[float]:
     """Helper to get the instrument noise for wdm"""
     # realistically this really only needs run once and is fast enough without jit
     # TODO check normalization
@@ -64,14 +62,15 @@ def instrument_noise_AET_wdm_loop(phif: npt.NDArray[np.float64], lc: LISAConstan
     phif /= nrm
     phif2 = phif**2
 
-    S_inst_m = np.zeros((wc.Nf, wc.NC))
     half_Nt = wc.Nt // 2
     fs_long = np.arange(-half_Nt, half_Nt + wc.Nf * half_Nt) / wc.Tobs
     # prevent division by 0
     fs_long[half_Nt] = fs_long[half_Nt + 1]
-    S_inst_long = instrument_noise_AET(fs_long, lc, wc)
+    S_inst_long = instrument_noise_AET(fs_long, lc)
     # excise the f=0 point
     S_inst_long[half_Nt, :] = 0.
+
+    S_inst_m = np.zeros((wc.Nf, S_inst_long.shape[-1]))
     # apply window in loop
     for m in range(wc.Nf):
         S_inst_m[m] = np.dot(phif2, S_inst_long[m * half_Nt:(m + 2) * half_Nt])
@@ -79,8 +78,7 @@ def instrument_noise_AET_wdm_loop(phif: npt.NDArray[np.float64], lc: LISAConstan
     return S_inst_m
 
 
-# @njit()
-def instrument_noise_AET_wdm_m(lc: LISAConstants, wc: WDMWaveletConstants):
+def instrument_noise_AET_wdm_m(lc: LISAConstants, wc: WDMWaveletConstants) -> NDArray[float]:
     """Get the instrument noise curve as a function of frequency for the wdm
     wavelet decomposition
 
@@ -93,7 +91,7 @@ def instrument_noise_AET_wdm_m(lc: LISAConstants, wc: WDMWaveletConstants):
 
     Returns
     -------
-    S_stat_m : numpy.ndarray (Nf x NC)
+    S_stat_m : numpy.ndarray (Nf x 3)
         array of the instrument noise curve for each TDI channel
         array shape is (freq. layers x number of TDI channels)
     """

@@ -1,35 +1,25 @@
 """run iterative processing of galactic background"""
 
-import configparser
 
 import numpy as np
 
 import GalacticStochastic.global_file_index as gfi
 import GalacticStochastic.plot_creation_helpers as pch
 from GalacticStochastic.background_decomposition import BGDecomposition
+from GalacticStochastic.config_helper import get_config_objects
 from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
-from GalacticStochastic.iteration_config import get_iteration_config
 from GalacticStochastic.iterative_fit_manager import IterativeFitManager
 from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
 from GalacticStochastic.noise_manager import NoiseModelManager
-from LisaWaveformTools.lisa_config import get_lisa_constants
-from WaveletWaveforms.wdm_config import get_wavelet_model
 
 if __name__ == '__main__':
 
     a = np.array([])
 
-    config = configparser.ConfigParser()
-    config.read('default_parameters.ini')
+    config, wc, lc, ic = get_config_objects('default_parameters.ini')
 
     galaxy_file = config['files']['galaxy_file']
     galaxy_dir = config['files']['galaxy_dir']
-
-    wc = get_wavelet_model(config)
-
-    lc = get_lisa_constants(config)
-
-    ic = get_iteration_config(config)
 
     galactic_below_in, snrs_tot_in, S_inst_m, wc, lc = gfi.load_preliminary_galactic_file(galaxy_file, galaxy_dir, ic.snr_thresh, wc, lc)
 
@@ -43,12 +33,12 @@ if __name__ == '__main__':
 
         fit_state = IterativeFitState(ic)
 
-        bgd = BGDecomposition(wc, ic.NC_gal, galactic_floor=galactic_below_in.copy())
+        bgd = BGDecomposition(wc, ic.nc_galaxy, galactic_floor=galactic_below_in.copy())
         galactic_below_in = None
 
-        noise_manager = NoiseModelManager(ic, wc, fit_state, bgd, S_inst_m, stat_only, nt_min, nt_max)
+        noise_manager = NoiseModelManager(ic, wc, lc, fit_state, bgd, S_inst_m, stat_only, nt_min, nt_max)
 
-        bis = BinaryInclusionState(wc, ic, lc, params_gb, noise_manager, fit_state, ic.NC_snr, snrs_tot_in)
+        bis = BinaryInclusionState(wc, ic, lc, params_gb, noise_manager, fit_state, snrs_tot_in)
 
         ifm = IterativeFitManager(ic, fit_state, noise_manager, bis)
 

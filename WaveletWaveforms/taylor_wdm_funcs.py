@@ -2,40 +2,33 @@
 import numpy as np
 from numba import njit
 
+from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime
+from WaveletWaveforms.coefficientsWDM_time_helpers import SparseTaylorWaveform, WaveletTaylorTimeCoeffs
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 @njit(fastmath=True)
-def wavemaket_multi_inplace(wavelet_waveform, waveform, nt_min, nt_max, wc: WDMWaveletConstants, taylor_table, force_nulls=False):
+def wavemaket_multi_inplace(wavelet_waveform: SparseTaylorWaveform, waveform: StationaryWaveformTime, nt_min, nt_max, wc: WDMWaveletConstants, taylor_table: WaveletTaylorTimeCoeffs, force_nulls=False) -> None:
     """Compute the actual wavelets using taylor time method"""
-    Phases = waveform.PT
-    Amps = waveform.AT
-    fas = waveform.FT
-    fdas = waveform.FTd
+    n_set_old = wavelet_waveform.n_set.copy()
 
-    # indicates this pixel not used
-    wave_value = wavelet_waveform.wave_value
-    pixel_index = wavelet_waveform.pixel_index
-    N_set = wavelet_waveform.N_set
-    N_set_old = wavelet_waveform.N_set.copy()
+    nc_waveform = wavelet_waveform.wave_value.shape[0]
 
-    NC_loc = wave_value.shape[0]
-
-    for itrc in range(NC_loc):
+    for itrc in range(nc_waveform):
         mm = 0
         for j in range(nt_min, nt_max):
             j_ind = j
 
-            y0 = fdas[itrc, j] / wc.dfd
+            y0 = waveform.FTd[itrc, j] / wc.dfd
             ny = np.int64(np.floor(y0))
             n_ind = ny + wc.Nfd_negative
 
             if 0 <= n_ind < wc.Nfd - 2:
-                c = Amps[itrc, j] * np.cos(Phases[itrc, j])
-                s = Amps[itrc, j] * np.sin(Phases[itrc, j])
+                c = waveform.AT[itrc, j] * np.cos(waveform.PT[itrc, j])
+                s = waveform.AT[itrc, j] * np.sin(waveform.PT[itrc, j])
 
                 dy = y0 - ny
-                fa = fas[itrc, j]
+                fa = waveform.FT[itrc, j]
                 za = fa / wc.df
 
                 Nfsam1_loc = taylor_table.Nfsam[n_ind]
@@ -48,7 +41,7 @@ def wavemaket_multi_inplace(wavelet_waveform, waveform, nt_min, nt_max, wc: WDMW
                 # highest frequency layer
                 kmax = min(wc.Nf - 1, np.int64(np.floor((fa + HBW) / wc.DF)))
                 for k in range(kmin, kmax + 1):
-                    pixel_index[itrc, mm] = j_ind * wc.Nf + k
+                    wavelet_waveform.pixel_index[itrc, mm] = j_ind * wc.Nf + k
 
                     zmid = (wc.DF / wc.df) * k
 
@@ -77,9 +70,9 @@ def wavemaket_multi_inplace(wavelet_waveform, waveform, nt_min, nt_max, wc: WDMW
                     z = (1. - dy) * z + dy * zz
 
                     if (j_ind + k) % 2:
-                        wave_value[itrc, mm] = -(c * z + s * y)
+                        wavelet_waveform.wave_value[itrc, mm] = -(c * z + s * y)
                     else:
-                        wave_value[itrc, mm] = c * y - s * z
+                        wavelet_waveform.wave_value[itrc, mm] = c * y - s * z
 
                     mm += 1
                     # end loop over frequency layers
@@ -88,7 +81,7 @@ def wavemaket_multi_inplace(wavelet_waveform, waveform, nt_min, nt_max, wc: WDMW
                 # so force values outside the range of the table to 0 instead of dropping, in order to get likelihoods right
                 # which is particularly important around total nulls which can be quite constraining on the parameters but have large spikes in frequency derivative
                 # note that if this happens only very rarely, we could also just actually calculate the non-precomputed coefficient
-                fa = fas[itrc, j]
+                fa = waveform.FT[itrc, j]
 
                 Nfsam1_loc = np.int64((wc.BW + wc.dfd * wc.Tw * ny) / wc.df)
                 if Nfsam1_loc % 2 == 1:
@@ -102,16 +95,14 @@ def wavemaket_multi_inplace(wavelet_waveform, waveform, nt_min, nt_max, wc: WDMW
                 kmax = min(wc.Nf - 1, np.int64(np.floor((fa + HBW) / wc.DF)))
 
                 for k in range(kmin, kmax + 1):
-                    pixel_index[itrc, mm] = j_ind * wc.Nf + k
-                    wave_value[itrc, mm] = 0.
+                    wavelet_waveform.pixel_index[itrc, mm] = j_ind * wc.Nf + k
+                    wavelet_waveform.wave_value[itrc, mm] = 0.
                     mm += 1
 
-        N_set[itrc] = mm
+        wavelet_waveform.n_set[itrc] = mm
 
     # clean up any pixels that were set in the old waveform but aren't anymore
-    for itrc in range(NC_loc):
-        for itrm in range(N_set[itrc], N_set_old[itrc]):
-            pixel_index[itrc, itrm] = -1
-            wave_value[itrc, itrm] = 0.
-
-    return wavelet_waveform
+    for itrc in range(nc_waveform):
+        for itrm in range(wavelet_waveform.n_set[itrc], n_set_old[itrc]):
+            wavelet_waveform.pixel_index[itrc, itrm] = -1
+            wavelet_waveform.wave_value[itrc, itrm] = 0.

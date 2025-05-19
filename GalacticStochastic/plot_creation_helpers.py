@@ -30,7 +30,7 @@ def plot_noise_spectrum_evolve(ifm) -> None:
     fig = plt.figure(figsize=(5.4, 3.5))
     ax = fig.subplots(1)
     fig.subplots_adjust(wspace=0., hspace=0., left=0.13, top=0.99, right=0.99, bottom=0.12)
-    ax.loglog(np.arange(1, wc.Nf) * wc.DF, (ifm.noise_manager.bgd.get_galactic_total().reshape((wc.Nt, wc.Nf, ifm.noise_manager.bgd.NC_gal))[:, 1:, 0:2]**2).mean(axis=0).mean(axis=1) + S_stat_m[1:, 0], 'k', alpha=0.3, zorder=-90)
+    ax.loglog(np.arange(1, wc.Nf) * wc.DF, (ifm.noise_manager.bgd.get_galactic_total().reshape((wc.Nt, wc.Nf, ifm.noise_manager.bgd.nc_galaxy))[:, 1:, 0:2] ** 2).mean(axis=0).mean(axis=1) + S_stat_m[1:, 0], 'k', alpha=0.3, zorder=-90)
     ax.loglog(np.arange(1, wc.Nf) * wc.DF, np.mean(ifm.noise_manager.S_record_upper[[1, 2, 3, 4], :, 1:, 0], axis=1).T, '--', alpha=0.7)
     ax.loglog(np.arange(1, wc.Nf) * wc.DF, np.mean(ifm.noise_manager.noise_upper.S[:, 1:, 0:2], axis=0).mean(axis=1).T)
     ax.loglog(np.arange(1, wc.Nf) * wc.DF, S_stat_m[1:, 0], 'k--', zorder=-100)

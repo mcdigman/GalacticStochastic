@@ -33,19 +33,19 @@ def filter_periods_fft(r_mean, Nt_loc, period_list, wc: WDMWaveletConstants):
     period_list is in multiples of wc.Tobs/gc.SECSYEAR
     """
     # get the same number of frequencies as the input r
-    NC_loc = r_mean.shape[1]
+    nc_loc = r_mean.shape[1]
 
     # time and angular frequency grids
     ts = np.arange(0, Nt_loc) * wc.DT
     wts = 2 * np.pi / gc.SECSYEAR * ts
 
     # places to store results
-    r = np.zeros((wc.Nt, NC_loc))
-    amp_got = np.zeros((len(period_list), NC_loc))
-    angle_got = np.zeros((len(period_list), NC_loc))
+    r = np.zeros((wc.Nt, nc_loc))
+    amp_got = np.zeros((len(period_list), nc_loc))
+    angle_got = np.zeros((len(period_list), nc_loc))
 
     # iterate over input frequencies
-    for itrc in range(NC_loc):
+    for itrc in range(nc_loc):
         res_fft = fft.rfft(r_mean[:, itrc] - 1.) * 2 / Nt_loc
         abs_fft = np.abs(res_fft)
         angle_fft = -np.angle(res_fft)
@@ -117,23 +117,23 @@ def get_S_cyclo(
     if Nt_loc == -1:
         Nt_loc = wc.Nt
 
-    NC_loc = S_inst_m.shape[1]
+    nc_s = S_inst_m.shape[1]
 
-    S_in = (galactic_below[..., :NC_loc].reshape((wc.Nt, wc.Nf, NC_loc)))**2
+    S_in = (galactic_below[..., :nc_s].reshape((wc.Nt, wc.Nf, nc_s)))**2
     S_in_mean = np.mean(S_in, axis=0)
 
     amp_got = None
     angle_got = None
 
     if not filter_periods:
-        r_smooth = np.zeros((wc.Nt, NC_loc)) + 1.
+        r_smooth = np.zeros((wc.Nt, nc_s)) + 1.
     else:
-        r_mean = np.zeros((wc.Nt, NC_loc))
+        r_mean = np.zeros((wc.Nt, nc_s))
         # whitened mean galaxy power
         Sw_in_mean = np.zeros_like(S_in_mean)
         Sw_in_mean[S_inst_m > 0.] = np.abs(S_in_mean[S_inst_m > 0.] / S_inst_m[S_inst_m > 0.])
 
-        for itrc in range(NC_loc):
+        for itrc in range(nc_s):
             # completely cut out faint frequencies for calculating the envelope modulation
             # faint frequencies are different and noisier, so just weighting may not work
             mask = Sw_in_mean[:, itrc] > faint_cutoff_thresh * np.max(Sw_in_mean[:, itrc])
@@ -169,16 +169,16 @@ def get_S_cyclo(
         r_smooth = np.abs(r_smooth)
 
     # get mean of demodulated spectrum as a function of time with time variation removed
-    S_demod_mean = np.zeros((wc.Nf, NC_loc))
+    S_demod_mean = np.zeros((wc.Nf, nc_s))
 
-    for itrc in range(NC_loc):
+    for itrc in range(nc_s):
         S_demod_mean[:, itrc] = np.mean(np.abs(S_in[:, :, itrc].T / r_smooth[:, itrc]), axis=1)
 
     S_in = None
 
     S_demod_mean = np.abs(S_demod_mean)
 
-    S_demod_smooth = np.zeros((wc.Nf, NC_loc))
+    S_demod_smooth = np.zeros((wc.Nf, nc_s))
     S_demod_smooth[0, :] = S_demod_mean[0, :]
 
     log_f = np.log10(np.arange(1, wc.Nf) * wc.DF)
@@ -191,7 +191,7 @@ def get_S_cyclo(
     n_f_interp = interp_mult * wc.Nf
     log_f_interp = np.linspace(np.log10(wc.DF), np.log10(wc.DF * (wc.Nf - 1)), n_f_interp)
 
-    for itrc in range(NC_loc):
+    for itrc in range(nc_s):
         # add and later remove a small numerical stabilizer for cases where the S is zero
         # better behaved to interpolate in log(S) as well
         log_S_demod_mean = np.log10(S_demod_mean[1:, itrc] + log_S_stabilizer)
@@ -204,8 +204,8 @@ def get_S_cyclo(
     # enforce positive just in case subtraction misbehaved
     S_demod_smooth = np.abs(S_demod_smooth)
 
-    S_res = np.zeros((wc.Nt, wc.Nf, NC_loc)) + S_inst_m
-    for itrc in range(NC_loc):
+    S_res = np.zeros((wc.Nt, wc.Nf, nc_s)) + S_inst_m
+    for itrc in range(nc_s):
         S_res[:, :, itrc] += np.outer(r_smooth[:, itrc], S_demod_smooth[:, itrc])
 
     S_res = np.abs(S_res)
@@ -216,7 +216,6 @@ def get_S_cyclo(
 
 
 def fit_gb_spectrum_evolve(S_goals, fs, fs_report, nt_ranges, offset, wc: WDMWaveletConstants):
-    # TODO take NC in this function properly
     a1 = -0.25
     b1 = -2.70
     ak = -0.27

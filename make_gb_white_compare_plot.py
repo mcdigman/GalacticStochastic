@@ -72,7 +72,7 @@ if __name__ == '__main__':
     snr_thresh = 7.
     smooth_lengthf = 6
 
-    noise_realization = gfi.get_noise_common(galaxy_dir, snr_thresh, wc, lc)
+    noise_realization = gfi.get_noise_common(galaxy_dir, snr_thresh, wc)
 
     _, galactic_cyclo = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, False)
     _, galactic_stat = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, True)
