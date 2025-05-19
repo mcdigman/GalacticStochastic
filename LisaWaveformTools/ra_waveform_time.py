@@ -6,14 +6,16 @@ import numpy as np
 from numba import njit
 
 from LisaWaveformTools.algebra_tools import gradient_homog_2d_inplace
+from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_freq import RAantenna_inplace, get_tensor_basis, get_xis_inplace, spacecraft_vec
+from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 StationaryWaveformTime = namedtuple('StationaryWaveformTime', ['T', 'PT', 'FT', 'FTd', 'AT'])
 SpacecraftChannels = namedtuple('SpacecraftChannels', ['T', 'RR', 'II', 'dRR', 'dII'])
 
 
 @njit(fastmath=True)
-def ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, NT, lc, wc) -> None:
+def ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, NT, lc: LISAConstants, wc: WDMWaveletConstants) -> None:
     """Get the amplitude and phase for LISA"""
     AA = waveform.AT
     PP = waveform.PT
@@ -109,7 +111,7 @@ class BinaryTimeWaveformAmpFreqD:
     assuming input binary format based on amplitude, frequency, and frequency derivative
     """
 
-    def __init__(self, params, nt_min, nt_max, lc, wc) -> None:
+    def __init__(self, params, nt_min, nt_max, lc: LISAConstants, wc: WDMWaveletConstants) -> None:
         """Initalize the object"""
         self.params = params
         self.nt_min = nt_min

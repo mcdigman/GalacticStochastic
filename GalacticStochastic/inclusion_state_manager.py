@@ -6,13 +6,15 @@ import numpy as np
 
 import GalacticStochastic.global_const as gc
 from GalacticStochastic.state_manager import StateManager
+from LisaWaveformTools.lisa_config import LISAConstants
 from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
+from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 class BinaryInclusionState(StateManager):
     """Stores all the binaries under consideration in the galaxy"""
 
-    def __init__(self, wc, ic, lc, params_gb_in, noise_manager, fit_state, NC_snr, snrs_tot_in=None) -> None:
+    def __init__(self, wc: WDMWaveletConstants, ic, lc: LISAConstants, params_gb_in, noise_manager, fit_state, NC_snr, snrs_tot_in=None) -> None:
         """Class that stores information about the binaries in the background, and which component they are assigned to"""
         self.wc = wc
         self.ic = ic

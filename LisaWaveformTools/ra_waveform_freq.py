@@ -3,6 +3,8 @@
 import numpy as np
 from numba import njit, prange
 
+from LisaWaveformTools.lisa_config import LISAConstants
+
 CLIGHT = 2.99792458e8     # Speed of light in m/s
 AU = 1.4959787e11         # Astronomical Unit in meters
 
@@ -44,7 +46,7 @@ def get_tensor_basis(phi, costh):
 
 
 @njit(fastmath=True)
-def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_low, NTs, kdotx, lc) -> None:
+def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_low, NTs, kdotx, lc: LISAConstants) -> None:
     """Get the waveform for LISA given polarization angle, spacecraft, tensor basis and Fs, channel order AET"""
     RRs = spacecraft_channels.RR
     IIs = spacecraft_channels.II
@@ -227,14 +229,14 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
 
 
 @njit()
-def get_xis_inplace(kv, ts, xas, yas, zas, xis, lc) -> None:
+def get_xis_inplace(kv, ts, xas, yas, zas, xis, lc: LISAConstants) -> None:
     """Get time adjusted to guiding center for tensor basis"""
     kdotx = (xas * kv[0] + yas * kv[1] + zas * kv[2]) * lc.Larm / CLIGHT
     xis[:] = ts - kdotx
 
 
 @njit()
-def spacecraft_vec(ts, lc):
+def spacecraft_vec(ts, lc: LISAConstants):
     """Calculate the spacecraft positions as a function of time, with Larm scaling pulled out"""
     xs = np.zeros((3, ts.size))
     ys = np.zeros((3, ts.size))

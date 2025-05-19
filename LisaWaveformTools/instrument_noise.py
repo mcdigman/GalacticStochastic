@@ -9,6 +9,7 @@ import numpy.typing as npt
 from numba import njit
 from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 
+from LisaWaveformTools.lisa_config import LISAConstants
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 # from numba.experimental import jitclass
@@ -48,7 +49,7 @@ class DenseNoiseModel(ABC):
         """Get the dense noise covariance matrix"""
 
 
-def instrument_noise1(f, lc):
+def instrument_noise1(f, lc: LISAConstants):
     # Power spectral density of the detector noise and transfer frequency
     SAE = np.zeros(f.size)
     Sps = 9.e-24     # should match sangria v2? Should it be backlinknoise or readoutnoise?
@@ -69,7 +70,7 @@ def instrument_noise1(f, lc):
 
 
 # @njit()
-def instrument_noise_AET(f, lc, wc):
+def instrument_noise_AET(f, lc: LISAConstants, wc: WDMWaveletConstants):
     """Get power spectral density in all 3 channels, assuming identical in all arms"""
     # see arXiv:2005.03610
     # see arXiv:1002.1291
@@ -91,7 +92,7 @@ def instrument_noise_AET(f, lc, wc):
 
 
 # @njit()
-def instrument_noise_AET_wdm_loop(phif: npt.NDArray[np.float64], lc, wc):
+def instrument_noise_AET_wdm_loop(phif: npt.NDArray[np.float64], lc: LISAConstants, wc: WDMWaveletConstants):
     """Helper to get the instrument noise for wdm"""
     # realistically this really only needs run once and is fast enough without jit
     # TODO check normalization
@@ -117,7 +118,7 @@ def instrument_noise_AET_wdm_loop(phif: npt.NDArray[np.float64], lc, wc):
 
 
 # @njit()
-def instrument_noise_AET_wdm_m(lc, wc):
+def instrument_noise_AET_wdm_m(lc: LISAConstants, wc: WDMWaveletConstants):
     """Get the instrument noise curve as a function of frequency for the wdm
     wavelet decomposition
 
@@ -145,7 +146,7 @@ def instrument_noise_AET_wdm_m(lc, wc):
 
 
 @njit()
-def get_sparse_snr_helper(wavelet_waveform, nt_min, nt_max, wc, inv_chol_S):
+def get_sparse_snr_helper(wavelet_waveform, nt_min, nt_max, wc: WDMWaveletConstants, inv_chol_S):
     """Calculates the S/N ratio for each TDI channel for a given waveform.
 
     Parameters
@@ -180,20 +181,19 @@ def get_sparse_snr_helper(wavelet_waveform, nt_min, nt_max, wc, inv_chol_S):
 
 
 # @jitclass([('prune', nb.b1), ('S', nb.float64[:, :, :]), ('inv_S', nb.float64[:, :, :]), ('inv_chol_S', nb.float64[:, :, :]), ('chol_S', nb.float64[:, :, :])])
-class DiagonalNonstationaryDenseInstrumentNoiseModel(DenseNoiseModel):
+class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
     """a class to handle the fully diagonal nonstationary
     instrument noise model to feed to snr and fisher matrix calculations
     """
 
-    def __init__(self, S, wc, prune, seed=-1) -> None:
-        """Initialize the fully diagonal, nonstationary instrument noise model
+    def __init__(self, S, wc: WDMWaveletConstants, prune, seed=-1) -> None:
+        """Initialize the fully diagonal, nonstationary noise model
 
         Parameters
         ----------
         S : numpy.ndarray
-            array of instrument noise curve for each TDI curve - usually output
-            from instrument_noise_AET_wdm_m
-            shape: (Nf x NC)=(freq layers x number of TDI channels)
+            array of dense noise curves for each TDI channel
+            shape: (Nt x Nf x NC)=(freq layers x number of TDI channels)
         wc : namedtuple
             constants for WDM wavelet basis also from wdm_config.py
         prune : bool
@@ -206,7 +206,7 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel(DenseNoiseModel):
 
         Returns
         -------
-        DiagonalNonstationaryDenseInstrumentNoiseModel : class
+        DiagonalNonstationaryDenseNoiseModel : class
         """
         self.prune = prune
         self.S = S
@@ -283,12 +283,12 @@ class DiagonalNonstationaryDenseInstrumentNoiseModel(DenseNoiseModel):
 
 
 # @jitclass([('prune', nb.b1), ('S_stat_m', nb.float64[:, :]), ('inv_S_stat_m', nb.float64[:, :]), ('inv_chol_S_stat_m', nb.float64[:, :]), ('S', nb.float64[:, :, :]), ('inv_S', nb.float64[:, :, :]), ('inv_chol_S', nb.float64[:, :, :]), ('chol_S_stat_m', nb.float64[:, :]), ('chol_S', nb.float64[:, :, :]), ('seed', nb.int64)])
-class DiagonalStationaryDenseInstrumentNoiseModel(DenseNoiseModel):
-    """a class to handle the fully diagonal stationary
-    instrument noise model to feed to snr and fisher matrix calculations
+class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
+    """a class to handle the a diagonal stationary
+     noise model to feed to snr and fisher matrix calculations
     """
 
-    def __init__(self, S_stat_m, wc, prune, seed=-1) -> None:
+    def __init__(self, S_stat_m, wc: WDMWaveletConstants, prune, seed=-1) -> None:
         """Initialize the stationary instrument noise model
 
         Parameters
@@ -309,7 +309,7 @@ class DiagonalStationaryDenseInstrumentNoiseModel(DenseNoiseModel):
 
         Returns
         -------
-        DiagonalStationaryDenseInstrumentNoiseModel : class
+        DiagonalStationaryDenseNoiseModel : class
         """
         self.prune = prune
         self.S_stat_m = S_stat_m

@@ -7,7 +7,7 @@ import WDMWaveletTransforms.fft_funcs as fft
 from WDMWaveletTransforms.wavelet_transforms import inverse_wavelet_freq, inverse_wavelet_time
 
 from GalacticStochastic.testing_tools import unit_normal_battery
-from LisaWaveformTools.instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel, DiagonalStationaryDenseInstrumentNoiseModel, instrument_noise_AET, instrument_noise_AET_wdm_m
+from LisaWaveformTools.instrument_noise import DiagonalNonstationaryDenseNoiseModel, DiagonalStationaryDenseNoiseModel, instrument_noise_AET, instrument_noise_AET_wdm_m
 from LisaWaveformTools.lisa_config import get_lisa_constants
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
@@ -26,7 +26,7 @@ def test_unit_noise_generation_stat(scale_mult) -> None:
     NC_loc = 3
 
     S_inst_m_one = np.full((wc.Nf, NC_loc), scale_mult)
-    noise_model_stat = DiagonalStationaryDenseInstrumentNoiseModel(S_inst_m_one, wc, prune=False)
+    noise_model_stat = DiagonalStationaryDenseNoiseModel(S_inst_m_one, wc, prune=False)
 
     noise_realization = noise_model_stat.generate_dense_noise()
 
@@ -85,7 +85,7 @@ def test_unit_noise_generation_cyclo_time(var_select) -> None:
     for itrc in range(NC_loc):
         S_cyclo[:, :, itrc] = np.outer(r_cyclo[:, itrc], S_one[:, itrc])
 
-    noise_model_cyclo = DiagonalNonstationaryDenseInstrumentNoiseModel(S_cyclo, wc, prune=False)
+    noise_model_cyclo = DiagonalNonstationaryDenseNoiseModel(S_cyclo, wc, prune=False)
 
     noise_realization_var = noise_model_cyclo.generate_dense_noise()
 
@@ -123,7 +123,7 @@ def test_noise_normalization_match() -> None:
     spectra_need[1:, :] = np.sqrt(ND // 2) * np.sqrt(instrument_noise_AET(fs_fft[1:], lc, wc))
 
     # check whitened noise matches correct spectrum
-    noise_model_stat = DiagonalStationaryDenseInstrumentNoiseModel(S_inst_m, wc, prune=True)
+    noise_model_stat = DiagonalStationaryDenseNoiseModel(S_inst_m, wc, prune=True)
     noise_wave = noise_model_stat.generate_dense_noise()
     noise_realization_freq = np.zeros((ND // 2 + 1, NC_loc), dtype=np.complex128)
     for itrc in range(NC_loc):
@@ -135,7 +135,7 @@ def test_noise_normalization_match() -> None:
         unit_normal_battery(np.imag(noise_realization_freq[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]), mult=1., do_assert=True)
 
     # check can generate noise through nonstationary method as well
-    noise_model_cyclo = DiagonalNonstationaryDenseInstrumentNoiseModel(noise_model_stat.S, wc, prune=True)
+    noise_model_cyclo = DiagonalNonstationaryDenseNoiseModel(noise_model_stat.S, wc, prune=True)
     noise_wave_var = noise_model_cyclo.generate_dense_noise()
     noise_realization_freq_var = np.zeros((ND // 2 + 1, NC_loc), dtype=np.complex128)
     for itrc in range(NC_loc):

@@ -1,14 +1,16 @@
 """subroutines for running lisa binary monte carlo search"""
 
+from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_time import BinaryTimeWaveformAmpFreqD
 from WaveletWaveforms.coefficientsWDM_time_helpers import get_empty_sparse_taylor_time_waveform, get_evTs
 from WaveletWaveforms.taylor_wdm_funcs import wavemaket_multi_inplace
+from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 class BinaryWaveletAmpFreqDT:
     """class to store a sparse binary wavelet and update for search"""
 
-    def __init__(self, params, wc, lc, nt_min=0, nt_max=-1) -> None:
+    def __init__(self, params, wc: WDMWaveletConstants, lc: LISAConstants, nt_min=0, nt_max=-1) -> None:
         """Construct a binary wavelet object, if NMF_use is not -1 it overrides the default"""
         self.wc = wc
         self.lc = lc

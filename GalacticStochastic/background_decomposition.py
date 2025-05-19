@@ -4,12 +4,13 @@ import numpy as np
 
 from GalacticStochastic.galactic_fit_helpers import get_S_cyclo
 from WaveletWaveforms.coefficientsWDM_time_helpers import sparse_addition_helper
+from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 class BGDecomposition:
     """class to handle the internal decomposition of the galactic background"""
 
-    def __init__(self, wc, NC_gal, galactic_floor=None, galactic_below=None, galactic_undecided=None, galactic_above=None, do_total_track=True) -> None:
+    def __init__(self, wc: WDMWaveletConstants, NC_gal, galactic_floor=None, galactic_below=None, galactic_undecided=None, galactic_above=None, do_total_track=True) -> None:
         self.wc = wc
         self.NC_gal = NC_gal
         self.shape1 = (wc.Nt * wc.Nf, self.NC_gal)

@@ -4,13 +4,14 @@ import numpy as np
 
 from GalacticStochastic.state_manager import StateManager
 from GalacticStochastic.testing_tools import unit_normal_battery
-from LisaWaveformTools.instrument_noise import DiagonalNonstationaryDenseInstrumentNoiseModel
+from LisaWaveformTools.instrument_noise import DiagonalNonstationaryDenseNoiseModel
+from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 class NoiseModelManager(StateManager):
     """object to manage the noise models used in the iterative fit"""
 
-    def __init__(self, ic, wc, fit_state, bgd, S_inst_m, stat_only, nt_min, nt_max) -> None:
+    def __init__(self, ic, wc: WDMWaveletConstants, fit_state, bgd, S_inst_m, stat_only, nt_min, nt_max) -> None:
         """Create the noise model manager"""
         self.ic = ic
         self.wc = wc
@@ -41,8 +42,8 @@ class NoiseModelManager(StateManager):
             self.itr_save += 1
         S_lower = np.min([S_lower, S_upper], axis=0)
 
-        self.noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(S_upper, wc, prune=True)
-        self.noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(S_lower, wc, prune=True)
+        self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, wc, prune=True)
+        self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, wc, prune=True)
 
         S_upper = None
         S_lower = None
@@ -101,7 +102,7 @@ class NoiseModelManager(StateManager):
 
             # use higher estimate of galactic bg
             S_upper = self.bgd.get_S_below_high(self.S_inst_m, self.ic.smooth_lengthf[self.itrn], filter_periods, period_list)
-            self.noise_upper = DiagonalNonstationaryDenseInstrumentNoiseModel(S_upper, self.wc, prune=True)
+            self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, self.wc, prune=True)
 
             S_upper = None
 
@@ -111,6 +112,6 @@ class NoiseModelManager(StateManager):
             filter_periods = not self.stat_only
             S_lower = self.bgd.get_S_below_low(self.S_inst_m, self.ic.smooth_lengthf_fix, filter_periods, period_list)
             S_lower = np.min([S_lower, self.noise_upper.S], axis=0)
-            self.noise_lower = DiagonalNonstationaryDenseInstrumentNoiseModel(S_lower, self.wc, prune=True)
+            self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, self.wc, prune=True)
             S_lower = None
         self.itrn += 1

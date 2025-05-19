@@ -11,7 +11,7 @@ import GalacticStochastic.global_const as gc
 LISAConstants = namedtuple('LISAConstants', ['Larm', 'Sps', 'Sacc', 'kappa0', 'lambda0', 'fstr', 'ec', 'fm'])
 
 
-def get_lisa_constants(config):
+def get_lisa_constants(config) -> LISAConstants:
     """Get lisa constant object from config file"""
     # Mean arm length of the LISA detector (meters)
     Larm = float(ast.literal_eval(config['lisa constants']['Larm']))

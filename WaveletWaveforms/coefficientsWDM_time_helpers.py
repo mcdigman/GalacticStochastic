@@ -10,6 +10,7 @@ import scipy as sp
 from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 
 from WaveletWaveforms.coefficientsWDM_time_funcs import get_ev_t_full, wavelet
+from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 SECSYEAR = 24 * 365 * 3600    # Number of seconds in a calendar year
 
@@ -47,7 +48,7 @@ N_max: integer
 """
 
 
-def get_empty_sparse_taylor_time_waveform(NC_in, wc):
+def get_empty_sparse_taylor_time_waveform(NC_in, wc: WDMWaveletConstants):
     """Get a blank SparseTaylorTimeWaveform object with arrays of the correct sizes"""
     # need the frequency derivatives to calculate the maximum possible size
     fds = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)
@@ -84,7 +85,7 @@ def sparse_addition_helper(sparse_waveform, dense_representation) -> None:
         dense_representation[pixel_index[itrc, :N_set[itrc]], itrc] += wave_value[itrc, :N_set[itrc]]
 
 
-def get_evTs(wc, cache_mode='skip', output_mode='skip'):
+def get_evTs(wc: WDMWaveletConstants, cache_mode='skip', output_mode='skip'):
     """Helper to get the ev matrices
     cache_mode:
         'skip':

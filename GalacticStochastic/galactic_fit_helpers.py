@@ -15,6 +15,7 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.optimize import dual_annealing
 
 import GalacticStochastic.global_const as gc
+from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 def S_gal_model(f, log10A, log10f2, log10f1, log10fknee, alpha):
@@ -27,7 +28,7 @@ def S_gal_model_alt(f, A, alpha, beta, kappa, gamma, fknee):
     return A * f**(7 / 3) * np.exp(-f**alpha + beta * f * np.sin(kappa * f)) * (1 + np.tanh(gamma * (fknee - f)))
 
 
-def filter_periods_fft(r_mean, Nt_loc, period_list, wc):
+def filter_periods_fft(r_mean, Nt_loc, period_list, wc: WDMWaveletConstants):
     """Filter to a specific set of periods using an fft.
     period_list is in multiples of wc.Tobs/gc.SECSYEAR
     """
@@ -100,7 +101,7 @@ def filter_periods_fft(r_mean, Nt_loc, period_list, wc):
 def get_S_cyclo(
         galactic_below,
         S_inst_m,
-        wc,
+        wc: WDMWaveletConstants,
         smooth_lengthf,
         filter_periods,
         period_list=None,
@@ -214,7 +215,7 @@ def get_S_cyclo(
     return S_res, r_smooth, S_demod_smooth, amp_got, angle_got
 
 
-def fit_gb_spectrum_evolve(S_goals, fs, fs_report, nt_ranges, offset, wc):
+def fit_gb_spectrum_evolve(S_goals, fs, fs_report, nt_ranges, offset, wc: WDMWaveletConstants):
     # TODO take NC in this function properly
     a1 = -0.25
     b1 = -2.70

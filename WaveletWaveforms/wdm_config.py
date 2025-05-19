@@ -13,7 +13,7 @@ WDMWaveletConstants = namedtuple(
         )
 
 
-def get_wavelet_model(config):
+def get_wavelet_model(config) -> WDMWaveletConstants:
     # number of time pixels (should be even)
     Nf = int(ast.literal_eval(config['wavelet constants']['Nf']))
     assert Nf & 1 == 0  # check even

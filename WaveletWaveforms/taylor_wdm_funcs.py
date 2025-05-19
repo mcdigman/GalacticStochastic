@@ -2,9 +2,11 @@
 import numpy as np
 from numba import njit
 
+from WaveletWaveforms.wdm_config import WDMWaveletConstants
+
 
 @njit(fastmath=True)
-def wavemaket_multi_inplace(wavelet_waveform, waveform, nt_min, nt_max, wc, taylor_table, force_nulls=False):
+def wavemaket_multi_inplace(wavelet_waveform, waveform, nt_min, nt_max, wc: WDMWaveletConstants, taylor_table, force_nulls=False):
     """Compute the actual wavelets using taylor time method"""
     Phases = waveform.PT
     Amps = waveform.AT
