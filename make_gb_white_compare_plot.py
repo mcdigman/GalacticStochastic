@@ -37,14 +37,14 @@ def result_normality_battery(signal_in):
     signal_white_outf = (signal_in[:, nf_min:nf_max, 0] / np.std(signal_in[:, nf_min:nf_max, 0], axis=0)).mean(axis=0)
     normal_resf_alt = scipy.stats.normaltest(signal_white_outf)
 
-    print("normal fit res", normal_res)
-    print("normal fit res A", normal_resa)
-    print("normal fit res E", normal_rese)
-    print("normal fit res freq", normal_resf)
-    print("normal fit res time", normal_rest)
-    print("normal fit res freq alt", normal_resf_alt)
-    print("normal fit res freq A", normal_resfa)
-    print("normal fit res freq E", normal_resfe)
+    print('normal fit res', normal_res)
+    print('normal fit res A', normal_resa)
+    print('normal fit res E', normal_rese)
+    print('normal fit res freq', normal_resf)
+    print('normal fit res time', normal_rest)
+    print('normal fit res freq alt', normal_resf_alt)
+    print('normal fit res freq A', normal_resfa)
+    print('normal fit res freq E', normal_resfe)
     std_std = np.std(signal_white_out) * np.sqrt(2 / ns)
     stdf0 = np.std(signal_white_out[:, :].mean(axis=0).mean(axis=1))
     stdt0 = np.std(signal_white_out[:, :].mean(axis=1).mean(axis=1))
@@ -53,9 +53,9 @@ def result_normality_battery(signal_in):
     std_stdf0 = stdf0 * np.sqrt(nf0) * np.sqrt(2 / signal_white_out.shape[1])
     std_stdt0 = stdt0 * np.sqrt(nt0) * np.sqrt(2 / signal_white_out.shape[0])
     print('mean white resids', np.mean(signal_white_out), 1. / np.sqrt(signal_white_out.size))
-    print('std white resids', np.std(signal_white_out), "+/-", std_std, 1., (np.std(signal_white_out) - 1) / std_std)
-    print('std white time', stdt0 * np.sqrt(nt0), "+/-", std_stdt0, 1., (stdt0 * np.sqrt(nt0) - 1) / std_stdt0)
-    print('std white freq', stdf0 * np.sqrt(nf0), "+/-", std_stdf0, 1., (stdf0 * np.sqrt(nf0) - 1) / std_stdf0)
+    print('std white resids', np.std(signal_white_out), '+/-', std_std, 1., (np.std(signal_white_out) - 1) / std_std)
+    print('std white time', stdt0 * np.sqrt(nt0), '+/-', std_stdt0, 1., (stdt0 * np.sqrt(nt0) - 1) / std_stdt0)
+    print('std white freq', stdf0 * np.sqrt(nf0), '+/-', std_stdf0, 1., (stdf0 * np.sqrt(nf0) - 1) / std_stdf0)
     return signal_white_out
 
 
@@ -121,8 +121,8 @@ if do_2plot:
     fig.subplots_adjust(wspace=0., hspace=0., left=0.085, top=0.91, right=1.075, bottom=0.18)
 
     aspect = 'auto'
-    im = white_plot_ax(ax[0], r"Constant", (signal_white_resid_stat[nt_min:nt_max, :, 0:2]**2).sum(axis=2))
-    im = white_plot_ax(ax[1], r"Cyclostationary", (signal_white_resid_cyclo[nt_min:nt_max, :, 0:2]**2).sum(axis=2))
+    im = white_plot_ax(ax[0], r'Constant', (signal_white_resid_stat[nt_min:nt_max, :, 0:2]**2).sum(axis=2))
+    im = white_plot_ax(ax[1], r'Cyclostationary', (signal_white_resid_cyclo[nt_min:nt_max, :, 0:2]**2).sum(axis=2))
 
     cbar = fig.colorbar(im, ax=ax[0:2], shrink=1., pad=0.01, orientation='vertical')
     cbar.set_ticks([0, 2, 4])
@@ -140,9 +140,9 @@ if do_3plot:
     fig.subplots_adjust(wspace=0., hspace=0., left=0.055, top=0.91, right=1.110, bottom=0.18)
 
     aspect = 'auto'
-    im = white_plot_ax(ax[0], r"Constant", (signal_white_resid_stat[nt_min:nt_max, :, 0:2]**2).sum(axis=2))
-    im = white_plot_ax(ax[1], r"Cyclostationary", (signal_white_resid_cyclo[nt_min:nt_max, :, 0:2]**2).sum(axis=2))
-    im = white_plot_ax(ax[2], r"Galactic Residual", signal_white_2[nt_min:nt_max])
+    im = white_plot_ax(ax[0], r'Constant', (signal_white_resid_stat[nt_min:nt_max, :, 0:2]**2).sum(axis=2))
+    im = white_plot_ax(ax[1], r'Cyclostationary', (signal_white_resid_cyclo[nt_min:nt_max, :, 0:2]**2).sum(axis=2))
+    im = white_plot_ax(ax[2], r'Galactic Residual', signal_white_2[nt_min:nt_max])
 
     cbar = fig.colorbar(im, ax=ax[0:3], shrink=1., pad=0.01, orientation='vertical')
     cbar.set_ticks([0, 2, 4])

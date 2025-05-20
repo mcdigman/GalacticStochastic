@@ -72,7 +72,6 @@ class IterativeFitState(StateManager):
         return self._faint_state_request
 
     @faint_state_request.setter
-    #def faint_state_request(self, do_faint_check: bool, bright_converged: bool, faint_converged: bool, force_converge: bool) -> None:
     def faint_state_request(self, value: (bool, bool, bool, bool)) -> None:
         """Set what we want the state to be after faint_convergence_decision"""
         (do_faint_check, bright_converged, faint_converged, force_converge) = value

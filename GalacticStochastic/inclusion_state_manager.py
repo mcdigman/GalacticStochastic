@@ -239,7 +239,7 @@ class BinaryInclusionState(StateManager):
         for itrb in idxbs:
             if itrb % 10000 == 0:
                 tcb = perf_counter()
-                print("Starting binary # %11d of %11d to consider at t=%9.2f s of iteration %4d" % (itrb, idxbs.size, (tcb - tib), self.itrn))
+                print('Starting binary # %11d of %11d to consider at t=%9.2f s of iteration %4d' % (itrb, idxbs.size, (tcb - tib), self.itrn))
 
             self.run_binary_coadd(itrb)
 

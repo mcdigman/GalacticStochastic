@@ -81,6 +81,6 @@ if __name__ == '__main__':
     plt.ylim([wc.dt * 2.e-44, wc.dt * 2.e-43])
     plt.xlim([3.e-4, 6.e-3])
     plt.xlabel('f [Hz]')
-    plt.ylabel(r"$S^{AE}(f)$ [Hz$^{-1}$]")
+    plt.ylabel(r'$S^{AE}(f)$ [Hz$^{-1}$]')
     plt.legend(['1 year', '2 years', '4 years', '8 years'])
     plt.show()

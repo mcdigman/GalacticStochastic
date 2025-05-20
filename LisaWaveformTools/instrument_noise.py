@@ -11,7 +11,6 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 def instrument_noise1(f: NDArray[float], lc: LISAConstants) -> NDArray[float]:
     # Power spectral density of the detector noise and transfer frequency
-    SAE = np.zeros(f.size)
     Sps = 9.e-24     # should match sangria v2? Should it be backlinknoise or readoutnoise?
     Sacc = 5.76e-30  # from sangria v2
     fonfs = f / lc.fstr
@@ -22,11 +21,10 @@ def instrument_noise1(f: NDArray[float], lc: LISAConstants) -> NDArray[float]:
     rollw = 1.0 + pow((2.0e-3 / f), 4.0)
     # Calculate the power spectral density of the detector noise at the given frequency
     # not and exact match to the LDC, but within 10%
-    SAE = LC * 16.0 / 3.0 * pow(np.sin(fonfs), 2.0) * (
+    return LC * 16.0 / 3.0 * pow(np.sin(fonfs), 2.0) * (
             (2.0 + np.cos(fonfs)) * Sps * rollw + 2.0 * (3.0 + 2.0 * np.cos(fonfs) + np.cos(2.0 * fonfs))
             *
             (Sacc / pow(2.0 * np.pi * f, 4.0) * rolla)) / pow(2.0 * lc.Larm, 2.0)
-    return SAE
 
 
 def instrument_noise_AET(f: NDArray[float], lc: LISAConstants) -> NDArray[float]:
@@ -101,5 +99,4 @@ def instrument_noise_AET_wdm_m(lc: LISAConstants, wc: WDMWaveletConstants) -> ND
     phif = np.sqrt(wc.dt) * phitilde_vec(2 * np.pi * fs * wc.dt, wc.Nf, wc.nx)
 
     # TODO check ad hoc normalization factor
-    S_inst_m = instrument_noise_AET_wdm_loop(phif, lc, wc)
-    return S_inst_m
+    return instrument_noise_AET_wdm_loop(phif, lc, wc)

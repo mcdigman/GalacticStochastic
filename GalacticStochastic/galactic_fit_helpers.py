@@ -85,7 +85,7 @@ def filter_periods_fft(r_mean: NDArray[float], Nt_loc, period_list, wc: WDMWavel
         angle_fftm = angle_fft % (2 * np.pi)
         mult = int(wc.Tobs / gc.SECSYEAR)
 
-        print("%3d & %5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f" %
+        print('%3d & %5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f & %5.3f & %5.2f' %
               (
                itrc,
                abs_fft[1 * mult], angle_fftm[1 * mult],
@@ -112,7 +112,7 @@ def get_S_cyclo(
         t_stabilizer_mult=1.e-13,
         r_cutoff_mult=1.e-6,
         log_S_stabilizer=1.e-50,
-        )-> (NDArray[float], NDArray[float], NDArray[float], NDArray[float], NDArray[float]):
+        ) -> (NDArray[float], NDArray[float], NDArray[float], NDArray[float], NDArray[float]):
     """Note the smoothing length is the length in *log* frequency,
     and the input is assumed spaced linearly in frequency
     """

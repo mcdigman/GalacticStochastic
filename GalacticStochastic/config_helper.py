@@ -12,7 +12,7 @@ def get_config_objects(toml_filename):
     """Load the configuration from the input toml filename
     and create some of the config objects the iterative fit will need
     """
-    with Path.open(toml_filename, "rb") as f:
+    with Path.open(toml_filename, 'rb') as f:
         config = tomllib.load(f)
 
     wc = get_wavelet_model(config)

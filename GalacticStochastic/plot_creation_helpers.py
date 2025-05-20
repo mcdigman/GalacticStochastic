@@ -21,7 +21,7 @@ def plot_noise_spectrum_ambiguity(ifm: IterativeFitManager) -> None:
     plt.ylim([2.e-44, 4.e-43])
     plt.xlim([3.e-4, 6.e-3])
     plt.xlabel('f (Hz)')
-    plt.ylabel(r"$\langle S^{AE}_{m} \rangle$")
+    plt.ylabel(r'$\langle S^{AE}_{m} \rangle$')
     plt.show()
 
 
@@ -41,5 +41,5 @@ def plot_noise_spectrum_evolve(ifm: IterativeFitManager) -> None:
     plt.ylim([2.e-44, 4.e-43])
     plt.xlim([3.e-4, 6.e-3])
     plt.xlabel('f (Hz)')
-    plt.ylabel(r"$\langle S^{AE}_{m} \rangle$")
+    plt.ylabel(r'$\langle S^{AE}_{m} \rangle$')
     plt.show()

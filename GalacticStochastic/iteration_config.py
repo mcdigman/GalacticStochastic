@@ -4,7 +4,26 @@ from collections import namedtuple
 
 import numpy as np
 
-IterationConfig = namedtuple('IterationConfig', ['max_iterations', 'snr_thresh', 'snr_min', 'snr_cut_bright', 'smooth_lengthf', 'period_list', 'n_cyclo_switch', 'n_min_faint_adapt', 'faint_converge_change_thresh', 'smooth_lengthf_fix', 'fmin_binary', 'fmax_binary', 'nc_galaxy', 'snr_min_preprocess', 'snr_min_reprocess'])
+IterationConfig = namedtuple(
+    'IterationConfig',
+    [
+        'max_iterations',
+        'snr_thresh',
+        'snr_min',
+        'snr_cut_bright',
+        'smooth_lengthf',
+        'period_list',
+        'n_cyclo_switch',
+        'n_min_faint_adapt',
+        'faint_converge_change_thresh',
+        'smooth_lengthf_fix',
+        'fmin_binary',
+        'fmax_binary',
+        'nc_galaxy',
+        'snr_min_preprocess',
+        'snr_min_reprocess',
+    ],
+)
 
 
 def get_iteration_config(config) -> IterationConfig:
@@ -26,15 +45,15 @@ def get_iteration_config(config) -> IterationConfig:
     assert faint_converge_change_thresh >= 0
 
     snr_thresh = float(config['iterative_fit_constants']['snr_thresh'])
-    assert snr_thresh >= 0.
+    assert snr_thresh >= 0.0
 
     # starting faint cutoff snr
     snr_low_initial = float(config['iterative_fit_constants']['snr_low_initial'])
-    assert snr_low_initial >= 0.
+    assert snr_low_initial >= 0.0
 
     # multiplier for faint cutoff snr in iterations after the zeroth
     snr_low_mult = float(config['iterative_fit_constants']['snr_low_mult'])
-    assert snr_low_mult >= 0.
+    assert snr_low_mult >= 0.0
 
     #  the faint cutoff snr
     snr_min = np.zeros(max_iterations)
@@ -43,12 +62,12 @@ def get_iteration_config(config) -> IterationConfig:
 
     # the list of periods to allow in the cyclostationary model
     period_list = np.array(config['iterative_fit_constants'].get('period_list'), dtype=float)
-    assert np.all(period_list >= 0.)
+    assert np.all(period_list >= 0.0)
     period_list = tuple(period_list)
 
     # final frequency smoothing length for galactic spectrum in log frequency bins
     smooth_lengthf_fix = float(config['iterative_fit_constants']['smooth_lengthf_fix'])
-    assert smooth_lengthf_fix >= 0.
+    assert smooth_lengthf_fix >= 0.0
 
     fsmooth_settle_mult = float(config['iterative_fit_constants']['fsmooth_settle_mult'])
 
@@ -67,11 +86,11 @@ def get_iteration_config(config) -> IterationConfig:
     smooth_lengthf = np.zeros(max_iterations) + smooth_lengthf_fix
     for itrn in range(fsmooth_fix_itr):
         smooth_lengthf[itrn] += fsmooth_settle_mult * np.exp(-fsmooth_settle_scale * itrn - fsmooth_settle_offset)
-        assert smooth_lengthf[itrn] >= 0.
+        assert smooth_lengthf[itrn] >= 0.0
 
     # final bright snr cutoff
     snr_high_fix = float(config['iterative_fit_constants']['snr_high_fix'])
-    assert snr_high_fix >= 0.
+    assert snr_high_fix >= 0.0
 
     # phase in bright snr cutoff gradually
     snr_high_settle_mult = float(config['iterative_fit_constants']['snr_high_settle_mult'])
@@ -87,7 +106,7 @@ def get_iteration_config(config) -> IterationConfig:
     snr_cut_bright = np.zeros(max_iterations) + snr_high_fix
     for itrn in range(snr_high_fix_itr):
         snr_cut_bright[itrn] += snr_high_settle_mult * np.exp(-snr_high_settle_scale * itrn - snr_high_settle_offset)
-        assert snr_cut_bright[itrn] >= 0.
+        assert snr_cut_bright[itrn] >= 0.0
 
     # minimum binary frequency to allow
     fmin_binary = float(config['iterative_fit_constants']['fmin_binary'])
@@ -108,4 +127,20 @@ def get_iteration_config(config) -> IterationConfig:
     assert snr_min_reprocess >= snr_min_preprocess
 
     # make arrays into tuples to ensure the configuration is immutable
-    return IterationConfig(max_iterations, snr_thresh, tuple(snr_min), tuple(snr_cut_bright), tuple(smooth_lengthf), period_list, n_cyclo_switch, n_min_faint_adapt, faint_converge_change_thresh, smooth_lengthf_fix, fmin_binary, fmax_binary, nc_galaxy, snr_min_preprocess, snr_min_reprocess)
+    return IterationConfig(
+        max_iterations,
+        snr_thresh,
+        tuple(snr_min),
+        tuple(snr_cut_bright),
+        tuple(smooth_lengthf),
+        period_list,
+        n_cyclo_switch,
+        n_min_faint_adapt,
+        faint_converge_change_thresh,
+        smooth_lengthf_fix,
+        fmin_binary,
+        fmax_binary,
+        nc_galaxy,
+        snr_min_preprocess,
+        snr_min_reprocess,
+    )

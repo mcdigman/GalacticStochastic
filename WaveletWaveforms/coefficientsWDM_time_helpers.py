@@ -101,16 +101,17 @@ def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mod
     """
     t0 = time()
 
-    print("Filter length (seconds) %e" % wc.Tw)
-    print("dt=" + str(wc.dt) + "s Tobs=" + str(wc.Tobs / SECSYEAR))
+    print('Filter length (seconds) %e' % wc.Tw)
+    print('dt=' + str(wc.dt) + 's Tobs=' + str(wc.Tobs / SECSYEAR))
 
-    print("full filter bandwidth %e  samples %d" % ((wc.A + wc.B) / np.pi, (wc.A + wc.B) / np.pi * wc.Tw))
+    print('full filter bandwidth %e  samples %d' % ((wc.A + wc.B) / np.pi, (wc.A + wc.B) / np.pi * wc.Tw))
     cache_good = False
 
-    filename_cache = 'coeffs/WDMcoeffs_Nsf=' + str(wc.Nsf) + '_mult=' + str(wc.mult) + '_Nfd=' + str(
-        wc.Nfd) + '_Nf=' + str(wc.Nf) \
-                     + '_Nt=' + str(wc.Nt) + '_dt=' + str(wc.dt) + '_dfdot=' + str(wc.dfdot) + '_Nfd_neg' + str(
-        wc.Nfd_negative) + '_fast.h5'
+    filename_cache = 'coeffs/WDMcoeffs_Nsf=' \
+        + str(wc.Nsf) + '_mult=' + str(wc.mult) + '_Nfd=' \
+        + str(wc.Nfd) + '_Nf=' + str(wc.Nf) \
+        + '_Nt=' + str(wc.Nt) + '_dt=' + str(wc.dt) + '_dfdot=' + str(wc.dfdot) + '_Nfd_neg' \
+        + str(wc.Nfd_negative) + '_fast.h5'
 
     if cache_mode == 'check':
         fds = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)
@@ -154,7 +155,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mod
             phi[np.int64(wc.K / 2) + i] = np.real(DX[i])
 
         nrm = np.linalg.norm(phi)
-        print("norm=" + str(nrm))
+        print('norm=' + str(nrm))
 
         # it turns out that all the wavelet layers are the same modulo a
         # shift in the reference frequency. Just have to do a single layer
@@ -165,7 +166,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mod
 
         fd = wc.DF / wc.Tw * wc.dfdot * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)  # set f-dot increments
 
-        print("%e %.14e %.14e %e %e" % (wc.DT, wc.DF, wc.DOM / (2 * np.pi), fd[1], fd[wc.Nfd - 1]))
+        print('%e %.14e %.14e %e %e' % (wc.DT, wc.DF, wc.DOM / (2 * np.pi), fd[1], fd[wc.Nfd - 1]))
 
         Nfsam = ((wc.BW + np.abs(fd) * wc.Tw) / wc.df).astype(np.int64)
         odd_mask = np.mod(Nfsam, 2) != 0
@@ -181,10 +182,10 @@ def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mod
         # half that
 
         t1 = time()
-        print("loop start time ", t1 - t0, "s")
+        print('loop start time ', t1 - t0, 's')
         evcs, evss = get_taylor_table_time_helper(wave, wc)
         tf = time()
-        print("Got Time Taylor Table in %f s" % (tf - t1))
+        print('Got Time Taylor Table in %f s' % (tf - t1))
 
         if output_mode == 'hf':
             hf = h5py.File(filename_cache, 'w')
@@ -197,7 +198,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mod
                 hf['evss'].create_dataset(str(jj), data=evss[jj, :Nfsam[jj]])
             hf.close()
             t3 = time()
-            print("output time", t3 - tf, "s")
+            print('output time', t3 - tf, 's')
         elif output_mode == 'skip':
             pass
         else:
