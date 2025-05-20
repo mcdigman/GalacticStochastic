@@ -5,8 +5,8 @@ from numba import njit, prange
 
 from LisaWaveformTools.lisa_config import LISAConstants
 
-CLIGHT = 2.99792458e8     # Speed of light in m/s
-AU = 1.4959787e11         # Astronomical Unit in meters
+CLIGHT = 2.99792458e8  # Speed of light in m/s
+AU = 1.4959787e11  # Astronomical Unit in meters
 
 
 @njit()
@@ -29,7 +29,7 @@ def get_tensor_basis(phi, costh):
 
     u[0] = sinph
     u[1] = -cosph
-    u[2] = 0.
+    u[2] = 0.0
 
     v[0] = -costh * cosph
     v[1] = -costh * sinph
@@ -44,11 +44,14 @@ def get_tensor_basis(phi, costh):
             ecross[i, j] = u[i] * v[j] + v[i] * u[j]
     return kv, eplus, ecross
 
+
 # TODO eliminate need for constants by storing e.g. Larm_AU
 
 
 @njit(fastmath=True)
-def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_low, NTs, kdotx, lc: LISAConstants) -> None:
+def RAantenna_inplace(
+    spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_low, NTs, kdotx, lc: LISAConstants
+) -> None:
     """Get the waveform for LISA given polarization angle, spacecraft, tensor basis and Fs, channel order AET"""
     RRs = spacecraft_channels.RR
     IIs = spacecraft_channels.II
@@ -121,7 +124,7 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
     sbs = np.zeros(n_spacecraft)
     cbs = np.zeros(n_spacecraft)
     for itrc in range(n_spacecraft):
-        betas[itrc] = 2. / 3. * np.pi * itrc + lc.lambda0
+        betas[itrc] = 2.0 / 3.0 * np.pi * itrc + lc.lambda0
         sbs[itrc] = (AU / lc.Larm * lc.ec) * np.sin(betas[itrc])
         cbs[itrc] = (AU / lc.Larm * lc.ec) * np.cos(betas[itrc])
 
@@ -130,7 +133,7 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
     sinps = np.sin(2 * psi)
 
     # amplitude multipliers
-    Aplus = (1. + cosi**2) / 2
+    Aplus = (1.0 + cosi**2) / 2
     Across = -cosi
 
     # Main Loop
@@ -142,9 +145,9 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
         sa = np.sin(alpha)
         ca = np.cos(alpha)
         for itrc in range(n_spacecraft):
-            x[itrc] = (AU / lc.Larm) * ca + sa * ca * sbs[itrc] - (1. + sa * sa) * cbs[itrc]
-            y[itrc] = (AU / lc.Larm) * sa + sa * ca * cbs[itrc] - (1. + ca * ca) * sbs[itrc]
-            z[itrc] = -np.sqrt(3.) * (ca * cbs[itrc] + sa * sbs[itrc])
+            x[itrc] = (AU / lc.Larm) * ca + sa * ca * sbs[itrc] - (1.0 + sa * sa) * cbs[itrc]
+            y[itrc] = (AU / lc.Larm) * sa + sa * ca * cbs[itrc] - (1.0 + ca * ca) * sbs[itrc]
+            z[itrc] = -np.sqrt(3.0) * (ca * cbs[itrc] + sa * sbs[itrc])
 
         # manually average over n_spacecraft to get coordinates of the guiding center
         xa = (x[0] + x[1] + x[2]) / n_spacecraft
@@ -179,8 +182,8 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
         r30[1] = ya - y[2]
         r30[2] = za - z[2]
 
-        kdr[:] = 0.
-        kdg[:] = 0.
+        kdr[:] = 0.0
+        kdg[:] = 0.0
         for k in range(n_space):
             kdr[0, 1] += kv[k] * r12[k]
             kdr[0, 2] += kv[k] * r13[k]
@@ -191,24 +194,24 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
 
         for i in range(n_arm - 1):
             for j in range(i + 1, n_arm):
-                q1 = fr * (1. - kdr[i, j])
-                q2 = fr * (1. + kdr[i, j])
-                q3 = -fr * (3. + kdr[i, j] - 2 * kdg[i])
-                q4 = -fr * (1. + kdr[i, j] - 2 * kdg[i])  # TODO missing 1/sqrt(3) on kdg?
-                q5 = -fr * (3. - kdr[i, j] - 2 * kdg[j])
-                q6 = -fr * (1. - kdr[i, j] - 2 * kdg[j])  # TODO missing 1/sqrt(3) on kdg?
+                q1 = fr * (1.0 - kdr[i, j])
+                q2 = fr * (1.0 + kdr[i, j])
+                q3 = -fr * (3.0 + kdr[i, j] - 2 * kdg[i])
+                q4 = -fr * (1.0 + kdr[i, j] - 2 * kdg[i])  # TODO missing 1/sqrt(3) on kdg?
+                q5 = -fr * (3.0 - kdr[i, j] - 2 * kdg[j])
+                q6 = -fr * (1.0 - kdr[i, j] - 2 * kdg[j])  # TODO missing 1/sqrt(3) on kdg?
                 sincq1 = np.sin(q1) / q1 / 2
                 sincq2 = np.sin(q2) / q2 / 2
                 # Real part of T from eq B9 in PhysRevD.101.124008
-                TR[i, j] = sincq1 * np.cos(q3) + sincq2 * np.cos(q4)   # goes to 1 when f/fstar small
+                TR[i, j] = sincq1 * np.cos(q3) + sincq2 * np.cos(q4)  # goes to 1 when f/fstar small
                 # imaginary part of T
-                TI[i, j] = sincq1 * np.sin(q3) + sincq2 * np.sin(q4)   # goes to 0 when f/fstar small
+                TI[i, j] = sincq1 * np.sin(q3) + sincq2 * np.sin(q4)  # goes to 0 when f/fstar small
                 # save ops computing other triangle simultaneously
-                TR[j, i] = sincq2 * np.cos(q5) + sincq1 * np.cos(q6)   # goes to 1 when f/fstar small
-                TI[j, i] = sincq2 * np.sin(q5) + sincq1 * np.sin(q6)   # goes to 0 when f/fstar small
+                TR[j, i] = sincq2 * np.cos(q5) + sincq1 * np.cos(q6)  # goes to 1 when f/fstar small
+                TI[j, i] = sincq2 * np.sin(q5) + sincq1 * np.sin(q6)  # goes to 0 when f/fstar small
 
-        dplus[:] = 0.
-        dcross[:] = 0.
+        dplus[:] = 0.0
+        dcross[:] = 0.0
         # Convenient quantities d+ & dx
         for i in range(n_space):
             for j in range(n_space):
@@ -227,40 +230,52 @@ def RAantenna_inplace(spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_lo
         dcross[2, 0] = dcross[0, 2]
 
         for i in range(nc_michelson):
-            fprs[i] = -(
-                        + (dplus[i, (i + 1) % 3] * cosps + dcross[i, (i + 1) % 3] * sinps) * TR[i, (i + 1) % 3]
-                        - (dplus[i, (i + 2) % 3] * cosps + dcross[i, (i + 2) % 3] * sinps) * TR[i, (i + 2) % 3]
-                       ) / 2
-            fcrs[i] = -(
-                        + (-dplus[i, (i + 1) % 3] * sinps + dcross[i, (i + 1) % 3] * cosps) * TR[i, (i + 1) % 3]
-                        - (-dplus[i, (i + 2) % 3] * sinps + dcross[i, (i + 2) % 3] * cosps) * TR[i, (i + 2) % 3]
-                       ) / 2
-            fpis[i] = -(
-                        + (dplus[i, (i + 1) % 3] * cosps + dcross[i, (i + 1) % 3] * sinps) * TI[i, (i + 1) % 3]
-                        - (dplus[i, (i + 2) % 3] * cosps + dcross[i, (i + 2) % 3] * sinps) * TI[i, (i + 2) % 3]
-                       ) / 2
-            fcis[i] = -(
-                        + (-dplus[i, (i + 1) % 3] * sinps + dcross[i, (i + 1) % 3] * cosps) * TI[i, (i + 1) % 3]
-                        - (-dplus[i, (i + 2) % 3] * sinps + dcross[i, (i + 2) % 3] * cosps) * TI[i, (i + 2) % 3]
-                       ) / 2
+            fprs[i] = (
+                -(
+                    +(dplus[i, (i + 1) % 3] * cosps + dcross[i, (i + 1) % 3] * sinps) * TR[i, (i + 1) % 3]
+                    - (dplus[i, (i + 2) % 3] * cosps + dcross[i, (i + 2) % 3] * sinps) * TR[i, (i + 2) % 3]
+                )
+                / 2
+            )
+            fcrs[i] = (
+                -(
+                    +(-dplus[i, (i + 1) % 3] * sinps + dcross[i, (i + 1) % 3] * cosps) * TR[i, (i + 1) % 3]
+                    - (-dplus[i, (i + 2) % 3] * sinps + dcross[i, (i + 2) % 3] * cosps) * TR[i, (i + 2) % 3]
+                )
+                / 2
+            )
+            fpis[i] = (
+                -(
+                    +(dplus[i, (i + 1) % 3] * cosps + dcross[i, (i + 1) % 3] * sinps) * TI[i, (i + 1) % 3]
+                    - (dplus[i, (i + 2) % 3] * cosps + dcross[i, (i + 2) % 3] * sinps) * TI[i, (i + 2) % 3]
+                )
+                / 2
+            )
+            fcis[i] = (
+                -(
+                    +(-dplus[i, (i + 1) % 3] * sinps + dcross[i, (i + 1) % 3] * cosps) * TI[i, (i + 1) % 3]
+                    - (-dplus[i, (i + 2) % 3] * sinps + dcross[i, (i + 2) % 3] * cosps) * TI[i, (i + 2) % 3]
+                )
+                / 2
+            )
 
-        FpRs[0] = (2 * fprs[0] - fprs[1] - fprs[2]) / 3. * Aplus
-        FcRs[0] = (2 * fcrs[0] - fcrs[1] - fcrs[2]) / 3. * Across
+        FpRs[0] = (2 * fprs[0] - fprs[1] - fprs[2]) / 3.0 * Aplus
+        FcRs[0] = (2 * fcrs[0] - fcrs[1] - fcrs[2]) / 3.0 * Across
 
-        FpRs[1] = (fprs[2] - fprs[1]) / np.sqrt(3.) * Aplus
-        FcRs[1] = (fcrs[2] - fcrs[1]) / np.sqrt(3.) * Across
+        FpRs[1] = (fprs[2] - fprs[1]) / np.sqrt(3.0) * Aplus
+        FcRs[1] = (fcrs[2] - fcrs[1]) / np.sqrt(3.0) * Across
 
-        FpRs[2] = (fprs[0] + fprs[1] + fprs[2]) / 3. * Aplus
-        FcRs[2] = (fcrs[0] + fcrs[1] + fcrs[2]) / 3. * Across
+        FpRs[2] = (fprs[0] + fprs[1] + fprs[2]) / 3.0 * Aplus
+        FcRs[2] = (fcrs[0] + fcrs[1] + fcrs[2]) / 3.0 * Across
 
-        FpIs[0] = (2 * fpis[0] - fpis[1] - fpis[2]) / 3. * Aplus
-        FcIs[0] = (2 * fcis[0] - fcis[1] - fcis[2]) / 3. * Across
+        FpIs[0] = (2 * fpis[0] - fpis[1] - fpis[2]) / 3.0 * Aplus
+        FcIs[0] = (2 * fcis[0] - fcis[1] - fcis[2]) / 3.0 * Across
 
         FpIs[1] = (fpis[2] - fpis[1]) / np.sqrt(3) * Aplus
         FcIs[1] = (fcis[2] - fcis[1]) / np.sqrt(3) * Across
 
-        FpIs[2] = (fpis[0] + fpis[1] + fpis[2]) / 3. * Aplus
-        FcIs[2] = (fcis[0] + fcis[1] + fcis[2]) / 3. * Across
+        FpIs[2] = (fpis[0] + fpis[1] + fpis[2]) / 3.0 * Aplus
+        FcIs[2] = (fcis[0] + fcis[1] + fcis[2]) / 3.0 * Across
 
         for itrc in range(nc_waveform):
             RRs[itrc, n] = FpRs[itrc] - FcIs[itrc]
@@ -291,8 +306,8 @@ def spacecraft_vec(ts, lc: LISAConstants):
         beta = i * 2 / 3 * np.pi + lc.lambda0
         sb = np.sin(beta)
         cb = np.cos(beta)
-        xs[i] = AU / lc.Larm * ca + AU / lc.Larm * lc.ec * (sa * ca * sb - (1. + sa * sa) * cb)
-        ys[i] = AU / lc.Larm * sa + AU / lc.Larm * lc.ec * (sa * ca * cb - (1. + ca * ca) * sb)
+        xs[i] = AU / lc.Larm * ca + AU / lc.Larm * lc.ec * (sa * ca * sb - (1.0 + sa * sa) * cb)
+        ys[i] = AU / lc.Larm * sa + AU / lc.Larm * lc.ec * (sa * ca * cb - (1.0 + ca * ca) * sb)
         zs[i] = -np.sqrt(3) * AU / lc.Larm * lc.ec * (ca * cb + sa * sb)
 
     # guiding center

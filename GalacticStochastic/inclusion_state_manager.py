@@ -17,8 +17,17 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 class BinaryInclusionState(StateManager):
     """Stores all the binaries under consideration in the galaxy"""
 
-    def __init__(self, wc: WDMWaveletConstants, ic: IterationConfig, lc: LISAConstants, params_gb_in, noise_manager: NoiseModelManager, fit_state: IterativeFitState, snrs_tot_in=None) -> None:
-        """Class that stores information about the binaries in the background, and which component they are assigned to"""
+    def __init__(
+        self,
+        wc: WDMWaveletConstants,
+        ic: IterationConfig,
+        lc: LISAConstants,
+        params_gb_in,
+        noise_manager: NoiseModelManager,
+        fit_state: IterativeFitState,
+        snrs_tot_in=None,
+    ) -> None:
+        """Class that stores information about which component of the galactic signal binaries belong to."""
         self.wc = wc
         self.ic = ic
         self.lc = lc
@@ -26,17 +35,21 @@ class BinaryInclusionState(StateManager):
         self.fit_state = fit_state
 
         self.n_tot = params_gb_in.shape[0]
-        self.fmin_binary = max(0., ic.fmin_binary)
+        self.fmin_binary = max(0.0, ic.fmin_binary)
         self.fmax_binary = min((wc.Nf - 1) * wc.DF, ic.fmax_binary)
 
         if snrs_tot_in is not None:
-            faints_in = (snrs_tot_in < ic.snr_min_preprocess) | (params_gb_in[:, 3] >= self.fmax_binary) | (params_gb_in[:, 3] < self.fmin_binary)
+            faints_in = (
+                (snrs_tot_in < ic.snr_min_preprocess)
+                | (params_gb_in[:, 3] >= self.fmax_binary)
+                | (params_gb_in[:, 3] < self.fmin_binary)
+            )
         else:
             faints_in = (params_gb_in[:, 3] >= self.fmax_binary) | (params_gb_in[:, 3] < self.fmin_binary)
 
         self.argbinmap = np.argwhere(~faints_in).flatten()
         self.faints_old = faints_in[self.argbinmap]
-        assert self.faints_old.sum() == 0.
+        assert self.faints_old.sum() == 0.0
         self.params_gb = params_gb_in[self.argbinmap]
         self.n_bin_use = self.argbinmap.size
 
@@ -107,7 +120,7 @@ class BinaryInclusionState(StateManager):
         return delta_brights
 
     def run_binary_coadd(self, itrb) -> None:
-        """Get the waveform for a binary, store its snr, decide whether it is faint, and coadd it to the appropriate spectrum"""
+        """Get the waveform for a binary, store its snr, and decide which spectrum to add it to."""
         itrn = self.itrn
         self.waveform_manager.update_params(self.params_gb[itrb].copy())
 
@@ -121,7 +134,9 @@ class BinaryInclusionState(StateManager):
         wavelet_waveform = self.waveform_manager.get_unsorted_coeffs()
 
         if not self.fit_state.get_faint_converged():
-            self.snrs_lower[itrn, itrb] = self.noise_manager.noise_lower.get_sparse_snrs(wavelet_waveform, self.noise_manager.nt_min, self.noise_manager.nt_max)
+            self.snrs_lower[itrn, itrb] = self.noise_manager.noise_lower.get_sparse_snrs(
+                wavelet_waveform, self.noise_manager.nt_min, self.noise_manager.nt_max
+            )
             self.snrs_tot_lower[itrn, itrb] = np.linalg.norm(self.snrs_lower[itrn, itrb])
         else:
             assert itrn > 1
@@ -129,7 +144,9 @@ class BinaryInclusionState(StateManager):
             self.snrs_tot_lower[itrn, itrb] = self.snrs_tot_lower[itrn - 1, itrb]
 
         if not self.fit_state.get_bright_converged():
-            self.snrs_upper[itrn, itrb] = self.noise_manager.noise_upper.get_sparse_snrs(wavelet_waveform, self.noise_manager.nt_min, self.noise_manager.nt_max)
+            self.snrs_upper[itrn, itrb] = self.noise_manager.noise_upper.get_sparse_snrs(
+                wavelet_waveform, self.noise_manager.nt_min, self.noise_manager.nt_max
+            )
             self.snrs_tot_upper[itrn, itrb] = np.linalg.norm(self.snrs_upper[itrn, itrb])
         else:
             assert itrn > 1
@@ -239,7 +256,10 @@ class BinaryInclusionState(StateManager):
         for itrb in idxbs:
             if itrb % 10000 == 0:
                 tcb = perf_counter()
-                print('Starting binary # %11d of %11d to consider at t=%9.2f s of iteration %4d' % (itrb, idxbs.size, (tcb - tib), self.itrn))
+                print(
+                    'Starting binary # %11d of %11d to consider at t=%9.2f s of iteration %4d'
+                    % (itrb, idxbs.size, (tcb - tib), self.itrn)
+                )
 
             self.run_binary_coadd(itrb)
 
@@ -270,8 +290,14 @@ class BinaryInclusionState(StateManager):
         n_faint2 = self.faints_cur[self.itrn - 1].sum()
         n_bright = self.brights[self.itrn - 1].sum()
         n_ambiguous = (~(self.faints_old | self.brights[self.itrn - 1] | self.faints_cur[self.itrn - 1])).sum()
-        print('Out of %10d total binaries, %10d were deemed undetectable by a previous evaluation, %10d were considered here.' % (self.n_tot, self.n_tot - n_consider, n_consider))
-        print('The iterative procedure deemed (%5.3f yr observation at threshold snr=%5.3f):' % (Tobs_consider_yr, self.ic.snr_thresh))
+        print(
+            'Out of %10d total binaries, %10d were deemed undetectable by a previous run, %10d were considered here.'
+            % (self.n_tot, self.n_tot - n_consider, n_consider)
+        )
+        print(
+            'The iterative procedure deemed (%5.3f yr observation at threshold snr=%5.3f):'
+            % (Tobs_consider_yr, self.ic.snr_thresh)
+        )
         print('       %10d undetectable due to instrument noise' % n_faint)
         print('       %10d undetectable due to galactic confusion' % n_faint2)
         print('       %10d undecided (presumed undetectable)' % n_ambiguous)
@@ -281,7 +307,7 @@ class BinaryInclusionState(StateManager):
         assert n_ambiguous + n_bright + n_faint + n_faint2 == n_consider
 
     def log_state(self) -> None:
-        """Perform any internal logging that should be done after advance_state is run for all objects for the iteration"""
+        """Perform any internal logging that should be done after advance_state is run."""
         return
 
     def loop_finalize(self) -> None:

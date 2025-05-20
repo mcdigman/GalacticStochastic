@@ -19,12 +19,19 @@ def wavelet(wc: WDMWaveletConstants, m, nrm) -> NDArray[float]:
     DE = np.zeros(wc.K, dtype=np.complex128)
 
     om = wc.dom * np.hstack([np.arange(0, halfN + 1), -np.arange(halfN - 1, 0, -1)])
-    DE[:] = np.sqrt(wc.dt) / np.sqrt(2.) * (phitilde_vec(wc.dt * (om + m * wc.DOM), wc.Nf, wc.nx) + phitilde_vec(wc.dt * (om - m * wc.DOM), wc.Nf, wc.nx))
+    DE[:] = (
+        np.sqrt(wc.dt)
+        / np.sqrt(2.0)
+        * (
+            phitilde_vec(wc.dt * (om + m * wc.DOM), wc.Nf, wc.nx)
+            + phitilde_vec(wc.dt * (om - m * wc.DOM), wc.Nf, wc.nx)
+        )
+    )
     DE = spf.fft(DE, wc.K, overwrite_x=True)
 
     wave[halfN:] = np.real(DE[0:halfN])
     wave[0:halfN] = np.real(DE[halfN:])
-    return 1. / nrm * wave
+    return 1.0 / nrm * wave
 
 
 @njit(parallel=True)
@@ -41,17 +48,17 @@ def get_taylor_table_time_helper(wave: NDArray[float], wc: WDMWaveletConstants) 
     zquads = np.zeros(wc.K)
     for jj in range(wc.Nfd):
         for k in range(wc.K):
-            zquads[k] = np.pi * wc.dt**2 * fd[jj] * (k - wc.K // 2)**2
+            zquads[k] = np.pi * wc.dt**2 * fd[jj] * (k - wc.K // 2) ** 2
         for i in range(Nfsam[jj]):
             zmults = zadd + zpre * (1 - Nfsam[jj] + 2 * i)
-            evc = 0.
-            evs = 0.
+            evc = 0.0
+            evs = 0.0
             for k in prange(wc.K):
                 zs = zmults * (k - wc.K // 2) + zquads[k]
                 evc += wave[k] * np.cos(zs)
                 evs += wave[k] * np.sin(zs)
-            assert evc != 0.
-            assert evs != 0.
+            assert evc != 0.0
+            assert evs != 0.0
             evcs[jj, i] = evc
             evss[jj, i] = evs
     return evcs, evss

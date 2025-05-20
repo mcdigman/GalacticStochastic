@@ -1,4 +1,5 @@
 """index for loading the current versions of files"""
+
 from pathlib import Path
 
 import h5py
@@ -13,19 +14,52 @@ from WaveletWaveforms import wdm_config
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 n_par_gb = 8
-labels_gb = ['Amplitude', 'EclipticLatitude', 'EclipticLongitude', 'Frequency', 'FrequencyDerivative', 'Inclination', 'InitialPhase', 'Polarization']
+labels_gb = [
+    'Amplitude',
+    'EclipticLatitude',
+    'EclipticLongitude',
+    'Frequency',
+    'FrequencyDerivative',
+    'Inclination',
+    'InitialPhase',
+    'Polarization',
+]
 
 
 def get_common_noise_filename(galaxy_dir, snr_thresh, wc: WDMWaveletConstants):
-    return galaxy_dir + ('preprocessed_background=%.2f' % snr_thresh) + '_Nf=' + str(wc.Nf) + '_Nt=' + str(wc.Nt) + '_dt=%.2f.hdf5' % wc.dt
+    return (
+        galaxy_dir
+        + ('preprocessed_background=%.2f' % snr_thresh)
+        + '_Nf='
+        + str(wc.Nf)
+        + '_Nt='
+        + str(wc.Nt)
+        + '_dt=%.2f.hdf5' % wc.dt
+    )
 
 
 def get_init_filename(galaxy_dir, snr_thresh, Nf, Nt, dt):
-    return galaxy_dir + ('preprocessed_background=%.2f' % snr_thresh) + '_Nf=' + str(Nf) + '_Nt=' + str(Nt) + '_dt=%.2f.hdf5' % dt
+    return (
+        galaxy_dir
+        + ('preprocessed_background=%.2f' % snr_thresh)
+        + '_Nf='
+        + str(Nf)
+        + '_Nt='
+        + str(Nt)
+        + '_dt=%.2f.hdf5' % dt
+    )
 
 
 def get_preliminary_filename(galaxy_dir, snr_thresh, Nf, Nt, dt):
-    return galaxy_dir + ('preprocessed_background=%.2f' % snr_thresh) + '_Nf=' + str(Nf) + '_Nt=' + str(Nt) + '_dt=%.2f.hdf5' % dt
+    return (
+        galaxy_dir
+        + ('preprocessed_background=%.2f' % snr_thresh)
+        + '_Nf='
+        + str(Nf)
+        + '_Nt='
+        + str(Nt)
+        + '_dt=%.2f.hdf5' % dt
+    )
 
 
 def get_galaxy_filename(galaxy_file, galaxy_dir):
@@ -33,7 +67,22 @@ def get_galaxy_filename(galaxy_file, galaxy_dir):
 
 
 def get_processed_gb_filename(galaxy_dir, stat_only, snr_thresh, wc: WDMWaveletConstants, nt_min, nt_max):
-    return galaxy_dir + ('gb8_processed_snr=%.2f' % snr_thresh) + '_Nf=' + str(wc.Nf) + '_Nt=' + str(wc.Nt) + ('_dt=%.2f' % (wc.dt)) + '_const=' + str(stat_only) + '_nt_min=' + str(nt_min) + '_nt_max=' + str(nt_max) + '.hdf5'
+    return (
+        galaxy_dir
+        + ('gb8_processed_snr=%.2f' % snr_thresh)
+        + '_Nf='
+        + str(wc.Nf)
+        + '_Nt='
+        + str(wc.Nt)
+        + ('_dt=%.2f' % (wc.dt))
+        + '_const='
+        + str(stat_only)
+        + '_nt_min='
+        + str(nt_min)
+        + '_nt_max='
+        + str(nt_max)
+        + '.hdf5'
+    )
 
 
 def get_noise_common(galaxy_dir, snr_thresh, wc: WDMWaveletConstants):
@@ -51,7 +100,9 @@ def get_noise_common(galaxy_dir, snr_thresh, wc: WDMWaveletConstants):
     return noise_realization_common
 
 
-def get_full_galactic_params(galaxy_file, galaxy_dir, *, fmin=0.00001, fmax=0.1, use_dgb=True, use_igb=True, use_vgb=True):
+def get_full_galactic_params(
+    galaxy_file, galaxy_dir, *, fmin=0.00001, fmax=0.1, use_dgb=True, use_igb=True, use_vgb=True
+):
     """Get the galaxy dataset binaries"""
     full_galactic_params_filename = get_galaxy_filename(galaxy_file, galaxy_dir)
     filename = full_galactic_params_filename
@@ -126,7 +177,7 @@ def load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, wc: WDMW
 
     # check input S makes sense, first value not checked as it may not be consistent
     S_inst_m_alt = instrument_noise_AET_wdm_m(lc, wc)
-    assert np.allclose(S_inst_m[1:], S_inst_m_alt[1:], atol=1.e-80, rtol=1.e-13)
+    assert np.allclose(S_inst_m[1:], S_inst_m_alt[1:], atol=1.0e-80, rtol=1.0e-13)
 
     hf_in.close()
 
@@ -184,14 +235,16 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
 
     # check input S makes sense, first value not checked as it may not be consistent
     S_inst_m_alt = instrument_noise_AET_wdm_m(lc, wc)
-    assert np.allclose(S_inst_m[1:], S_inst_m_alt[1:], atol=1.e-80, rtol=1.e-13)
+    assert np.allclose(S_inst_m[1:], S_inst_m_alt[1:], atol=1.0e-80, rtol=1.0e-13)
 
     hf_in.close()
 
     return galactic_below_in, snr_tots_in, S_inst_m, wc, lc, snr_min
 
 
-def load_processed_gb_file(galaxy_dir, snr_thresh, wc: WDMWaveletConstants, lc: LISAConstants, nt_min, nt_max, *, stat_only):
+def load_processed_gb_file(
+    galaxy_dir, snr_thresh, wc: WDMWaveletConstants, lc: LISAConstants, nt_min, nt_max, *, stat_only
+):
     # TODO loading should produce a galactic background decomposition object
     filename_in = get_processed_gb_filename(galaxy_dir, stat_only, snr_thresh, wc, nt_min, nt_max)
     hf_in = h5py.File(filename_in, 'r')
@@ -216,7 +269,17 @@ def load_processed_gb_file(galaxy_dir, snr_thresh, wc: WDMWaveletConstants, lc: 
     return argbinmap, (galactic_below + galactic_undecided).reshape((wc.Nt, wc.Nf, galactic_below.shape[-1]))
 
 
-def store_preliminary_gb_file(config_filename, galaxy_dir, galaxy_file, wc: WDMWaveletConstants, lc: LISAConstants, ic: IterationConfig, galactic_below, S_inst_m, snrs_tot_upper) -> None:
+def store_preliminary_gb_file(
+    config_filename,
+    galaxy_dir,
+    galaxy_file,
+    wc: WDMWaveletConstants,
+    lc: LISAConstants,
+    ic: IterationConfig,
+    galactic_below,
+    S_inst_m,
+    snrs_tot_upper,
+) -> None:
     filename_out = get_preliminary_filename(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
     hf_out = h5py.File(filename_out, 'w')
 
@@ -270,7 +333,27 @@ def store_preliminary_gb_file(config_filename, galaxy_dir, galaxy_file, wc: WDMW
     hf_out.close()
 
 
-def store_processed_gb_file(galaxy_dir, galaxy_file, wc: WDMWaveletConstants, lc: LISAConstants, ic: IterationConfig, nt_min, nt_max, bgd: BGDecomposition, period_list, n_bin_use, S_inst_m, S_final, stat_only, snrs_tot_upper, n_full_converged, argbinmap, faints_old, faints_cur, brights) -> None:
+def store_processed_gb_file(
+    galaxy_dir,
+    galaxy_file,
+    wc: WDMWaveletConstants,
+    lc: LISAConstants,
+    ic: IterationConfig,
+    nt_min,
+    nt_max,
+    bgd: BGDecomposition,
+    period_list,
+    n_bin_use,
+    S_inst_m,
+    S_final,
+    stat_only,
+    snrs_tot_upper,
+    n_full_converged,
+    argbinmap,
+    faints_old,
+    faints_cur,
+    brights,
+) -> None:
     filename_gb_init = get_preliminary_filename(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
     filename_gb_common = get_common_noise_filename(galaxy_dir, ic.snr_thresh, wc)
     filename_out = get_processed_gb_filename(galaxy_dir, stat_only, ic.snr_thresh, wc, nt_min, nt_max)

@@ -12,8 +12,14 @@ from GalacticStochastic.state_manager import StateManager
 class IterativeFitManager(StateManager):
     """Iterative fit object that runs the iterative fitting procedure"""
 
-    def __init__(self, ic: IterationConfig, fit_state: IterativeFitState, noise_manager: NoiseModelManager, bis: BinaryInclusionState) -> None:
-        """"Create the iterative fit object"""
+    def __init__(
+        self,
+        ic: IterationConfig,
+        fit_state: IterativeFitState,
+        noise_manager: NoiseModelManager,
+        bis: BinaryInclusionState,
+    ) -> None:
+        """Create the iterative fit object"""
         self.ic = ic
         self.fit_state = fit_state
         self.noise_manager = noise_manager
@@ -28,7 +34,6 @@ class IterativeFitManager(StateManager):
         print('entered loop')
         ti = perf_counter()
         for _ in range(self.fit_state.get_n_itr_cut()):
-
             self.do_iteration()
 
             if self.check_done():
@@ -66,10 +71,11 @@ class IterativeFitManager(StateManager):
 
         t2n = perf_counter()
 
-        print('made bg %3d in time %7.3fs fit time %7.3fs' % (self.itrn, t1n - t0n, t2n - t1n))
+        print('made bg %3d in time %7.3fs fit time %7.3fs'
+              % (self.itrn, t1n - t0n, t2n - t1n))
 
     def log_state(self) -> None:
-        """Perform any internal logging that should be done after advance_state is run for all objects for the iteration"""
+        """Perform any internal logging that should be done after advance_state is run."""
         self.bis.log_state()
         self.fit_state.log_state()
         self.noise_manager.log_state()

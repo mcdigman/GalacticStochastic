@@ -1,4 +1,5 @@
 """Load all the configuration objects that are needed from a toml file"""
+
 from pathlib import Path
 
 import tomllib

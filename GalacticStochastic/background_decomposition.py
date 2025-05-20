@@ -11,7 +11,17 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 class BGDecomposition:
     """class to handle the internal decomposition of the galactic background"""
 
-    def __init__(self, wc: WDMWaveletConstants, nc_galaxy, *, galactic_floor=None, galactic_below=None, galactic_undecided=None, galactic_above=None, do_total_track=True) -> None:
+    def __init__(
+        self,
+        wc: WDMWaveletConstants,
+        nc_galaxy,
+        *,
+        galactic_floor=None,
+        galactic_below=None,
+        galactic_undecided=None,
+        galactic_above=None,
+        do_total_track=True,
+    ) -> None:
         self.wc = wc
         self.nc_galaxy = nc_galaxy
         self.shape1 = (wc.Nt * wc.Nf, self.nc_galaxy)
@@ -94,20 +104,38 @@ class BGDecomposition:
         """
         if self.do_total_track:
             if self.galactic_total_cache is None:
-                assert np.all(self.galactic_below == 0.)
+                assert np.all(self.galactic_below == 0.0)
                 self.galactic_total_cache = self.get_galactic_total(bypass_check=True)
             else:
                 # check all contributions to the total signal are tracked accurately
-                assert np.allclose(self.galactic_total_cache, self.get_galactic_total(bypass_check=True), atol=1.e-300, rtol=1.e-6)
+                assert np.allclose(
+                    self.galactic_total_cache, self.get_galactic_total(bypass_check=True), atol=1.0e-300, rtol=1.0e-6
+                )
 
     def log_state(self, S_mean: NDArray[float]) -> None:
         """Record any diagnostics we want to track about this iteration"""
-        power_undecided = np.sum(np.sum((self.galactic_undecided**2).reshape(self.shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0)
-        power_above = np.sum(np.sum((self.galactic_above**2).reshape(self.shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0)
+        power_undecided = np.sum(
+            np.sum((self.galactic_undecided**2).reshape(self.shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0
+        )
+        power_above = np.sum(
+            np.sum((self.galactic_above**2).reshape(self.shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0
+        )
 
-        power_total = np.sum(np.sum((self.get_galactic_total(bypass_check=True)**2).reshape(self.shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0)
-        power_below_high = np.sum(np.sum((self.get_galactic_below_high(bypass_check=True)**2).reshape(self.shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0)
-        power_below_low = np.sum(np.sum((self.get_galactic_below_low(bypass_check=True)**2).reshape(self.shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0)
+        power_total = np.sum(
+            np.sum((self.get_galactic_total(bypass_check=True) ** 2).reshape(self.shape2)[:, 1:, :], axis=0)
+            / S_mean[1:, :],
+            axis=0,
+        )
+        power_below_high = np.sum(
+            np.sum((self.get_galactic_below_high(bypass_check=True) ** 2).reshape(self.shape2)[:, 1:, :], axis=0)
+            / S_mean[1:, :],
+            axis=0,
+        )
+        power_below_low = np.sum(
+            np.sum((self.get_galactic_below_low(bypass_check=True) ** 2).reshape(self.shape2)[:, 1:, :], axis=0)
+            / S_mean[1:, :],
+            axis=0,
+        )
 
         self.power_galactic_undecided.append(power_undecided)
         self.power_galactic_above.append(power_above)
@@ -118,26 +146,30 @@ class BGDecomposition:
 
     def clear_undecided(self) -> None:
         """Clear the undecided part of the galactic spectrum"""
-        self.galactic_undecided[:] = 0.
+        self.galactic_undecided[:] = 0.0
 
     def clear_above(self) -> None:
         """Clear the bright part of the galactic spectrum"""
-        self.galactic_above[:] = 0.
+        self.galactic_above[:] = 0.0
 
     def clear_below(self) -> None:
         """Clear the faint part of the galactic spectrum"""
-        self.galactic_below[:] = 0.
+        self.galactic_below[:] = 0.0
 
     def get_S_below_high(self, S_mean, smooth_lengthf, filter_periods, period_list) -> NDArray[float]:
         """Get the upper estimate of the galactic power spectrum"""
         galactic_loc = self.get_galactic_below_high(bypass_check=True)
-        S, _, _, _, _ = get_S_cyclo(galactic_loc, S_mean, self.wc, smooth_lengthf, filter_periods, period_list=period_list)
+        S, _, _, _, _ = get_S_cyclo(
+            galactic_loc, S_mean, self.wc, smooth_lengthf, filter_periods, period_list=period_list
+        )
         return S
 
     def get_S_below_low(self, S_mean, smooth_lengthf, filter_periods, period_list) -> NDArray[float]:
         """Get the lower estimate of the galactic power spectrum"""
         galactic_loc = self.get_galactic_below_low(bypass_check=True)
-        S, _, _, _, _ = get_S_cyclo(galactic_loc, S_mean, self.wc, smooth_lengthf, filter_periods, period_list=period_list)
+        S, _, _, _, _ = get_S_cyclo(
+            galactic_loc, S_mean, self.wc, smooth_lengthf, filter_periods, period_list=period_list
+        )
         return S
 
     def add_undecided(self, wavelet_waveform: SparseTaylorWaveform) -> None:

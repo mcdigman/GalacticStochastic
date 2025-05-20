@@ -1,6 +1,7 @@
 """C 2023 Matthew C. Digman
 test the wdm time functions
 """
+
 from collections import namedtuple
 from time import time
 
@@ -13,7 +14,7 @@ from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 from WaveletWaveforms.coefficientsWDM_time_funcs import get_taylor_table_time_helper, wavelet
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
-SECSYEAR = 24 * 365 * 3600    # Number of seconds in a calendar year
+SECSYEAR = 24 * 365 * 3600  # Number of seconds in a calendar year
 
 WaveletTaylorTimeCoeffs = namedtuple('WaveletTaylorTimeCoeffs', ['Nfsam', 'evcs', 'evss'])
 
@@ -85,7 +86,7 @@ def sparse_addition_helper(sparse_waveform: SparseTaylorWaveform, dense_represen
     nc_loc = min(nc_representation, nc_waveform)
 
     for itrc in range(nc_loc):
-        dense_representation[pixel_index[itrc, :n_set[itrc]], itrc] += wave_value[itrc, :n_set[itrc]]
+        dense_representation[pixel_index[itrc, : n_set[itrc]], itrc] += wave_value[itrc, : n_set[itrc]]
 
 
 def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mode='skip') -> WaveletTaylorTimeCoeffs:
@@ -107,11 +108,25 @@ def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mod
     print('full filter bandwidth %e  samples %d' % ((wc.A + wc.B) / np.pi, (wc.A + wc.B) / np.pi * wc.Tw))
     cache_good = False
 
-    filename_cache = 'coeffs/WDMcoeffs_Nsf=' \
-        + str(wc.Nsf) + '_mult=' + str(wc.mult) + '_Nfd=' \
-        + str(wc.Nfd) + '_Nf=' + str(wc.Nf) \
-        + '_Nt=' + str(wc.Nt) + '_dt=' + str(wc.dt) + '_dfdot=' + str(wc.dfdot) + '_Nfd_neg' \
-        + str(wc.Nfd_negative) + '_fast.h5'
+    filename_cache = (
+        'coeffs/WDMcoeffs_Nsf='
+        + str(wc.Nsf)
+        + '_mult='
+        + str(wc.mult)
+        + '_Nfd='
+        + str(wc.Nfd)
+        + '_Nf='
+        + str(wc.Nf)
+        + '_Nt='
+        + str(wc.Nt)
+        + '_dt='
+        + str(wc.dt)
+        + '_dfdot='
+        + str(wc.dfdot)
+        + '_Nfd_neg'
+        + str(wc.Nfd_negative)
+        + '_fast.h5'
+    )
 
     if cache_mode == 'check':
         fds = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)
@@ -127,8 +142,8 @@ def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mod
         try:
             hf_in = h5py.File(filename_cache, 'r')
             for i in range(wc.Nfd):
-                evcs[i, :Nfsam[i]] = np.asarray(hf_in['evcs'][str(i)])
-                evss[i, :Nfsam[i]] = np.asarray(hf_in['evss'][str(i)])
+                evcs[i, : Nfsam[i]] = np.asarray(hf_in['evcs'][str(i)])
+                evss[i, : Nfsam[i]] = np.asarray(hf_in['evss'][str(i)])
             hf_in.close()
             cache_good = True
         except OSError:
@@ -145,8 +160,12 @@ def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mod
         DX = np.zeros(wc.K, dtype=np.complex128)
         DX[0] = wc.insDOM
 
-        DX[1:np.int64(wc.K / 2) + 1] = np.sqrt(wc.dt) * phitilde_vec(wc.dom * wc.dt * np.arange(1, np.int64(wc.K / 2) + 1), wc.Nf, wc.nx)
-        DX[np.int64(wc.K / 2) + 1:] = np.sqrt(wc.dt) * phitilde_vec(-wc.dom * wc.dt * np.arange(np.int64(wc.K / 2) - 1, 0, -1), wc.Nf, wc.nx)
+        DX[1:np.int64(wc.K / 2) + 1] = np.sqrt(wc.dt) * phitilde_vec(
+            wc.dom * wc.dt * np.arange(1, np.int64(wc.K / 2) + 1), wc.Nf, wc.nx
+        )
+        DX[np.int64(wc.K / 2) + 1:] = np.sqrt(wc.dt) * phitilde_vec(
+            -wc.dom * wc.dt * np.arange(np.int64(wc.K / 2) - 1, 0, -1), wc.Nf, wc.nx
+        )
 
         DX = sp.fft.fft(DX, wc.K, overwrite_x=True)
 
@@ -194,8 +213,8 @@ def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mod
             hf.create_group('evss')
             for jj in range(wc.Nfd):
                 hf['inds'].create_dataset(str(jj), data=np.arange(0, Nfsam[jj]))
-                hf['evcs'].create_dataset(str(jj), data=evcs[jj, :Nfsam[jj]])
-                hf['evss'].create_dataset(str(jj), data=evss[jj, :Nfsam[jj]])
+                hf['evcs'].create_dataset(str(jj), data=evcs[jj, : Nfsam[jj]])
+                hf['evss'].create_dataset(str(jj), data=evss[jj, : Nfsam[jj]])
             hf.close()
             t3 = time()
             print('output time', t3 - tf, 's')

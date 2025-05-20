@@ -1,9 +1,10 @@
 """utilities for testing the code"""
+
 import numpy as np
 import scipy.stats
 
 
-def unit_normal_battery(signal, *, mult=1., sig_thresh=5., A2_cut=2.28, do_assert=True, verbose=False):
+def unit_normal_battery(signal, *, mult=1.0, sig_thresh=5.0, A2_cut=2.28, do_assert=True, verbose=False):
     """Battery of tests for checking if signal is unit normal white noise
     default anderson darling cutoff of 2.28 is hand selected to
     give ~1 in 1e5 empirical probablity of false positive for n=64
@@ -12,7 +13,7 @@ def unit_normal_battery(signal, *, mult=1., sig_thresh=5., A2_cut=2.28, do_asser
     """
     n_sig = signal.size
     if n_sig == 0:
-        return True, 0., 0., 0.
+        return True, 0.0, 0.0, 0.0
 
     sig_adjust = signal / mult
     mean_wave = np.mean(sig_adjust)
@@ -29,7 +30,7 @@ def unit_normal_battery(signal, *, mult=1., sig_thresh=5., A2_cut=2.28, do_asser
         print(A2Star, A2_cut)
 
     mean_stat = np.abs(mean_wave) / std_wave * np.sqrt(n_sig)
-    std_stat = np.abs(std_wave - 1.) / std_std_wave
+    std_stat = np.abs(std_wave - 1.0) / std_std_wave
     test1 = mean_stat < sig_thresh
     test2 = std_stat < sig_thresh
     test3 = A2Star < A2_cut  # should be less than cutoff value

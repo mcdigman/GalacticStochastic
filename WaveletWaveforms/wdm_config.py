@@ -5,11 +5,33 @@ from collections import namedtuple
 import numpy as np
 
 WDMWaveletConstants = namedtuple(
-        'WDMWaveletConstants',
-        [
-            'Nf', 'Nt', 'dt', 'mult', 'Nsf', 'Nfd', 'dfdot', 'Nfd_negative', 'Nst', 'Tobs', 'DF', 'DT', 'nx', 'dfd', 'df', 'BW', 'Tw', 'K', 'A', 'B', 'dom', 'DOM', 'insDOM'
-        ]
-        )
+    'WDMWaveletConstants',
+    [
+        'Nf',
+        'Nt',
+        'dt',
+        'mult',
+        'Nsf',
+        'Nfd',
+        'dfdot',
+        'Nfd_negative',
+        'Nst',
+        'Tobs',
+        'DF',
+        'DT',
+        'nx',
+        'dfd',
+        'df',
+        'BW',
+        'Tw',
+        'K',
+        'A',
+        'B',
+        'dom',
+        'DOM',
+        'insDOM',
+    ],
+)
 
 
 def get_wavelet_model(config) -> WDMWaveletConstants:
@@ -23,7 +45,7 @@ def get_wavelet_model(config) -> WDMWaveletConstants:
 
     # time sampling cadence (units of seconds)
     dt = float(config['wavelet_constants']['dt'])
-    assert dt > 0.
+    assert dt > 0.0
 
     # over sampling
     mult = int(config['wavelet_constants']['mult'])
@@ -69,7 +91,7 @@ def get_wavelet_model(config) -> WDMWaveletConstants:
     DT = dt * Nf
 
     # width of wavelet pixel in frequency (cycles/time)
-    DF = 1. / (2 * dt * Nf)
+    DF = 1.0 / (2 * dt * Nf)
 
     # dimensionless filter legnth
     K = mult * 2 * Nf
@@ -78,7 +100,7 @@ def get_wavelet_model(config) -> WDMWaveletConstants:
     Tw = dt * K
 
     # angular frequency spacing (radians per time)
-    dom = 2. * np.pi / Tw
+    dom = 2.0 * np.pi / Tw
 
     # Nyquist angular frequency (Radians per time)
     OM = np.pi / dt
@@ -87,7 +109,7 @@ def get_wavelet_model(config) -> WDMWaveletConstants:
     DOM = OM / Nf
 
     # inverse square root of DOM (sqrt(time/radian))
-    insDOM = 1. / np.sqrt(DOM)
+    insDOM = 1.0 / np.sqrt(DOM)
 
     # wavelet parameter A
     B = OM / (2 * Nf)
@@ -104,4 +126,28 @@ def get_wavelet_model(config) -> WDMWaveletConstants:
     # step size in FTd
     dfd = DF / Tw * dfdot
 
-    return WDMWaveletConstants(Nf, Nt, dt, mult, Nsf, Nfd, dfdot, Nfd_negative, Nst, Tobs, DF, DT, nx, dfd, df, BW, Tw, K, A, B, dom, DOM, insDOM)
+    return WDMWaveletConstants(
+        Nf,
+        Nt,
+        dt,
+        mult,
+        Nsf,
+        Nfd,
+        dfdot,
+        Nfd_negative,
+        Nst,
+        Tobs,
+        DF,
+        DT,
+        nx,
+        dfd,
+        df,
+        BW,
+        Tw,
+        K,
+        A,
+        B,
+        dom,
+        DOM,
+        insDOM,
+    )

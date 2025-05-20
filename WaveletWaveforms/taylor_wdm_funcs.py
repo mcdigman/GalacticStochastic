@@ -1,4 +1,5 @@
 """helper functions for Chirp_WDM"""
+
 import numpy as np
 from numba import njit
 
@@ -8,7 +9,16 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 @njit(fastmath=True)
-def wavemaket_multi_inplace(wavelet_waveform: SparseTaylorWaveform, waveform: StationaryWaveformTime, nt_min, nt_max, wc: WDMWaveletConstants, taylor_table: WaveletTaylorTimeCoeffs, *, force_nulls=False) -> None:
+def wavemaket_multi_inplace(
+    wavelet_waveform: SparseTaylorWaveform,
+    waveform: StationaryWaveformTime,
+    nt_min,
+    nt_max,
+    wc: WDMWaveletConstants,
+    taylor_table: WaveletTaylorTimeCoeffs,
+    *,
+    force_nulls=False,
+) -> None:
     """Compute the actual wavelets using taylor time method"""
     n_set_old = wavelet_waveform.n_set.copy()
 
@@ -54,20 +64,20 @@ def wavemaket_multi_inplace(wavelet_waveform: SparseTaylorWaveform, waveform: St
                     jj1 = kk + Nfsam1_loc // 2
                     jj2 = kk + Nfsam2_loc // 2
 
-                    assert taylor_table.evcs[n_ind, jj1] != 0.
-                    assert taylor_table.evcs[n_ind, jj1 + 1] != 0.
-                    assert taylor_table.evcs[n_ind + 1, jj2] != 0.
-                    assert taylor_table.evcs[n_ind + 1, jj2 + 1] != 0.
+                    assert taylor_table.evcs[n_ind, jj1] != 0.0
+                    assert taylor_table.evcs[n_ind, jj1 + 1] != 0.0
+                    assert taylor_table.evcs[n_ind + 1, jj2] != 0.0
+                    assert taylor_table.evcs[n_ind + 1, jj2 + 1] != 0.0
 
-                    y = (1. - dx) * taylor_table.evcs[n_ind, jj1] + dx * taylor_table.evcs[n_ind, jj1 + 1]
-                    yy = (1. - dx) * taylor_table.evcs[n_ind + 1, jj2] + dx * taylor_table.evcs[n_ind + 1, jj2 + 1]
+                    y = (1.0 - dx) * taylor_table.evcs[n_ind, jj1] + dx * taylor_table.evcs[n_ind, jj1 + 1]
+                    yy = (1.0 - dx) * taylor_table.evcs[n_ind + 1, jj2] + dx * taylor_table.evcs[n_ind + 1, jj2 + 1]
 
-                    z = (1. - dx) * taylor_table.evss[n_ind, jj1] + dx * taylor_table.evss[n_ind, jj1 + 1]
-                    zz = (1. - dx) * taylor_table.evss[n_ind + 1, jj2] + dx * taylor_table.evss[n_ind + 1, jj2 + 1]
+                    z = (1.0 - dx) * taylor_table.evss[n_ind, jj1] + dx * taylor_table.evss[n_ind, jj1 + 1]
+                    zz = (1.0 - dx) * taylor_table.evss[n_ind + 1, jj2] + dx * taylor_table.evss[n_ind + 1, jj2 + 1]
 
                     # interpolate over fdot
-                    y = (1. - dy) * y + dy * yy
-                    z = (1. - dy) * z + dy * zz
+                    y = (1.0 - dy) * y + dy * yy
+                    z = (1.0 - dy) * z + dy * zz
 
                     if (j_ind + k) % 2:
                         wavelet_waveform.wave_value[itrc, mm] = -(c * z + s * y)
@@ -78,9 +88,11 @@ def wavemaket_multi_inplace(wavelet_waveform: SparseTaylorWaveform, waveform: St
                     # end loop over frequency layers
             elif force_nulls:
                 # we know what the indices would be for values not precomputed in the table
-                # so force values outside the range of the table to 0 instead of dropping, in order to get likelihoods right
-                # which is particularly important around total nulls which can be quite constraining on the parameters but have large spikes in frequency derivative
-                # note that if this happens only very rarely, we could also just actually calculate the non-precomputed coefficient
+                # so force values outside the range of the table to 0 instead of dropping,
+                # in order to get likelihoods right, which is particularly important around total nulls,
+                # which can be quite constraining on the parameters but have large spikes in frequency derivative
+                # note that if this happens only very rarely
+                # we could just actually calculate the non-precomputed coefficient
                 fa = waveform.FT[itrc, j]
 
                 Nfsam1_loc = np.int64((wc.BW + wc.dfd * wc.Tw * ny) / wc.df)
@@ -96,7 +108,7 @@ def wavemaket_multi_inplace(wavelet_waveform: SparseTaylorWaveform, waveform: St
 
                 for k in range(kmin, kmax + 1):
                     wavelet_waveform.pixel_index[itrc, mm] = j_ind * wc.Nf + k
-                    wavelet_waveform.wave_value[itrc, mm] = 0.
+                    wavelet_waveform.wave_value[itrc, mm] = 0.0
                     mm += 1
 
         wavelet_waveform.n_set[itrc] = mm
@@ -105,4 +117,4 @@ def wavemaket_multi_inplace(wavelet_waveform: SparseTaylorWaveform, waveform: St
     for itrc in range(nc_waveform):
         for itrm in range(wavelet_waveform.n_set[itrc], n_set_old[itrc]):
             wavelet_waveform.pixel_index[itrc, itrm] = -1
-            wavelet_waveform.wave_value[itrc, itrm] = 0.
+            wavelet_waveform.wave_value[itrc, itrm] = 0.0

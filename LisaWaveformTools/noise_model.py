@@ -60,7 +60,14 @@ class DenseNoiseModel(ABC):
 
 
 @njit()
-def get_sparse_snr_helper(wavelet_waveform: SparseTaylorWaveform, nt_min, nt_max, wc: WDMWaveletConstants, inv_chol_S: npt.NDArray[float], nc_snr) -> npt.NDArray[float]:
+def get_sparse_snr_helper(
+    wavelet_waveform: SparseTaylorWaveform,
+    nt_min,
+    nt_max,
+    wc: WDMWaveletConstants,
+    inv_chol_S: npt.NDArray[float],
+    nc_snr,
+) -> npt.NDArray[float]:
     """Calculates the S/N ratio for each TDI channel for a given waveform.
 
     Parameters
@@ -82,8 +89,8 @@ def get_sparse_snr_helper(wavelet_waveform: SparseTaylorWaveform, nt_min, nt_max
         nt_max = wc.Nt
     snr2s = np.zeros(nc_snr)
     for itrc in range(nc_snr):
-        i_itrs = np.mod(wavelet_waveform.pixel_index[itrc, 0:wavelet_waveform.n_set[itrc]], wc.Nf).astype(np.int64)
-        j_itrs = (wavelet_waveform.pixel_index[itrc, 0:wavelet_waveform.n_set[itrc]] - i_itrs) // wc.Nf
+        i_itrs = np.mod(wavelet_waveform.pixel_index[itrc, : wavelet_waveform.n_set[itrc]], wc.Nf).astype(np.int64)
+        j_itrs = (wavelet_waveform.pixel_index[itrc, : wavelet_waveform.n_set[itrc]] - i_itrs) // wc.Nf
         for mm in range(wavelet_waveform.n_set[itrc]):
             if nt_min <= j_itrs[mm] < nt_max:
                 mult = inv_chol_S[j_itrs[mm], i_itrs[mm], itrc] * wavelet_waveform.wave_value[itrc, mm]
@@ -91,7 +98,15 @@ def get_sparse_snr_helper(wavelet_waveform: SparseTaylorWaveform, nt_min, nt_max
     return np.sqrt(snr2s)
 
 
-# @jitclass([('prune', nb.b1), ('S', nb.float64[:, :, :]), ('inv_S', nb.float64[:, :, :]), ('inv_chol_S', nb.float64[:, :, :]), ('chol_S', nb.float64[:, :, :])])
+# @jitclass(
+#    [
+#        ('prune', nb.b1),
+#        ('S', nb.float64[:, :, :]),
+#        ('inv_S', nb.float64[:, :, :]),
+#        ('inv_chol_S', nb.float64[:, :, :]),
+#        ('chol_S', nb.float64[:, :, :]),
+#    ]
+# )
 class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
     """a class to handle the fully diagonal nonstationary
     instrument noise model to feed to snr and fisher matrix calculations
@@ -133,7 +148,9 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
 
         self.nc_snr = nc_snr
         self.nc_noise = self.S.shape[-1]
-        assert self.nc_snr <= self.nc_noise, 'number of TDI channels to calculate S/N for must be less than or equal to the number of TDI channels in S'
+        assert self.nc_snr <= self.nc_noise, (
+            'number of TDI channels to calculate S/N for must be less than or equal to the number of TDI channels in S'
+        )
 
         self.inv_S = np.zeros((self.wc.Nt, self.wc.Nf, self.nc_noise))
         self.inv_chol_S = np.zeros((self.wc.Nt, self.wc.Nf, self.nc_noise))
@@ -145,12 +162,12 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
         for j in range(self.wc.Nt):
             for itrc in range(self.nc_noise):
                 self.chol_S[j, i_offset:, itrc] = np.sqrt(self.S[j, i_offset:, itrc])
-                self.inv_chol_S[j, i_offset:, itrc] = 1. / self.chol_S[j, i_offset:, itrc]
+                self.inv_chol_S[j, i_offset:, itrc] = 1.0 / self.chol_S[j, i_offset:, itrc]
                 self.inv_S[j, i_offset:, itrc] = self.inv_chol_S[j, i_offset:, itrc] ** 2
         if self.prune:
-            self.chol_S[:, 0, :] = 0.
-            self.inv_chol_S[:, 0, :] = 0.
-            self.inv_S[:, 0, :] = 0.
+            self.chol_S[:, 0, :] = 0.0
+            self.inv_chol_S[:, 0, :] = 0.0
+            self.inv_S[:, 0, :] = 0.0
 
     def generate_dense_noise(self) -> npt.NDArray[np.float64]:
         """Generate random noise for full matrix
@@ -173,7 +190,7 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
             rng = np.random.default_rng(self.seed)
 
         for j in range(self.wc.Nt):
-            noise_res[j, :, :] = rng.normal(0., 1., (self.wc.Nf, self.nc_noise)) * self.chol_S[j, :, :]
+            noise_res[j, :, :] = rng.normal(0.0, 1.0, (self.wc.Nf, self.nc_noise)) * self.chol_S[j, :, :]
         return noise_res
 
     def get_sparse_snrs(self, wavelet_waveform: SparseTaylorWaveform, nt_min=0, nt_max=-1) -> npt.NDArray[np.float64]:
@@ -201,10 +218,23 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
         return self.chol_S
 
 
-# @jitclass([('prune', nb.b1), ('S_stat_m', nb.float64[:, :]), ('inv_S_stat_m', nb.float64[:, :]), ('inv_chol_S_stat_m', nb.float64[:, :]), ('S', nb.float64[:, :, :]), ('inv_S', nb.float64[:, :, :]), ('inv_chol_S', nb.float64[:, :, :]), ('chol_S_stat_m', nb.float64[:, :]), ('chol_S', nb.float64[:, :, :]), ('seed', nb.int64)])
+# @jitclass(
+#    [
+#        ('prune', nb.b1),
+#        ('S_stat_m', nb.float64[:, :]),
+#        ('inv_S_stat_m', nb.float64[:, :]),
+#        ('inv_chol_S_stat_m', nb.float64[:, :]),
+#        ('S', nb.float64[:, :, :]),
+#        ('inv_S', nb.float64[:, :, :]),
+#        ('inv_chol_S', nb.float64[:, :, :]),
+#        ('chol_S_stat_m', nb.float64[:, :]),
+#        ('chol_S', nb.float64[:, :, :]),
+#        ('seed', nb.int64),
+#    ]
+# )
 class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
     """a class to handle the a diagonal stationary
-     noise model to feed to snr and fisher matrix calculations
+    noise model to feed to snr and fisher matrix calculations
     """
 
     def __init__(self, S_stat_m, wc: WDMWaveletConstants, prune, nc_snr: int, seed=-1) -> None:
@@ -244,7 +274,9 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
         self.nc_snr = nc_snr
         self.nc_noise = self.S_stat_m.shape[-1]
 
-        assert self.nc_snr <= self.nc_noise, 'number of TDI channels to calculate S/N for must be less than or equal to the number of TDI channels in S'
+        assert self.nc_snr <= self.nc_noise, (
+            'number of TDI channels to calculate S/N for must be less than or equal to the number of TDI channels in S'
+        )
 
         self.inv_S_stat_m = np.zeros((self.wc.Nf, self.nc_noise))
         self.inv_chol_S_stat_m = np.zeros((self.wc.Nf, self.nc_noise))
@@ -256,9 +288,9 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
                 # but if it did it would also need to be pruned
                 continue
             for itrc in range(self.nc_noise):
-                self.inv_S_stat_m[m, itrc] = 1. / self.S_stat_m[m, itrc]
+                self.inv_S_stat_m[m, itrc] = 1.0 / self.S_stat_m[m, itrc]
                 self.chol_S_stat_m[m, itrc] = np.sqrt(self.S_stat_m[m, itrc])
-                self.inv_chol_S_stat_m[m, itrc] = 1. / self.chol_S_stat_m[m, itrc]
+                self.inv_chol_S_stat_m[m, itrc] = 1.0 / self.chol_S_stat_m[m, itrc]
 
         self.S = np.zeros((self.wc.Nt, self.wc.Nf, self.nc_noise))
         self.inv_S = np.zeros((self.wc.Nt, self.wc.Nf, self.nc_noise))
@@ -271,13 +303,14 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
                 self.inv_chol_S[j, 1:, itrc] = self.inv_chol_S_stat_m[1:, itrc]
                 self.chol_S[j, 1:, itrc] = self.chol_S_stat_m[1:, itrc]
                 if j % 2 == 0:
-                    # NOTE right now this just necessarily drops the highest frequency term, also note that lowest frequency term may be a bit different
+                    # NOTE right now this just necessarily drops the highest frequency term
+                    # also note that lowest frequency term may be a bit different
                     self.S[j, 0, itrc] = self.S_stat_m[0, itrc]
                     self.inv_S[j, 0, itrc] = self.inv_S_stat_m[0, itrc]
                     self.inv_chol_S[j, 0, itrc] = self.inv_chol_S_stat_m[0, itrc]
                     self.chol_S[j, 0, itrc] = self.chol_S_stat_m[0, itrc]
 
-    def generate_dense_noise(self) ->  npt.NDArray[np.float64]:
+    def generate_dense_noise(self) -> npt.NDArray[np.float64]:
         """Generate random noise for full matrix
 
         Parameters
@@ -298,7 +331,7 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
             rng = np.random.default_rng(self.seed)
 
         for j in range(self.wc.Nt):
-            noise_res[j, :, :] = rng.normal(0., 1., (self.wc.Nf, self.nc_noise)) * self.chol_S[j, :, :]
+            noise_res[j, :, :] = rng.normal(0.0, 1.0, (self.wc.Nf, self.nc_noise)) * self.chol_S[j, :, :]
         return noise_res
 
     def get_sparse_snrs(self, wavelet_waveform: SparseTaylorWaveform, nt_min=0, nt_max=-1) -> npt.NDArray[float]:

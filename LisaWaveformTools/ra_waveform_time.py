@@ -15,7 +15,14 @@ SpacecraftChannels = namedtuple('SpacecraftChannels', ['T', 'RR', 'II', 'dRR', '
 
 
 @njit(fastmath=True)
-def ExtractAmpPhase_inplace(spacecraft_channels: SpacecraftChannels, AET_waveform: StationaryWaveformTime, waveform: StationaryWaveformTime, NT, lc: LISAConstants, wc: WDMWaveletConstants) -> None:
+def ExtractAmpPhase_inplace(
+    spacecraft_channels: SpacecraftChannels,
+    AET_waveform: StationaryWaveformTime,
+    waveform: StationaryWaveformTime,
+    NT,
+    lc: LISAConstants,
+    wc: WDMWaveletConstants,
+) -> None:
     """Get the amplitude and phase for LISA"""
     AA = waveform.AT
     PP = waveform.PT
@@ -43,7 +50,7 @@ def ExtractAmpPhase_inplace(spacecraft_channels: SpacecraftChannels, AET_wavefor
     n = 0
     for itrc in range(nc_channel):
         polds[itrc] = np.arctan2(IIs[itrc, n], RRs[itrc, n])
-        if polds[itrc] < 0.:
+        if polds[itrc] < 0.0:
             polds[itrc] += 2 * np.pi
     for n in range(NT):
         fonfs = FT[n] / lc.fstr
@@ -55,19 +62,19 @@ def ExtractAmpPhase_inplace(spacecraft_channels: SpacecraftChannels, AET_wavefor
             RR = RRs[itrc, n]
             II = IIs[itrc, n]
 
-            if RR == 0. and II == 0.:
-                p = 0.
+            if RR == 0.0 and II == 0.0:
+                p = 0.0
                 AET_FTs[itrc, n] = FT[n]
             else:
                 p = np.arctan2(II, RR)
                 AET_FTs[itrc, n] = FT[n] - (II * dRRs[itrc, n] - RR * dIIs[itrc, n]) / (RR**2 + II**2) / (2 * np.pi)
 
-            if p < 0.:
+            if p < 0.0:
                 p += 2 * np.pi
 
-            if p - polds[itrc] > 6.:
+            if p - polds[itrc] > 6.0:
                 js[itrc] -= 2 * np.pi
-            if polds[itrc] - p > 6.:
+            if polds[itrc] - p > 6.0:
                 js[itrc] += 2 * np.pi
             polds[itrc] = p
 
@@ -76,7 +83,9 @@ def ExtractAmpPhase_inplace(spacecraft_channels: SpacecraftChannels, AET_wavefor
 
     for itrc in range(nc_channel):
         AET_FTds[itrc, 0] = (AET_FTs[itrc, 1] - AET_FTs[itrc, 0] - FT[1] + FT[0]) / wc.DT + FTd[0]
-        AET_FTds[itrc, NT - 1] = (AET_FTs[itrc, NT - 1] - AET_FTs[itrc, NT - 2] - FT[NT - 1] + FT[NT - 2]) / wc.DT + FTd[NT - 1]
+        AET_FTds[itrc, NT - 1] = (
+            AET_FTs[itrc, NT - 1] - AET_FTs[itrc, NT - 2] - FT[NT - 1] + FT[NT - 2]
+        ) / wc.DT + FTd[NT - 1]
 
     for n in range(1, NT - 1):
         FT_shift = -FT[n + 1] + FT[n - 1]
@@ -180,5 +189,19 @@ class BinaryTimeWaveformAmpFreqD:
         psi = self.params[7]
 
         # TODO fix F_min and nf_range
-        RAantenna_inplace(self.spacecraft_channels, cosi, psi, phi, costh, self.TTs, self.waveform.FT, 0, self.nt_range, self.kdotx, self.lc)
-        ExtractAmpPhase_inplace(self.spacecraft_channels, self.AET_waveform, self.waveform, self.nt_range, self.lc, self.wc)
+        RAantenna_inplace(
+            self.spacecraft_channels,
+            cosi,
+            psi,
+            phi,
+            costh,
+            self.TTs,
+            self.waveform.FT,
+            0,
+            self.nt_range,
+            self.kdotx,
+            self.lc,
+        )
+        ExtractAmpPhase_inplace(
+            self.spacecraft_channels, self.AET_waveform, self.waveform, self.nt_range, self.lc, self.wc
+        )

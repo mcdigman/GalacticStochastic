@@ -25,7 +25,16 @@ hf_out['sky']['vgb'].create_group('cat')
 hf_out['sky']['igb'].create_group('cat')
 
 n_par_gb = 8
-labels_gb = ['Amplitude', 'EclipticLatitude', 'EclipticLongitude', 'Frequency', 'FrequencyDerivative', 'Inclination', 'InitialPhase', 'Polarization']
+labels_gb = [
+    'Amplitude',
+    'EclipticLatitude',
+    'EclipticLongitude',
+    'Frequency',
+    'FrequencyDerivative',
+    'Inclination',
+    'InitialPhase',
+    'Polarization',
+]
 
 params_dgb[:, 0] *= 10
 params_vgb[:, 0] *= 10

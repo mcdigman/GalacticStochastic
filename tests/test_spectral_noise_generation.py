@@ -1,4 +1,5 @@
 """test comparison of signal for sangria v1 verification binaries"""
+
 import configparser
 
 import numpy as np
@@ -13,7 +14,7 @@ from LisaWaveformTools.noise_model import DiagonalNonstationaryDenseNoiseModel, 
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
 
-@pytest.mark.parametrize('scale_mult', [1., 2.])
+@pytest.mark.parametrize('scale_mult', [1.0, 2.0])
 def test_unit_noise_generation_stat(scale_mult) -> None:
     """Test unit normal noise for stationary model produced with input spectrum S_stat_m = 1"""
     config = configparser.ConfigParser()
@@ -65,10 +66,10 @@ def test_unit_noise_generation_cyclo_time(var_select) -> None:
     ts = np.arange(0, wc.Nt) * wc.DT
     ts_full = np.arange(0, ND) * wc.dt
 
-    S_one = np.full((wc.Nf, nc_noise), 1.)
+    S_one = np.full((wc.Nf, nc_noise), 1.0)
 
-    r_cyclo = np.full((wc.Nt, nc_noise), 1.)
-    r_full = np.full((ND, nc_noise), 1.)
+    r_cyclo = np.full((wc.Nt, nc_noise), 1.0)
+    r_full = np.full((ND, nc_noise), 1.0)
 
     if var_select == 'const1':
         pass
@@ -94,11 +95,15 @@ def test_unit_noise_generation_cyclo_time(var_select) -> None:
 
     for itrc in range(nc_noise):
         for itrt in range(wc.Nt):
-            unit_normal_battery(noise_realization_var[itrt, :, itrc].flatten(), mult=np.sqrt(r_cyclo[itrt, itrc]), do_assert=True)
+            unit_normal_battery(
+                noise_realization_var[itrt, :, itrc].flatten(), mult=np.sqrt(r_cyclo[itrt, itrc]), do_assert=True
+            )
 
     for itrc in range(nc_noise):
         # apply the multiplier as a whitening filter in the time domain
-        noise_realization_time = 1. / np.sqrt(r_full[:, itrc]) * inverse_wavelet_time(noise_realization_var[:, :, itrc], wc.Nf, wc.Nt)
+        noise_realization_time = (
+            1.0 / np.sqrt(r_full[:, itrc]) * inverse_wavelet_time(noise_realization_var[:, :, itrc], wc.Nf, wc.Nt)
+        )
         unit_normal_battery(noise_realization_time, do_assert=True)
         # check frequency components were preserved
         noise_realization_freq = np.fft.rfft(noise_realization_time)
@@ -132,11 +137,20 @@ def test_noise_normalization_match() -> None:
     noise_realization_freq = np.zeros((ND // 2 + 1, nc_noise), dtype=np.complex128)
     for itrc in range(nc_noise):
         noise_realization_freq[:, itrc] = inverse_wavelet_freq(noise_wave[:, :, itrc], Nf, Nt)
-        # NOTE have to cut off Nt because at very low frequencies we are not currently estimating the spectrum correctly in the wavelet domain
+        # NOTE have to cut off Nt because at very low frequencies
+        # we are not currently estimating the spectrum correctly in the wavelet domain
         # also dont't hit the frequencies with big dips
         arglim = np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs)
-        unit_normal_battery(np.real(noise_realization_freq[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]), mult=1., do_assert=True)
-        unit_normal_battery(np.imag(noise_realization_freq[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]), mult=1., do_assert=True)
+        unit_normal_battery(
+            np.real(noise_realization_freq[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
+            mult=1.0,
+            do_assert=True,
+        )
+        unit_normal_battery(
+            np.imag(noise_realization_freq[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
+            mult=1.0,
+            do_assert=True,
+        )
 
     # check can generate noise through nonstationary method as well
     noise_model_cyclo = DiagonalNonstationaryDenseNoiseModel(noise_model_stat.S, wc, True, nc_snr)
@@ -144,8 +158,17 @@ def test_noise_normalization_match() -> None:
     noise_realization_freq_var = np.zeros((ND // 2 + 1, nc_noise), dtype=np.complex128)
     for itrc in range(nc_noise):
         noise_realization_freq_var[:, itrc] = inverse_wavelet_freq(noise_wave_var[:, :, itrc], Nf, Nt)
-        # NOTE have to cut off Nt because at very low frequencies we are not currently estimating the spectrum correctly in the wavelet domain
+        # NOTE have to cut off Nt because at very low frequencies
+        # we are not currently estimating the spectrum correctly in the wavelet domain
         # also dont't hit the frequencies with big dips
         arglim = np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs)
-        unit_normal_battery(np.real(noise_realization_freq_var[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]), mult=1., do_assert=True)
-        unit_normal_battery(np.imag(noise_realization_freq_var[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]), mult=1., do_assert=True)
+        unit_normal_battery(
+            np.real(noise_realization_freq_var[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
+            mult=1.0,
+            do_assert=True,
+        )
+        unit_normal_battery(
+            np.imag(noise_realization_freq_var[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
+            mult=1.0,
+            do_assert=True,
+        )

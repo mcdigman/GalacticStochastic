@@ -15,7 +15,18 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 class NoiseModelManager(StateManager):
     """object to manage the noise models used in the iterative fit"""
 
-    def __init__(self, ic: IterationConfig, wc: WDMWaveletConstants, lc: LISAConstants, fit_state: IterativeFitState, bgd: BGDecomposition, S_inst_m, stat_only, nt_min, nt_max) -> None:
+    def __init__(
+        self,
+        ic: IterationConfig,
+        wc: WDMWaveletConstants,
+        lc: LISAConstants,
+        fit_state: IterativeFitState,
+        bgd: BGDecomposition,
+        S_inst_m,
+        stat_only,
+        nt_min,
+        nt_max,
+    ) -> None:
         """Create the noise model manager"""
         self.ic = ic
         self.lc = lc
@@ -29,7 +40,13 @@ class NoiseModelManager(StateManager):
 
         self.itrn = 0
 
-        self.idx_S_save = np.hstack([np.arange(0, min(10, self.fit_state.get_n_itr_cut())), np.arange(min(10, self.fit_state.get_n_itr_cut()), 4), self.fit_state.get_n_itr_cut() - 1])
+        self.idx_S_save = np.hstack(
+            [
+                np.arange(0, min(10, self.fit_state.get_n_itr_cut())),
+                np.arange(min(10, self.fit_state.get_n_itr_cut()), 4),
+                self.fit_state.get_n_itr_cut() - 1,
+            ]
+        )
         self.itr_save = 0
 
         self.S_record_upper = np.zeros((self.idx_S_save.size, wc.Nt, wc.Nf, self.bgd.nc_galaxy))
@@ -54,7 +71,7 @@ class NoiseModelManager(StateManager):
         S_lower = None
 
     def log_state(self) -> None:
-        """Perform any internal logging that should be done after advance_state is run for all objects for the iteration"""
+        """Perform any internal logging that should be done after advance_state is run."""
         if self.itr_save < self.idx_S_save.size and self.itrn - 1 == self.idx_S_save[self.itr_save]:
             self.S_record_upper[self.itr_save] = self.noise_upper.S[:, :, :]
             self.S_record_lower[self.itr_save] = self.noise_lower.S[:, :, :]
@@ -71,20 +88,37 @@ class NoiseModelManager(StateManager):
 
     def print_report(self) -> None:
         """Do any printing desired after convergence has been achieved and the loop ends"""
-        res_mask = ((self.noise_upper.S[:, :, 0] - self.S_inst_m[:, 0]).mean(axis=0) > 0.1 * self.S_inst_m[:, 0]) & (self.S_inst_m[:, 0] > 0.)
+        res_mask = ((self.noise_upper.S[:, :, 0] - self.S_inst_m[:, 0]).mean(axis=0) > 0.1 * self.S_inst_m[:, 0]) & (
+            self.S_inst_m[:, 0] > 0.0
+        )
         galactic_below_high = self.bgd.get_galactic_below_high()
-        noise_divide = np.sqrt(self.noise_upper.S[self.nt_min:self.nt_max, res_mask, :2] - self.S_inst_m[res_mask, :2])
-        points_res = galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy)[self.nt_min:self.nt_max, res_mask, :2] / noise_divide
+        noise_divide = np.sqrt(
+            self.noise_upper.S[self.nt_min:self.nt_max, res_mask, :2] - self.S_inst_m[res_mask, :2]
+        )
+        points_res = (
+            galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy)[
+                self.nt_min:self.nt_max, res_mask, :2
+            ]
+            / noise_divide
+        )
         n_points = points_res.size
         noise_divide = None
         galactic_below_high = None
         res_mask = None
-        unit_normal_res, a2score, mean_rat, std_rat = unit_normal_battery(points_res.flatten(), A2_cut=2.28, sig_thresh=5., do_assert=False)
+        unit_normal_res, a2score, mean_rat, std_rat = unit_normal_battery(
+            points_res.flatten(), A2_cut=2.28, sig_thresh=5.0, do_assert=False
+        )
         points_res = None
         if unit_normal_res:
-            print('Background PASSES normality: points=%12d A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f' % (n_points, a2score, mean_rat, std_rat))
+            print(
+                'Background PASSES normality: points=%12d A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f'
+                % (n_points, a2score, mean_rat, std_rat)
+            )
         else:
-            print('Background FAILS  normality: points=%12d A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f' % (n_points, a2score, mean_rat, std_rat))
+            print(
+                'Background FAILS  normality: points=%12d A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f'
+                % (n_points, a2score, mean_rat, std_rat)
+            )
 
     def advance_state(self) -> None:
         """Handle any logic necessary to advance the state of the object to the next iteration"""
@@ -106,7 +140,9 @@ class NoiseModelManager(StateManager):
                 filter_periods = not self.stat_only
 
             # use higher estimate of galactic bg
-            S_upper = self.bgd.get_S_below_high(self.S_inst_m, self.ic.smooth_lengthf[self.itrn], filter_periods, period_list)
+            S_upper = self.bgd.get_S_below_high(
+                self.S_inst_m, self.ic.smooth_lengthf[self.itrn], filter_periods, period_list
+            )
             self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, self.wc, prune=True, nc_snr=self.lc.nc_snr)
 
             S_upper = None

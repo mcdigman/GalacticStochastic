@@ -1,6 +1,5 @@
 """run iterative processing of galactic background"""
 
-
 import numpy as np
 
 import GalacticStochastic.global_file_index as gfi
@@ -13,7 +12,6 @@ from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
 from GalacticStochastic.noise_manager import NoiseModelManager
 
 if __name__ == '__main__':
-
     a = np.array([])
 
     config, wc, lc, ic = get_config_objects('default_parameters.toml')
@@ -21,7 +19,9 @@ if __name__ == '__main__':
     galaxy_file = config['files']['galaxy_file']
     galaxy_dir = config['files']['galaxy_dir']
 
-    galactic_below_in, snrs_tot_in, S_inst_m, wc, lc = gfi.load_preliminary_galactic_file(galaxy_file, galaxy_dir, ic.snr_thresh, wc, lc)
+    galactic_below_in, snrs_tot_in, S_inst_m, wc, lc = gfi.load_preliminary_galactic_file(
+        galaxy_file, galaxy_dir, ic.snr_thresh, wc, lc
+    )
 
     for itrm in range(1):
         stat_only = False
@@ -48,7 +48,27 @@ if __name__ == '__main__':
 
         do_hf_out = True
         if do_hf_out:
-            gfi.store_processed_gb_file(galaxy_dir, galaxy_file, wc, lc, ifm.ic, ifm.noise_manager.nt_min, ifm.noise_manager.nt_max, bgd, ic.period_list, ifm.bis.n_bin_use, ifm.noise_manager.S_inst_m, ifm.noise_manager.S_final, ifm.noise_manager.stat_only, ifm.bis.snrs_tot_upper, ifm.n_full_converged, ifm.bis.argbinmap, ifm.bis.faints_old, ifm.bis.faints_cur, ifm.bis.brights)
+            gfi.store_processed_gb_file(
+                galaxy_dir,
+                galaxy_file,
+                wc,
+                lc,
+                ifm.ic,
+                ifm.noise_manager.nt_min,
+                ifm.noise_manager.nt_max,
+                bgd,
+                ic.period_list,
+                ifm.bis.n_bin_use,
+                ifm.noise_manager.S_inst_m,
+                ifm.noise_manager.S_final,
+                ifm.noise_manager.stat_only,
+                ifm.bis.snrs_tot_upper,
+                ifm.n_full_converged,
+                ifm.bis.argbinmap,
+                ifm.bis.faints_old,
+                ifm.bis.faints_cur,
+                ifm.bis.brights,
+            )
 
     do_plot_noise_spectrum_ambiguity = True
     if do_plot_noise_spectrum_ambiguity:

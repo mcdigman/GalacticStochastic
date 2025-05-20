@@ -17,7 +17,6 @@ from LisaWaveformTools.lisa_config import get_lisa_constants
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
 if __name__ == '__main__':
-
     a = np.array([])
 
     config = configparser.ConfigParser()
@@ -57,7 +56,17 @@ if __name__ == '__main__':
 
     do_hf_out = True
     if do_hf_out:
-        gfi.store_preliminary_gb_file(galaxy_dir, galaxy_file, wc, lc, ic, bgd.get_galactic_below_low(), bis.n_bin_use, noise_manager.S_inst_m, bis.snrs_tot_lower)
+        gfi.store_preliminary_gb_file(
+            galaxy_dir,
+            galaxy_file,
+            wc,
+            lc,
+            ic,
+            bgd.get_galactic_below_low(),
+            bis.n_bin_use,
+            noise_manager.S_inst_m,
+            bis.snrs_tot_lower,
+        )
 
     do_plot_noise_spectrum_ambiguity = True
 

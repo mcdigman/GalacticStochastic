@@ -171,7 +171,11 @@ class IterativeFitState(StateManager):
                         force_converge_loc = True
                     else:
                         force_converge_loc = False
-                    print('bright adaptation predicted initial converged at ' + str(self.itrn) + ' next iteration will be check iteration')
+                    print(
+                        'bright adaptation predicted initial converged at '
+                        + str(self.itrn)
+                        + ' next iteration will be check iteration'
+                    )
                     self.bright_state_request = (True, False, faint_converged_in, force_converge_loc)
 
                 self.noise_safe_upper = noise_safe
@@ -193,34 +197,65 @@ class IterativeFitState(StateManager):
                 faint_converged_loc = faint_converged_in
             else:
                 faint_converged_loc = True
-                # need to disable adaption of faint component here because after this point the convergence isn't guaranteed to be monotonic
+                # need to disable adaption of faint component here
+                # because after this point the convergence isn't guaranteed to be monotonic
                 print('disabled faint component adaptation at ' + str(self.itrn))
 
             delta_faints = bis.delta_faint_check_helper()
             if do_faint_check_in and faint_converged_loc:
                 print('overriding faint convergence to check background model')
                 faint_converged_loc = False
-                self.faint_state_request = (do_faint_check_in, bright_converged_in, faint_converged_loc, force_converge_in)
+                self.faint_state_request = (
+                    do_faint_check_in,
+                    bright_converged_in,
+                    faint_converged_loc,
+                    force_converge_in,
+                )
             elif delta_faints < 0:
                 faint_converged_loc = False
                 if bright_converged_in:
                     do_faint_check_loc = True
                     bright_converged_loc = False
-                    self.faint_state_request = (do_faint_check_loc, bright_converged_loc, faint_converged_loc, force_converge_in)
+                    self.faint_state_request = (
+                        do_faint_check_loc,
+                        bright_converged_loc,
+                        faint_converged_loc,
+                        force_converge_in,
+                    )
                 else:
-                    self.faint_state_request = (do_faint_check_in, bright_converged_in, faint_converged_loc, force_converge_in)
+                    self.faint_state_request = (
+                        do_faint_check_in,
+                        bright_converged_in,
+                        faint_converged_loc,
+                        force_converge_in,
+                    )
                 print('faint adaptation removed values at ' + str(self.itrn) + ', repeating check iteration')
 
             elif self.itrn > 1 and np.abs(delta_faints) < self.ic.faint_converge_change_thresh:
                 print('near convergence in faint adaption at ' + str(self.itrn), ' doing check iteration')
                 faint_converged_loc = False
-                self.faint_state_request = (do_faint_check_in, bright_converged_in, faint_converged_loc, force_converge_in)
+                self.faint_state_request = (
+                    do_faint_check_in,
+                    bright_converged_in,
+                    faint_converged_loc,
+                    force_converge_in,
+                )
             elif bright_converged_in:
                 print('faint adaptation convergence continuing beyond bright adaptation, try check iteration')
                 faint_converged_loc = False
-                self.faint_state_request = (do_faint_check_in, bright_converged_in, faint_converged_loc, force_converge_in)
+                self.faint_state_request = (
+                    do_faint_check_in,
+                    bright_converged_in,
+                    faint_converged_loc,
+                    force_converge_in,
+                )
             else:
-                self.faint_state_request = (do_faint_check_in, bright_converged_in, faint_converged_loc, force_converge_in)
+                self.faint_state_request = (
+                    do_faint_check_in,
+                    bright_converged_in,
+                    faint_converged_loc,
+                    force_converge_in,
+                )
 
         else:
             noise_safe = True

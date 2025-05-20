@@ -1,11 +1,15 @@
 """some helper algebra tools using numba"""
+
 from numba import njit
 from numpy.typing import NDArray
 
 
 @njit()
 def gradient_homog_2d_inplace(ys: NDArray[float], result: NDArray[float], dx: float) -> None:
-    """Compute the gradient dy/dx using a second order accurate central finite difference assuming constant x grid along second axis, forward/backward first order accurate at boundaries, speedup is trivial"""
+    """Compute the gradient dy/dx using a second order accurate central finite difference.
+    Assumes constant x grid along second axis,
+    forward/backward first order accurate at boundaries, speedup is trivial
+    """
     nc_loc = ys.shape[0]
     n_ys = ys.shape[1]
     for itrc in range(nc_loc):
