@@ -46,8 +46,8 @@ class IterativeFitState(StateManager):
         self.noise_safe_lower_log = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
         self.noise_safe_upper_log = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
 
-        self.bright_state_request = (False, False, False, False)
-        self.faint_state_request = (False, False, False, False)
+        self._bright_state_request = (False, False, False, False)
+        self._faint_state_request = (False, False, False, False)
         self.current_state = (False, False, False, False)
 
         self.noise_safe_lower = False
@@ -55,21 +55,28 @@ class IterativeFitState(StateManager):
 
         self.itrn = 0
 
-    def set_bright_state_request(self, do_faint_check: bool, bright_converged: bool, faint_converged: bool, force_converge: bool) -> None:
-        """Set what we want the state to be after bright_convergence_decision"""
-        self.bright_state_request = (do_faint_check, bright_converged, faint_converged, force_converge)
-
-    def get_bright_state_request(self) -> (bool, bool, bool, bool):
+    @property
+    def bright_state_request(self) -> (bool, bool, bool, bool):
         """Get what we wanted the state to be after bright_convergence_decision"""
-        return self.bright_state_request
+        return self._bright_state_request
 
-    def set_faint_state_request(self, do_faint_check: bool, bright_converged: bool, faint_converged: bool, force_converge: bool) -> None:
-        """Set what we want the state to be after faint_convergence_decision"""
-        self.faint_state_request = (do_faint_check, bright_converged, faint_converged, force_converge)
+    @bright_state_request.setter
+    def bright_state_request(self, value: (bool, bool, bool, bool)) -> None:
+        """Set what we want the state to be after bright_convergence_decision"""
+        (do_faint_check, bright_converged, faint_converged, force_converge) = value
+        self._bright_state_request = (do_faint_check, bright_converged, faint_converged, force_converge)
 
-    def get_faint_state_request(self) -> (bool, bool, bool, bool):
+    @property
+    def faint_state_request(self) -> (bool, bool, bool, bool):
         """Get what we want the state to be after faint_convergence_decision"""
-        return self.faint_state_request
+        return self._faint_state_request
+
+    @faint_state_request.setter
+    #def faint_state_request(self, do_faint_check: bool, bright_converged: bool, faint_converged: bool, force_converge: bool) -> None:
+    def faint_state_request(self, value: (bool, bool, bool, bool)) -> None:
+        """Set what we want the state to be after faint_convergence_decision"""
+        (do_faint_check, bright_converged, faint_converged, force_converge) = value
+        self._faint_state_request = (do_faint_check, bright_converged, faint_converged, force_converge)
 
     def get_noise_safe_lower(self) -> bool:
         """Get whether the lower noise background would need to be updated to handle the most recent state change"""
@@ -121,14 +128,14 @@ class IterativeFitState(StateManager):
         self.do_faint_check[self.itrn] = do_faint_check
         self.force_converge[self.itrn] = force_converge
 
-        (do_faint_check, bright_converged, faint_converged, force_converge) = self.get_faint_state_request()
+        (do_faint_check, bright_converged, faint_converged, force_converge) = self.faint_state_request
 
         self.bright_converged_faint[self.itrn] = bright_converged
         self.faint_converged_faint[self.itrn] = faint_converged
         self.do_faint_check_faint[self.itrn] = do_faint_check
         self.force_converge_faint[self.itrn] = force_converge
 
-        (do_faint_check, bright_converged, faint_converged, force_converge) = self.get_bright_state_request()
+        (do_faint_check, bright_converged, faint_converged, force_converge) = self.bright_state_request
 
         self.bright_converged_bright[self.itrn] = bright_converged
         self.faint_converged_bright[self.itrn] = faint_converged
@@ -145,7 +152,7 @@ class IterativeFitState(StateManager):
 
         # short circuit if we have previously decided bright adaptation is converged
         if bright_converged_in:
-            self.set_bright_state_request(False, bright_converged_in, faint_converged_in, False)
+            self.bright_state_request = (False, bright_converged_in, faint_converged_in, False)
             self.noise_safe_upper = noise_safe
             return noise_safe
 
@@ -158,7 +165,7 @@ class IterativeFitState(StateManager):
                 assert delta_brights == 0 or self.get_force_converge() or old_match
                 if do_faint_check_in:
                     print('bright adaptation converged at ' + str(self.itrn))
-                    self.set_bright_state_request(False, True, True, False)
+                    self.bright_state_request = (False, True, True, False)
                 else:
                     if cycling:
                         print('cycling detected at ' + str(self.itrn) + ', doing final check iteration aborting')
@@ -166,20 +173,20 @@ class IterativeFitState(StateManager):
                     else:
                         force_converge_loc = False
                     print('bright adaptation predicted initial converged at ' + str(self.itrn) + ' next iteration will be check iteration')
-                    self.set_bright_state_request(True, False, faint_converged_in, force_converge_loc)
+                    self.bright_state_request = (True, False, faint_converged_in, force_converge_loc)
 
                 self.noise_safe_upper = noise_safe
                 return noise_safe
 
         # bright adaptation has not converged, get a new noise model
         noise_safe = False
-        self.set_bright_state_request(False, bright_converged_in, faint_converged_in, False)
+        self.bright_state_request = (False, bright_converged_in, faint_converged_in, False)
         self.noise_safe_upper = noise_safe
         return noise_safe
 
     def faint_convergence_decision(self, bis) -> bool:
         """Make a decision about whether the faint binaries are converged; needs a BinaryInclusionState object"""
-        (do_faint_check_in, bright_converged_in, faint_converged_in, force_converge_in) = self.get_bright_state_request()
+        (do_faint_check_in, bright_converged_in, faint_converged_in, force_converge_in) = self.bright_state_request
 
         if not faint_converged_in or do_faint_check_in:
             noise_safe = False
@@ -193,26 +200,32 @@ class IterativeFitState(StateManager):
             delta_faints = bis.delta_faint_check_helper()
             if do_faint_check_in and faint_converged_loc:
                 print('overriding faint convergence to check background model')
-                self.set_faint_state_request(do_faint_check_in, bright_converged_in, False, force_converge_in)
+                faint_converged_loc = False
+                self.faint_state_request = (do_faint_check_in, bright_converged_in, faint_converged_loc, force_converge_in)
             elif delta_faints < 0:
+                faint_converged_loc = False
                 if bright_converged_in:
-                    self.set_faint_state_request(True, False, False, force_converge_in)
+                    do_faint_check_loc = True
+                    bright_converged_loc = False
+                    self.faint_state_request = (do_faint_check_loc, bright_converged_loc, faint_converged_loc, force_converge_in)
                 else:
-                    self.set_faint_state_request(do_faint_check_in, bright_converged_in, False, force_converge_in)
+                    self.faint_state_request = (do_faint_check_in, bright_converged_in, faint_converged_loc, force_converge_in)
                 print('faint adaptation removed values at ' + str(self.itrn) + ', repeating check iteration')
 
             elif self.itrn > 1 and np.abs(delta_faints) < self.ic.faint_converge_change_thresh:
                 print('near convergence in faint adaption at ' + str(self.itrn), ' doing check iteration')
-                self.set_faint_state_request(do_faint_check_in, bright_converged_in, False, force_converge_in)
+                faint_converged_loc = False
+                self.faint_state_request = (do_faint_check_in, bright_converged_in, faint_converged_loc, force_converge_in)
             elif bright_converged_in:
                 print('faint adaptation convergence continuing beyond bright adaptation, try check iteration')
-                self.set_faint_state_request(do_faint_check_in, bright_converged_in, False, force_converge_in)
+                faint_converged_loc = False
+                self.faint_state_request = (do_faint_check_in, bright_converged_in, faint_converged_loc, force_converge_in)
             else:
-                self.set_faint_state_request(do_faint_check_in, bright_converged_in, faint_converged_loc, force_converge_in)
+                self.faint_state_request = (do_faint_check_in, bright_converged_in, faint_converged_loc, force_converge_in)
 
         else:
             noise_safe = True
-            self.set_faint_state_request(do_faint_check_in, bright_converged_in, faint_converged_in, force_converge_in)
+            self.faint_state_request = (do_faint_check_in, bright_converged_in, faint_converged_in, force_converge_in)
         self.noise_safe_lower = noise_safe
         return noise_safe
 

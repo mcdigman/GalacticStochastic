@@ -74,15 +74,16 @@ if __name__ == '__main__':
 
     noise_realization = gfi.get_noise_common(galaxy_dir, snr_thresh, wc)
 
-    _, galactic_cyclo = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, False)
-    _, galactic_stat = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, True)
+    _, galactic_cyclo = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, stat_only=False)
+    _, galactic_stat = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_min, nt_max, stat_only=True)
 
     signal_full_cyclo = galactic_cyclo + noise_realization
     signal_full_stat = galactic_stat + noise_realization
 
     S_inst_m = instrument_noise_AET_wdm_m(lc, wc)
 
-    S_cyclo_model, _, _, _, _ = get_S_cyclo(galactic_cyclo, S_inst_m, wc, 0, True, period_list=(1, 2, 3, 4, 5))
+    filter_periods = True
+    S_cyclo_model, _, _, _, _ = get_S_cyclo(galactic_cyclo, S_inst_m, wc, 0, filter_periods, period_list=(1, 2, 3, 4, 5))
 
     fs = np.arange(1, wc.Nf) * wc.DF
 

@@ -51,7 +51,7 @@ def get_noise_common(galaxy_dir, snr_thresh, wc: WDMWaveletConstants):
     return noise_realization_common
 
 
-def get_full_galactic_params(galaxy_file, galaxy_dir, fmin=0.00001, fmax=0.1, use_dgb=True, use_igb=True, use_vgb=True):
+def get_full_galactic_params(galaxy_file, galaxy_dir, *, fmin=0.00001, fmax=0.1, use_dgb=True, use_igb=True, use_vgb=True):
     """Get the galaxy dataset binaries"""
     full_galactic_params_filename = get_galaxy_filename(galaxy_file, galaxy_dir)
     filename = full_galactic_params_filename
@@ -191,7 +191,7 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
     return galactic_below_in, snr_tots_in, S_inst_m, wc, lc, snr_min
 
 
-def load_processed_gb_file(galaxy_dir, snr_thresh, wc: WDMWaveletConstants, lc: LISAConstants, nt_min, nt_max, stat_only):
+def load_processed_gb_file(galaxy_dir, snr_thresh, wc: WDMWaveletConstants, lc: LISAConstants, nt_min, nt_max, *, stat_only):
     # TODO loading should produce a galactic background decomposition object
     filename_in = get_processed_gb_filename(galaxy_dir, stat_only, snr_thresh, wc, nt_min, nt_max)
     hf_in = h5py.File(filename_in, 'r')

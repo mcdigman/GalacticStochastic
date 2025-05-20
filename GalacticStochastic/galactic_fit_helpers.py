@@ -106,6 +106,7 @@ def get_S_cyclo(
         smooth_lengthf,
         filter_periods,
         period_list=None,
+        *,
         Nt_loc=-1,
         faint_cutoff_thresh=0.1,
         t_stabilizer_mult=1.e-13,

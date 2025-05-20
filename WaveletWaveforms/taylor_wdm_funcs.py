@@ -8,7 +8,7 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 @njit(fastmath=True)
-def wavemaket_multi_inplace(wavelet_waveform: SparseTaylorWaveform, waveform: StationaryWaveformTime, nt_min, nt_max, wc: WDMWaveletConstants, taylor_table: WaveletTaylorTimeCoeffs, force_nulls=False) -> None:
+def wavemaket_multi_inplace(wavelet_waveform: SparseTaylorWaveform, waveform: StationaryWaveformTime, nt_min, nt_max, wc: WDMWaveletConstants, taylor_table: WaveletTaylorTimeCoeffs, *, force_nulls=False) -> None:
     """Compute the actual wavelets using taylor time method"""
     n_set_old = wavelet_waveform.n_set.copy()
 

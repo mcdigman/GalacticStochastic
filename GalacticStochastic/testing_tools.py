@@ -3,7 +3,7 @@ import numpy as np
 import scipy.stats
 
 
-def unit_normal_battery(signal, mult=1., sig_thresh=5., A2_cut=2.28, do_assert=True, verbose=False):
+def unit_normal_battery(signal, *, mult=1., sig_thresh=5., A2_cut=2.28, do_assert=True, verbose=False):
     """Battery of tests for checking if signal is unit normal white noise
     default anderson darling cutoff of 2.28 is hand selected to
     give ~1 in 1e5 empirical probablity of false positive for n=64
