@@ -1,19 +1,22 @@
 """unit tests for code in galactic_fit_helpers.py"""
 
-import configparser
+from pathlib import Path
 
 import numpy as np
 import pytest
 import scipy.ndimage
+import tomllib
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 import GalacticStochastic.global_const as gc
 from GalacticStochastic.galactic_fit_helpers import filter_periods_fft, get_S_cyclo
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
+toml_filename = 'tests/galactic_fit_test_config1.toml'
+
 # we  can use the same baise noise for most things and modulate it as necessary
-config = configparser.ConfigParser()
-config.read('tests/galactic_fit_test_config1.toml')
+with Path.open(toml_filename, 'rb') as f:
+    config = tomllib.load(f)
 
 wc = get_wavelet_model(config)
 

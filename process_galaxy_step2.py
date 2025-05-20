@@ -1,35 +1,25 @@
 """run iterative processing of galactic background"""
 
-import configparser
-
 import numpy as np
 
 import GalacticStochastic.global_file_index as gfi
 import GalacticStochastic.plot_creation_helpers as pch
 from GalacticStochastic.background_decomposition import BGDecomposition
+from GalacticStochastic.config_helper import get_config_objects
 from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
-from GalacticStochastic.iteration_config import get_iteration_config
 from GalacticStochastic.iterative_fit_manager import IterativeFitManager
 from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
 from GalacticStochastic.noise_manager import NoiseModelManager
 from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
-from LisaWaveformTools.lisa_config import get_lisa_constants
-from WaveletWaveforms.wdm_config import get_wavelet_model
 
 if __name__ == '__main__':
     a = np.array([])
 
-    config = configparser.ConfigParser()
-    config.read('default_parameters.toml')
+    config_file = 'default_parameters.toml'
+    config, wc, lc, ic = get_config_objects(config_file)
 
     galaxy_file = config['files']['galaxy_file']
     galaxy_dir = config['files']['galaxy_dir']
-
-    wc = get_wavelet_model(config)
-
-    lc = get_lisa_constants(config)
-
-    ic = get_iteration_config(config)
 
     S_inst_m = instrument_noise_AET_wdm_m(lc, wc)
 

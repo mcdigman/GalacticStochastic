@@ -1,9 +1,10 @@
 """test comparison of signal for sangria v1 verification binaries"""
 
-import configparser
+from pathlib import Path
 
 import numpy as np
 import pytest
+import tomllib
 import WDMWaveletTransforms.fft_funcs as fft
 from WDMWaveletTransforms.wavelet_transforms import inverse_wavelet_freq, inverse_wavelet_time
 
@@ -17,11 +18,12 @@ from WaveletWaveforms.wdm_config import get_wavelet_model
 @pytest.mark.parametrize('scale_mult', [1.0, 2.0])
 def test_unit_noise_generation_stat(scale_mult) -> None:
     """Test unit normal noise for stationary model produced with input spectrum S_stat_m = 1"""
-    config = configparser.ConfigParser()
-    config.read('tests/galactic_fit_test_config1.toml')
+    toml_filename = 'tests/galactic_fit_test_config1.toml'
+
+    with Path.open(toml_filename, 'rb') as f:
+        config = tomllib.load(f)
 
     wc = get_wavelet_model(config)
-    get_lisa_constants(config)
 
     ND = wc.Nf * wc.Nt
 
@@ -53,11 +55,12 @@ def test_unit_noise_generation_stat(scale_mult) -> None:
 @pytest.mark.parametrize('var_select', ['const1', 'const2', 'cos1'])
 def test_unit_noise_generation_cyclo_time(var_select) -> None:
     """Test unit normal noise for nonstationary model produced with input spectrum S_stat_m = 1"""
-    config = configparser.ConfigParser()
-    config.read('tests/galactic_fit_test_config1.toml')
+    toml_filename = 'tests/galactic_fit_test_config1.toml'
+
+    with Path.open(toml_filename, 'rb') as f:
+        config = tomllib.load(f)
 
     wc = get_wavelet_model(config)
-    get_lisa_constants(config)
 
     ND = wc.Nf * wc.Nt
     nc_noise = 3
@@ -113,8 +116,10 @@ def test_unit_noise_generation_cyclo_time(var_select) -> None:
 
 def test_noise_normalization_match() -> None:
     """Test ability to generate noise matching known spectrum through wavelet methods"""
-    config = configparser.ConfigParser()
-    config.read('tests/spectral_noise_test_config1.toml')
+    toml_filename = 'tests/spectral_noise_test_config1.toml'
+
+    with Path.open(toml_filename, 'rb') as f:
+        config = tomllib.load(f)
 
     wc = get_wavelet_model(config)
     lc = get_lisa_constants(config)

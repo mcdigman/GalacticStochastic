@@ -88,8 +88,10 @@ if __name__ == '__main__':
 
     fs = np.arange(1, wc.Nf) * wc.DF
 
-    nf_min = np.argmax(fs > 8.0e-5)
-    nf_max = np.argmax(fs > 4.0e-3)
+    f_min = 8.0e-5
+    f_max = 4.0e-3
+    nf_min = np.argmax(fs > f_min)
+    nf_max = np.argmax(fs > f_max)
 
     signal_white_resid_cyclo = result_normality_battery(signal_full_cyclo)
     signal_white_resid_stat = result_normality_battery(signal_full_stat)
