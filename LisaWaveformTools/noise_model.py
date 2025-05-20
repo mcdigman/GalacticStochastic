@@ -27,7 +27,7 @@ class DenseNoiseModel(ABC):
         """Generate random noise for full matrix"""
 
     @abstractmethod
-    def get_sparse_snrs(self, wavelet_waveform, nt_min=0, nt_max=-1) -> npt.NDArray[np.float64]:
+    def get_sparse_snrs(self, wavelet_waveform: SparseTaylorWaveform, nt_min=0, nt_max=-1) -> npt.NDArray[np.float64]:
         """Get S/N of waveform in each TDI channel"""
 
     @abstractmethod
@@ -152,7 +152,7 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
             self.inv_chol_S[:, 0, :] = 0.
             self.inv_S[:, 0, :] = 0.
 
-    def generate_dense_noise(self):
+    def generate_dense_noise(self) -> npt.NDArray[np.float64]:
         """Generate random noise for full matrix
 
         Parameters
@@ -176,27 +176,27 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
             noise_res[j, :, :] = rng.normal(0., 1., (self.wc.Nf, self.nc_noise)) * self.chol_S[j, :, :]
         return noise_res
 
-    def get_sparse_snrs(self, wavelet_waveform, nt_min=0, nt_max=-1):
+    def get_sparse_snrs(self, wavelet_waveform: SparseTaylorWaveform, nt_min=0, nt_max=-1) -> npt.NDArray[np.float64]:
         """Get snr of waveform in each channel"""
         return get_sparse_snr_helper(wavelet_waveform, nt_min, nt_max, self.wc, self.inv_chol_S, self.nc_snr)
 
-    def get_S_stat_m(self):
+    def get_S_stat_m(self) -> npt.NDArray[np.float64]:
         """Get the mean noise covariance matrix as a function of time"""
         return np.mean(self.S, axis=0)
 
-    def get_inv_chol_S(self):
+    def get_inv_chol_S(self) -> npt.NDArray[np.float64]:
         """Get the inverse cholesky decomposition of the dense noise covariance matrix"""
         return self.inv_chol_S
 
-    def get_inv_S(self):
+    def get_inv_S(self) -> npt.NDArray[np.float64]:
         """Get the inverse of the dense noise covariance matrix"""
         return self.inv_S
 
-    def get_chol_S(self):
+    def get_chol_S(self) -> npt.NDArray[np.float64]:
         """Get the cholesky decomposition of the dense noise covariance matrix"""
         return self.chol_S
 
-    def get_S(self):
+    def get_S(self) -> npt.NDArray[np.float64]:
         """Get the dense noise covariance matrix"""
         return self.chol_S
 
@@ -277,7 +277,7 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
                     self.inv_chol_S[j, 0, itrc] = self.inv_chol_S_stat_m[0, itrc]
                     self.chol_S[j, 0, itrc] = self.chol_S_stat_m[0, itrc]
 
-    def generate_dense_noise(self):
+    def generate_dense_noise(self) ->  npt.NDArray[np.float64]:
         """Generate random noise for full matrix
 
         Parameters
@@ -301,7 +301,7 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
             noise_res[j, :, :] = rng.normal(0., 1., (self.wc.Nf, self.nc_noise)) * self.chol_S[j, :, :]
         return noise_res
 
-    def get_sparse_snrs(self, wavelet_waveform, nt_min=0, nt_max=-1):
+    def get_sparse_snrs(self, wavelet_waveform: SparseTaylorWaveform, nt_min=0, nt_max=-1) -> npt.NDArray[float]:
         """Get s/n of waveform in each TDI channel. Parameters usually come from
         BinaryWaveletAmpFreqDT.get_unsorted_coeffs() from
         wavelet_detector_waveforms.
@@ -324,22 +324,22 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
             nt_max = self.wc.Nt
         return get_sparse_snr_helper(wavelet_waveform, nt_min, nt_max, self.wc, self.inv_chol_S, self.nc_snr)
 
-    def get_S_stat_m(self):
+    def get_S_stat_m(self) -> npt.NDArray[np.float64]:
         """Get the mean noise covariance matrix as a function of time"""
         return self.S_stat_m
 
-    def get_inv_chol_S(self):
+    def get_inv_chol_S(self) -> npt.NDArray[np.float64]:
         """Get the inverse cholesky decomposition of the dense noise covariance matrix"""
         return self.inv_chol_S
 
-    def get_inv_S(self):
+    def get_inv_S(self) -> npt.NDArray[np.float64]:
         """Get the inverse of the dense noise covariance matrix"""
         return self.inv_S
 
-    def get_chol_S(self):
+    def get_chol_S(self) -> npt.NDArray[np.float64]:
         """Get the cholesky decomposition of the dense noise covariance matrix"""
         return self.chol_S
 
-    def get_S(self):
+    def get_S(self) -> npt.NDArray[np.float64]:
         """Get the dense noise covariance matrix"""
         return self.chol_S

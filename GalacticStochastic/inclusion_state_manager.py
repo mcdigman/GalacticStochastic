@@ -5,6 +5,9 @@ from time import perf_counter
 import numpy as np
 
 import GalacticStochastic.global_const as gc
+from GalacticStochastic.iteration_config import IterationConfig
+from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
+from GalacticStochastic.noise_manager import NoiseModelManager
 from GalacticStochastic.state_manager import StateManager
 from LisaWaveformTools.lisa_config import LISAConstants
 from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
@@ -14,7 +17,7 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 class BinaryInclusionState(StateManager):
     """Stores all the binaries under consideration in the galaxy"""
 
-    def __init__(self, wc: WDMWaveletConstants, ic, lc: LISAConstants, params_gb_in, noise_manager, fit_state, snrs_tot_in=None) -> None:
+    def __init__(self, wc: WDMWaveletConstants, ic: IterationConfig, lc: LISAConstants, params_gb_in, noise_manager: NoiseModelManager, fit_state: IterativeFitState, snrs_tot_in=None) -> None:
         """Class that stores information about the binaries in the background, and which component they are assigned to"""
         self.wc = wc
         self.ic = ic
@@ -69,7 +72,7 @@ class BinaryInclusionState(StateManager):
             self.snrs_tot_upper[itrn, self.decided[itrn]] = self.snrs_tot_upper[itrn - 1, self.decided[itrn]]
             self.snrs_upper[itrn, self.decided[itrn]] = self.snrs_upper[itrn - 1, self.decided[itrn]]
 
-    def oscillation_check_helper(self):
+    def oscillation_check_helper(self) -> (bool, bool, bool):
         """Helper used by fit_state to decide if the bright binaries are oscillating without converging"""
         osc1 = False
         osc2 = False
@@ -87,7 +90,7 @@ class BinaryInclusionState(StateManager):
         cycling = old_match and not osc1
         return cycling, converged_or_cycling, old_match
 
-    def delta_faint_check_helper(self):
+    def delta_faint_check_helper(self) -> int:
         """Get the difference in the number of faint binaries between the last two iterations"""
         if self.itrn - 1 == 0:
             delta_faints = self.n_faints_cur[self.itrn - 1]
@@ -95,7 +98,7 @@ class BinaryInclusionState(StateManager):
             delta_faints = self.n_faints_cur[self.itrn - 1] - self.n_faints_cur[self.itrn - 2]
         return delta_faints
 
-    def delta_bright_check_helper(self):
+    def delta_bright_check_helper(self) -> int:
         """Get the difference in the number of bright binaries between the last two iterations"""
         if self.itrn - 1 == 0:
             delta_brights = self.n_brights_cur[self.itrn - 1]
@@ -139,7 +142,7 @@ class BinaryInclusionState(StateManager):
         if ~np.isfinite(self.snrs_tot_upper[itrn, itrb]) or ~np.isfinite(self.snrs_tot_lower[itrn, itrb]):
             raise ValueError('Non-finite value detected in snr at ' + str(itrn) + ', ' + str(itrb))
 
-    def decision_helper(self, itrb):
+    def decision_helper(self, itrb: int) -> (bool, bool):
         """Helper to decide whether a binary is bright or faint by the current noise spectrum"""
         itrn = self.itrn
         if self.fit_state.get_preprocess_mode() == 1:
@@ -179,7 +182,7 @@ class BinaryInclusionState(StateManager):
 
         return bright_loc, faint_loc
 
-    def decide_coadd_helper(self, itrb) -> None:
+    def decide_coadd_helper(self, itrb: int) -> None:
         """Add each binary to the correct part of the galactic spectrum, depending on whether it is bright or faint"""
         itrn = self.itrn
         # the same binary cannot be decided as both bright and faint

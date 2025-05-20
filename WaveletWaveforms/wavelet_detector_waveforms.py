@@ -2,7 +2,7 @@
 
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_time import BinaryTimeWaveformAmpFreqD, StationaryWaveformTime
-from WaveletWaveforms.coefficientsWDM_time_helpers import WaveletTaylorTimeCoeffs, get_empty_sparse_taylor_time_waveform, get_evTs
+from WaveletWaveforms.coefficientsWDM_time_helpers import SparseTaylorWaveform, WaveletTaylorTimeCoeffs, get_empty_sparse_taylor_time_waveform, get_taylor_table_time
 from WaveletWaveforms.taylor_wdm_funcs import wavemaket_multi_inplace
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
@@ -23,7 +23,8 @@ class BinaryWaveletAmpFreqDT:
         self.params = params
 
         # interpolation for wavelet taylor expansion
-        self.taylor_time_table: WaveletTaylorTimeCoeffs = get_evTs(self.wc, cache_mode='skip', output_mode='skip')
+        self.taylor_time_table: WaveletTaylorTimeCoeffs = get_taylor_table_time(self.wc, cache_mode='skip',
+                                                                                output_mode='skip')
 
         # get the waveform in frequency space
         self.fwt = BinaryTimeWaveformAmpFreqD(self.params, self.nt_min, self.nt_max, self.lc, self.wc, self.lc.nc_waveform)
@@ -47,7 +48,7 @@ class BinaryWaveletAmpFreqDT:
         wavemaket_multi_inplace(self.wavelet_waveform, self.fwt.AET_waveform, self.nt_min, self.nt_max, self.wc, self.taylor_time_table, force_nulls=False)
         self.consistent = True
 
-    def get_unsorted_coeffs(self):
+    def get_unsorted_coeffs(self) -> SparseTaylorWaveform:
         """Get coefficients in the order they are generated"""
         if not self.consistent:
             self.update_params(self.params)

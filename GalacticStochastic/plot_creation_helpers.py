@@ -3,8 +3,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+from GalacticStochastic.iterative_fit_manager import IterativeFitManager
 
-def plot_noise_spectrum_ambiguity(ifm) -> None:
+
+def plot_noise_spectrum_ambiguity(ifm: IterativeFitManager) -> None:
     """Make a plot of the difference between the upper and lower estimates of the spectrum"""
     S_stat_m = ifm.noise_manager.S_inst_m
     wc = ifm.noise_manager.wc
@@ -23,7 +25,7 @@ def plot_noise_spectrum_ambiguity(ifm) -> None:
     plt.show()
 
 
-def plot_noise_spectrum_evolve(ifm) -> None:
+def plot_noise_spectrum_evolve(ifm: IterativeFitManager) -> None:
     """Plot the evolution of the noise power spectrum with iteration"""
     S_stat_m = ifm.noise_manager.S_inst_m
     wc = ifm.noise_manager.wc

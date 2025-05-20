@@ -11,6 +11,7 @@ from warnings import warn
 import numpy as np
 import scipy.ndimage
 import WDMWaveletTransforms.fft_funcs as fft
+from numpy.typing import NDArray
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.optimize import dual_annealing
 
@@ -18,17 +19,17 @@ import GalacticStochastic.global_const as gc
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
-def S_gal_model(f, log10A, log10f2, log10f1, log10fknee, alpha):
+def S_gal_model(f, log10A, log10f2, log10f1, log10fknee, alpha) -> NDArray[float]:
     """Model from arXiv:2103.14598 for galactic binary confusion noise amplitude"""
     return 10**log10A / 2 * f**(5 / 3) * np.exp(-(f / 10**log10f1)**alpha) * (1 + np.tanh((10**log10fknee - f) / 10**log10f2))
 
 
-def S_gal_model_alt(f, A, alpha, beta, kappa, gamma, fknee):
+def S_gal_model_alt(f, A, alpha, beta, kappa, gamma, fknee) -> NDArray[float]:
     """Model from arXiv:1703.09858 for galactic binary confusion noise amplitude"""
     return A * f**(7 / 3) * np.exp(-f**alpha + beta * f * np.sin(kappa * f)) * (1 + np.tanh(gamma * (fknee - f)))
 
 
-def filter_periods_fft(r_mean, Nt_loc, period_list, wc: WDMWaveletConstants):
+def filter_periods_fft(r_mean: NDArray[float], Nt_loc, period_list, wc: WDMWaveletConstants) -> (NDArray[float], NDArray[float], NDArray[float]):
     """Filter to a specific set of periods using an fft.
     period_list is in multiples of wc.Tobs/gc.SECSYEAR
     """
@@ -99,8 +100,8 @@ def filter_periods_fft(r_mean, Nt_loc, period_list, wc: WDMWaveletConstants):
 
 
 def get_S_cyclo(
-        galactic_below,
-        S_inst_m,
+        galactic_below: NDArray[float],
+        S_inst_m: NDArray[float],
         wc: WDMWaveletConstants,
         smooth_lengthf,
         filter_periods,
@@ -110,7 +111,7 @@ def get_S_cyclo(
         t_stabilizer_mult=1.e-13,
         r_cutoff_mult=1.e-6,
         log_S_stabilizer=1.e-50,
-        ):
+        )-> (NDArray[float], NDArray[float], NDArray[float], NDArray[float], NDArray[float]):
     """Note the smoothing length is the length in *log* frequency,
     and the input is assumed spaced linearly in frequency
     """
@@ -215,7 +216,7 @@ def get_S_cyclo(
     return S_res, r_smooth, S_demod_smooth, amp_got, angle_got
 
 
-def fit_gb_spectrum_evolve(S_goals, fs, fs_report, nt_ranges, offset, wc: WDMWaveletConstants):
+def fit_gb_spectrum_evolve(S_goals: NDArray[float], fs: NDArray[float], fs_report: NDArray[float], nt_ranges, offset, wc: WDMWaveletConstants) -> (NDArray[float], NDArray[float]):
     a1 = -0.25
     b1 = -2.70
     ak = -0.27
@@ -229,7 +230,7 @@ def fit_gb_spectrum_evolve(S_goals, fs, fs_report, nt_ranges, offset, wc: WDMWav
 
     log_S_goals = np.log10(S_goals[:, :, 0:2])
 
-    def S_func_temp(tpl):
+    def S_func_temp(tpl: (float, float, float, float, float, float, float)) -> float:
         resid = 0.
         a1 = tpl[0]
         ak = tpl[1]

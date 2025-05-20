@@ -15,7 +15,7 @@ SpacecraftChannels = namedtuple('SpacecraftChannels', ['T', 'RR', 'II', 'dRR', '
 
 
 @njit(fastmath=True)
-def ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, NT, lc: LISAConstants, wc: WDMWaveletConstants) -> None:
+def ExtractAmpPhase_inplace(spacecraft_channels: SpacecraftChannels, AET_waveform: StationaryWaveformTime, waveform: StationaryWaveformTime, NT, lc: LISAConstants, wc: WDMWaveletConstants) -> None:
     """Get the amplitude and phase for LISA"""
     AA = waveform.AT
     PP = waveform.PT
@@ -87,7 +87,7 @@ def ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, NT, lc:
 
 # TODO check factor of 2pi
 @njit()
-def AmpFreqDeriv_inplace(waveform, Amp, phi0, FI, FD0, TS) -> None:
+def AmpFreqDeriv_inplace(waveform: StationaryWaveformTime, Amp, phi0, FI, FD0, TS) -> None:
     """Get time domain waveform to lowest order, simple constant fdot"""
     AS = waveform.AT
     PS = waveform.PT

@@ -9,7 +9,7 @@ import numpy as np
 IterationConfig = namedtuple('IterationConfig', ['max_iterations', 'snr_thresh', 'snr_min', 'snr_cut_bright', 'smooth_lengthf', 'period_list', 'n_cyclo_switch', 'n_min_faint_adapt', 'faint_converge_change_thresh', 'smooth_lengthf_fix', 'fmin_binary', 'fmax_binary', 'nc_galaxy', 'snr_min_preprocess', 'snr_min_reprocess'])
 
 
-def get_iteration_config(config):
+def get_iteration_config(config) -> IterationConfig:
     """Get lisa constant object from config file"""
     # maximum number of iterations to allow
     max_iterations = int(ast.literal_eval(config['iterative fit constants']['max_iterations']))

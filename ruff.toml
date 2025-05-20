@@ -53,7 +53,7 @@ author = "Matthew C. Digman"
 min-file-size = 1024
 
 [lint.per-file-ignores]
-"tests/*" = ["C90", "FBT"]
+"tests/*" = ["C90", "FBT", "ANN"]
 
 
 [format]

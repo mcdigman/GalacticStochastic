@@ -5,21 +5,22 @@ python port of coefficients WDM_time.c
 import numpy as np
 import scipy.fft as spf
 from numba import njit, prange
+from numpy.typing import NDArray
 from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
-def wavelet(m, N, nrm, dom, DOM, Nf, dt, nx=4.):
+def wavelet(wc: WDMWaveletConstants, m, nrm) -> NDArray[float]:
     """Computes wavelet, modifies wave in place"""
-    wave = np.zeros(N)
-    halfN = np.int64(N / 2)
+    wave = np.zeros(wc.K)
+    halfN = np.int64(wc.K / 2)
 
-    DE = np.zeros(N, dtype=np.complex128)
+    DE = np.zeros(wc.K, dtype=np.complex128)
 
-    om = dom * np.hstack([np.arange(0, halfN + 1), -np.arange(halfN - 1, 0, -1)])
-    DE = np.sqrt(dt) / np.sqrt(2.) * (phitilde_vec(dt * (om + m * DOM), Nf, nx) + phitilde_vec(dt * (om - m * DOM), Nf, nx))
-    DE = spf.fft(DE, N, overwrite_x=True)
+    om = wc.dom * np.hstack([np.arange(0, halfN + 1), -np.arange(halfN - 1, 0, -1)])
+    DE[:] = np.sqrt(wc.dt) / np.sqrt(2.) * (phitilde_vec(wc.dt * (om + m * wc.DOM), wc.Nf, wc.nx) + phitilde_vec(wc.dt * (om - m * wc.DOM), wc.Nf, wc.nx))
+    DE = spf.fft(DE, wc.K, overwrite_x=True)
 
     wave[halfN:] = np.real(DE[0:halfN])
     wave[0:halfN] = np.real(DE[halfN:])
@@ -27,7 +28,7 @@ def wavelet(m, N, nrm, dom, DOM, Nf, dt, nx=4.):
 
 
 @njit(parallel=True)
-def get_ev_t_full(wave, wc: WDMWaveletConstants):
+def get_taylor_table_time_helper(wave: NDArray[float], wc: WDMWaveletConstants) -> (NDArray[float], NDArray[float]):
     """Helper function to take advantage of jit compiler in t calculation"""
     fd = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)  # set f-dot increments
     Nfsam = ((wc.BW + np.abs(fd) * wc.Tw) / wc.df).astype(np.int64)

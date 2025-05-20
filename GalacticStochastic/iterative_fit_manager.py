@@ -2,13 +2,17 @@
 
 from time import perf_counter
 
+from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
+from GalacticStochastic.iteration_config import IterationConfig
+from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
+from GalacticStochastic.noise_manager import NoiseModelManager
 from GalacticStochastic.state_manager import StateManager
 
 
 class IterativeFitManager(StateManager):
     """Iterative fit object that runs the iterative fitting procedure"""
 
-    def __init__(self, ic, fit_state, noise_manager, bis) -> None:
+    def __init__(self, ic: IterationConfig, fit_state: IterativeFitState, noise_manager: NoiseModelManager, bis: BinaryInclusionState) -> None:
         """"Create the iterative fit object"""
         self.ic = ic
         self.fit_state = fit_state

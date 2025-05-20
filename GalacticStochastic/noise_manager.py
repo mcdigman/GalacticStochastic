@@ -2,6 +2,9 @@
 
 import numpy as np
 
+from GalacticStochastic.background_decomposition import BGDecomposition
+from GalacticStochastic.iteration_config import IterationConfig
+from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
 from GalacticStochastic.state_manager import StateManager
 from GalacticStochastic.testing_tools import unit_normal_battery
 from LisaWaveformTools.lisa_config import LISAConstants
@@ -12,7 +15,7 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 class NoiseModelManager(StateManager):
     """object to manage the noise models used in the iterative fit"""
 
-    def __init__(self, ic, wc: WDMWaveletConstants, lc: LISAConstants, fit_state, bgd, S_inst_m, stat_only, nt_min, nt_max) -> None:
+    def __init__(self, ic: IterationConfig, wc: WDMWaveletConstants, lc: LISAConstants, fit_state: IterativeFitState, bgd: BGDecomposition, S_inst_m, stat_only, nt_min, nt_max) -> None:
         """Create the noise model manager"""
         self.ic = ic
         self.lc = lc

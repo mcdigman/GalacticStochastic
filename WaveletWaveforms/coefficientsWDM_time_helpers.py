@@ -7,16 +7,17 @@ from time import time
 import h5py
 import numpy as np
 import scipy as sp
+from numpy.typing import NDArray
 from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 
-from WaveletWaveforms.coefficientsWDM_time_funcs import get_ev_t_full, wavelet
+from WaveletWaveforms.coefficientsWDM_time_funcs import get_taylor_table_time_helper, wavelet
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 SECSYEAR = 24 * 365 * 3600    # Number of seconds in a calendar year
 
 WaveletTaylorTimeCoeffs = namedtuple('WaveletTaylorTimeCoeffs', ['Nfsam', 'evcs', 'evss'])
 
-SparseTaylorWaveform = namedtuple('SparseTaylorTimeWaveform', ['wave_value', 'pixel_index', 'n_set', 'N_max'])
+SparseTaylorWaveform = namedtuple('SparseTaylorWaveform', ['wave_value', 'pixel_index', 'n_set', 'N_max'])
 
 SparseTaylorWaveform.__doc__ = """
 namedtuple object that contains a sparse representation of a wavelet waveform,
@@ -64,8 +65,8 @@ def get_empty_sparse_taylor_time_waveform(nc_waveform, wc: WDMWaveletConstants) 
     return SparseTaylorWaveform(wave_value, pixel_index, n_set, N_max)
 
 
-def sparse_addition_helper(sparse_waveform, dense_representation) -> None:
-    """Take a sparse wavelet representation from e.g. SparseTaylorTimeWaveform
+def sparse_addition_helper(sparse_waveform: SparseTaylorWaveform, dense_representation: NDArray[float]) -> None:
+    """Take a sparse wavelet representation from SparseTaylorWaveform
     and add it to a dense wavelet representation
     sparse_waveform: namedtuple SparseTaylorTimeWaveform
         the sparse representation of waveform, with
@@ -87,13 +88,13 @@ def sparse_addition_helper(sparse_waveform, dense_representation) -> None:
         dense_representation[pixel_index[itrc, :n_set[itrc]], itrc] += wave_value[itrc, :n_set[itrc]]
 
 
-def get_evTs(wc: WDMWaveletConstants, cache_mode='skip', output_mode='skip') -> WaveletTaylorTimeCoeffs:
+def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mode='skip') -> WaveletTaylorTimeCoeffs:
     """Helper to get the ev matrices
     cache_mode:
         'skip':
             do not check if a cached coefficient table is available
         'check':
-            check if a cached coefficiient table is available
+            check if a cached coefficient table is available
     output_mode:
         'skip': just return, do not output to a file
         'hf': output to an hdf5 file in the coeffs/ directory
@@ -106,10 +107,12 @@ def get_evTs(wc: WDMWaveletConstants, cache_mode='skip', output_mode='skip') -> 
     print("full filter bandwidth %e  samples %d" % ((wc.A + wc.B) / np.pi, (wc.A + wc.B) / np.pi * wc.Tw))
     cache_good = False
 
-    if cache_mode == 'check':
-        coeffTs_in = 'coeffs/WDMcoeffs_Nsf=' + str(wc.Nsf) + '_mult=' + str(wc.mult) + '_Nfd=' + str(wc.Nfd) + '_Nf=' + str(wc.Nf)\
-            + '_Nt=' + str(wc.Nt) + '_dt=' + str(wc.dt) + '_dfdot=' + str(wc.dfdot) + '_Nfd_neg' + str(wc.Nfd_negative) + '_fast.h5'
+    filename_cache = 'coeffs/WDMcoeffs_Nsf=' + str(wc.Nsf) + '_mult=' + str(wc.mult) + '_Nfd=' + str(
+        wc.Nfd) + '_Nf=' + str(wc.Nf) \
+                     + '_Nt=' + str(wc.Nt) + '_dt=' + str(wc.dt) + '_dfdot=' + str(wc.dfdot) + '_Nfd_neg' + str(
+        wc.Nfd_negative) + '_fast.h5'
 
+    if cache_mode == 'check':
         fds = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)
 
         # number of samples for each frequency derivative layer (grow with increasing BW)
@@ -121,14 +124,14 @@ def get_evTs(wc: WDMWaveletConstants, cache_mode='skip', output_mode='skip') -> 
         evss = np.zeros((wc.Nfd, max_shape))
 
         try:
-            hf_in = h5py.File(coeffTs_in, 'r')
+            hf_in = h5py.File(filename_cache, 'r')
             for i in range(wc.Nfd):
                 evcs[i, :Nfsam[i]] = np.asarray(hf_in['evcs'][str(i)])
                 evss[i, :Nfsam[i]] = np.asarray(hf_in['evss'][str(i)])
             hf_in.close()
             cache_good = True
         except OSError:
-            print(coeffTs_in)
+            print(filename_cache)
             print('cache checked and missed')
     elif cache_mode == 'skip':
         pass
@@ -158,8 +161,7 @@ def get_evTs(wc: WDMWaveletConstants, cache_mode='skip', output_mode='skip') -> 
         # we pick one far from the boundaries to avoid edge effects
 
         k = wc.Nf / 16
-
-        wave = wavelet(k, wc.K, nrm, wc.dom, wc.DOM, wc.Nf, wc.dt, wc.nx)
+        wave = wavelet(wc, k, nrm)
 
         fd = wc.DF / wc.Tw * wc.dfdot * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)  # set f-dot increments
 
@@ -180,28 +182,26 @@ def get_evTs(wc: WDMWaveletConstants, cache_mode='skip', output_mode='skip') -> 
 
         t1 = time()
         print("loop start time ", t1 - t0, "s")
-        evcs, evss = get_ev_t_full(wave, wc)
+        evcs, evss = get_taylor_table_time_helper(wave, wc)
         tf = time()
-        print("got full evcs in %f s" % (tf - t1))
-        t1 = time()
+        print("Got Time Taylor Table in %f s" % (tf - t1))
 
-    if output_mode == 'hf':
-        hf = h5py.File('coeffs/WDMcoeffs_Nsf=' + str(wc.Nsf) + '_mult=' + str(wc.mult) + '_Nfd=' + str(wc.Nfd) + '_Nf=' + str(wc.Nf) +
-                       '_Nt=' + str(wc.Nt) + '_dt=' + str(wc.dt) + '_dfdot=' + str(wc.dfdot) + '_Nfd_neg' + str(wc.Nfd_negative) + '_fast.h5', 'w')
-        hf.create_group('inds')
-        hf.create_group('evcs')
-        hf.create_group('evss')
-        for jj in range(wc.Nfd):
-            hf['inds'].create_dataset(str(jj), data=np.arange(0, Nfsam[jj]))
-            hf['evcs'].create_dataset(str(jj), data=evcs[jj, :Nfsam[jj]])
-            hf['evss'].create_dataset(str(jj), data=evss[jj, :Nfsam[jj]])
-        hf.close()
-        t3 = time()
-        print("output time", t3 - tf, "s")
-    elif output_mode == 'skip':
-        pass
-    else:
-        msg = 'unrecognized option for output_mode'
-        raise NotImplementedError(msg)
+        if output_mode == 'hf':
+            hf = h5py.File(filename_cache, 'w')
+            hf.create_group('inds')
+            hf.create_group('evcs')
+            hf.create_group('evss')
+            for jj in range(wc.Nfd):
+                hf['inds'].create_dataset(str(jj), data=np.arange(0, Nfsam[jj]))
+                hf['evcs'].create_dataset(str(jj), data=evcs[jj, :Nfsam[jj]])
+                hf['evss'].create_dataset(str(jj), data=evss[jj, :Nfsam[jj]])
+            hf.close()
+            t3 = time()
+            print("output time", t3 - tf, "s")
+        elif output_mode == 'skip':
+            pass
+        else:
+            msg = 'unrecognized option for output_mode'
+            raise NotImplementedError(msg)
 
     return WaveletTaylorTimeCoeffs(Nfsam, evcs, evss)

@@ -4,6 +4,8 @@ from pathlib import Path
 import h5py
 import numpy as np
 
+from GalacticStochastic.background_decomposition import BGDecomposition
+from GalacticStochastic.iteration_config import IterationConfig
 from LisaWaveformTools import lisa_config
 from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
 from LisaWaveformTools.lisa_config import LISAConstants
@@ -214,7 +216,7 @@ def load_processed_gb_file(galaxy_dir, snr_thresh, wc: WDMWaveletConstants, lc: 
     return argbinmap, (galactic_below + galactic_undecided).reshape((wc.Nt, wc.Nf, galactic_below.shape[-1]))
 
 
-def store_preliminary_gb_file(config_filename, galaxy_dir, galaxy_file, wc: WDMWaveletConstants, lc: LISAConstants, ic, galactic_below, S_inst_m, snrs_tot_upper) -> None:
+def store_preliminary_gb_file(config_filename, galaxy_dir, galaxy_file, wc: WDMWaveletConstants, lc: LISAConstants, ic: IterationConfig, galactic_below, S_inst_m, snrs_tot_upper) -> None:
     filename_out = get_preliminary_filename(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
     hf_out = h5py.File(filename_out, 'w')
 
@@ -268,7 +270,7 @@ def store_preliminary_gb_file(config_filename, galaxy_dir, galaxy_file, wc: WDMW
     hf_out.close()
 
 
-def store_processed_gb_file(galaxy_dir, galaxy_file, wc: WDMWaveletConstants, lc: LISAConstants, ic, nt_min, nt_max, bgd, period_list, n_bin_use, S_inst_m, S_final, stat_only, snrs_tot_upper, n_full_converged, argbinmap, faints_old, faints_cur, brights) -> None:
+def store_processed_gb_file(galaxy_dir, galaxy_file, wc: WDMWaveletConstants, lc: LISAConstants, ic: IterationConfig, nt_min, nt_max, bgd: BGDecomposition, period_list, n_bin_use, S_inst_m, S_final, stat_only, snrs_tot_upper, n_full_converged, argbinmap, faints_old, faints_cur, brights) -> None:
     filename_gb_init = get_preliminary_filename(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
     filename_gb_common = get_common_noise_filename(galaxy_dir, ic.snr_thresh, wc)
     filename_out = get_processed_gb_filename(galaxy_dir, stat_only, ic.snr_thresh, wc, nt_min, nt_max)
