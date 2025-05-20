@@ -2,26 +2,26 @@
 # values related to file io
 
 
-galaxy_dir = Galaxies/Galaxy3/
-galaxy_file = galaxy_binaries.hdf5
+galaxy_dir = 'Galaxies/Galaxy1/'
+galaxy_file = 'galaxy_binaries.hdf5'
 
-[iterative fit constants]
+[iterative_fit_constants]
 
 # periodicities to fit to cyclostationary model; 1/year, 2/year, 3/year, etc
 period_list = [1, 2, 3, 4, 5]
 
-[wavelet constants]
+[wavelet_constants]
 # constants related to wavelet transforms
 
 # number of frequency layers in the wavelet transform (should be even)
-Nf = 256
+Nf = 12318
 
 # number of time layers in wavelet transform (should be even)
-Nt = 1024
+Nt = 512
 
 # time sampling cadence in seconds (note that the total time covered by the transform will be Nf*Nt*dt)
 # dt is the only quantity in the definition of the wavelet transform that has units
-dt = 120.30029296875
+dt = 5.0
 
 # over sampling
 mult = 8
@@ -47,7 +47,7 @@ nx = 4.0
 # reduced filter length; must be a power of 2
 L = 512
 
-[lisa constants]
+[lisa_constants]
 # constants related to LISA constellation
 
 # Mean arm length of the LISA detector (meters)

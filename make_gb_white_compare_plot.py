@@ -61,7 +61,7 @@ def result_normality_battery(signal_in):
 
 if __name__ == '__main__':
 
-    config, wc, lc = config_helper.get_config_objects('default_parameters.ini')
+    config, wc, lc = config_helper.get_config_objects('default_parameters.toml')
     galaxy_dir = config['files']['galaxy_dir']
 
     nt_min = 256 * 6

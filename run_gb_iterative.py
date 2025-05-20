@@ -16,7 +16,7 @@ if __name__ == '__main__':
 
     a = np.array([])
 
-    config, wc, lc, ic = get_config_objects('default_parameters.ini')
+    config, wc, lc, ic = get_config_objects('default_parameters.toml')
 
     galaxy_file = config['files']['galaxy_file']
     galaxy_dir = config['files']['galaxy_dir']

@@ -1,6 +1,5 @@
 """read wavelet transform constants in from config file and compute derived parameters"""
 
-import ast
 from collections import namedtuple
 from warnings import warn
 
@@ -14,44 +13,44 @@ LISAConstants = namedtuple('LISAConstants', ['Larm', 'Sps', 'Sacc', 'kappa0', 'l
 def get_lisa_constants(config) -> LISAConstants:
     """Get lisa constant object from config file"""
     # Mean arm length of the LISA detector (meters)
-    Larm = float(ast.literal_eval(config['lisa constants']['Larm']))
+    Larm = float(config['lisa_constants']['Larm'])
     assert Larm > 0.
 
     # Photon shot noise power
-    Sps = float(ast.literal_eval(config['lisa constants']['Sps']))
+    Sps = float(config['lisa_constants']['Sps'])
     assert Sps >= 0.
 
     # Acceleration noise power
-    Sacc = float(ast.literal_eval(config['lisa constants']['Sacc']))
+    Sacc = float(config['lisa_constants']['Sacc'])
     assert Sacc >= 0.
 
     # Initial azimuthal position of the guiding center
-    kappa0 = float(ast.literal_eval(config['lisa constants']['kappa0']))
+    kappa0 = float(config['lisa_constants']['kappa0'])
 
     # Initial orientation of the LISA constellation
-    lambda0 = float(ast.literal_eval(config['lisa constants']['lambda0']))
+    lambda0 = float(config['lisa_constants']['lambda0'])
 
     # Transfer frequency should be fixed to c/(2*pi*Larm)?
-    fstr = float(ast.literal_eval(config['lisa constants']['fstr']))
+    fstr = float(config['lisa_constants']['fstr'])
     assert fstr > 0.
     if not np.isclose(fstr, gc.CLIGHT / (2 * np.pi * Larm), atol=1.e-10, rtol=1.e-3):
         warn('expected fstr=gc.CLIGHT/(2*np.pi*Larm)=%+.6e, got %+.6e' % (gc.CLIGHT / (2 * np.pi * Larm), fstr), stacklevel=2)
 
     # LISA orbital eccentricity; should be fixed to Larm/(2*AU*np.sqrt(3))?
-    ec = float(ast.literal_eval(config['lisa constants']['ec']))
+    ec = float(config['lisa_constants']['ec'])
     if not np.isclose(ec, Larm / (2 * gc.AU * np.sqrt(3)), atol=1.e-10, rtol=1.e-3):
         warn('expected ec=Larm/(2*AU*np.sqrt(3))=%+.6e, got %+.6e' % (Larm / (2 * gc.AU * np.sqrt(3)), fstr), stacklevel=2)
 
     # LISA modulation frequency
-    fm = float(ast.literal_eval(config['lisa constants']['fm']))
+    fm = float(config['lisa_constants']['fm'])
     assert fm > 0.
 
     # number of waveform channels that must be evaluated
-    nc_waveform = int(ast.literal_eval(config['lisa constants']['nc_waveform']))
+    nc_waveform = int(config['lisa_constants']['nc_waveform'])
     assert nc_waveform >= 0
     assert nc_waveform <= 3
 
-    nc_snr = int(ast.literal_eval(config['lisa constants']['nc_snr']))
+    nc_snr = int(config['lisa_constants']['nc_snr'])
     assert nc_snr >= 0
     assert nc_snr <= 3
     assert nc_snr <= nc_waveform

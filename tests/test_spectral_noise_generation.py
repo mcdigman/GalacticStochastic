@@ -17,7 +17,7 @@ from WaveletWaveforms.wdm_config import get_wavelet_model
 def test_unit_noise_generation_stat(scale_mult) -> None:
     """Test unit normal noise for stationary model produced with input spectrum S_stat_m = 1"""
     config = configparser.ConfigParser()
-    config.read('tests/galactic_fit_test_config1.ini')
+    config.read('tests/galactic_fit_test_config1.toml')
 
     wc = get_wavelet_model(config)
     get_lisa_constants(config)
@@ -53,7 +53,7 @@ def test_unit_noise_generation_stat(scale_mult) -> None:
 def test_unit_noise_generation_cyclo_time(var_select) -> None:
     """Test unit normal noise for nonstationary model produced with input spectrum S_stat_m = 1"""
     config = configparser.ConfigParser()
-    config.read('tests/galactic_fit_test_config1.ini')
+    config.read('tests/galactic_fit_test_config1.toml')
 
     wc = get_wavelet_model(config)
     get_lisa_constants(config)
@@ -109,7 +109,7 @@ def test_unit_noise_generation_cyclo_time(var_select) -> None:
 def test_noise_normalization_match() -> None:
     """Test ability to generate noise matching known spectrum through wavelet methods"""
     config = configparser.ConfigParser()
-    config.read('tests/spectral_noise_test_config1.ini')
+    config.read('tests/spectral_noise_test_config1.toml')
 
     wc = get_wavelet_model(config)
     lc = get_lisa_constants(config)

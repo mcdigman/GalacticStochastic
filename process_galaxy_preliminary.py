@@ -20,7 +20,7 @@ if __name__ == '__main__':
 
     a = np.array([])
 
-    config_file = 'default_parameters.ini'
+    config_file = 'default_parameters.toml'
     config = configparser.ConfigParser()
     config.read(config_file)
 

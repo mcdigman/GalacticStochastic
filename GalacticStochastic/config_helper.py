@@ -1,17 +1,19 @@
-"""Load all the configuration objects that are needed from an ini file"""
-import configparser
+"""Load all the configuration objects that are needed from a toml file"""
+from pathlib import Path
+
+import tomllib
 
 from GalacticStochastic.iteration_config import get_iteration_config
 from LisaWaveformTools.lisa_config import get_lisa_constants
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
 
-def get_config_objects(ini_filename):
-    """Load the configuration from the input ini filename
+def get_config_objects(toml_filename):
+    """Load the configuration from the input toml filename
     and create some of the config objects the iterative fit will need
     """
-    config = configparser.ConfigParser()
-    config.read(ini_filename)
+    with Path.open(toml_filename, "rb") as f:
+        config = tomllib.load(f)
 
     wc = get_wavelet_model(config)
 

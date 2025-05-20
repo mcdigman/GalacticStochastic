@@ -13,7 +13,7 @@ from WaveletWaveforms.wdm_config import get_wavelet_model
 
 # we  can use the same baise noise for most things and modulate it as necessary
 config = configparser.ConfigParser()
-config.read('tests/galactic_fit_test_config1.ini')
+config.read('tests/galactic_fit_test_config1.toml')
 
 wc = get_wavelet_model(config)
 

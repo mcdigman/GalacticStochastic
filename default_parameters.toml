@@ -90,10 +90,10 @@ snr_high_settle_offset = 2.0
 snr_high_fix_itr = 4
 
 # minimum binary frequency to allow (Hz)
-fmin_binary = 1.e-8
+fmin_binary = 1.0e-8
 
 # minimum binary frequency to allow (Hz)
-fmax_binary = 1.e0
+fmax_binary = 1.0e0
 
 # number of channels to evaluate galactic background
 nc_galaxy = 3

@@ -1,6 +1,5 @@
 """read wavelet transform constants in from config file and compute derived parameters"""
 
-import ast
 from collections import namedtuple
 
 import numpy as np
@@ -15,35 +14,35 @@ WDMWaveletConstants = namedtuple(
 
 def get_wavelet_model(config) -> WDMWaveletConstants:
     # number of time pixels (should be even)
-    Nf = int(ast.literal_eval(config['wavelet constants']['Nf']))
+    Nf = int(config['wavelet_constants']['Nf'])
     assert Nf & 1 == 0  # check even
 
     # number of frequency pixels (should be even)
-    Nt = int(ast.literal_eval(config['wavelet constants']['Nt']))
+    Nt = int(config['wavelet_constants']['Nt'])
     assert Nt & 1 == 0  # check even
 
     # time sampling cadence (units of seconds)
-    dt = float(ast.literal_eval(config['wavelet constants']['dt']))
+    dt = float(config['wavelet_constants']['dt'])
     assert dt > 0.
 
     # over sampling
-    mult = int(ast.literal_eval(config['wavelet constants']['mult']))
+    mult = int(config['wavelet_constants']['mult'])
 
     # number of frequency steps in interpolation table
-    Nsf = int(ast.literal_eval(config['wavelet constants']['Nsf']))
+    Nsf = int(config['wavelet_constants']['Nsf'])
 
     # number of fdots in interpolation table
-    Nfd = int(ast.literal_eval(config['wavelet constants']['Nfd']))
+    Nfd = int(config['wavelet_constants']['Nfd'])
 
     # fractional fdot increment in interpolation table
-    dfdot = float(ast.literal_eval(config['wavelet constants']['dfdot']))
+    dfdot = float(config['wavelet_constants']['dfdot'])
 
     # number of fdot increments which are less than zero in the interpolation table
-    Nfd_negative = int(ast.literal_eval(config['wavelet constants']['Nfd_negative']))
+    Nfd_negative = int(config['wavelet_constants']['Nfd_negative'])
     assert Nfd_negative < Nfd
 
     # number of time steps used to compute the interpolation table; must be an integer times mult
-    Nst = int(ast.literal_eval(config['wavelet constants']['Nst']))
+    Nst = int(config['wavelet_constants']['Nst'])
 
     dkstep = int(Nst // mult)
     if dkstep * mult != Nst:
@@ -51,10 +50,10 @@ def get_wavelet_model(config) -> WDMWaveletConstants:
         raise ValueError(msg)
 
     # filter steepness of wavelet transform
-    nx = float(ast.literal_eval(config['wavelet constants']['nx']))
+    nx = float(config['wavelet_constants']['nx'])
 
     # reduced filter length; must be a power of 2
-    L = int(ast.literal_eval(config['wavelet constants']['L']))
+    L = int(config['wavelet_constants']['L'])
     assert L > 0
     assert (L & (L - 1)) == 0  # check power of 2
 

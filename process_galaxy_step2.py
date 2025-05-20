@@ -21,7 +21,7 @@ if __name__ == '__main__':
     a = np.array([])
 
     config = configparser.ConfigParser()
-    config.read('default_parameters.ini')
+    config.read('default_parameters.toml')
 
     galaxy_file = config['files']['galaxy_file']
     galaxy_dir = config['files']['galaxy_dir']
