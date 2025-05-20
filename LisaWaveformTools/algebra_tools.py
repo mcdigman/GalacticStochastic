@@ -10,8 +10,10 @@ def gradient_homog_2d_inplace(ys: NDArray[float], result: NDArray[float], dx: fl
     Assumes constant x grid along second axis,
     forward/backward first order accurate at boundaries, speedup is trivial
     """
+    assert ys.shape == result.shape, 'Incompatible shape for result'
     nc_loc = ys.shape[0]
     n_ys = ys.shape[1]
+    assert n_ys > 1, 'Insufficient dimension to compute gradient'
     for itrc in range(nc_loc):
         result[itrc, 0] = (ys[itrc, 1] - ys[itrc, 0]) / dx
         result[itrc, n_ys - 1] = (ys[itrc, n_ys - 1] - ys[itrc, n_ys - 2]) / dx

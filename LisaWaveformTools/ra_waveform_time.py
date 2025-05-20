@@ -14,7 +14,7 @@ StationaryWaveformTime = namedtuple('StationaryWaveformTime', ['T', 'PT', 'FT', 
 SpacecraftChannels = namedtuple('SpacecraftChannels', ['T', 'RR', 'II', 'dRR', 'dII'])
 
 
-@njit(fastmath=True)
+#@njit(fastmath=True)
 def ExtractAmpPhase_inplace(
     spacecraft_channels: SpacecraftChannels,
     AET_waveform: StationaryWaveformTime,
@@ -63,6 +63,7 @@ def ExtractAmpPhase_inplace(
             II = IIs[itrc, n]
 
             if RR == 0.0 and II == 0.0:
+                #print('zero',n, p, polds, js)
                 p = 0.0
                 AET_FTs[itrc, n] = FT[n]
             else:
@@ -70,11 +71,14 @@ def ExtractAmpPhase_inplace(
                 AET_FTs[itrc, n] = FT[n] - (II * dRRs[itrc, n] - RR * dIIs[itrc, n]) / (RR**2 + II**2) / (2 * np.pi)
 
             if p < 0.0:
+                #print('z',n, p)
                 p += 2 * np.pi
 
             if p - polds[itrc] > 6.0:
                 js[itrc] -= 2 * np.pi
+                #print('gt',n)
             if polds[itrc] - p > 6.0:
+                #print('lt',n)
                 js[itrc] += 2 * np.pi
             polds[itrc] = p
 
