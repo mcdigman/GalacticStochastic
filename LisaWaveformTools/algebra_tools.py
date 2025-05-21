@@ -7,8 +7,8 @@ from numpy.typing import NDArray
 @njit()
 def gradient_homog_2d_inplace(ys: NDArray[float], result: NDArray[float], dx: float) -> None:
     """Compute the gradient dy/dx using a second order accurate central finite difference.
-    Assumes constant x grid along second axis,
-    forward/backward first order accurate at boundaries, speedup is trivial
+    First order accurate method at the edges of the array..
+    Assumes constant x grid along second axis.
     """
     assert ys.shape == result.shape, 'Incompatible shape for result'
     nc_loc = ys.shape[0]

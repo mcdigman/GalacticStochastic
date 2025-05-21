@@ -51,8 +51,6 @@ def wavemaket_multi_inplace(
                 # highest frequency layer
                 kmax = min(wc.Nf - 1, np.int64(np.floor((fa + HBW) / wc.DF)))
                 for k in range(kmin, kmax + 1):
-                    wavelet_waveform.pixel_index[itrc, mm] = j_ind * wc.Nf + k
-
                     zmid = (wc.DF / wc.df) * k
 
                     kk = np.floor(za - zmid - 0.5)
@@ -66,6 +64,7 @@ def wavemaket_multi_inplace(
 
                     # prevent case where we would overflow the table
                     if (0 <= jj1 < Nfsam1_loc - 1) and (0 <= jj2 < Nfsam2_loc - 1):
+                        wavelet_waveform.pixel_index[itrc, mm] = j_ind * wc.Nf + k
 
                         assert taylor_table.evcs[n_ind, jj1] != 0.0
                         assert taylor_table.evcs[n_ind, jj1 + 1] != 0.0

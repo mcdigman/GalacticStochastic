@@ -14,6 +14,7 @@ StationaryWaveformTime = namedtuple('StationaryWaveformTime', ['T', 'PT', 'FT', 
 SpacecraftChannels = namedtuple('SpacecraftChannels', ['T', 'RR', 'II', 'dRR', 'dII'])
 
 
+#@njit(fastmath=True, parallel=True)
 @njit()
 def ExtractAmpPhase_inplace(
     spacecraft_channels: SpacecraftChannels,
@@ -24,6 +25,17 @@ def ExtractAmpPhase_inplace(
     dt: float,
 ) -> None:
     """Get the amplitude and phase for LISA"""
+    # Note that if RR and II are both very near zero there can be a step function
+    # in the phase that would correspond to a dirac delta function in the frequency,
+    # that currently is not represented in the frequency or derivative at all,
+    # because the formula used for the frequency derivative does not include a delta function.
+    # It appears naturally in the phase due to the two argument arctangent.
+    # (the limit of the two argument arctangent as one argument approaches zero
+    # is one possible representation of a step function)
+    # I think this may be the best behavior given the current use of passing to
+    # Wavelet domain taylor expansion methods given typically sparse sampling for wavelets
+    # but I am not sure if including such delta functions would be better in other use cases.
+    # The code implicitly assumes postivie frequencies.
     AA = waveform.AT
     PP = waveform.PT
     FT = waveform.FT
@@ -47,40 +59,60 @@ def ExtractAmpPhase_inplace(
     gradient_homog_2d_inplace(RRs, dRRs, dt)
     gradient_homog_2d_inplace(IIs, dIIs, dt)
 
-    n = 0
+    # Get the starting local phase for wrapping
     for itrc in range(nc_channel):
-        polds[itrc] = np.arctan2(IIs[itrc, n], RRs[itrc, n])
-        if polds[itrc] < 0.0:
-            polds[itrc] += 2 * np.pi
+        polds[itrc] = np.arctan2(IIs[itrc, 0], RRs[itrc, 0]) % (2*np.pi)
+
     for n in range(NT):
         fonfs = FT[n] / lc.fstr
 
         # including TDI + fractional frequency modifiers
         Ampx = AA[n] * (8 * fonfs * np.sin(fonfs))
-        Phase = PP[n]
         for itrc in range(nc_channel):
             RR = RRs[itrc, n]
             II = IIs[itrc, n]
 
             if RR == 0.0 and II == 0.0:
+                # Handle zero denominator case without a delta function.
+                # Note that the second derivative could be more complicated here,
+                # But we ignore that for now and just take a numerical derivative.
                 p = 0.0
                 AET_FTs[itrc, n] = FT[n]
             else:
-                p = np.arctan2(II, RR)
+                # Handle general case, with the analytic derivative of the phase.
+                # dRR and dII are currently computed through a numerical derivative,
+                # But could be constructed analytically.
+                # Ignores delta functions in FT that can happen when RR or II pass through 0.
+                # Keep the local phase postive for self-consistent wrapping.
+                p = np.arctan2(II, RR) % (2 * np.pi)
                 AET_FTs[itrc, n] = FT[n] - (II * dRRs[itrc, n] - RR * dIIs[itrc, n]) / (RR**2 + II**2) / (2 * np.pi)
 
-            if p < 0.0:
-                p += 2 * np.pi
-
+            # If the phase has increased or decreased more than 6 (<~2 pi)
+            # try absorbing that change into the reported phase permanently,
+            # as it is likely represents wrapping.
+            # In testing 6 is a decent choice of the cutoff.
+            # It might be possible to detect wrapping by multiple factors of 2 pi
+            # using the analytic part of the perturbation in AET_Fts.
+            # Note that wrapping due to the linear part of the frequency is assumed
+            # to have already been done in the original waveform generation.
             if p - polds[itrc] > 6.0:
                 js[itrc] -= 2 * np.pi
-            if polds[itrc] - p > 6.0:
+            elif polds[itrc] - p > 6.0:
                 js[itrc] += 2 * np.pi
+
+            # Store the current phase for wrapping
             polds[itrc] = p
 
+            # Set the amplitude
             AET_Amps[itrc, n] = Ampx * np.sqrt(RR**2 + II**2)
-            AET_Phases[itrc, n] = Phase + p + js[itrc]
+            # Set the phase, including the input base phase, the perturbation from this iteration,
+            # and any previous wrapping we have applied.
+            AET_Phases[itrc, n] = PP[n] + p + js[itrc]
 
+    # Get the frequency derivative using a numerical derivative, with offsets for
+    # improved numerical accuracy. Because of the behavior near RR or II=0,
+    # the numerical derivative may have better practical accuracy than
+    # inserting an analytic result, at least without some additional numerical stabilizers.
     for itrc in range(nc_channel):
         AET_FTds[itrc, 0] = (AET_FTs[itrc, 1] - AET_FTs[itrc, 0] - FT[1] + FT[0]) / dt + FTd[0]
         AET_FTds[itrc, NT - 1] = (
