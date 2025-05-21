@@ -64,28 +64,31 @@ def wavemaket_multi_inplace(
                     jj1 = kk + Nfsam1_loc // 2
                     jj2 = kk + Nfsam2_loc // 2
 
-                    assert taylor_table.evcs[n_ind, jj1] != 0.0
-                    assert taylor_table.evcs[n_ind, jj1 + 1] != 0.0
-                    assert taylor_table.evcs[n_ind + 1, jj2] != 0.0
-                    assert taylor_table.evcs[n_ind + 1, jj2 + 1] != 0.0
+                    # prevent case where we would overflow the table
+                    if (0 <= jj1 < Nfsam1_loc - 1) and (0 <= jj2 < Nfsam2_loc - 1):
 
-                    y = (1.0 - dx) * taylor_table.evcs[n_ind, jj1] + dx * taylor_table.evcs[n_ind, jj1 + 1]
-                    yy = (1.0 - dx) * taylor_table.evcs[n_ind + 1, jj2] + dx * taylor_table.evcs[n_ind + 1, jj2 + 1]
+                        assert taylor_table.evcs[n_ind, jj1] != 0.0
+                        assert taylor_table.evcs[n_ind, jj1 + 1] != 0.0
+                        assert taylor_table.evcs[n_ind + 1, jj2] != 0.0
+                        assert taylor_table.evcs[n_ind + 1, jj2 + 1] != 0.0
 
-                    z = (1.0 - dx) * taylor_table.evss[n_ind, jj1] + dx * taylor_table.evss[n_ind, jj1 + 1]
-                    zz = (1.0 - dx) * taylor_table.evss[n_ind + 1, jj2] + dx * taylor_table.evss[n_ind + 1, jj2 + 1]
+                        y = (1.0 - dx) * taylor_table.evcs[n_ind, jj1] + dx * taylor_table.evcs[n_ind, jj1 + 1]
+                        yy = (1.0 - dx) * taylor_table.evcs[n_ind + 1, jj2] + dx * taylor_table.evcs[n_ind + 1, jj2 + 1]
 
-                    # interpolate over fdot
-                    y = (1.0 - dy) * y + dy * yy
-                    z = (1.0 - dy) * z + dy * zz
+                        z = (1.0 - dx) * taylor_table.evss[n_ind, jj1] + dx * taylor_table.evss[n_ind, jj1 + 1]
+                        zz = (1.0 - dx) * taylor_table.evss[n_ind + 1, jj2] + dx * taylor_table.evss[n_ind + 1, jj2 + 1]
 
-                    if (j_ind + k) % 2:
-                        wavelet_waveform.wave_value[itrc, mm] = -(c * z + s * y)
-                    else:
-                        wavelet_waveform.wave_value[itrc, mm] = c * y - s * z
+                        # interpolate over fdot
+                        y = (1.0 - dy) * y + dy * yy
+                        z = (1.0 - dy) * z + dy * zz
 
-                    mm += 1
-                    # end loop over frequency layers
+                        if (j_ind + k) % 2:
+                            wavelet_waveform.wave_value[itrc, mm] = -(c * z + s * y)
+                        else:
+                            wavelet_waveform.wave_value[itrc, mm] = c * y - s * z
+
+                        mm += 1
+                        # end loop over frequency layers
             elif force_nulls:
                 # we know what the indices would be for values not precomputed in the table
                 # so force values outside the range of the table to 0 instead of dropping,
