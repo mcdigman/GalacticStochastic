@@ -189,7 +189,7 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult, rr_model, f0p_mult):
     spacecraft_channels = SpacecraftChannels(T, RR.copy(), II.copy(), dRR, dII)
 
     # Call the function
-    ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, nt_loc, lc, wc.DT)
+    ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, lc, wc.DT)
 
     # Check that input wavefrom objects have not mutated
     assert np.all(spacecraft_channels.RR == RR)
@@ -503,7 +503,7 @@ def test_ExtractAmpPhase_inplace_nearzero(f0_mult, rr_model, f0p_mult):
     spacecraft_channels = SpacecraftChannels(T, RR.copy(), II.copy(), dRR, dII)
 
     # Call the function
-    ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, nt_loc, lc, wc.DT)
+    ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, lc, wc.DT)
 
     # Check that input wavefrom objects have not mutated
     assert np.all(spacecraft_channels.RR == RR)
@@ -763,8 +763,8 @@ def test_ExtractAmpPhase_inplace_transform(f0_mult, rr_model, f0p_mult):
     spacecraft_channels_fine = SpacecraftChannels(T_fine, RR_fine, II_fine, dRR_fine, dII_fine)
 
     # Call the function
-    ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, nt_loc, lc, wc.DT)
-    ExtractAmpPhase_inplace(spacecraft_channels_fine, AET_waveform_fine, waveform_fine, nt_loc * wc.Nf, lc, wc.dt)
+    ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, lc, wc.DT)
+    ExtractAmpPhase_inplace(spacecraft_channels_fine, AET_waveform_fine, waveform_fine, lc, wc.dt)
 
     # get the sparse wavelet waveform
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(lc.nc_waveform, wc)
