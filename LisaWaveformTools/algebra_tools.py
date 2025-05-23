@@ -1,4 +1,4 @@
-"""some helper algebra tools using numba"""
+"""Functions for computing gradients of arrays using numerical finite differences."""
 
 from numba import njit, prange
 from numpy.typing import NDArray
@@ -44,6 +44,7 @@ def gradient_uniform_inplace(ys: NDArray[float], result: NDArray[float], dx: flo
         If input array has less than 2 points along second axis
     """
     assert ys.shape == result.shape, 'Incompatible shape for result'
+    assert len(ys.shape) == 2, 'Input ys must be a 2D array'
     nc_loc = ys.shape[0]
     n_ys = ys.shape[1]
     assert n_ys > 1, 'Insufficient length to compute gradient'
@@ -59,7 +60,7 @@ def gradient_uniform_inplace(ys: NDArray[float], result: NDArray[float], dx: flo
             result[itrc, i] = (ys[itrc, i + 1] - ys[itrc, i - 1]) / (2 * dx)
 
 @njit()
-def stabilized_gradient_inplace(
+def stabilized_gradient_uniform_inplace(
     x: NDArray[float], dxdt: NDArray[float], y: NDArray[float], dydt: NDArray[float], dt: float
 ) -> None:
     """Get a second-order central stabilized gradient of y and store it in dydt.
@@ -94,15 +95,14 @@ def stabilized_gradient_inplace(
     - n_t must be greater than 1 for gradient computation
 
     """
+    # input dimension validation
+    assert len(y.shape) == 2, 'Input y must be a 2D array'
+    assert len(x.shape) == 1, 'Input x must be a 1D array'
+    assert dydt.shape == y.shape, 'Input dydt must have the same shape as y'
+    assert x.shape == dxdt.shape, 'Input x and dxdt must have the same shape'
     nc_channel = y.shape[0]
     n_t = y.shape[1]
-
-    # input dimension validation
-    assert len(y.shape) == 2
-    assert len(x.shape) == 1
-    assert dydt.shape == y.shape
-    assert x.shape == dxdt.shape
-    assert x.shape[0] == n_t
+    assert x.shape[0] == n_t, 'Input x and dxdt must have the same length'
     assert n_t > 1, 'Insuficient Length to Compute Gradient'
 
     for itrc in range(nc_channel):

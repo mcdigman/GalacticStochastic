@@ -5,7 +5,7 @@ from collections import namedtuple
 import numpy as np
 from numba import njit, prange
 
-from LisaWaveformTools.algebra_tools import gradient_uniform_inplace, stabilized_gradient_inplace
+from LisaWaveformTools.algebra_tools import gradient_uniform_inplace, stabilized_gradient_uniform_inplace
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_freq import RAantenna_inplace, get_tensor_basis, get_xis_inplace, spacecraft_vec
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
@@ -284,7 +284,7 @@ def get_time_tdi_amp_phase(
     # improved numerical accuracy. Because of the behavior near RR or II=0,
     # the numerical derivative may have better practical accuracy than
     # inserting an analytic result, at least without some additional numerical stabilizers.
-    stabilized_gradient_inplace(waveform.FT, waveform.FTd, AET_waveform.FT, AET_waveform.FTd, dt)
+    stabilized_gradient_uniform_inplace(waveform.FT, waveform.FTd, AET_waveform.FT, AET_waveform.FTd, dt)
 
 
 # TODO check factor of 2pi

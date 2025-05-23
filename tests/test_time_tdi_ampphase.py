@@ -34,12 +34,12 @@ wc_in = get_wavelet_model(config_in)
 taylor_time_table = get_taylor_table_time(wc_in, cache_mode='skip', output_mode='skip')
 
 
-def get_waveform_helper(f_input, fp_input, amp_input, nt_loc, DT, nc_waveform, max_f):
+def get_waveform_helper(f_input, fp_input, fpp_input, amp_input, nt_loc, DT, nc_waveform, max_f):
     """Help get waveform objects."""
     T = np.arange(nt_loc) * DT
-    PT = 2 * np.pi * (f_input + 1.0 / 2 * fp_input * T) * T
-    FT = f_input + fp_input * T
-    FTd = np.full(nt_loc, fp_input)
+    PT = 2 * np.pi * (f_input + 1.0 / 2.0 * fp_input * T + 1.0/6.0 * fpp_input * T**2) * T
+    FT = f_input + fp_input * T + 1.0 / 2.0 *fpp_input * T**2
+    FTd = fp_input + fpp_input * T
     AT = np.full(nt_loc, amp_input)
 
     if np.any((max_f < FT) | (FT < 0)):
@@ -665,19 +665,20 @@ def test_time_tdi_inplace_transform(f0_mult, rr_model, f0p_mult):
     # Create fake input data for a pure sine wave
     f_input = wc.DF * wc.Nf * f0_mult
     fp_input = f0p_mult * f_input / wc.Tobs
+    fpp_input = 0.
     amp_input = 1.0
     waveform, AET_waveform, arg_cut = get_waveform_helper(
-        f_input, fp_input, amp_input, nt_loc, wc.DT, nc_waveform, max_f=1 / (2 * wc.dt) - 1 / wc.Tobs
+        f_input, fp_input, fpp_input, amp_input, nt_loc, wc.DT, nc_waveform, max_f=1 / (2 * wc.dt) - 1 / wc.Tobs
     )
     waveform_fine, AET_waveform_fine, arg_cut_fine = get_waveform_helper(
-        f_input, fp_input, amp_input, nt_loc * wc.Nf, wc.dt, nc_waveform, max_f=1 / (2 * wc.dt) - 1 / wc.Tobs
+        f_input, fp_input, fpp_input, amp_input, nt_loc * wc.Nf, wc.dt, nc_waveform, max_f=1 / (2 * wc.dt) - 1 / wc.Tobs
     )
     T = waveform.T
     T_fine = waveform_fine.T
 
     # ensure the RRs and IIs are scaled diferently in different channels
-    RR_scale_mult = np.array([1.0, 1.0, 1.0])
-    II_scale_mult = np.array([1.0, 1.0, 1.0])
+    RR_scale_mult = np.array([0.3, 0.9, 0.7])
+    II_scale_mult = np.array([0.3, 0.9, 0.7])
     if rr_model == 'const':
         RR_t_mult = np.full(nt_loc, 1.0)
         II_t_mult = np.full(nt_loc, 1.0)

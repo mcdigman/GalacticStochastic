@@ -1,13 +1,14 @@
 """Unit tests for the functions in algebra_tools."""
 
+import numba
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose, assert_array_equal
 
-from LisaWaveformTools.algebra_tools import gradient_uniform_inplace, stabilized_gradient_inplace
+from LisaWaveformTools.algebra_tools import gradient_uniform_inplace, stabilized_gradient_uniform_inplace
 
 
-def test_gradient_homog_2d_inplace_raise_bad_shape1():
+def test_gradient_uniform_inplace_raise_bad_shape1():
     """Check for an assertion error if the shape is wrong"""
     DT = 0.1
     x = np.zeros((3, 100))
@@ -16,7 +17,7 @@ def test_gradient_homog_2d_inplace_raise_bad_shape1():
         gradient_uniform_inplace(x, y, DT)
 
 
-def test_gradient_homog_2d_inplace_raise_bad_shape2():
+def test_gradient_uniform_inplace_raise_bad_shape2():
     """Check for an assertion error if the shape is wrong"""
     DT = 0.1
     x = np.zeros((3, 100))
@@ -25,7 +26,7 @@ def test_gradient_homog_2d_inplace_raise_bad_shape2():
         gradient_uniform_inplace(x, y, DT)
 
 
-def test_gradient_homog_2d_inplace_raise_bad_shape3():
+def test_gradient_uniform_inplace_raise_bad_shape3():
     """Check for an assertion error if the shape is wrong"""
     DT = 0.1
     x = np.zeros((3, 100))
@@ -34,7 +35,7 @@ def test_gradient_homog_2d_inplace_raise_bad_shape3():
         gradient_uniform_inplace(x, y, DT)
 
 
-def test_gradient_homog_2d_inplace_raise_bad_shape4():
+def test_gradient_uniform_inplace_raise_bad_shape4():
     """Check for an assertion error if the shape is wrong"""
     DT = 0.1
     x = np.zeros((3, 100))
@@ -42,6 +43,195 @@ def test_gradient_homog_2d_inplace_raise_bad_shape4():
     with pytest.raises(AssertionError):
         gradient_uniform_inplace(x, y, DT)
 
+def test_gradient_uniform_inplace_raise_bad_shape5():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros((3, 1))
+    y = np.zeros((3, 1))
+    with pytest.raises(AssertionError):
+        gradient_uniform_inplace(x, y, DT)
+
+def test_gradient_uniform_inplace_raise_bad_shape6():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros((3, 0))
+    y = np.zeros((3, 0))
+    with pytest.raises(AssertionError):
+        gradient_uniform_inplace(x, y, DT)
+
+def test_gradient_uniform_inplace_raise_bad_shape7():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros(100)
+    y = np.zeros(100)
+    with pytest.raises((AssertionError, numba.core.errors.TypingError)):
+        gradient_uniform_inplace(x, y, DT)
+
+def test_gradient_uniform_inplace_raise_bad_shape8():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros((3, 100, 1))
+    y = np.zeros((3, 100, 1))
+    with pytest.raises((AssertionError, numba.core.errors.TypingError)):
+        gradient_uniform_inplace(x, y, DT)
+
+def test_gradient_uniform_inplace_raise_bad_shape9():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros((3, 100, 1))
+    y = np.zeros((3, 100))
+    with pytest.raises((AssertionError, numba.core.errors.TypingError)):
+        gradient_uniform_inplace(x, y, DT)
+
+def test_stabilized_gradient_uniform_inplace_raise_bad_shape1():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros(100)
+    dxdt = np.zeros(100)
+    y = np.zeros((3, 100))
+    dydt = np.zeros((3, 100, 1))
+    with pytest.raises(AssertionError):
+        stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
+
+def test_stabilized_gradient_uniform_inplace_raise_bad_shape2():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros((100, 1))
+    dxdt = np.zeros(100)
+    y = np.zeros((3, 100))
+    dydt = np.zeros((3, 100))
+    with pytest.raises((AssertionError, numba.core.errors.TypingError)):
+        stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
+
+def test_stabilized_gradient_uniform_inplace_raise_bad_shape3():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros(100)
+    dxdt = np.zeros(100)
+    y = np.zeros((4, 100))
+    dydt = np.zeros((3, 100))
+    with pytest.raises(AssertionError):
+        stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
+
+def test_stabilized_gradient_uniform_inplace_raise_bad_shape4():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros(100)
+    dxdt = np.zeros(100)
+    y = np.zeros((3, 101))
+    dydt = np.zeros((3, 100))
+    with pytest.raises(AssertionError):
+        stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
+
+def test_stabilized_gradient_uniform_inplace_raise_bad_shape5():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros(101)
+    dxdt = np.zeros(100)
+    y = np.zeros((3, 100))
+    dydt = np.zeros((3, 100))
+    with pytest.raises(AssertionError):
+        stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
+
+def test_stabilized_gradient_uniform_inplace_raise_bad_shape6():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros(100)
+    dxdt = np.zeros(101)
+    y = np.zeros((3, 100))
+    dydt = np.zeros((3, 100))
+    with pytest.raises(AssertionError):
+        stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
+
+def test_stabilized_gradient_uniform_inplace_raise_bad_shape7():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros(100)
+    dxdt = np.zeros(100)
+    y = np.zeros((3, 100))
+    dydt = np.zeros((3, 101))
+    with pytest.raises(AssertionError):
+        stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
+
+def test_stabilized_gradient_uniform_inplace_raise_bad_shape8():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros(1)
+    dxdt = np.zeros(1)
+    y = np.zeros((3, 1))
+    dydt = np.zeros((3, 1))
+    with pytest.raises(AssertionError):
+        stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
+
+def test_stabilized_gradient_uniform_inplace_raise_bad_shape9():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros(0)
+    dxdt = np.zeros(0)
+    y = np.zeros((3, 0))
+    dydt = np.zeros((3, 0))
+    with pytest.raises(AssertionError):
+        stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
+
+def test_stabilized_gradient_uniform_inplace_raise_bad_shape10():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros(100)
+    dxdt = np.zeros((100, 1))
+    y = np.zeros((3, 100))
+    dydt = np.zeros((3, 100))
+    with pytest.raises((AssertionError, numba.core.errors.TypingError)):
+        stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
+
+def test_stabilized_gradient_uniform_inplace_raise_bad_shape11():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros(100)
+    dxdt = np.zeros(100)
+    y = np.zeros((3, 100, 1))
+    dydt = np.zeros((3, 100))
+    with pytest.raises((AssertionError, numba.core.errors.TypingError)):
+        stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
+
+def test_stabilized_gradient_uniform_inplace_raise_bad_shape12():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros(100)
+    dxdt = np.zeros(100)
+    y = np.zeros((3, 100, 1))
+    dydt = np.zeros((3, 100, 1))
+    with pytest.raises((AssertionError, numba.core.errors.TypingError)):
+        stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
+
+def test_stabilized_gradient_uniform_inplace_raise_bad_shape13():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros(101)
+    dxdt = np.zeros(101)
+    y = np.zeros((3, 100))
+    dydt = np.zeros((3, 100))
+    with pytest.raises((AssertionError, numba.core.errors.TypingError)):
+        stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
+
+def test_stabilized_gradient_uniform_inplace_raise_bad_shape14():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros(100)
+    dxdt = np.zeros(100)
+    y = np.zeros(100)
+    dydt = np.zeros(100)
+    with pytest.raises((AssertionError, numba.core.errors.TypingError)):
+        stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
+
+def test_stabilized_gradient_uniform_inplace_raise_bad_shape15():
+    """Check for an assertion error if the shape is wrong"""
+    DT = 0.1
+    x = np.zeros((3, 100))
+    dxdt = np.zeros((3, 100))
+    y = np.zeros(100)
+    dydt = np.zeros(100)
+    with pytest.raises((AssertionError, numba.core.errors.TypingError)):
+        stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
 
 def get_scaling_test_case_helper(t_scaling, T, DT):
     """Get various cases of scaling for gradient computation tests"""
@@ -183,7 +373,7 @@ def get_scaling_test_case_helper(t_scaling, T, DT):
 
 @pytest.mark.parametrize('DT', [0.05, 1])
 @pytest.mark.parametrize('t0', [-101.0, -50.0, 0.0, 50.0, 101.0])
-@pytest.mark.parametrize('nt_loc', [0, 1, 2, 3, 4, 100, 101])
+@pytest.mark.parametrize('nt_loc', [2, 3, 4, 100, 101])
 @pytest.mark.parametrize(
     't_scaling',
     [
@@ -210,7 +400,7 @@ def get_scaling_test_case_helper(t_scaling, T, DT):
         'log1',
     ],
 )
-def test_gradient_homog_2d_inplace(t_scaling, DT, t0, nt_loc):
+def test_gradient_uniform_inplace(t_scaling, DT, t0, nt_loc):
     """Test the function gradient_homog_2d_implace produces expected results"""
     nc_waveform = 3
     T = np.arange(0.0, nt_loc) * DT + t0
@@ -228,13 +418,6 @@ def test_gradient_homog_2d_inplace(t_scaling, DT, t0, nt_loc):
     # check we get the same results if we iterate over every dimension separately
     result2 = np.zeros((nc_waveform, nt_loc))
 
-    # check we raise an error if a gradient cannot be computed
-    if nt_loc < 2:
-        with pytest.raises(AssertionError):
-            gradient_uniform_inplace(ys, result, DT)
-        with pytest.raises(AssertionError):
-            gradient_uniform_inplace(ys, result2[0:1], DT)
-        return
     gradient_uniform_inplace(ys, result, DT)
 
     for itrc in range(nc_waveform):
@@ -292,13 +475,12 @@ def test_gradient_homog_2d_inplace(t_scaling, DT, t0, nt_loc):
     ],
 )
 @pytest.mark.parametrize('perturb_mult', [-1.0, 0.0, 0.1, 1.0])
-def test_stabilized_gradient_inplace(t_scale_base, t_scale_perturb, perturb_mult, DT, t0, nt_loc):
+def test_stabilized_gradient_uniform_inplace(t_scale_base, t_scale_perturb, perturb_mult, DT, t0, nt_loc):
     """Test the function gradient_homog_2d_implace produces expected results"""
     nc_waveform = 3
     T = np.arange(0.0, nt_loc) * DT + t0
-    # channel_scale_mult = np.array([0.9, 0.5, 0.3])
     x_scale_mult = np.array([1.0, 1.0, 1.0])
-    x_perturb_scale_mult = np.array([1.0, 1.0, 1.0]) * perturb_mult
+    x_perturb_scale_mult = np.array([0.95, 1.05, 1.0]) * perturb_mult
 
     x, dxdt = get_scaling_test_case_helper(t_scale_base, T, DT)
     if x is None or dxdt is None:
@@ -329,16 +511,10 @@ def test_stabilized_gradient_inplace(t_scale_base, t_scale_perturb, perturb_mult
     result2 = np.zeros((nc_waveform, nt_loc))
 
     # check we raise an error if a gradient cannot be computed
-    if nt_loc < 2:
-        with pytest.raises(AssertionError):
-            stabilized_gradient_inplace(x, dxdt, y_perturbed, result, DT)
-        with pytest.raises(AssertionError):
-            stabilized_gradient_inplace(x, dxdt, y_perturbed, result2[0:1], DT)
-        return
-    stabilized_gradient_inplace(x, dxdt, y_perturbed, result, DT)
+    stabilized_gradient_uniform_inplace(x, dxdt, y_perturbed, result, DT)
 
     for itrc in range(nc_waveform):
-        stabilized_gradient_inplace(x, dxdt, y_perturbed[itrc:itrc + 1], result2[itrc:itrc + 1], DT)
+        stabilized_gradient_uniform_inplace(x, dxdt, y_perturbed[itrc:itrc + 1], result2[itrc:itrc + 1], DT)
 
     assert_array_equal(result, result2)
     result2 = None
