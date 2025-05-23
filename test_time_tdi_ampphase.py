@@ -1,4 +1,4 @@
-"""Unit tests for ExtractAmpPhase_inplace.
+"""Unit tests for get_time_tdi_amp_phase.
 There is also some incidental/partial coverage of wavemaket.
 """
 
@@ -15,7 +15,7 @@ from WDMWaveletTransforms.wavelet_transforms import inverse_wavelet_time
 
 from LisaWaveformTools.algebra_tools import gradient_homog_2d_inplace
 from LisaWaveformTools.lisa_config import get_lisa_constants
-from LisaWaveformTools.ra_waveform_time import ExtractAmpPhase_inplace, SpacecraftChannels, StationaryWaveformTime
+from LisaWaveformTools.ra_waveform_time import SpacecraftChannels, StationaryWaveformTime, get_time_tdi_amp_phase
 from WaveletWaveforms.coefficientsWDM_time_helpers import (
     get_empty_sparse_taylor_time_waveform,
     get_taylor_table_time,
@@ -189,7 +189,7 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult, rr_model, f0p_mult):
     spacecraft_channels = SpacecraftChannels(T, RR.copy(), II.copy(), dRR, dII)
 
     # Call the function
-    ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, lc, wc.DT)
+    get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, wc.DT)
 
     # Check that input wavefrom objects have not mutated
     assert np.all(spacecraft_channels.RR == RR)
@@ -365,7 +365,7 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult, rr_model, f0p_mult):
     ],
 )
 # @pytest.mark.skip()
-def test_ExtractAmpPhase_inplace_nearzero(f0_mult, rr_model, f0p_mult):
+def test_time_tdi_inplace_nearzero(f0_mult, rr_model, f0p_mult):
     """Test extraction in cases where the RR or II or both go near zero"""
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 
@@ -503,7 +503,7 @@ def test_ExtractAmpPhase_inplace_nearzero(f0_mult, rr_model, f0p_mult):
     spacecraft_channels = SpacecraftChannels(T, RR.copy(), II.copy(), dRR, dII)
 
     # Call the function
-    ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, lc, wc.DT)
+    get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, wc.DT)
 
     # Check that input wavefrom objects have not mutated
     assert np.all(spacecraft_channels.RR == RR)
@@ -646,7 +646,7 @@ def test_ExtractAmpPhase_inplace_nearzero(f0_mult, rr_model, f0p_mult):
 @pytest.mark.parametrize('f0p_mult', [-0.2, 0.0, 1.0e-5, 0.2, 0.9])
 @pytest.mark.parametrize('rr_model', ['quad2', 'sin1', 'sin2', 'sin3', 'sin4', 'sin5', 'lin18', 'lin17', 'const'])
 # @pytest.mark.skip()
-def test_ExtractAmpPhase_inplace_transform(f0_mult, rr_model, f0p_mult):
+def test_time_tdi_inplace_transform(f0_mult, rr_model, f0p_mult):
     """Test whether the signal computed in the time domain matches computing
     it in the wavelet domain and transforming to time.
     """
@@ -763,8 +763,8 @@ def test_ExtractAmpPhase_inplace_transform(f0_mult, rr_model, f0p_mult):
     spacecraft_channels_fine = SpacecraftChannels(T_fine, RR_fine, II_fine, dRR_fine, dII_fine)
 
     # Call the function
-    ExtractAmpPhase_inplace(spacecraft_channels, AET_waveform, waveform, lc, wc.DT)
-    ExtractAmpPhase_inplace(spacecraft_channels_fine, AET_waveform_fine, waveform_fine, lc, wc.dt)
+    get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, wc.DT)
+    get_time_tdi_amp_phase(spacecraft_channels_fine, AET_waveform_fine, waveform_fine, lc, wc.dt)
 
     # get the sparse wavelet waveform
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(lc.nc_waveform, wc)

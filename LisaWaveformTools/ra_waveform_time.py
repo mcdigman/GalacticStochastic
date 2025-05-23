@@ -208,7 +208,7 @@ def get_time_tdi_amp_phase_helper(
 
 
 @njit()
-def ExtractAmpPhase_inplace(
+def get_time_tdi_amp_phase(
     spacecraft_channels: SpacecraftChannels,
     AET_waveform: StationaryWaveformTime,
     waveform: StationaryWaveformTime,
@@ -395,6 +395,6 @@ class BinaryTimeWaveformAmpFreqD:
             self.kdotx,
             self.lc,
         )
-        ExtractAmpPhase_inplace(
+        get_time_tdi_amp_phase(
             self.spacecraft_channels, self.AET_waveform, self.waveform, self.nt_range, self.lc, self.wc.DT
         )
