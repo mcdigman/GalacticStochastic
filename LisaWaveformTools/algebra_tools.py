@@ -5,10 +5,43 @@ from numpy.typing import NDArray
 
 
 @njit()
-def gradient_homog_2d_inplace(ys: NDArray[float], result: NDArray[float], dx: float) -> None:
-    """Compute the gradient dy/dx using a second order accurate central finite difference.
-    First order accurate method at the edges of the array..
-    Assumes constant x grid along second axis.
+def gradient_uniform_inplace(ys: NDArray[float], result: NDArray[float], dx: float) -> None:
+    """Compute the numerical gradient of a 2D array using finite differences.
+
+    This function computes dy/dx using second-order accurate central finite differences
+    for interior points and first-order accurate forward/backward differences at the edges.
+    Results are stored in-place in the provided result array.
+
+    Parameters
+    ----------
+    ys : numpy.ndarray
+        Input 2D array of shape (nc_loc, n_ys) containing y-values to differentiate.
+        Array is assumed to be on a uniform grid along the second axis
+    result : numpy.ndarray
+        Output array of same shape as ys where gradient values will be stored
+    dx : float
+        Step size between x-values (uniform grid spacing)
+
+    Returns
+    -------
+    None
+        Results are stored in-place in the result array
+
+    Notes
+    -----
+    - Uses second-order central differences: (y[i+1] - y[i-1])/(2*dx) for interior points
+    - Uses first-order differences at boundaries:
+      - Forward difference at left edge: (y[1] - y[0])/dx
+      - Backward difference at right edge: (y[n] - y[n-1])/dx
+    - Input array must have at least 2 points along second axis for gradient computation
+    - Function is optimized using Numba's @njit decorator for performance
+    - If compiled with parallel=True, parallel computation is used for the main loop over interior points
+
+    Raises
+    ------
+    AssertionError
+        If result and ys arrays have different shapes
+        If input array has less than 2 points along second axis
     """
     assert ys.shape == result.shape, 'Incompatible shape for result'
     nc_loc = ys.shape[0]

@@ -13,7 +13,7 @@ from scipy.signal import butter, filtfilt
 from WDMWaveletTransforms.transform_freq_funcs import tukey
 from WDMWaveletTransforms.wavelet_transforms import inverse_wavelet_time
 
-from LisaWaveformTools.algebra_tools import gradient_homog_2d_inplace
+from LisaWaveformTools.algebra_tools import gradient_uniform_inplace
 from LisaWaveformTools.lisa_config import get_lisa_constants
 from LisaWaveformTools.ra_waveform_time import SpacecraftChannels, StationaryWaveformTime, get_time_tdi_amp_phase
 from WaveletWaveforms.coefficientsWDM_time_helpers import (
@@ -264,8 +264,8 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult, rr_model, f0p_mult):
         #    (waveform.PT - 2*np.pi*T*waveform.FT + p_offset)
         #    % (2*np.pi), atol=1.e-14*f0_mult*wc.DT, rtol=1.e-14*f0_mult*wc.DT)
 
-    gradient_homog_2d_inplace(dII, ddII, wc.DT)
-    gradient_homog_2d_inplace(dRR, ddRR, wc.DT)
+    gradient_uniform_inplace(dII, ddII, wc.DT)
+    gradient_uniform_inplace(dRR, ddRR, wc.DT)
 
     # Checks specitic for static sine wave
     for itrc in range(nc_waveform):
@@ -515,8 +515,8 @@ def test_time_tdi_inplace_nearzero(f0_mult, rr_model, f0p_mult):
     assert np.all(waveform.FT == FT)
     assert np.all(waveform.FTd == FTd)
 
-    gradient_homog_2d_inplace(dII, ddII, wc.DT)
-    gradient_homog_2d_inplace(dRR, ddRR, wc.DT)
+    gradient_uniform_inplace(dII, ddII, wc.DT)
+    gradient_uniform_inplace(dRR, ddRR, wc.DT)
 
     # Check that the inputs respect expected derivatives
     assert_allclose(

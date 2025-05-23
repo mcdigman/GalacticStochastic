@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose, assert_array_equal
 
-from LisaWaveformTools.algebra_tools import gradient_homog_2d_inplace, stabilized_gradient_inplace
+from LisaWaveformTools.algebra_tools import gradient_uniform_inplace, stabilized_gradient_inplace
 
 
 def test_gradient_homog_2d_inplace_raise_bad_shape1():
@@ -13,7 +13,7 @@ def test_gradient_homog_2d_inplace_raise_bad_shape1():
     x = np.zeros((3, 100))
     y = np.zeros((2, 100))
     with pytest.raises(AssertionError):
-        gradient_homog_2d_inplace(x, y, DT)
+        gradient_uniform_inplace(x, y, DT)
 
 
 def test_gradient_homog_2d_inplace_raise_bad_shape2():
@@ -22,7 +22,7 @@ def test_gradient_homog_2d_inplace_raise_bad_shape2():
     x = np.zeros((3, 100))
     y = np.zeros((3, 101))
     with pytest.raises(AssertionError):
-        gradient_homog_2d_inplace(x, y, DT)
+        gradient_uniform_inplace(x, y, DT)
 
 
 def test_gradient_homog_2d_inplace_raise_bad_shape3():
@@ -31,7 +31,7 @@ def test_gradient_homog_2d_inplace_raise_bad_shape3():
     x = np.zeros((3, 100))
     y = np.zeros((2, 101))
     with pytest.raises(AssertionError):
-        gradient_homog_2d_inplace(x, y, DT)
+        gradient_uniform_inplace(x, y, DT)
 
 
 def test_gradient_homog_2d_inplace_raise_bad_shape4():
@@ -40,7 +40,7 @@ def test_gradient_homog_2d_inplace_raise_bad_shape4():
     x = np.zeros((3, 100))
     y = np.zeros((3, 100, 1))
     with pytest.raises(AssertionError):
-        gradient_homog_2d_inplace(x, y, DT)
+        gradient_uniform_inplace(x, y, DT)
 
 
 def get_scaling_test_case_helper(t_scaling, T, DT):
@@ -231,14 +231,14 @@ def test_gradient_homog_2d_inplace(t_scaling, DT, t0, nt_loc):
     # check we raise an error if a gradient cannot be computed
     if nt_loc < 2:
         with pytest.raises(AssertionError):
-            gradient_homog_2d_inplace(ys, result, DT)
+            gradient_uniform_inplace(ys, result, DT)
         with pytest.raises(AssertionError):
-            gradient_homog_2d_inplace(ys, result2[0:1], DT)
+            gradient_uniform_inplace(ys, result2[0:1], DT)
         return
-    gradient_homog_2d_inplace(ys, result, DT)
+    gradient_uniform_inplace(ys, result, DT)
 
     for itrc in range(nc_waveform):
-        gradient_homog_2d_inplace(ys[itrc:itrc + 1], result2[itrc:itrc + 1], DT)
+        gradient_uniform_inplace(ys[itrc:itrc + 1], result2[itrc:itrc + 1], DT)
 
     assert_array_equal(result, result2)
     result2 = None

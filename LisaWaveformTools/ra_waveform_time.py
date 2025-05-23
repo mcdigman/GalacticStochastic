@@ -5,7 +5,7 @@ from collections import namedtuple
 import numpy as np
 from numba import njit, prange
 
-from LisaWaveformTools.algebra_tools import gradient_homog_2d_inplace, stabilized_gradient_inplace
+from LisaWaveformTools.algebra_tools import gradient_uniform_inplace, stabilized_gradient_inplace
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_freq import RAantenna_inplace, get_tensor_basis, get_xis_inplace, spacecraft_vec
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
@@ -86,8 +86,8 @@ def spacecraft_channel_deriv_helper(spacecraft_channels: SpacecraftChannels, dt:
         Results are stored in place in dRR and dII attributes of spacecraft_channels
     """
     # get and store the derivatives
-    gradient_homog_2d_inplace(spacecraft_channels.RR, spacecraft_channels.dRR, dt)
-    gradient_homog_2d_inplace(spacecraft_channels.II, spacecraft_channels.dII, dt)
+    gradient_uniform_inplace(spacecraft_channels.RR, spacecraft_channels.dRR, dt)
+    gradient_uniform_inplace(spacecraft_channels.II, spacecraft_channels.dII, dt)
 
 
 @njit(fastmath=True, parallel=True)
