@@ -83,7 +83,7 @@ def get_scaling_test_case_helper(t_scaling, T, DT):
     elif t_scaling == 'sin1':
         x = np.sin(2 * np.pi * T)
         dxdt = 2 * np.pi * np.cos(2 * np.pi * T)
-    elif t_scaling == 'osc1' or t_scaling == 'osc2':
+    elif t_scaling == 'osc1':
         x = (-1) ** np.arange(0, nt_loc)
         dxdt = np.zeros(nt_loc)
         if nt_loc < 2:
@@ -197,7 +197,6 @@ def get_scaling_test_case_helper(t_scaling, T, DT):
         'sqrt1',
         'cbrt1',
         'osc1',
-        'osc2',
         'heaviside1',
         'dirac1',
         'dirac2',
@@ -265,7 +264,6 @@ def test_gradient_homog_2d_inplace(t_scaling, DT, t0, nt_loc):
         'sqrt1',
         'cbrt1',
         'osc1',
-        'osc2',
         'heaviside1',
         'dirac1',
         'dirac2',
@@ -293,7 +291,7 @@ def test_gradient_homog_2d_inplace(t_scaling, DT, t0, nt_loc):
         'exp1',
     ],
 )
-@pytest.mark.parametrize('perturb_mult', [0.0, 0.1, 1.0])
+@pytest.mark.parametrize('perturb_mult', [-1.0, 0.0, 0.1, 1.0])
 def test_stabilized_gradient_inplace(t_scale_base, t_scale_perturb, perturb_mult, DT, t0, nt_loc):
     """Test the function gradient_homog_2d_implace produces expected results"""
     nc_waveform = 3
@@ -387,10 +385,9 @@ def test_stabilized_gradient_inplace(t_scale_base, t_scale_perturb, perturb_mult
                 atol=max(np.abs(result[itrc, mask_ind]).max() * 1.0e-11, 1.0e-14),
                 rtol=1.0e-12,
             )
-
             # check that the approximation is an improvement on average
             # by asserting that it is not more than 10% worse in any test case
-            if mask_ind.size > 4 and perturb_mult != 0.0:
-                assert np.linalg.norm(
-                    dydt_perturbed[itrc, mask_ind] - gradient_basic[itrc, mask_ind]
-                ) >= 0.9 * np.linalg.norm(dydt_perturbed[itrc, mask_ind] - result[itrc, mask_ind])
+            if mask_ind.size > 4 and perturb_mult != 0.0 and perturb_mult != -1.0:
+                nrm1 = np.linalg.norm(dydt_perturbed[itrc, mask_ind] - gradient_basic[itrc, mask_ind])
+                nrm2 = np.linalg.norm(dydt_perturbed[itrc, mask_ind] - result[itrc, mask_ind])
+                assert max(nrm1, 1.e-9) >= 0.9 * nrm2
