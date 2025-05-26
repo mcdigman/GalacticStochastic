@@ -8,7 +8,7 @@ import numpy.typing as npt
 # import numba as nb
 from numba import njit
 
-from WaveletWaveforms.coefficientsWDM_time_helpers import SparseTaylorWaveform
+from WaveletWaveforms.sparse_waveform_functions import SparseWaveletWaveform
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 # from numba.experimental import jitclass
@@ -27,7 +27,7 @@ class DenseNoiseModel(ABC):
         """Generate random noise for full matrix"""
 
     @abstractmethod
-    def get_sparse_snrs(self, wavelet_waveform: SparseTaylorWaveform, nt_min=0, nt_max=-1) -> npt.NDArray[np.float64]:
+    def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_min=0, nt_max=-1) -> npt.NDArray[np.float64]:
         """Get S/N of waveform in each TDI channel"""
 
     @abstractmethod
@@ -61,7 +61,7 @@ class DenseNoiseModel(ABC):
 
 @njit()
 def get_sparse_snr_helper(
-    wavelet_waveform: SparseTaylorWaveform,
+    wavelet_waveform: SparseWaveletWaveform,
     nt_min,
     nt_max,
     wc: WDMWaveletConstants,
@@ -72,7 +72,7 @@ def get_sparse_snr_helper(
 
     Parameters
     ----------
-    wavelet_waveform: SparseTaylorWaveform
+    wavelet_waveform: SparseWaveletWaveform
         a sparse wavelet domain waveform
     nt_min
     nt_max
@@ -193,7 +193,7 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
             noise_res[j, :, :] = rng.normal(0.0, 1.0, (self.wc.Nf, self.nc_noise)) * self.chol_S[j, :, :]
         return noise_res
 
-    def get_sparse_snrs(self, wavelet_waveform: SparseTaylorWaveform, nt_min=0, nt_max=-1) -> npt.NDArray[np.float64]:
+    def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_min=0, nt_max=-1) -> npt.NDArray[np.float64]:
         """Get snr of waveform in each channel"""
         return get_sparse_snr_helper(wavelet_waveform, nt_min, nt_max, self.wc, self.inv_chol_S, self.nc_snr)
 
@@ -334,14 +334,14 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
             noise_res[j, :, :] = rng.normal(0.0, 1.0, (self.wc.Nf, self.nc_noise)) * self.chol_S[j, :, :]
         return noise_res
 
-    def get_sparse_snrs(self, wavelet_waveform: SparseTaylorWaveform, nt_min=0, nt_max=-1) -> npt.NDArray[float]:
+    def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_min=0, nt_max=-1) -> npt.NDArray[float]:
         """Get s/n of waveform in each TDI channel. Parameters usually come from
         BinaryWaveletAmpFreqDT.get_unsorted_coeffs() from
         wavelet_detector_waveforms.
 
         Parameters
         ----------
-        wavelet_waveform: namedtuple SparseTaylorTimeWaveform
+        wavelet_waveform: namedtuple SparseWaveletWaveform
             a sparse wavelet domain waveform
         nt_min : int, default=0
             time pixels that are start/end of slice for evaluating.

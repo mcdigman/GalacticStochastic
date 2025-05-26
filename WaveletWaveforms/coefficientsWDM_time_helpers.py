@@ -8,54 +8,24 @@ from time import time
 import h5py
 import numpy as np
 import scipy as sp
-from numpy.typing import NDArray
 from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 
 from WaveletWaveforms.coefficientsWDM_time_funcs import get_taylor_table_time_helper, wavelet
+from WaveletWaveforms.sparse_waveform_functions import SparseWaveletWaveform
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 SECSYEAR = 24 * 365 * 3600  # Number of seconds in a calendar year
 
 WaveletTaylorTimeCoeffs = namedtuple('WaveletTaylorTimeCoeffs', ['Nfsam', 'evcs', 'evss'])
 
-SparseTaylorWaveform = namedtuple('SparseTaylorWaveform', ['wave_value', 'pixel_index', 'n_set', 'N_max'])
-
-SparseTaylorWaveform.__doc__ = """
-namedtuple object that contains a sparse representation of a wavelet waveform,
-as computed using the taylor approximation in e.g. wavemaket_multi_inplace
-because the actual array size needed isn't known in advance,
-it internally stores arrays that are the maximum size possible in
-the approximation, and records the number of pixels that are actually set in
-n_set. In pixel_index, it additionally uses indicator values of -1 to indicate pixels
-which are not set. The pixel indices don't need to be listed in any particular order,
-Although for some applications it could be convenient for them to be sorted.
-wave_value : numpy.ndarray
-    stores the actual waveform as the values of the wavelet pixels
-    at the pixel indices specified by lists_pixels.
-    All values with index >= n_set should be set to 0.
-    Shape is the same as lists_pixels: shape: (nc_waveform, N_max)
-pixel_index : numpy.ndarray
-    stores the indices of x,y coordinates of all pixels that are
-    currently set. All values with index >= n_set should be set to -1
-    shape: (nc_waveform, N_max) number of TDI channels x maximum number
-    of pixels possible in sparse representation.
-n_set : numpy.ndarray of integers
-    number of wavelet coefficients that are *currently* set
-    all values must be <= N_max.
-    shape: number of TDI channels
-N_max: integer
-    the maximum number of wavelet pixels that could possibly
-    be set in the sparse representation,
-    which is determined by the shape of the interpolation table
-"""
 
 
-def get_empty_sparse_taylor_time_waveform(nc_waveform, wc: WDMWaveletConstants) -> SparseTaylorWaveform:
-    """Get a blank SparseTaylorTimeWaveform object with arrays of the correct sizes"""
+def get_empty_sparse_taylor_time_waveform(nc_waveform, wc: WDMWaveletConstants) -> SparseWaveletWaveform:
+    """Get a blank SparseWaveletWaveform object for the Taylor time approximation methods."""
     # need the frequency derivatives to calculate the maximum possible size
     fds = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)
     # calculate maximum possible number of pixels
-    N_max = np.int64(np.ceil((wc.BW + fds[wc.Nfd - 1] * wc.Tw) / wc.DF)) * wc.Nt
+    N_max = np.int64(np.ceil((wc.BW + np.max(np.abs(fds)) * wc.Tw) / wc.DF)) * wc.Nt
     # array of wavelet coefficients
     wave_value = np.zeros((nc_waveform, N_max))
     # aray of pixel indices
@@ -63,30 +33,9 @@ def get_empty_sparse_taylor_time_waveform(nc_waveform, wc: WDMWaveletConstants) 
     # number of pixel indices that are set
     n_set = np.zeros(nc_waveform, dtype=np.int64)
 
-    return SparseTaylorWaveform(wave_value, pixel_index, n_set, N_max)
+    return SparseWaveletWaveform(wave_value, pixel_index, n_set, N_max)
 
 
-def sparse_addition_helper(sparse_waveform: SparseTaylorWaveform, dense_representation: NDArray[float]) -> None:
-    """Take a sparse wavelet representation from SparseTaylorWaveform
-    and add it to a dense wavelet representation
-    sparse_waveform: namedtuple SparseTaylorTimeWaveform
-        the sparse representation of waveform, with
-        at least as many channels as dense_representation
-    dense_representation: nd.ndarray
-        the dense wavelet representation
-        shape: (Nf*Nt, N channels)
-    """
-    nc_waveform = sparse_waveform.wave_value.shape[0]
-    nc_representation = dense_representation.shape[-1]
-    pixel_index = sparse_waveform.pixel_index
-    n_set = sparse_waveform.n_set
-    wave_value = sparse_waveform.wave_value
-
-    # write to all the channels that we know how to write to
-    nc_loc = min(nc_representation, nc_waveform)
-
-    for itrc in range(nc_loc):
-        dense_representation[pixel_index[itrc, : n_set[itrc]], itrc] += wave_value[itrc, : n_set[itrc]]
 
 
 def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mode='skip') -> WaveletTaylorTimeCoeffs:

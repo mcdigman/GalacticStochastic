@@ -3,11 +3,11 @@
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_time import BinaryTimeWaveformAmpFreqD, StationaryWaveformTime
 from WaveletWaveforms.coefficientsWDM_time_helpers import (
-    SparseTaylorWaveform,
     WaveletTaylorTimeCoeffs,
     get_empty_sparse_taylor_time_waveform,
     get_taylor_table_time,
 )
+from WaveletWaveforms.sparse_waveform_functions import SparseWaveletWaveform
 from WaveletWaveforms.taylor_wdm_funcs import wavemaket_multi_inplace
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
@@ -64,7 +64,7 @@ class BinaryWaveletAmpFreqDT:
         )
         self.consistent = True
 
-    def get_unsorted_coeffs(self) -> SparseTaylorWaveform:
+    def get_unsorted_coeffs(self) -> SparseWaveletWaveform:
         """Get coefficients in the order they are generated"""
         if not self.consistent:
             self.update_params(self.params)

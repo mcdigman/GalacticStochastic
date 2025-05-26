@@ -4,7 +4,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from GalacticStochastic.galactic_fit_helpers import get_S_cyclo
-from WaveletWaveforms.coefficientsWDM_time_helpers import SparseTaylorWaveform, sparse_addition_helper
+from WaveletWaveforms.sparse_waveform_functions import SparseWaveletWaveform, sparse_addition_helper
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
@@ -172,18 +172,18 @@ class BGDecomposition:
         )
         return S
 
-    def add_undecided(self, wavelet_waveform: SparseTaylorWaveform) -> None:
+    def add_undecided(self, wavelet_waveform: SparseWaveletWaveform) -> None:
         """Add a binary to the undecided component of the galactic background"""
         sparse_addition_helper(wavelet_waveform, self.galactic_undecided)
 
-    def add_floor(self, wavelet_waveform: SparseTaylorWaveform) -> None:
+    def add_floor(self, wavelet_waveform: SparseWaveletWaveform) -> None:
         """Add a binary to the floor component of the galactic background"""
         sparse_addition_helper(wavelet_waveform, self.galactic_floor)
 
-    def add_faint(self, wavelet_waveform: SparseTaylorWaveform) -> None:
+    def add_faint(self, wavelet_waveform: SparseWaveletWaveform) -> None:
         """Add a binary to the faint component of the galactic background"""
         sparse_addition_helper(wavelet_waveform, self.galactic_below)
 
-    def add_bright(self, wavelet_waveform: SparseTaylorWaveform) -> None:
+    def add_bright(self, wavelet_waveform: SparseWaveletWaveform) -> None:
         """Add a binary to the bright component of the galactic background"""
         sparse_addition_helper(wavelet_waveform, self.galactic_above)

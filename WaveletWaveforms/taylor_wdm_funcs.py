@@ -4,13 +4,14 @@ import numpy as np
 from numba import njit
 
 from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime
-from WaveletWaveforms.coefficientsWDM_time_helpers import SparseTaylorWaveform, WaveletTaylorTimeCoeffs
+from WaveletWaveforms.coefficientsWDM_time_helpers import WaveletTaylorTimeCoeffs
+from WaveletWaveforms.sparse_waveform_functions import SparseWaveletWaveform
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 @njit(fastmath=True)
 def wavemaket_multi_inplace(
-    wavelet_waveform: SparseTaylorWaveform,
+    wavelet_waveform: SparseWaveletWaveform,
     waveform: StationaryWaveformTime,
     nt_min,
     nt_max,
@@ -33,7 +34,9 @@ def wavemaket_multi_inplace(
             ny = np.int64(np.floor(y0))
             n_ind = ny + wc.Nfd_negative
 
-            if 0 <= n_ind < wc.Nfd - 2:
+            # TODO why was this Nfd - 2?
+            assert taylor_table.Nfsam.size == wc.Nfd
+            if 0 <= n_ind < wc.Nfd - 1:
                 c = waveform.AT[itrc, j] * np.cos(waveform.PT[itrc, j])
                 s = waveform.AT[itrc, j] * np.sin(waveform.PT[itrc, j])
 
@@ -42,7 +45,9 @@ def wavemaket_multi_inplace(
                 za = fa / wc.df
 
                 Nfsam1_loc = taylor_table.Nfsam[n_ind]
+                #assert Nfsam1_loc == int(wc.Nsf + 2 / 3 * np.abs(ny) * wc.dfdot * wc.Nsf)
                 Nfsam2_loc = taylor_table.Nfsam[n_ind + 1]
+                #assert Nfsam2_loc == int(wc.Nsf + 2 / 3 * np.abs(ny + 1) * wc.dfdot * wc.Nsf)
                 HBW = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df / 2
 
                 # lowest frequency layer
@@ -50,6 +55,8 @@ def wavemaket_multi_inplace(
 
                 # highest frequency layer
                 kmax = min(wc.Nf - 1, np.int64(np.floor((fa + HBW) / wc.DF)))
+
+
                 for k in range(kmin, kmax + 1):
                     zmid = (wc.DF / wc.df) * k
 
@@ -61,6 +68,9 @@ def wavemaket_multi_inplace(
                     # interpolate over frequency
                     jj1 = kk + Nfsam1_loc // 2
                     jj2 = kk + Nfsam2_loc // 2
+                    #if not ((0 <= jj1 < Nfsam1_loc - 1) and (0 <= jj2 < Nfsam2_loc - 1)):
+                    #    print(jj1, jj2, Nfsam1_loc, Nfsam2_loc, kk)
+                    #    print(j, k, kmin, kmax)
 
                     # prevent case where we would overflow the table
                     if (0 <= jj1 < Nfsam1_loc - 1) and (0 <= jj2 < Nfsam2_loc - 1):
@@ -70,6 +80,11 @@ def wavemaket_multi_inplace(
                         assert taylor_table.evcs[n_ind, jj1 + 1] != 0.0
                         assert taylor_table.evcs[n_ind + 1, jj2] != 0.0
                         assert taylor_table.evcs[n_ind + 1, jj2 + 1] != 0.0
+
+                        assert taylor_table.evss[n_ind, jj1] != 0.0
+                        assert taylor_table.evss[n_ind, jj1 + 1] != 0.0
+                        assert taylor_table.evss[n_ind + 1, jj2] != 0.0
+                        assert taylor_table.evss[n_ind + 1, jj2 + 1] != 0.0
 
                         y = (1.0 - dx) * taylor_table.evcs[n_ind, jj1] + dx * taylor_table.evcs[n_ind, jj1 + 1]
                         yy = (1.0 - dx) * taylor_table.evcs[n_ind + 1, jj2] + dx * taylor_table.evcs[n_ind + 1, jj2 + 1]

@@ -30,6 +30,7 @@ WDMWaveletConstants = namedtuple(
         'dom',
         'DOM',
         'insDOM',
+        'L',
     ],
 )
 
@@ -126,6 +127,9 @@ def get_wavelet_model(config) -> WDMWaveletConstants:
     # step size in FTd
     dfd = DF / Tw * dfdot
 
+    # double check some known relationships between the parameters hold
+    assert DF**2 == DF/(2*DT)
+
     return WDMWaveletConstants(
         Nf,
         Nt,
@@ -150,4 +154,5 @@ def get_wavelet_model(config) -> WDMWaveletConstants:
         dom,
         DOM,
         insDOM,
+        L,
     )

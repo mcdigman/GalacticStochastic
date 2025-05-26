@@ -396,5 +396,5 @@ class BinaryTimeWaveformAmpFreqD:
             self.lc,
         )
         get_time_tdi_amp_phase(
-            self.spacecraft_channels, self.AET_waveform, self.waveform, self.nt_range, self.lc, self.wc.DT
+            self.spacecraft_channels, self.AET_waveform, self.waveform, self.lc, self.wc.DT
         )

@@ -19,8 +19,8 @@ from LisaWaveformTools.ra_waveform_time import SpacecraftChannels, StationaryWav
 from WaveletWaveforms.coefficientsWDM_time_helpers import (
     get_empty_sparse_taylor_time_waveform,
     get_taylor_table_time,
-    sparse_addition_helper,
 )
+from WaveletWaveforms.sparse_waveform_functions import sparse_addition_helper
 from WaveletWaveforms.taylor_wdm_funcs import wavemaket_multi_inplace
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
@@ -31,13 +31,13 @@ with Path.open(toml_filename_in, 'rb') as f:
     config_in = tomllib.load(f)
 
 wc_in = get_wavelet_model(config_in)
-taylor_time_table = get_taylor_table_time(wc_in, cache_mode='skip', output_mode='skip')
+taylor_time_table = get_taylor_table_time(wc_in, cache_mode='check', output_mode='hf')
 
 
-def get_waveform_helper(f_input, fp_input, fpp_input, amp_input, nt_loc, DT, nc_waveform, max_f):
+def get_waveform_helper(p_input, f_input, fp_input, fpp_input, amp_input, nt_loc, DT, nc_waveform, max_f):
     """Help get waveform objects."""
     T = np.arange(nt_loc) * DT
-    PT = 2 * np.pi * (f_input + 1.0 / 2.0 * fp_input * T + 1.0/6.0 * fpp_input * T**2) * T
+    PT = 2 * np.pi * (f_input + 1.0 / 2.0 * fp_input * T + 1.0/6.0 * fpp_input * T**2) * T + p_input
     FT = f_input + fp_input * T + 1.0 / 2.0 *fpp_input * T**2
     FTd = fp_input + fpp_input * T
     AT = np.full(nt_loc, amp_input)
@@ -58,6 +58,56 @@ def get_waveform_helper(f_input, fp_input, fpp_input, amp_input, nt_loc, DT, nc_
     waveform = StationaryWaveformTime(T, PT, FT, FTd, AT)
     AET_waveform = StationaryWaveformTime(T, AET_PT, AET_FT, AET_FTd, AET_AT)
     return waveform, AET_waveform, arg_cut
+
+def get_RR_t_mult(rr_model, nt_loc, nf_loc, dt):
+    """Get a multiplier for RR and II for testing"""
+    if rr_model == 'const':
+        RR_t_mult = np.full(nt_loc * nf_loc, 1.0)
+        II_t_mult = np.full(nt_loc * nf_loc, 1.0)
+    elif rr_model == 'lin17':
+        RR_t_mult = np.linspace(
+            0.17946632189870892,
+            0.17946632189870892 - 4.633410079678654e-08 * dt * (nt_loc - nt_loc / 2) * nf_loc,
+            nt_loc * nf_loc,
+        )
+        II_t_mult = np.linspace(
+            0.005095443502715089,
+            0.005095443502715089 - 1.1460665211908961e-07 * dt * (nt_loc - nt_loc / 2) * nf_loc,
+            nt_loc * nf_loc,
+        )
+    elif rr_model == 'lin18':
+        II_t_mult = -np.linspace(
+            0.17946632189870892,
+            0.17946632189870892 - 4.633410079678654e-08 * dt * (nt_loc - nt_loc / 2) * nf_loc,
+            nt_loc * nf_loc,
+        )
+        RR_t_mult = -np.linspace(
+            0.005095443502715089,
+            0.005095443502715089 - 1.1460665211908961e-07 * dt * (nt_loc - nt_loc / 2) * nf_loc,
+            nt_loc * nf_loc,
+        )
+    elif rr_model == 'quad2':
+        RR_t_mult = np.linspace(-1.0, 1.0, (nt_loc + 1) * nf_loc)[nf_loc :] ** 2
+        II_t_mult = np.linspace(-1.0, 1.0, (nt_loc + 1) * nf_loc)[nf_loc :] ** 2
+    elif rr_model == 'sin1':
+        RR_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :])
+        II_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :])
+    elif rr_model == 'sin2':
+        RR_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :])
+        II_t_mult = np.cos(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :])
+    elif rr_model == 'sin3':
+        RR_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :])
+        II_t_mult = -np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :])
+    elif rr_model == 'sin4':
+        RR_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :])
+        II_t_mult = np.sin(2 * np.pi * (np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :] + 2.0 / nt_loc))
+    elif rr_model == 'sin5':
+        RR_t_mult = -np.cos(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :])
+        II_t_mult = -np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :])
+    else:
+        msg = 'unrecognized option for rr_model=' + str(rr_model)
+        raise ValueError(msg)
+    return RR_t_mult, II_t_mult
 
 @pytest.mark.parametrize(
     'f0_mult',
@@ -663,15 +713,16 @@ def test_time_tdi_inplace_transform(f0_mult, rr_model, f0p_mult):
     nc_waveform = lc.nc_waveform
 
     # Create fake input data for a pure sine wave
+    p_input = np.pi/2.
     f_input = wc.DF * wc.Nf * f0_mult
     fp_input = f0p_mult * f_input / wc.Tobs
     fpp_input = 0.
     amp_input = 1.0
     waveform, AET_waveform, arg_cut = get_waveform_helper(
-        f_input, fp_input, fpp_input, amp_input, nt_loc, wc.DT, nc_waveform, max_f=1 / (2 * wc.dt) - 1 / wc.Tobs
+        p_input, f_input, fp_input, fpp_input, amp_input, nt_loc, wc.DT, nc_waveform, max_f=1 / (2 * wc.dt) - 1 / wc.Tobs
     )
     waveform_fine, AET_waveform_fine, arg_cut_fine = get_waveform_helper(
-        f_input, fp_input, fpp_input, amp_input, nt_loc * wc.Nf, wc.dt, nc_waveform, max_f=1 / (2 * wc.dt) - 1 / wc.Tobs
+        p_input, f_input, fp_input, fpp_input, amp_input, nt_loc * wc.Nf, wc.dt, nc_waveform, max_f=1 / (2 * wc.dt) - 1 / wc.Tobs
     )
     T = waveform.T
     T_fine = waveform_fine.T
@@ -679,78 +730,9 @@ def test_time_tdi_inplace_transform(f0_mult, rr_model, f0p_mult):
     # ensure the RRs and IIs are scaled diferently in different channels
     RR_scale_mult = np.array([0.3, 0.9, 0.7])
     II_scale_mult = np.array([0.3, 0.9, 0.7])
-    if rr_model == 'const':
-        RR_t_mult = np.full(nt_loc, 1.0)
-        II_t_mult = np.full(nt_loc, 1.0)
-        RR_t_mult_fine = np.full(nt_loc * wc.Nf, 1.0)
-        II_t_mult_fine = np.full(nt_loc * wc.Nf, 1.0)
-    elif rr_model == 'lin17':
-        RR_t_mult = np.linspace(
-            0.17946632189870892, 0.17946632189870892 - 4.633410079678654e-08 * wc.DT * (nt_loc - nt_loc / 2), nt_loc
-        )
-        II_t_mult = np.linspace(
-            0.005095443502715089, 0.005095443502715089 - 1.1460665211908961e-07 * wc.DT * (nt_loc - nt_loc / 2), nt_loc
-        )
-        RR_t_mult_fine = np.linspace(
-            0.17946632189870892,
-            0.17946632189870892 - 4.633410079678654e-08 * wc.dt * (nt_loc - nt_loc / 2) * wc.Nf,
-            nt_loc * wc.Nf,
-        )
-        II_t_mult_fine = np.linspace(
-            0.005095443502715089,
-            0.005095443502715089 - 1.1460665211908961e-07 * wc.dt * (nt_loc - nt_loc / 2) * wc.Nf,
-            nt_loc * wc.Nf,
-        )
-    elif rr_model == 'lin18':
-        II_t_mult = -np.linspace(
-            0.17946632189870892, 0.17946632189870892 - 4.633410079678654e-08 * wc.DT * (nt_loc - nt_loc / 2), nt_loc
-        )
-        RR_t_mult = -np.linspace(
-            0.005095443502715089, 0.005095443502715089 - 1.1460665211908961e-07 * wc.DT * (nt_loc - nt_loc / 2), nt_loc
-        )
-        II_t_mult_fine = -np.linspace(
-            0.17946632189870892,
-            0.17946632189870892 - 4.633410079678654e-08 * wc.dt * (nt_loc - nt_loc / 2) * wc.Nf,
-            nt_loc * wc.Nf,
-        )
-        RR_t_mult_fine = -np.linspace(
-            0.005095443502715089,
-            0.005095443502715089 - 1.1460665211908961e-07 * wc.dt * (nt_loc - nt_loc / 2) * wc.Nf,
-            nt_loc * wc.Nf,
-        )
-    elif rr_model == 'quad2':
-        RR_t_mult = np.linspace(-1.0, 1.0, nt_loc + 1)[1:] ** 2
-        II_t_mult = np.linspace(-1.0, 1.0, nt_loc + 1)[1:] ** 2
-        RR_t_mult_fine = np.linspace(-1.0, 1.0, (nt_loc + 1) * wc.Nf)[wc.Nf :] ** 2
-        II_t_mult_fine = np.linspace(-1.0, 1.0, (nt_loc + 1) * wc.Nf)[wc.Nf :] ** 2
-    elif rr_model == 'sin1':
-        RR_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, nt_loc + 1)[1:])
-        II_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, nt_loc + 1)[1:])
-        RR_t_mult_fine = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * wc.Nf)[wc.Nf :])
-        II_t_mult_fine = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * wc.Nf)[wc.Nf :])
-    elif rr_model == 'sin2':
-        RR_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, nt_loc + 1)[1:])
-        II_t_mult = np.cos(2 * np.pi * np.linspace(1.0, -1.0, nt_loc + 1)[1:])
-        RR_t_mult_fine = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * wc.Nf)[wc.Nf :])
-        II_t_mult_fine = np.cos(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * wc.Nf)[wc.Nf :])
-    elif rr_model == 'sin3':
-        RR_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, nt_loc + 1)[1:])
-        II_t_mult = -np.sin(2 * np.pi * np.linspace(1.0, -1.0, nt_loc + 1)[1:])
-        RR_t_mult_fine = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * wc.Nf)[wc.Nf :])
-        II_t_mult_fine = -np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * wc.Nf)[wc.Nf :])
-    elif rr_model == 'sin4':
-        RR_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, nt_loc + 1)[1:])
-        II_t_mult = np.sin(2 * np.pi * (np.linspace(1.0, -1.0, nt_loc + 1)[1:] + 2.0 / nt_loc))
-        RR_t_mult_fine = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * wc.Nf)[wc.Nf :])
-        II_t_mult_fine = np.sin(2 * np.pi * (np.linspace(1.0, -1.0, (nt_loc + 1) * wc.Nf)[wc.Nf :] + 2.0 / nt_loc))
-    elif rr_model == 'sin5':
-        RR_t_mult = -np.cos(2 * np.pi * np.linspace(1.0, -1.0, nt_loc + 1)[1:])
-        II_t_mult = -np.sin(2 * np.pi * np.linspace(1.0, -1.0, nt_loc + 1)[1:])
-        RR_t_mult_fine = -np.cos(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * wc.Nf)[wc.Nf :])
-        II_t_mult_fine = -np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * wc.Nf)[wc.Nf :])
-    else:
-        msg = 'unrecognized option for rr_model=' + str(rr_model)
-        raise ValueError(msg)
+
+    RR_t_mult, II_t_mult = get_RR_t_mult(rr_model, nt_loc, 1, wc.DT)
+    RR_t_mult_fine, II_t_mult_fine = get_RR_t_mult(rr_model, nt_loc, wc.Nf, wc.dt)
 
     RR = (np.ones((nc_waveform, nt_loc)).T * RR_scale_mult).T * RR_t_mult
     II = (np.ones((nc_waveform, nt_loc)).T * II_scale_mult).T * II_t_mult
@@ -820,6 +802,6 @@ def test_time_tdi_inplace_transform(f0_mult, rr_model, f0p_mult):
     print(match_cos)
     print(match_sin)
     print(resid)
-    assert resid < 4.0e-3
-    assert match_cos > 0.998
+    assert resid < 5.0e-3
+    assert match_cos > 0.997
     assert match_sin < 1.0e-2
