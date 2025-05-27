@@ -79,13 +79,13 @@ def wavelet_sparse_to_dense(wavelet_waveform: SparseWaveletWaveform, wc) -> NDAr
     #unpack the signal
     for itrc in range(nc_waveform):
         assert n_set[itrc] <= wavelet_waveform.N_max
-        #for itrp in range(n_set[itrc]):
-        #    assert pixel_index[itrc, itrp] != -1
-        #    i = pixel_index[itrc, itrp] % wc.Nf
-        #    j = (pixel_index[itrc, itrp] - i) // wc.Nf
-        #    result[j, i, itrc] = wave_value[itrc, itrp]
-        i = np.mod(pixel_index[itrc, :n_set[itrc]], wc.Nf).astype(np.int64)
-        j = ((pixel_index[itrc, :n_set[itrc]] - i) // wc.Nf).astype(np.int64)
-        result[j, i, itrc] = wave_value[itrc, :n_set[itrc]]
+        for itrp in range(n_set[itrc]):
+            assert pixel_index[itrc, itrp] != -1
+            i = pixel_index[itrc, itrp] % wc.Nf
+            j = (pixel_index[itrc, itrp] - i) // wc.Nf
+            result[j, i, itrc] = wave_value[itrc, itrp]
+        # i = np.mod(pixel_index[itrc, :n_set[itrc]], wc.Nf).astype(np.int64)
+        # j = ((pixel_index[itrc, :n_set[itrc]] - i) // wc.Nf).astype(np.int64)
+        # result[j, i, itrc] = wave_value[itrc, :n_set[itrc]]
 
     return result

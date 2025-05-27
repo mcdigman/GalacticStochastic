@@ -7,16 +7,14 @@ from time import time
 
 import h5py
 import numpy as np
-import scipy as sp
-from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 
-from WaveletWaveforms.coefficientsWDM_time_funcs import get_taylor_table_time_helper, wavelet
+from WaveletWaveforms.coefficientsWDM_time_funcs import get_taylor_table_time_helper, get_wavelet_norm
 from WaveletWaveforms.sparse_waveform_functions import SparseWaveletWaveform
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 SECSYEAR = 24 * 365 * 3600  # Number of seconds in a calendar year
 
-WaveletTaylorTimeCoeffs = namedtuple('WaveletTaylorTimeCoeffs', ['Nfsam', 'evcs', 'evss'])
+WaveletTaylorTimeCoeffs = namedtuple('WaveletTaylorTimeCoeffs', ['Nfsam', 'evcs', 'evss', 'wavelet_norm'])
 
 
 
@@ -90,6 +88,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mod
 
         try:
             hf_in = h5py.File(filename_cache, 'r')
+            wavelet_norm = np.asarray(hf_in['wavelet_norm'])
             for i in range(wc.Nfd):
                 evcs[i, : Nfsam[i]] = np.asarray(hf_in['evcs'][str(i)])
                 evss[i, : Nfsam[i]] = np.asarray(hf_in['evss'][str(i)])
@@ -105,32 +104,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mod
         raise NotImplementedError(msg)
 
     if not cache_good:
-        phi = np.zeros(wc.K)
-        DX = np.zeros(wc.K, dtype=np.complex128)
-        DX[0] = wc.insDOM
-
-        DX[1:np.int64(wc.K / 2) + 1] = np.sqrt(wc.dt) * phitilde_vec(
-            wc.dom * wc.dt * np.arange(1, np.int64(wc.K / 2) + 1), wc.Nf, wc.nx
-        )
-        DX[np.int64(wc.K / 2) + 1:] = np.sqrt(wc.dt) * phitilde_vec(
-            -wc.dom * wc.dt * np.arange(np.int64(wc.K / 2) - 1, 0, -1), wc.Nf, wc.nx
-        )
-
-        DX = sp.fft.fft(DX, wc.K, overwrite_x=True)
-
-        for i in range(np.int64(wc.K / 2)):
-            phi[i] = np.real(DX[np.int64(wc.K / 2) + i])
-            phi[np.int64(wc.K / 2) + i] = np.real(DX[i])
-
-        nrm = np.linalg.norm(phi)
-        print('norm=' + str(nrm))
-
-        # it turns out that all the wavelet layers are the same modulo a
-        # shift in the reference frequency. Just have to do a single layer
-        # we pick one far from the boundaries to avoid edge effects
-
-        k = wc.Nf / 16
-        wave = wavelet(wc, k, nrm)
+        wavelet_norm = get_wavelet_norm(wc)
 
         fd = wc.DF / wc.Tw * wc.dfdot * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)  # set f-dot increments
 
@@ -151,7 +125,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mod
 
         t1 = time()
         print('loop start time ', t1 - t0, 's')
-        evcs, evss = get_taylor_table_time_helper(wave, wc)
+        evcs, evss = get_taylor_table_time_helper(wavelet_norm, wc)
         tf = time()
         print('Got Time Taylor Table in %f s' % (tf - t1))
 
@@ -160,6 +134,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mod
             hf.create_group('inds')
             hf.create_group('evcs')
             hf.create_group('evss')
+            hf.create_dataset('wavelet_norm', data=wavelet_norm)
             for jj in range(wc.Nfd):
                 hf['inds'].create_dataset(str(jj), data=np.arange(0, Nfsam[jj]))
                 hf['evcs'].create_dataset(str(jj), data=evcs[jj, : Nfsam[jj]])
@@ -173,4 +148,4 @@ def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mod
             msg = 'unrecognized option for output_mode'
             raise NotImplementedError(msg)
 
-    return WaveletTaylorTimeCoeffs(Nfsam, evcs, evss)
+    return WaveletTaylorTimeCoeffs(Nfsam, evcs, evss, wavelet_norm)

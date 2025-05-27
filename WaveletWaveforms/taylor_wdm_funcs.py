@@ -1,15 +1,15 @@
 """helper functions for Chirp_WDM"""
 
 import numpy as np
-from numba import njit
 
 from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime
+from WaveletWaveforms.coefficientsWDM_time_funcs import get_taylor_pixel_direct
 from WaveletWaveforms.coefficientsWDM_time_helpers import WaveletTaylorTimeCoeffs
 from WaveletWaveforms.sparse_waveform_functions import SparseWaveletWaveform
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
-@njit(fastmath=True)
+#@njit(fastmath=True)
 def wavemaket_multi_inplace(
     wavelet_waveform: SparseWaveletWaveform,
     waveform: StationaryWaveformTime,
@@ -28,13 +28,13 @@ def wavemaket_multi_inplace(
     for itrc in range(nc_waveform):
         mm = 0
         for j in range(nt_min, nt_max):
+            # keep j_ind separate in case we want to apply a time offset in the future
             j_ind = j
 
             y0 = waveform.FTd[itrc, j] / wc.dfd
             ny = np.int64(np.floor(y0))
             n_ind = ny + wc.Nfd_negative
 
-            # TODO why was this Nfd - 2?
             assert taylor_table.Nfsam.size == wc.Nfd
             if 0 <= n_ind < wc.Nfd - 1:
                 c = waveform.AT[itrc, j] * np.cos(waveform.PT[itrc, j])
@@ -48,6 +48,7 @@ def wavemaket_multi_inplace(
                 #assert Nfsam1_loc == int(wc.Nsf + 2 / 3 * np.abs(ny) * wc.dfdot * wc.Nsf)
                 Nfsam2_loc = taylor_table.Nfsam[n_ind + 1]
                 #assert Nfsam2_loc == int(wc.Nsf + 2 / 3 * np.abs(ny + 1) * wc.dfdot * wc.Nsf)
+                # TODO why - 1?
                 HBW = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df / 2
 
                 # lowest frequency layer
@@ -127,6 +128,65 @@ def wavemaket_multi_inplace(
                     wavelet_waveform.pixel_index[itrc, mm] = j_ind * wc.Nf + k
                     wavelet_waveform.wave_value[itrc, mm] = 0.0
                     mm += 1
+
+        wavelet_waveform.n_set[itrc] = mm
+
+    # clean up any pixels that were set in the old waveform but aren't anymore
+    for itrc in range(nc_waveform):
+        for itrm in range(wavelet_waveform.n_set[itrc], n_set_old[itrc]):
+            wavelet_waveform.pixel_index[itrc, itrm] = -1
+            wavelet_waveform.wave_value[itrc, itrm] = 0.0
+
+def wavemaket_exact(
+    wavelet_waveform: SparseWaveletWaveform,
+    waveform: StationaryWaveformTime,
+    nt_min,
+    nt_max,
+    wc: WDMWaveletConstants,
+    taylor_table: WaveletTaylorTimeCoeffs,
+) -> None:
+    """Compute the wavelet values analogousely to wavemaket using the taylor time method.
+    Computes the value at every wavelet pixel directly, without the precomputed interpolation table.
+    Useful for testing accuracy/if the interpolation table is dense enough, if only a small
+    number of points need to be evaluated, if slopes are too large for the interpolation table to be
+    practical, as can happen near nulls in the waveform.
+    """
+    n_set_old = wavelet_waveform.n_set.copy()
+
+    nc_waveform = wavelet_waveform.wave_value.shape[0]
+
+    wavelet_norm = taylor_table.wavelet_norm
+
+    for itrc in range(nc_waveform):
+        mm = 0
+        for j in range(nt_min, nt_max):
+            j_ind = j # keep j_ind separate in case we want to apply a time offset in the future
+
+            c = waveform.AT[itrc, j] * np.cos(waveform.PT[itrc, j])
+            s = waveform.AT[itrc, j] * np.sin(waveform.PT[itrc, j])
+
+            fa = waveform.FT[itrc, j]
+
+            HBW = 3/(8*wc.dt*wc.Nf) + (wc.dt*wc.mult*wc.Nf)*waveform.FTd[itrc, j]
+
+            # lowest frequency layer
+            kmin = max(0, np.int64(np.ceil((fa - HBW) / wc.DF)))
+
+            # highest frequency layer
+            kmax = min(wc.Nf - 1, np.int64(np.floor((fa + HBW) / wc.DF)))
+
+            for k in range(kmin, kmax + 1):
+                wavelet_waveform.pixel_index[itrc, mm] = j_ind * wc.Nf + k
+
+                y, z = get_taylor_pixel_direct(fa, waveform.FTd[itrc, j], k, wavelet_norm, wc)
+
+                if (j_ind + k) % 2:
+                    wavelet_waveform.wave_value[itrc, mm] = -(c * z + s * y)
+                else:
+                    wavelet_waveform.wave_value[itrc, mm] = c * y - s * z
+
+                mm += 1
+                # end loop over frequency layers
 
         wavelet_waveform.n_set[itrc] = mm
 
