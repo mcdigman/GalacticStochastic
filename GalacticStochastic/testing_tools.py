@@ -2,9 +2,10 @@
 
 import numpy as np
 import scipy.stats
+from numpy.typing import NDArray
 
 
-def unit_normal_battery(signal, *, mult=1.0, sig_thresh=5.0, A2_cut=2.28, do_assert=True, verbose=False):
+def unit_normal_battery(signal: NDArray[float], *, mult: float=1.0, sig_thresh: float=5.0, A2_cut: float=2.28, do_assert: bool=True, verbose: bool=False) -> (bool, float, float, float):
     """Battery of tests for checking if signal is unit normal white noise
     default anderson darling cutoff of 2.28 is hand selected to
     give ~1 in 1e5 empirical probablity of false positive for n=64

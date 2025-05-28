@@ -35,7 +35,7 @@ WDMWaveletConstants = namedtuple(
 )
 
 
-def get_wavelet_model(config) -> WDMWaveletConstants:
+def get_wavelet_model(config: dict) -> WDMWaveletConstants:
     # number of time pixels (should be even)
     Nf = int(config['wavelet_constants']['Nf'])
     assert Nf & 1 == 0  # check even

@@ -42,12 +42,15 @@ def get_waveform_helper(p_input, f_input, fp_input, fpp_input, amp_input, nt_loc
     FTd = fp_input + fpp_input * T
     AT = np.full(nt_loc, amp_input)
 
-    if np.any((max_f < FT) | (FT < 0)):
-        arg_cut = np.argmax((max_f < FT) | (FT < 0))
+    if np.any((max_f < FT) | (FT < 0.0)):
+        arg_cut = np.argmax((max_f < FT) | (FT < 0.0))
         PT[arg_cut:] = PT[arg_cut]
         FTd[arg_cut:] = 0.0
         AT[arg_cut:] = 0.0
-        FT[arg_cut:] = max_f
+        if FT[arg_cut] < 0.0:
+            FT[arg_cut:] = 0.0
+        else:
+            FT[arg_cut:] = max_f
     else:
         arg_cut = nt_loc
 

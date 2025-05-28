@@ -1,6 +1,7 @@
 """helper functions for Chirp_WDM"""
 
 import numpy as np
+from numba import njit
 
 from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime
 from WaveletWaveforms.coefficientsWDM_time_funcs import get_taylor_pixel_direct
@@ -9,7 +10,7 @@ from WaveletWaveforms.sparse_waveform_functions import SparseWaveletWaveform
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
-#@njit(fastmath=True)
+@njit(fastmath=True)
 def wavemaket_multi_inplace(
     wavelet_waveform: SparseWaveletWaveform,
     waveform: StationaryWaveformTime,
@@ -18,7 +19,7 @@ def wavemaket_multi_inplace(
     wc: WDMWaveletConstants,
     taylor_table: WaveletTaylorTimeCoeffs,
     *,
-    force_nulls=False,
+    force_nulls: int=0,
 ) -> None:
     """Compute the actual wavelets using taylor time method"""
     n_set_old = wavelet_waveform.n_set.copy()
@@ -27,6 +28,8 @@ def wavemaket_multi_inplace(
 
     for itrc in range(nc_waveform):
         mm = 0
+        nf_min = 0
+        nf_max = wc.Nf - 1
         for j in range(nt_min, nt_max):
             # keep j_ind separate in case we want to apply a time offset in the future
             j_ind = j
@@ -41,37 +44,38 @@ def wavemaket_multi_inplace(
                 s = waveform.AT[itrc, j] * np.sin(waveform.PT[itrc, j])
 
                 dy = y0 - ny
+                assert 0.0 <= dy <= 1.0
                 fa = waveform.FT[itrc, j]
                 za = fa / wc.df
 
                 Nfsam1_loc = taylor_table.Nfsam[n_ind]
-                #assert Nfsam1_loc == int(wc.Nsf + 2 / 3 * np.abs(ny) * wc.dfdot * wc.Nsf)
+                # assert Nfsam1_loc == int(wc.Nsf + 2 / 3 * np.abs(ny) * wc.dfdot * wc.Nsf)
                 Nfsam2_loc = taylor_table.Nfsam[n_ind + 1]
-                #assert Nfsam2_loc == int(wc.Nsf + 2 / 3 * np.abs(ny + 1) * wc.dfdot * wc.Nsf)
-                # TODO why - 1?
+                # assert Nfsam2_loc == int(wc.Nsf + 2 / 3 * np.abs(ny + 1) * wc.dfdot * wc.Nsf)
                 HBW = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df / 2
 
                 # lowest frequency layer
-                kmin = max(0, np.int64(np.ceil((fa - HBW) / wc.DF)))
+                kmin = max(nf_min, np.int64(np.ceil((fa - HBW) / wc.DF)))
 
                 # highest frequency layer
-                kmax = min(wc.Nf - 1, np.int64(np.floor((fa + HBW) / wc.DF)))
-
+                kmax = min(nf_max, np.int64(np.floor((fa + HBW) / wc.DF)))
 
                 for k in range(kmin, kmax + 1):
                     zmid = (wc.DF / wc.df) * k
+
+                    # we apparently need za - zmid to be positive
+                    if za < zmid:
+                        zmid = za - np.abs(za - zmid)
 
                     kk = np.floor(za - zmid - 0.5)
                     zsam = zmid + kk + 0.5
                     kk = np.int64(kk)
                     dx = za - zsam  # used for linear interpolation
+                    assert 0.0 <= dx <= 1.0
 
                     # interpolate over frequency
                     jj1 = kk + Nfsam1_loc // 2
                     jj2 = kk + Nfsam2_loc // 2
-                    #if not ((0 <= jj1 < Nfsam1_loc - 1) and (0 <= jj2 < Nfsam2_loc - 1)):
-                    #    print(jj1, jj2, Nfsam1_loc, Nfsam2_loc, kk)
-                    #    print(j, k, kmin, kmax)
 
                     # prevent case where we would overflow the table
                     if (0 <= jj1 < Nfsam1_loc - 1) and (0 <= jj2 < Nfsam2_loc - 1):
@@ -81,11 +85,6 @@ def wavemaket_multi_inplace(
                         assert taylor_table.evcs[n_ind, jj1 + 1] != 0.0
                         assert taylor_table.evcs[n_ind + 1, jj2] != 0.0
                         assert taylor_table.evcs[n_ind + 1, jj2 + 1] != 0.0
-
-                        assert taylor_table.evss[n_ind, jj1] != 0.0
-                        assert taylor_table.evss[n_ind, jj1 + 1] != 0.0
-                        assert taylor_table.evss[n_ind + 1, jj2] != 0.0
-                        assert taylor_table.evss[n_ind + 1, jj2 + 1] != 0.0
 
                         y = (1.0 - dx) * taylor_table.evcs[n_ind, jj1] + dx * taylor_table.evcs[n_ind, jj1 + 1]
                         yy = (1.0 - dx) * taylor_table.evcs[n_ind + 1, jj2] + dx * taylor_table.evcs[n_ind + 1, jj2 + 1]
@@ -97,6 +96,7 @@ def wavemaket_multi_inplace(
                         y = (1.0 - dy) * y + dy * yy
                         z = (1.0 - dy) * z + dy * zz
 
+
                         if (j_ind + k) % 2:
                             wavelet_waveform.wave_value[itrc, mm] = -(c * z + s * y)
                         else:
@@ -104,7 +104,7 @@ def wavemaket_multi_inplace(
 
                         mm += 1
                         # end loop over frequency layers
-            elif force_nulls:
+            elif force_nulls == 1:
                 # we know what the indices would be for values not precomputed in the table
                 # so force values outside the range of the table to 0 instead of dropping,
                 # in order to get likelihoods right, which is particularly important around total nulls,
@@ -128,7 +128,6 @@ def wavemaket_multi_inplace(
                     wavelet_waveform.pixel_index[itrc, mm] = j_ind * wc.Nf + k
                     wavelet_waveform.wave_value[itrc, mm] = 0.0
                     mm += 1
-
         wavelet_waveform.n_set[itrc] = mm
 
     # clean up any pixels that were set in the old waveform but aren't anymore
@@ -137,6 +136,7 @@ def wavemaket_multi_inplace(
             wavelet_waveform.pixel_index[itrc, itrm] = -1
             wavelet_waveform.wave_value[itrc, itrm] = 0.0
 
+@njit()
 def wavemaket_exact(
     wavelet_waveform: SparseWaveletWaveform,
     waveform: StationaryWaveformTime,
@@ -159,6 +159,9 @@ def wavemaket_exact(
 
     for itrc in range(nc_waveform):
         mm = 0
+        nf_min = 0
+        nf_max = wc.Nf - 1
+
         for j in range(nt_min, nt_max):
             j_ind = j # keep j_ind separate in case we want to apply a time offset in the future
 
@@ -167,13 +170,23 @@ def wavemaket_exact(
 
             fa = waveform.FT[itrc, j]
 
-            HBW = 3/(8*wc.dt*wc.Nf) + (wc.dt*wc.mult*wc.Nf)*waveform.FTd[itrc, j]
+            y0 = waveform.FTd[itrc, j] / wc.dfd
+            ny = np.int64(np.floor(y0))
+
+            Nfsam1_loc = int(wc.Nsf + 2 / 3 * np.abs(ny) * wc.dfdot * wc.Nsf)
+            Nfsam2_loc = int(wc.Nsf + 2 / 3 * np.abs(ny + 1) * wc.dfdot * wc.Nsf)
+            # TODO why - 1?
+            HBW = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df / 2
 
             # lowest frequency layer
-            kmin = max(0, np.int64(np.ceil((fa - HBW) / wc.DF)))
+            kmin = np.int64(np.ceil((fa - HBW) / wc.DF))
+            kmin = max(nf_min, kmin)
+            kmin = min(nf_max, kmin)
 
             # highest frequency layer
-            kmax = min(wc.Nf - 1, np.int64(np.floor((fa + HBW) / wc.DF)))
+            kmax = min(nf_max, np.int64(np.floor((fa + HBW) / wc.DF)))
+            kmax = max(nf_min, kmax)
+            kmax = max(kmin, kmax)
 
             for k in range(kmin, kmax + 1):
                 wavelet_waveform.pixel_index[itrc, mm] = j_ind * wc.Nf + k

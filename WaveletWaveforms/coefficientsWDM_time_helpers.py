@@ -18,7 +18,7 @@ WaveletTaylorTimeCoeffs = namedtuple('WaveletTaylorTimeCoeffs', ['Nfsam', 'evcs'
 
 
 
-def get_empty_sparse_taylor_time_waveform(nc_waveform, wc: WDMWaveletConstants) -> SparseWaveletWaveform:
+def get_empty_sparse_taylor_time_waveform(nc_waveform: int, wc: WDMWaveletConstants) -> SparseWaveletWaveform:
     """Get a blank SparseWaveletWaveform object for the Taylor time approximation methods."""
     # need the frequency derivatives to calculate the maximum possible size
     fds = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)
@@ -36,7 +36,7 @@ def get_empty_sparse_taylor_time_waveform(nc_waveform, wc: WDMWaveletConstants) 
 
 
 
-def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mode='skip') -> WaveletTaylorTimeCoeffs:
+def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str='skip', output_mode: str='skip', cache_dir: str='coeffs/', filename_base: str='taylor_time_table_') -> WaveletTaylorTimeCoeffs:
     """Helper to get the ev matrices
     cache_mode:
         'skip':
@@ -56,7 +56,9 @@ def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mod
     cache_good = False
 
     filename_cache = (
-        'coeffs/WDMcoeffs_Nsf='
+        cache_dir
+        + filename_base
+        +'Nsf='
         + str(wc.Nsf)
         + '_mult='
         + str(wc.mult)
@@ -70,9 +72,11 @@ def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mod
         + str(wc.dt)
         + '_dfdot='
         + str(wc.dfdot)
-        + '_Nfd_neg'
+        + '_Nfd_negative='
         + str(wc.Nfd_negative)
-        + '_fast.h5'
+        + '_nx='
+        + str(wc.nx)
+        + '.h5'
     )
 
     if cache_mode == 'check':
@@ -89,9 +93,8 @@ def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mod
         try:
             hf_in = h5py.File(filename_cache, 'r')
             wavelet_norm = np.asarray(hf_in['wavelet_norm'])
-            for i in range(wc.Nfd):
-                evcs[i, : Nfsam[i]] = np.asarray(hf_in['evcs'][str(i)])
-                evss[i, : Nfsam[i]] = np.asarray(hf_in['evss'][str(i)])
+            evcs[:] =  np.asarray(hf_in['evcs'])
+            evss[:] =  np.asarray(hf_in['evss'])
             hf_in.close()
             cache_good = True
         except OSError:
@@ -107,6 +110,15 @@ def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mod
         wavelet_norm = get_wavelet_norm(wc)
 
         fd = wc.DF / wc.Tw * wc.dfdot * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)  # set f-dot increments
+
+        max_fd = np.max(np.abs(fd))
+        if max_fd > 8 * wc.DF/wc.Tw:
+            msg = 'Requested interpolation grid exceeds valid range of time domain taylor approximation'
+            raise ValueError(msg)
+
+        if not np.any(fd == 0.):
+            msg = 'Requested frequency derivative grid does not contain zero; results may be unexpected'
+            raise ValueError(msg)
 
         print('%e %.14e %.14e %e %e' % (wc.DT, wc.DF, wc.DOM / (2 * np.pi), fd[1], fd[wc.Nfd - 1]))
 
@@ -131,14 +143,17 @@ def get_taylor_table_time(wc: WDMWaveletConstants, cache_mode='skip', output_mod
 
         if output_mode == 'hf':
             hf = h5py.File(filename_cache, 'w')
-            hf.create_group('inds')
-            hf.create_group('evcs')
-            hf.create_group('evss')
-            hf.create_dataset('wavelet_norm', data=wavelet_norm)
-            for jj in range(wc.Nfd):
-                hf['inds'].create_dataset(str(jj), data=np.arange(0, Nfsam[jj]))
-                hf['evcs'].create_dataset(str(jj), data=evcs[jj, : Nfsam[jj]])
-                hf['evss'].create_dataset(str(jj), data=evss[jj, : Nfsam[jj]])
+
+            hf.create_group('wc')
+            for key in wc._fields:
+                hf['wc'].create_dataset(key, data=getattr(wc, key))
+
+            hf.create_dataset('wavelet_norm', data=wavelet_norm, compression='gzip')
+            hf.create_dataset('fd', data=fd, compression='gzip')
+
+            hf.create_dataset('Nfsam', data=Nfsam, compression='gzip')
+            hf.create_dataset('evcs', data=evcs, compression='gzip')
+            hf.create_dataset('evss', data=evss, compression='gzip')
             hf.close()
             t3 = time()
             print('output time', t3 - tf, 's')

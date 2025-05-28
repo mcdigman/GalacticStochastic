@@ -12,7 +12,7 @@ LISAConstants = namedtuple(
 )
 
 
-def get_lisa_constants(config) -> LISAConstants:
+def get_lisa_constants(config: dict) -> LISAConstants:
     """Get lisa constant object from config file"""
     # Mean arm length of the LISA detector (meters)
     Larm = float(config['lisa_constants']['Larm'])

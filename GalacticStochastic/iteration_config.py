@@ -26,7 +26,7 @@ IterationConfig = namedtuple(
 )
 
 
-def get_iteration_config(config) -> IterationConfig:
+def get_iteration_config(config: dict) -> IterationConfig:
     """Get lisa constant object from config file"""
     # maximum number of iterations to allow
     max_iterations = int(config['iterative_fit_constants']['max_iterations'])

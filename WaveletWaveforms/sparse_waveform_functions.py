@@ -5,6 +5,8 @@ import numpy as np
 from numba import njit
 from numpy.typing import NDArray
 
+from WaveletWaveforms.wdm_config import WDMWaveletConstants
+
 SparseWaveletWaveform = namedtuple('SparseWaveletWaveform', ['wave_value', 'pixel_index', 'n_set', 'N_max'])
 
 SparseWaveletWaveform.__doc__ = """
@@ -59,7 +61,7 @@ def sparse_addition_helper(sparse_waveform: SparseWaveletWaveform, dense_represe
         dense_representation[pixel_index[itrc, : n_set[itrc]], itrc] += wave_value[itrc, : n_set[itrc]]
 
 @njit()
-def wavelet_sparse_to_dense(wavelet_waveform: SparseWaveletWaveform, wc) -> NDArray[float]:
+def wavelet_sparse_to_dense(wavelet_waveform: SparseWaveletWaveform, wc: WDMWaveletConstants) -> NDArray[float]:
     """Unpack a sparse wavelet representation to a dense wavelet representation."""
     # initialize the array
     n_set = wavelet_waveform.n_set

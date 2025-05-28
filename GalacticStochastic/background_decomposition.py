@@ -14,12 +14,12 @@ class BGDecomposition:
     def __init__(
         self,
         wc: WDMWaveletConstants,
-        nc_galaxy,
+        nc_galaxy: int,
         *,
-        galactic_floor=None,
-        galactic_below=None,
-        galactic_undecided=None,
-        galactic_above=None,
+        galactic_floor: NDArray[float]=None,
+        galactic_below: NDArray[float]=None,
+        galactic_undecided: NDArray[float]=None,
+        galactic_above: NDArray[float]=None,
         do_total_track=True,
     ) -> None:
         self.wc = wc
@@ -57,13 +57,13 @@ class BGDecomposition:
         self.power_galactic_below_high = []
         self.power_galactic_total = []
 
-    def get_galactic_total(self, *, bypass_check=False) -> NDArray[float]:
+    def get_galactic_total(self, *, bypass_check: bool=False) -> NDArray[float]:
         """Get the sum of the entire galactic signal, including detectable binaries"""
         if not bypass_check:
             self.state_check()
         return self.get_galactic_below_high(bypass_check=True) + self.galactic_above
 
-    def get_galactic_below_high(self, *, bypass_check=False) -> NDArray[float]:
+    def get_galactic_below_high(self, *, bypass_check: bool=False) -> NDArray[float]:
         """Get the upper estimate of the unresolvable signal from the galactic background,
         assuming that the undecided part of the signal *is* part of the unresolvable background
         """
@@ -71,7 +71,7 @@ class BGDecomposition:
             self.state_check()
         return self.get_galactic_below_low(bypass_check=True) + self.galactic_undecided
 
-    def get_galactic_below_low(self, *, bypass_check=False) -> NDArray[float]:
+    def get_galactic_below_low(self, *, bypass_check: bool=False) -> NDArray[float]:
         """Get the lower estimate of the unresolvable signal from the galactic background,
         assuming that the undecided part of the signal *is not* part of the unresolvable background
         """
@@ -79,19 +79,19 @@ class BGDecomposition:
             self.state_check()
         return self.galactic_floor + self.galactic_below
 
-    def get_galactic_coadd_resolvable(self, *, bypass_check=False) -> NDArray[float]:
+    def get_galactic_coadd_resolvable(self, *, bypass_check: bool=False) -> NDArray[float]:
         """Get the coadded signal from only bright/resolvable galactic binaries"""
         if not bypass_check:
             self.state_check()
         return self.galactic_above
 
-    def get_galactic_coadd_undecided(self, *, bypass_check=False) -> NDArray[float]:
+    def get_galactic_coadd_undecided(self, *, bypass_check: bool=False) -> NDArray[float]:
         """Get the coadded signal from galactic binaries whose status as bright or faint has not yet been decided"""
         if not bypass_check:
             self.state_check()
         return self.galactic_undecided
 
-    def get_galactic_coadd_floor(self, *, bypass_check=False) -> NDArray[float]:
+    def get_galactic_coadd_floor(self, *, bypass_check: bool=False) -> NDArray[float]:
         """Get the coadded signal from the faintest set of galactic binaries"""
         if not bypass_check:
             self.state_check()
