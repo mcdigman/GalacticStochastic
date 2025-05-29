@@ -7,12 +7,9 @@ from numba import njit, prange
 
 from LisaWaveformTools.algebra_tools import gradient_uniform_inplace, stabilized_gradient_uniform_inplace
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.ra_waveform_freq import RAantenna_inplace, get_tensor_basis, get_xis_inplace, spacecraft_vec
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
-from WaveletWaveforms.wdm_config import WDMWaveletConstants
+from LisaWaveformTools.ra_waveform_freq import SpacecraftChannels
 
 StationaryWaveformTime = namedtuple('StationaryWaveformTime', ['T', 'PT', 'FT', 'FTd', 'AT'])
-SpacecraftChannels = namedtuple('SpacecraftChannels', ['T', 'RR', 'II', 'dRR', 'dII'])
 
 
 @njit()
@@ -296,115 +293,3 @@ def get_time_tdi_amp_phase(
     # the numerical derivative may have better practical accuracy than
     # inserting an analytic result, at least without some additional numerical stabilizers.
     stabilized_gradient_uniform_inplace(waveform.FT, waveform.FTd, AET_waveform.FT, AET_waveform.FTd, dt)
-
-
-# TODO check factor of 2pi
-@njit()
-def AmpFreqDeriv_inplace(waveform: StationaryWaveformTime, Amp, phi0, FI, FD0, TS) -> None:
-    """Get time domain waveform to lowest order, simple constant fdot"""
-    AS = waveform.AT
-    PS = waveform.PT
-    FS = waveform.FT
-    FDS = waveform.FTd
-
-    NT = TS.size
-    #  compute the intrinsic frequency, phase and amplitude
-    for n in range(NT):
-        t = TS[n]
-        FS[n] = FI + FD0 * t
-        FDS[n] = FD0
-        PS[n] = -phi0 + 2 * np.pi * FI * t + np.pi * FD0 * t**2
-        AS[n] = Amp
-
-
-# TODO do consistency checks
-class BinaryTimeWaveformAmpFreqD:
-    """class to store a binary waveform in time domain and update for search
-    assuming input binary format based on amplitude, frequency, and frequency derivative
-    """
-
-    def __init__(self, params, nt_lim_waveform: PixelTimeRange, lc: LISAConstants, wc: WDMWaveletConstants, nc_waveform: int) -> None:
-        """Initalize the object"""
-        self.params = params
-        self.nt_lim_waveform = nt_lim_waveform
-        self.nt_range = self.nt_lim_waveform.nt_max - self.nt_lim_waveform.nt_min
-        self.lc = lc
-        self.wc = wc
-        self.nc_waveform = nc_waveform
-
-        self.TTs = self.wc.DT * np.arange(self.nt_lim_waveform.nt_min, self.nt_lim_waveform.nt_max)
-
-        AmpTs = np.zeros(self.nt_range)
-        PPTs = np.zeros(self.nt_range)
-        FTs = np.zeros(self.nt_range)
-        FTds = np.zeros(self.nt_range)
-
-        self.waveform = StationaryWaveformTime(self.TTs, PPTs, FTs, FTds, AmpTs)
-
-        RRs = np.zeros((self.nc_waveform, self.nt_range))
-        IIs = np.zeros((self.nc_waveform, self.nt_range))
-        dRRs = np.zeros((self.nc_waveform, self.nt_range))
-        dIIs = np.zeros((self.nc_waveform, self.nt_range))
-
-        self.spacecraft_channels = SpacecraftChannels(self.TTs, RRs, IIs, dRRs, dIIs)
-
-        self.xas = np.zeros(self.nt_range)
-        self.yas = np.zeros(self.nt_range)
-        self.zas = np.zeros(self.nt_range)
-        self.xis = np.zeros(self.nt_range)
-        self.kdotx = np.zeros(self.nt_range)
-
-        _, _, _, self.xas[:], self.yas[:], self.zas[:] = spacecraft_vec(self.TTs, self.lc)
-
-        AET_AmpTs = np.zeros((self.nc_waveform, self.nt_range))
-        AET_PPTs = np.zeros((self.nc_waveform, self.nt_range))
-        AET_FTs = np.zeros((self.nc_waveform, self.nt_range))
-        AET_FTds = np.zeros((self.nc_waveform, self.nt_range))
-
-        self.AET_waveform = StationaryWaveformTime(self.TTs, AET_PPTs, AET_FTs, AET_FTds, AET_AmpTs)
-
-        self.update_params(params)
-
-    def update_params(self, params) -> None:
-        self.params = params
-        self.update_intrinsic()
-        self.update_extrinsic()
-
-    def update_intrinsic(self) -> None:
-        """Get amplitude and phase for taylorT3"""
-        amp = self.params[0]
-        costh = np.cos(np.pi / 2 - self.params[1])  # TODO check
-        phi = self.params[2]
-        freq0 = self.params[3]
-        freqD = self.params[4]
-        phi0 = self.params[6] + np.pi
-
-        kv, _, _ = get_tensor_basis(phi, costh)  # TODO check intrinsic extrinsic separation here
-        get_xis_inplace(kv, self.TTs, self.xas, self.yas, self.zas, self.xis, self.lc)
-
-        AmpFreqDeriv_inplace(self.waveform, amp, phi0, freq0, freqD, self.xis)
-
-    def update_extrinsic(self) -> None:
-        # Calculate cos and sin of sky position, inclination, polarization
-        costh = np.cos(np.pi / 2 - self.params[1])
-        phi = self.params[2]
-        cosi = np.cos(self.params[5])
-        psi = self.params[7]
-
-        # TODO fix F_min and nf_range
-        RAantenna_inplace(
-            self.spacecraft_channels,
-            cosi,
-            psi,
-            phi,
-            costh,
-            self.TTs,
-            self.waveform.FT,
-            0,
-            self.nt_range,
-            self.kdotx,
-            self.lc,
-        )
-        get_time_tdi_amp_phase(
-            self.spacecraft_channels, self.AET_waveform, self.waveform, self.lc, self.wc.DT
-        )

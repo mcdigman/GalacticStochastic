@@ -15,7 +15,8 @@ from WDMWaveletTransforms.wavelet_transforms import inverse_wavelet_time
 
 from LisaWaveformTools.algebra_tools import gradient_uniform_inplace
 from LisaWaveformTools.lisa_config import get_lisa_constants
-from LisaWaveformTools.ra_waveform_time import SpacecraftChannels, StationaryWaveformTime, get_time_tdi_amp_phase
+from LisaWaveformTools.ra_waveform_freq import SpacecraftChannels
+from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime, get_time_tdi_amp_phase
 from WaveletWaveforms.coefficientsWDM_time_helpers import (
     get_empty_sparse_taylor_time_waveform,
     get_taylor_table_time,

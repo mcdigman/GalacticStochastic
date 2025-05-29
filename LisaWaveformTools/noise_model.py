@@ -244,7 +244,7 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
     noise model to feed to snr and fisher matrix calculations
     """
 
-    def __init__(self, S_stat_m: NDArray[float], wc: WDMWaveletConstants, prune, nc_snr: int, seed: int=-1) -> None:
+    def __init__(self, S_stat_m: NDArray[np.float64], wc: WDMWaveletConstants, prune, nc_snr: int, seed: int=-1) -> None:
         """Initialize the stationary instrument noise model
 
         Parameters

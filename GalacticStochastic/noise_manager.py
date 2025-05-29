@@ -55,10 +55,10 @@ class NoiseModelManager(StateManager):
         self.S_record_lower = np.zeros((self.idx_S_save.size, wc.Nt, wc.Nf, self.bgd.nc_galaxy))
         self.S_final = np.zeros((wc.Nt, wc.Nf, self.bgd.nc_galaxy))
 
-        S_upper: NDArray[float] = np.zeros((wc.Nt, wc.Nf, self.bgd.nc_galaxy))
+        S_upper: NDArray[np.float64] = np.zeros((wc.Nt, wc.Nf, self.bgd.nc_galaxy))
         S_upper[:] = self.S_inst_m
 
-        S_lower: NDArray[float] = np.zeros((wc.Nt, wc.Nf, self.bgd.nc_galaxy))
+        S_lower: NDArray[np.float64] = np.zeros((wc.Nt, wc.Nf, self.bgd.nc_galaxy))
         S_lower[:] = self.S_inst_m
         if self.idx_S_save[self.itr_save] == 0:
             self.S_record_upper[0] = S_upper[:, :, :]

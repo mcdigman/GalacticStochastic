@@ -1,20 +1,102 @@
 """functions to compute rigid adiabatic response in frequency domain"""
+from collections import namedtuple
 
 import numpy as np
 from numba import njit, prange
+from numpy.typing import NDArray
 
 from LisaWaveformTools.lisa_config import LISAConstants
 
 CLIGHT = 2.99792458e8  # Speed of light in m/s
 AU = 1.4959787e11  # Astronomical Unit in meters
 
+SpacecraftChannels = namedtuple('SpacecraftChannels', ['T', 'RR', 'II', 'dRR', 'dII'])
+
+ExtrinsicParams = namedtuple('ExtrinsicParams', ['costh', 'phi', 'cosi', 'psi'])
+ExtrinsicParams.__doc__ = """
+Store the extrinsic parameters common to most detector waveform models.
+
+Parameters
+----------
+costh : float
+    Cosine of the source's ecliptic colatitude
+phi : float
+    Source's ecliptic longitude in radians
+cosi : float
+    Cosine of the source's inclination angle
+psi : float
+    Source polarization angle in radians
+"""
+
+TensorBasis = namedtuple('TensorBasis', ['kv', 'eplus', 'ecross'])
+
+TensorBasis.__doc__ = """Store the tensor basis vectors.
+kv : numpy.ndarray
+    The unit vector in the direction of the source
+eplus : numpy.ndarray
+    The plus polarization tensor basis vector
+ecross : numpy.ndarray
+    The cross polarization tensor basis vector
+"""
+
+SpacecraftOrbits = namedtuple('SpacecraftOrbits', ['xs', 'ys', 'zs', 'xas', 'yas', 'zas'])
+SpacecraftOrbits.__doc__= """
+Store the spacecraft positions and guiding center coordinates.
+Parameters
+----------
+xs : numpy.ndarray
+    2D array of spacecraft x coordinates, shape (3, n_t)
+ys : numpy.ndarray
+    2D array of spacecraft y coordinates, shape (3, n_t)
+zs : numpy.ndarray
+    2D array of spacecraft z coordinates, shape (3, n_t)
+xas : numpy.ndarray
+    1D array of guiding center x coordinates, shape (n_t,)
+yas : numpy.ndarray
+    1D array of guiding center y coordinates, shape (n_t,)
+zas : numpy.ndarray
+    1D array of guiding center z coordinates, shape (n_t,)
+"""
+
 
 @njit()
-def get_tensor_basis(phi, costh):
-    """Get the 3 dimensional tensor basis"""
+def get_tensor_basis(params_extrinsic: ExtrinsicParams):
+    """Compute the gravitational wave tensor basis vectors for LISA observations.
+
+        This function calculates three key components needed for gravitational wave detection:
+        1. The wave propagation direction unit vector (kv)
+        2. The plus polarization tensor basis (eplus)
+        3. The cross polarization tensor basis (ecross)
+
+        Parameters
+        ----------
+        params_extrinsic : ExtrinsicParams
+            A namedtuple containing the extrinsic parameters:
+            - costh: Cosine of the source's ecliptic colatitude
+            - phi: Source's ecliptic longitude in radians
+
+        Returns
+        -------
+        TensorBasis
+            A namedtuple containing:
+            - kv: ndarray of shape (3,)
+                Unit vector pointing from the source toward LISA
+            - eplus: ndarray of shape (3, 3)
+                Plus polarization tensor basis
+            - ecross: ndarray of shape (3, 3)
+                Cross polarization tensor basis
+
+        Notes
+        -----
+        The function constructs intermediate coordinate vectors u and v that are used
+        to build the polarization tensors. The calculations are performed in a
+        three-dimensional space (n_space=3) using spherical coordinates.
+    """
     # Calculate cos and sin of sky position, inclination, polarization
     n_space = 3  # number of spatial dimensions (must be 3)
 
+    costh = params_extrinsic.costh
+    phi = params_extrinsic.phi
     sinth = np.sqrt(1.0 - costh**2)
     cosph = np.cos(phi)
     sinph = np.sin(phi)
@@ -42,7 +124,7 @@ def get_tensor_basis(phi, costh):
         for j in range(n_space):
             eplus[i, j] = u[i] * u[j] - v[i] * v[j]
             ecross[i, j] = u[i] * v[j] + v[i] * u[j]
-    return kv, eplus, ecross
+    return TensorBasis(kv, eplus, ecross)
 
 
 # TODO eliminate need for constants by storing e.g. Larm_AU
@@ -50,20 +132,24 @@ def get_tensor_basis(phi, costh):
 
 @njit(fastmath=True)
 def RAantenna_inplace(
-    spacecraft_channels, cosi, psi, phi, costh, ts, FFs, nf_low, NTs, kdotx, lc: LISAConstants
+    spacecraft_channels: SpacecraftChannels, params_extrinsic: ExtrinsicParams, ts, FFs, nf_low, NTs, kdotx, lc: LISAConstants
 ) -> None:
     """Get the waveform for LISA given polarization angle, spacecraft, tensor basis and Fs, channel order AET"""
     RRs = spacecraft_channels.RR
     IIs = spacecraft_channels.II
 
-    kv, eplus, ecross = get_tensor_basis(phi, costh)
+    tb: TensorBasis = get_tensor_basis(params_extrinsic)
+
+    cosi = params_extrinsic.cosi
+    psi = params_extrinsic.psi
+
 
     n_space = 3  # number of spatial dimensions (must be 3)
     assert n_space == 3
 
-    assert kv.shape == (n_space,)
-    assert eplus.shape == (n_space, n_space)
-    assert ecross.shape == (n_space, n_space)
+    assert tb.kv.shape == (n_space,)
+    assert tb.eplus.shape == (n_space, n_space)
+    assert tb.ecross.shape == (n_space, n_space)
 
     n_spacecraft = 3  # number of spacecraft (currently must be 3)
     assert n_spacecraft == 3
@@ -155,7 +241,7 @@ def RAantenna_inplace(
         za = (z[0] + z[1] + z[2]) / n_spacecraft
 
         # manual dot product with n_spacecraft
-        kdotx[n] = (lc.Larm / CLIGHT) * (xa * kv[0] + ya * kv[1] + za * kv[2])
+        kdotx[n] = (lc.Larm / CLIGHT) * (xa * tb.kv[0] + ya * tb.kv[1] + za * tb.kv[2])
 
         # normalized frequency
         fr = 1 / (2 * lc.fstr) * FFs[n + nf_low]
@@ -185,12 +271,12 @@ def RAantenna_inplace(
         kdr[:] = 0.0
         kdg[:] = 0.0
         for k in range(n_space):
-            kdr[0, 1] += kv[k] * r12[k]
-            kdr[0, 2] += kv[k] * r13[k]
-            kdr[1, 2] += kv[k] * r23[k]
-            kdg[0] += kv[k] * r10[k]
-            kdg[1] += kv[k] * r20[k]
-            kdg[2] += kv[k] * r30[k]
+            kdr[0, 1] += tb.kv[k] * r12[k]
+            kdr[0, 2] += tb.kv[k] * r13[k]
+            kdr[1, 2] += tb.kv[k] * r23[k]
+            kdg[0] += tb.kv[k] * r10[k]
+            kdg[1] += tb.kv[k] * r20[k]
+            kdg[2] += tb.kv[k] * r30[k]
 
         for i in range(n_arm - 1):
             for j in range(i + 1, n_arm):
@@ -215,12 +301,12 @@ def RAantenna_inplace(
         # Convenient quantities d+ & dx
         for i in range(n_space):
             for j in range(n_space):
-                dplus[0, 1] += r12[i] * r12[j] * eplus[i, j]
-                dcross[0, 1] += r12[i] * r12[j] * ecross[i, j]
-                dplus[1, 2] += r23[i] * r23[j] * eplus[i, j]
-                dcross[1, 2] += r23[i] * r23[j] * ecross[i, j]
-                dplus[0, 2] += r13[i] * r13[j] * eplus[i, j]
-                dcross[0, 2] += r13[i] * r13[j] * ecross[i, j]
+                dplus[0, 1] += r12[i] * r12[j] * tb.eplus[i, j]
+                dcross[0, 1] += r12[i] * r12[j] * tb.ecross[i, j]
+                dplus[1, 2] += r23[i] * r23[j] * tb.eplus[i, j]
+                dcross[1, 2] += r23[i] * r23[j] * tb.ecross[i, j]
+                dplus[0, 2] += r13[i] * r13[j] * tb.eplus[i, j]
+                dcross[0, 2] += r13[i] * r13[j] * tb.ecross[i, j]
 
         dplus[1, 0] = dplus[0, 1]
         dcross[1, 0] = dcross[0, 1]
@@ -283,15 +369,28 @@ def RAantenna_inplace(
 
 
 @njit()
-def get_xis_inplace(kv, ts, xas, yas, zas, xis, lc: LISAConstants) -> None:
+def get_xis_inplace(lc: LISAConstants, tb: TensorBasis, ts, sv: SpacecraftOrbits, xis) -> None:
     """Get time adjusted to guiding center for tensor basis"""
-    kdotx = (xas * kv[0] + yas * kv[1] + zas * kv[2]) * (lc.Larm / CLIGHT)
+    kdotx = (sv.xas * tb.kv[0] + sv.yas * tb.kv[1] + sv.zas * tb.kv[2]) * (lc.Larm / CLIGHT)
     xis[:] = ts - kdotx
 
 
+
 @njit()
-def spacecraft_vec(ts, lc: LISAConstants):
-    """Calculate the spacecraft positions as a function of time, with Larm scaling pulled out"""
+def get_spacecraft_vec(ts: NDArray[np.float64], lc: LISAConstants) -> SpacecraftOrbits:
+    """Calculate the spacecraft positions as a function of time, with Larm scaling pulled out.
+
+    Parameters
+    ----------
+    ts : numpy.ndarray
+        1D array of time values in seconds, shape (n_t,)
+    lc : LISAConstants
+        LISAConstants object containing the LISA orbit configuration parameters.
+    Returns
+    -------
+    SpacecraftOrbits
+        A namedtuple containing the spacecraft positions (xs, ys, zs) and guiding center coordinates (xas, yas, zas).
+    """
     n_spacecraft = 3  # number of spacecraft (currently must be 3)
 
     xs = np.zeros((n_spacecraft, ts.size))
@@ -314,4 +413,4 @@ def spacecraft_vec(ts, lc: LISAConstants):
     xas = (xs[0] + xs[1] + xs[2]) / n_spacecraft
     yas = (ys[0] + ys[1] + ys[2]) / n_spacecraft
     zas = (zs[0] + zs[1] + zs[2]) / n_spacecraft
-    return xs, ys, zs, xas, yas, zas
+    return SpacecraftOrbits(xs, ys, zs, xas, yas, zas)

@@ -15,7 +15,8 @@ from WDMWaveletTransforms.transform_freq_funcs import tukey
 from WDMWaveletTransforms.wavelet_transforms import inverse_wavelet_freq, inverse_wavelet_freq_time, transform_wavelet_freq, transform_wavelet_freq_time
 
 from LisaWaveformTools.lisa_config import get_lisa_constants
-from LisaWaveformTools.ra_waveform_time import SpacecraftChannels, StationaryWaveformTime, get_time_tdi_amp_phase
+from LisaWaveformTools.ra_waveform_freq import SpacecraftChannels
+from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime, get_time_tdi_amp_phase
 from tests.test_time_tdi_ampphase import get_RR_t_mult, get_waveform_helper
 from WaveletWaveforms.coefficientsWDM_time_helpers import (
     get_empty_sparse_taylor_time_waveform,

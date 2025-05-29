@@ -1,7 +1,7 @@
 """Class to store information about the binaries in the galactic background"""
 
 from time import perf_counter
-from typing import Tuple, override
+from typing import TYPE_CHECKING, Tuple, override
 
 import numpy as np
 
@@ -10,10 +10,33 @@ from GalacticStochastic.iteration_config import IterationConfig
 from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
 from GalacticStochastic.noise_manager import NoiseModelManager
 from GalacticStochastic.state_manager import StateManager
+from LisaWaveformTools.linear_frequency_source import LinearFrequencyIntrinsicParams, LinearFrequencyParams
 from LisaWaveformTools.lisa_config import LISAConstants
+from LisaWaveformTools.ra_waveform_freq import ExtrinsicParams
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
 from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+
+def unpack_params_gb(params_in):
+    # Ecliptic latitude to cosine of ecliptic colatitude
+    costh = np.cos(np.pi / 2 - params_in[1])
+    # Ecliptic longitude
+    phi = params_in[2]
+    # Cosine of inclination angle
+    cosi = np.cos(params_in[5])
+    # Polarization angle
+    psi = params_in[7]
+    amp0_t = params_in[0]
+    F0 = params_in[3]
+    FTd0 = params_in[4]
+    phi0 = params_in[6] + np.pi
+    params_extrinsic = ExtrinsicParams(costh, phi, cosi, psi)
+    params_intrinsic = LinearFrequencyIntrinsicParams(amp0_t, phi0, F0, FTd0)
+    return LinearFrequencyParams(intrinsic=params_intrinsic, extrinsic=params_extrinsic)
 
 
 class BinaryInclusionState(StateManager):
@@ -54,7 +77,7 @@ class BinaryInclusionState(StateManager):
         self.argbinmap = np.argwhere(~faints_in).flatten()
         self.faints_old = faints_in[self.argbinmap]
         assert self.faints_old.sum() == 0.0
-        self.params_gb = params_gb_in[self.argbinmap]
+        self.params_gb: NDArray[np.float64] = params_gb_in[self.argbinmap]
         self.n_bin_use = self.argbinmap.size
 
         del params_gb_in
@@ -68,8 +91,8 @@ class BinaryInclusionState(StateManager):
         self.decided = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use), dtype=np.bool_)
         self.faints_cur = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use), dtype=np.bool_)
 
-        params0 = self.params_gb[0].copy()
-        self.waveform_manager = BinaryWaveletAmpFreqDT(params0.copy(), wc, self.lc, self.nt_lim_waveform)
+        params0 = unpack_params_gb(self.params_gb[0])
+        self.waveform_manager = BinaryWaveletAmpFreqDT(params0, wc, self.lc, self.nt_lim_waveform)
 
         self.itrn = 0
 
@@ -126,7 +149,8 @@ class BinaryInclusionState(StateManager):
     def run_binary_coadd(self, itrb) -> None:
         """Get the waveform for a binary, store its snr, and decide which spectrum to add it to."""
         itrn = self.itrn
-        self.waveform_manager.update_params(self.params_gb[itrb].copy())
+        params_loc = unpack_params_gb(self.params_gb[itrb])
+        self.waveform_manager.update_params(params_loc)
 
         self.snr_storage_helper(itrb)
         self.brights[itrn, itrb], self.faints_cur[itrn, itrb] = self.decision_helper(itrb)

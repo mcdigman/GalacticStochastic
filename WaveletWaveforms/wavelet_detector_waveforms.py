@@ -1,7 +1,7 @@
 """subroutines for running lisa binary monte carlo search"""
 
+from LisaWaveformTools.linear_frequency_source import LinearFrequencyWaveformTime
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.ra_waveform_time import BinaryTimeWaveformAmpFreqD
 from WaveletWaveforms.coefficientsWDM_time_helpers import (
     WaveletTaylorTimeCoeffs,
     get_empty_sparse_taylor_time_waveform,
@@ -29,8 +29,8 @@ class BinaryWaveletAmpFreqDT:
         )
 
         # get the waveform in frequency space
-        self.fwt = BinaryTimeWaveformAmpFreqD(
-            self.params, self.nt_lim_waveform, self.lc, self.wc, self.lc.nc_waveform
+        self.fwt = LinearFrequencyWaveformTime(
+            self.params, self.nt_lim_waveform, self.lc, self.wc
         )
 
         # get a blank waveform in the sparse wavelet domain
