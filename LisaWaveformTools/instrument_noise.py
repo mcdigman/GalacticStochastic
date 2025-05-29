@@ -8,7 +8,7 @@ from LisaWaveformTools.lisa_config import LISAConstants
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
-def instrument_noise1(f: NDArray[float], lc: LISAConstants) -> NDArray[float]:
+def instrument_noise1(f: NDArray[np.float64], lc: LISAConstants) -> NDArray[np.float64]:
     # Power spectral density of the detector noise and transfer frequency
     Sps = 9.0e-24  # should match sangria v2? Should it be backlinknoise or readoutnoise?
     Sacc = 5.76e-30  # from sangria v2
@@ -33,7 +33,7 @@ def instrument_noise1(f: NDArray[float], lc: LISAConstants) -> NDArray[float]:
     )
 
 
-def instrument_noise_AET(f: NDArray[float], lc: LISAConstants) -> NDArray[float]:
+def instrument_noise_AET(f: NDArray[np.float64], lc: LISAConstants) -> NDArray[np.float64]:
     """Get power spectral density in all 3 channels, assuming identical in all arms"""
     # see arXiv:2005.03610
     # see arXiv:1002.1291
@@ -58,7 +58,7 @@ def instrument_noise_AET(f: NDArray[float], lc: LISAConstants) -> NDArray[float]
 
 def instrument_noise_AET_wdm_loop(
     phif: NDArray[np.float64], lc: LISAConstants, wc: WDMWaveletConstants
-) -> NDArray[float]:
+) -> NDArray[np.float64]:
     """Helper to get the instrument noise for wdm"""
     # realistically this really only needs run once and is fast enough without jit
     # TODO check normalization
@@ -84,7 +84,7 @@ def instrument_noise_AET_wdm_loop(
     return S_inst_m
 
 
-def instrument_noise_AET_wdm_m(lc: LISAConstants, wc: WDMWaveletConstants) -> NDArray[float]:
+def instrument_noise_AET_wdm_m(lc: LISAConstants, wc: WDMWaveletConstants) -> NDArray[np.float64]:
     """Get the instrument noise curve as a function of frequency for the wdm
     wavelet decomposition
 
@@ -100,11 +100,12 @@ def instrument_noise_AET_wdm_m(lc: LISAConstants, wc: WDMWaveletConstants) -> ND
     S_stat_m : numpy.ndarray (Nf x 3)
         array of the instrument noise curve for each TDI channel
         array shape is (freq. layers x number of TDI channels)
+
     """
     # TODO why no plus 1?
     ls = np.arange(-wc.Nt // 2, wc.Nt // 2)
     fs = ls / wc.Tobs
-    phif = np.sqrt(wc.dt) * phitilde_vec(2 * np.pi * fs * wc.dt, wc.Nf, wc.nx)
+    phif: NDArray[np.float64] = np.sqrt(wc.dt) * phitilde_vec(2 * np.pi * fs * wc.dt, wc.Nf, wc.nx)
 
     # TODO check ad hoc normalization factor
     return instrument_noise_AET_wdm_loop(phif, lc, wc)

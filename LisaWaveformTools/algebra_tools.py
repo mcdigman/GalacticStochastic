@@ -1,11 +1,12 @@
 """Functions for computing gradients of arrays using numerical finite differences."""
 
+import numpy as np
 from numba import njit, prange
 from numpy.typing import NDArray
 
 
 @njit()
-def gradient_uniform_inplace(ys: NDArray[float], result: NDArray[float], dx: float) -> None:
+def gradient_uniform_inplace(ys: NDArray[np.float64], result: NDArray[np.float64], dx: float) -> None:
     """Compute the numerical gradient of a 2D array using finite differences.
 
     This function computes dy/dx using second-order accurate central finite differences
@@ -42,6 +43,7 @@ def gradient_uniform_inplace(ys: NDArray[float], result: NDArray[float], dx: flo
     AssertionError
         If result and ys arrays have different shapes
         If input array has less than 2 points along second axis
+
     """
     assert ys.shape == result.shape, 'Incompatible shape for result'
     assert len(ys.shape) == 2, 'Input ys must be a 2D array'
@@ -61,14 +63,16 @@ def gradient_uniform_inplace(ys: NDArray[float], result: NDArray[float], dx: flo
 
 @njit()
 def stabilized_gradient_uniform_inplace(
-    x: NDArray[float], dxdt: NDArray[float], y: NDArray[float], dydt: NDArray[float], dt: float
+    x: NDArray[np.float64], dxdt: NDArray[np.float64], y: NDArray[np.float64], dydt: NDArray[np.float64], dt: float
 ) -> None:
     """Get a second-order central stabilized gradient of y and store it in dydt.
+
     Uses x and it's already-known derivative dxdt as a reference value
     for greater numerical stability, assuming the curve y is a perturbation on top of x.
     Then using the idea that y is a perturbed curve, we can compute
     dydt = d/dt (y-x) + dxdt
     which is significantly more numerically accurate if dxdt is already well-known.
+
     Parameters
     ----------
     x : numpy.ndarray

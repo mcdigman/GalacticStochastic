@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     ifm = IterativeFitManager(ic, fit_state, noise_manager, bis)
 
-    params_gb = None
+    del params_gb
 
     ifm.do_loop()
 

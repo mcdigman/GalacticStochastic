@@ -67,8 +67,8 @@ class NoiseModelManager(StateManager):
         self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, wc, prune=True, nc_snr=lc.nc_snr)
         self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, wc, prune=True, nc_snr=lc.nc_snr)
 
-        S_upper = None
-        S_lower = None
+        del S_upper
+        del S_lower
 
     def log_state(self) -> None:
         """Perform any internal logging that should be done after advance_state is run."""
@@ -102,13 +102,14 @@ class NoiseModelManager(StateManager):
             / noise_divide
         )
         n_points = points_res.size
-        noise_divide = None
-        galactic_below_high = None
-        res_mask = None
+
+        del noise_divide
+        del galactic_below_high
+        del res_mask
         unit_normal_res, a2score, mean_rat, std_rat = unit_normal_battery(
             points_res.flatten(), A2_cut=2.28, sig_thresh=5.0, do_assert=False
         )
-        points_res = None
+        del points_res
         if unit_normal_res:
             print(
                 'Background PASSES normality: points=%12d A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f'
@@ -145,7 +146,7 @@ class NoiseModelManager(StateManager):
             )
             self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, self.wc, prune=True, nc_snr=self.lc.nc_snr)
 
-            S_upper = None
+            del S_upper
 
         if not noise_safe_lower:
             # make sure this will always predict >= snrs to the actual spectrum in use
@@ -154,5 +155,5 @@ class NoiseModelManager(StateManager):
             S_lower = self.bgd.get_S_below_low(self.S_inst_m, self.ic.smooth_lengthf_fix, filter_periods, period_list)
             S_lower = np.min([S_lower, self.noise_upper.S], axis=0)
             self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, self.wc, prune=True, nc_snr=self.lc.nc_snr)
-            S_lower = None
+            del S_lower
         self.itrn += 1

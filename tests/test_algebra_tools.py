@@ -424,7 +424,8 @@ def test_gradient_uniform_inplace(t_scaling, DT, t0, nt_loc):
         gradient_uniform_inplace(ys[itrc:itrc + 1], result2[itrc:itrc + 1], DT)
 
     assert_array_equal(result, result2)
-    result2 = None
+
+    del result2
 
     gradient_exp = np.gradient(ys, DT, axis=1, edge_order=1)
 
@@ -517,7 +518,7 @@ def test_stabilized_gradient_uniform_inplace(t_scale_base, t_scale_perturb, pert
         stabilized_gradient_uniform_inplace(x, dxdt, y_perturbed[itrc:itrc + 1], result2[itrc:itrc + 1], DT)
 
     assert_array_equal(result, result2)
-    result2 = None
+    del result2
 
     # the expected result
     gradient_perturber = np.gradient(y_perturber, DT, axis=1, edge_order=1)

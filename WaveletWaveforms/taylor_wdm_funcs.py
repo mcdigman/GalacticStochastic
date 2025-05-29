@@ -35,7 +35,7 @@ def wavemaket_multi_inplace(
             j_ind = j
 
             y0 = waveform.FTd[itrc, j] / wc.dfd
-            ny = np.int64(np.floor(y0))
+            ny = int(np.floor(y0))
             n_ind = ny + wc.Nfd_negative
 
             assert taylor_table.Nfsam.size == wc.Nfd
@@ -55,10 +55,10 @@ def wavemaket_multi_inplace(
                 HBW = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df / 2
 
                 # lowest frequency layer
-                kmin = max(nf_min, np.int64(np.ceil((fa - HBW) / wc.DF)))
+                kmin = max(nf_min, int(np.ceil((fa - HBW) / wc.DF)))
 
                 # highest frequency layer
-                kmax = min(nf_max, np.int64(np.floor((fa + HBW) / wc.DF)))
+                kmax = min(nf_max, int(np.floor((fa + HBW) / wc.DF)))
 
                 for k in range(kmin, kmax + 1):
                     zmid = (wc.DF / wc.df) * k
@@ -69,7 +69,7 @@ def wavemaket_multi_inplace(
 
                     kk = np.floor(za - zmid - 0.5)
                     zsam = zmid + kk + 0.5
-                    kk = np.int64(kk)
+                    kk = int(kk)
                     dx = za - zsam  # used for linear interpolation
                     assert 0.0 <= dx <= 1.0
 
@@ -113,16 +113,16 @@ def wavemaket_multi_inplace(
                 # we could just actually calculate the non-precomputed coefficient
                 fa = waveform.FT[itrc, j]
 
-                Nfsam1_loc = np.int64((wc.BW + wc.dfd * wc.Tw * ny) / wc.df)
+                Nfsam1_loc = int((wc.BW + wc.dfd * wc.Tw * ny) / wc.df)
                 if Nfsam1_loc % 2 == 1:
                     Nfsam1_loc += 1
 
                 HBW = (Nfsam1_loc - 1) * wc.df / 2
                 # lowest frequency layer
-                kmin = max(0, np.int64(np.ceil((fa - HBW) / wc.DF)))
+                kmin = max(0, int(np.ceil((fa - HBW) / wc.DF)))
 
                 # highest frequency layer
-                kmax = min(wc.Nf - 1, np.int64(np.floor((fa + HBW) / wc.DF)))
+                kmax = min(wc.Nf - 1, int(np.floor((fa + HBW) / wc.DF)))
 
                 for k in range(kmin, kmax + 1):
                     wavelet_waveform.pixel_index[itrc, mm] = j_ind * wc.Nf + k
@@ -171,7 +171,7 @@ def wavemaket_exact(
             fa = waveform.FT[itrc, j]
 
             y0 = waveform.FTd[itrc, j] / wc.dfd
-            ny = np.int64(np.floor(y0))
+            ny = int(np.floor(y0))
 
             Nfsam1_loc = int(wc.Nsf + 2 / 3 * np.abs(ny) * wc.dfdot * wc.Nsf)
             Nfsam2_loc = int(wc.Nsf + 2 / 3 * np.abs(ny + 1) * wc.dfdot * wc.Nsf)
@@ -179,12 +179,12 @@ def wavemaket_exact(
             HBW = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df / 2
 
             # lowest frequency layer
-            kmin = np.int64(np.ceil((fa - HBW) / wc.DF))
+            kmin = int(np.ceil((fa - HBW) / wc.DF))
             kmin = max(nf_min, kmin)
             kmin = min(nf_max, kmin)
 
             # highest frequency layer
-            kmax = min(nf_max, np.int64(np.floor((fa + HBW) / wc.DF)))
+            kmax = min(nf_max, int(np.floor((fa + HBW) / wc.DF)))
             kmax = max(nf_min, kmax)
             kmax = max(kmin, kmax)
 

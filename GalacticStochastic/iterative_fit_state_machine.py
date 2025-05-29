@@ -1,5 +1,7 @@
 """State machine that handles the state of the iterator, deciding whether it has converged or not"""
 
+from typing import Tuple
+
 import numpy as np
 
 from GalacticStochastic.iteration_config import IterationConfig
@@ -56,23 +58,23 @@ class IterativeFitState(StateManager):
         self.itrn = 0
 
     @property
-    def bright_state_request(self) -> (bool, bool, bool, bool):
+    def bright_state_request(self) -> Tuple[bool, bool, bool, bool]:
         """Get what we wanted the state to be after bright_convergence_decision"""
         return self._bright_state_request
 
     @bright_state_request.setter
-    def bright_state_request(self, value: (bool, bool, bool, bool)) -> None:
+    def bright_state_request(self, value: Tuple[bool, bool, bool, bool]) -> None:
         """Set what we want the state to be after bright_convergence_decision"""
         (do_faint_check, bright_converged, faint_converged, force_converge) = value
         self._bright_state_request = (do_faint_check, bright_converged, faint_converged, force_converge)
 
     @property
-    def faint_state_request(self) -> (bool, bool, bool, bool):
+    def faint_state_request(self) -> Tuple[bool, bool, bool, bool]:
         """Get what we want the state to be after faint_convergence_decision"""
         return self._faint_state_request
 
     @faint_state_request.setter
-    def faint_state_request(self, value: (bool, bool, bool, bool)) -> None:
+    def faint_state_request(self, value: Tuple[bool, bool, bool, bool]) -> None:
         """Set what we want the state to be after faint_convergence_decision"""
         (do_faint_check, bright_converged, faint_converged, force_converge) = value
         self._faint_state_request = (do_faint_check, bright_converged, faint_converged, force_converge)
@@ -98,7 +100,7 @@ class IterativeFitState(StateManager):
         self.current_state = self.faint_state_request
         self.itrn += 1
 
-    def get_state(self) -> (bool, bool, bool, bool):
+    def get_state(self) -> Tuple[bool, bool, bool, bool]:
         """Get the current state of the state machine"""
         return self.current_state
 

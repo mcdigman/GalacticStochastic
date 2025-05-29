@@ -79,17 +79,19 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str='skip', ou
         + '.h5'
     )
 
+    fds = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)
+
+    # number of samples for each frequency derivative layer (grow with increasing BW)
+    Nfsam = ((wc.BW + np.abs(fds) * wc.Tw) / wc.df).astype(np.int64)
+    Nfsam[Nfsam % 2 != 0] += 1  # makes sure it is an even number
+
+    wavelet_norm = get_wavelet_norm(wc)
+
+    max_shape = np.max(Nfsam)
+    evcs = np.zeros((wc.Nfd, max_shape))
+    evss = np.zeros((wc.Nfd, max_shape))
+
     if cache_mode == 'check':
-        fds = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)
-
-        # number of samples for each frequency derivative layer (grow with increasing BW)
-        Nfsam = ((wc.BW + np.abs(fds) * wc.Tw) / wc.df).astype(np.int64)
-        Nfsam[Nfsam % 2 != 0] += 1  # makes sure it is an even number
-
-        max_shape = np.max(Nfsam)
-        evcs = np.zeros((wc.Nfd, max_shape))
-        evss = np.zeros((wc.Nfd, max_shape))
-
         try:
             hf_in = h5py.File(filename_cache, 'r')
             wavelet_norm = np.asarray(hf_in['wavelet_norm'])
@@ -107,7 +109,6 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str='skip', ou
         raise NotImplementedError(msg)
 
     if not cache_good:
-        wavelet_norm = get_wavelet_norm(wc)
 
         fd = wc.DF / wc.Tw * wc.dfdot * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)  # set f-dot increments
 

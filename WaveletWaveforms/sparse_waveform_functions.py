@@ -38,7 +38,7 @@ N_max: integer
     which is determined by the shape of the interpolation table
 """
 
-def sparse_addition_helper(sparse_waveform: SparseWaveletWaveform, dense_representation: NDArray[float]) -> None:
+def sparse_addition_helper(sparse_waveform: SparseWaveletWaveform, dense_representation: NDArray[np.float64]) -> None:
     """Take a sparse wavelet representation from SparseWaveletWaveform
     and add it to a dense wavelet representation
     sparse_waveform: namedtuple SparseTaylorTimeWaveform
@@ -61,7 +61,7 @@ def sparse_addition_helper(sparse_waveform: SparseWaveletWaveform, dense_represe
         dense_representation[pixel_index[itrc, : n_set[itrc]], itrc] += wave_value[itrc, : n_set[itrc]]
 
 @njit()
-def wavelet_sparse_to_dense(wavelet_waveform: SparseWaveletWaveform, wc: WDMWaveletConstants) -> NDArray[float]:
+def wavelet_sparse_to_dense(wavelet_waveform: SparseWaveletWaveform, wc: WDMWaveletConstants) -> NDArray[np.float64]:
     """Unpack a sparse wavelet representation to a dense wavelet representation."""
     # initialize the array
     n_set = wavelet_waveform.n_set

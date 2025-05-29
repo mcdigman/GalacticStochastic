@@ -34,7 +34,7 @@ if __name__ == '__main__':
         fit_state = IterativeFitState(ic)
 
         bgd = BGDecomposition(wc, ic.nc_galaxy, galactic_floor=galactic_below_in.copy())
-        galactic_below_in = None
+        del galactic_below_in
 
         noise_manager = NoiseModelManager(ic, wc, lc, fit_state, bgd, S_inst_m, stat_only, nt_min, nt_max)
 
@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
         ifm = IterativeFitManager(ic, fit_state, noise_manager, bis)
 
-        params_gb = None
+        del params_gb
 
         ifm.do_loop()
 

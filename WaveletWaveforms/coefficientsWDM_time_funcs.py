@@ -2,6 +2,8 @@
 python port of coefficients WDM_time.c
 """
 
+from typing import Tuple
+
 import numpy as np
 import scipy.fft as spf
 from numba import njit, prange
@@ -11,7 +13,7 @@ from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
-def wavelet(wc: WDMWaveletConstants, m: int, nrm: float) -> NDArray[float]:
+def wavelet(wc: WDMWaveletConstants, m: int, nrm: np.floating) -> NDArray[np.float64]:
     """Computes wavelet, modifies wave in place"""
     wave = np.zeros(wc.K)
     halfN = np.int64(wc.K / 2)
@@ -35,7 +37,7 @@ def wavelet(wc: WDMWaveletConstants, m: int, nrm: float) -> NDArray[float]:
 
 
 @njit(parallel=True)
-def get_taylor_table_time_helper(wavelet_norm: NDArray[float], wc: WDMWaveletConstants) -> (NDArray[float], NDArray[float]):
+def get_taylor_table_time_helper(wavelet_norm: NDArray[np.float64], wc: WDMWaveletConstants) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
     """Helper function to take advantage of jit compiler in t calculation"""
     fd = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)  # set f-dot increments
     Nfsam = ((wc.BW + np.abs(fd) * wc.Tw) / wc.df).astype(np.int64)
@@ -64,7 +66,7 @@ def get_taylor_table_time_helper(wavelet_norm: NDArray[float], wc: WDMWaveletCon
     return evcs, evss
 
 @njit()
-def get_taylor_pixel_direct(fa: float, fda: float, k_in: int, wavelet_norm: NDArray[float], wc: WDMWaveletConstants) -> (float, float):
+def get_taylor_pixel_direct(fa: float, fda: float, k_in: int, wavelet_norm: NDArray[np.float64], wc: WDMWaveletConstants) -> Tuple[float, float]:
     """Helper function to take advantage of jit compiler in t calculation"""
     dfa = fa - wc.DF*k_in
     xk = np.abs(dfa)/wc.df
@@ -89,7 +91,7 @@ def get_taylor_pixel_direct(fa: float, fda: float, k_in: int, wavelet_norm: NDAr
     assert evs_mid != 0.0
     return evc_mid, evs_mid
 
-def get_wavelet_norm(wc: WDMWaveletConstants) -> NDArray[float]:
+def get_wavelet_norm(wc: WDMWaveletConstants) -> NDArray[np.float64]:
     """Get the normalized wavelet needed for the taylor time coefficients table.
     Also used in the exact version of wavemaket.
     """

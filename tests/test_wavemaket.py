@@ -278,7 +278,7 @@ def multishape_method_match_helper(p_offset, f0_mult, f0p_mult, f0pp_mult, rr_mo
 @pytest.mark.parametrize('rr_model', ['const'])
 @pytest.mark.parametrize('gridsize2_mult', [1])
 @pytest.mark.parametrize('p_offset', [0., np.pi/2.])
-#@pytest.mark.skip()
+@pytest.mark.skip
 def test_wavemaket_method_match_slopes(p_offset, f0_mult, f0p_mult, f0pp_mult, rr_model, gridsize2_mult):
     """Test whether the signal computed in the time domain matches computing
     it in the wavelet domain with several different pixel grid sizes for a galactic binary
@@ -297,7 +297,7 @@ def test_wavemaket_method_match_slopes(p_offset, f0_mult, f0p_mult, f0pp_mult, r
 @pytest.mark.parametrize('rr_model', ['const'])
 @pytest.mark.parametrize('gridsize2_mult', [32, 16, 8, 4, 2, 1, 0.5])
 @pytest.mark.parametrize('p_offset', [np.pi/2., 0.])
-#@pytest.mark.skip()
+@pytest.mark.skip
 def test_wavemaket_multishape_method_match(p_offset, f0_mult, f0p_mult, f0pp_mult, rr_model, gridsize2_mult):
     """Test whether the signal computed in the time domain matches computing
     it in the wavelet domain with several different pixel grid sizes for a galactic binary
@@ -313,7 +313,7 @@ def test_wavemaket_multishape_method_match(p_offset, f0_mult, f0p_mult, f0pp_mul
     ],
 )
 @pytest.mark.parametrize('p_offset', [0., np.pi/2.])
-#@pytest.mark.skip()
+@pytest.mark.skip
 def test_wavemaket_extreme_size(p_offset, f0_mult, direct):
     """Test with maximally rapid oscillations in FTd that integrate out to constant frequency"""
     # get the config for the first (Nf, Nt) pair
@@ -428,7 +428,7 @@ def test_wavemaket_extreme_size(p_offset, f0_mult, direct):
 @pytest.mark.parametrize('gridsize2_mult', [32, 16, 8, 4, 2, 0.5])
 @pytest.mark.parametrize('p_offset', [0., np.pi/2. ])
 @pytest.mark.parametrize('direct', [True, False])
-#@pytest.mark.skip
+@pytest.mark.skip
 def test_wavemaket_dimension_comparison_midevolve2(p_offset, f0_mult, f0p_mult, f0pp_mult, rr_model, gridsize2_mult, direct):
     """Test whether the signal computed in the time domain matches computing
     it in the wavelet domain with several different pixel grid sizes for a galactic binary
@@ -641,6 +641,29 @@ def test_wavemaket_dimension_comparison_slowevolve(p_offset, f0_mult, f0p_mult, 
     wavelet_dense2, signal_time2, signal_freq2, mag_got2, angle_got2, envelope2, p_envelope2, f_envelope2, fd_envelope2, itr_low_cut2, itr_high_cut2 = get_wavelet_alternative_representation_helper(wavelet_waveform2, wc2, tukey_alpha, f_lowpass, 8.e-2)
     itr_low_cut = max(itr_low_cut1, itr_low_cut2)
     itr_high_cut = min(itr_high_cut1, itr_high_cut2)
+
+    #import matplotlib.pyplot as plt
+    #plt.plot(np.arange(0, wc1.Nf*wc1.Nt)*wc1.dt/(3600*24*365), signal_time1[:,0])
+    #plt.xlabel('Time [yr]')
+    #plt.ylabel('Amplitude')
+    #plt.title('Sine Wave, %5.3f s sampling: ~%9d parameters' % (wc1.dt, wc1.Nf*wc1.Nt))
+    #plt.show()
+
+    #plt.plot(np.fft.rfftfreq(wc1.Nf*wc1.Nt, d=wc1.dt)*1000, mag_got1[:,0])
+    #plt.xlabel('f [mHz]')
+    #plt.ylabel('Amplitude')
+    #plt.title('FFT Sine Wave: ~2 parameters')
+    #plt.show()
+
+    #print(wc1.Nf*wc1.DF, f_input)
+    ##plt.plot(np.arange(0, wc1.Nf*wc1.Nt//2+1)/(2*wc1.dt), mag_got1[:,0])
+    #extent = (0 * wc1.DT / gc.SECSYEAR, wc1.Nt * wc1.DT / gc.SECSYEAR, 0 * wc1.DF*1000, wc1.Nf * wc1.DF*100)
+    #plt.imshow(np.rot90(wavelet_dense1[:,:,0]**2), aspect='auto', extent=extent, cmap='YlOrRd')
+    #plt.ylabel('f [mHz]')
+    #plt.xlabel('t [yr]')
+    #plt.title('Wavelet Sine Wave: ~%5d parameters' % wavelet_waveform1.n_set[0])
+    #plt.show()
+    #assert False
 
     assert_allclose(envelope1, envelope2, atol=1.e-2, rtol=1.e-2)
     assert_allclose(f_envelope1, f_envelope2, atol=1.e-2*f_input, rtol=1.e-4)

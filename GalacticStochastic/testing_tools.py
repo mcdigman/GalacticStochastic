@@ -1,16 +1,20 @@
-"""utilities for testing the code"""
+"""Utilities for testing code performance."""
+
+from typing import Tuple
 
 import numpy as np
 import scipy.stats
 from numpy.typing import NDArray
 
 
-def unit_normal_battery(signal: NDArray[float], *, mult: float=1.0, sig_thresh: float=5.0, A2_cut: float=2.28, do_assert: bool=True, verbose: bool=False) -> (bool, float, float, float):
-    """Battery of tests for checking if signal is unit normal white noise
+def unit_normal_battery(signal: NDArray[np.float64], *, mult: float=1.0, sig_thresh: float=5.0, A2_cut: float=2.28, do_assert: bool=True, verbose: bool=False) -> Tuple[bool, float, float, float]:
+    """Check if signal is consistent with unit normal white noise.
+
+    Uses several tests, including an Anderston-Darling test
+    and tests for zero mean and unit variance.
     default anderson darling cutoff of 2.28 is hand selected to
-    give ~1 in 1e5 empirical probablity of false positive for n=64
-    calibration looks about same for n=32 could probably choose better way
-    with current defaults that should make it the most sensitive test
+    give ~1 in 1e5 empirical probablity of false positive for n=64.
+    The calibration is about the same for other n tested, such as n=32.
     """
     n_sig = signal.size
     if n_sig == 0:
@@ -25,16 +29,18 @@ def unit_normal_battery(signal: NDArray[float], *, mult: float=1.0, sig_thresh: 
     sig_sort = np.sort((sig_adjust - mean_wave) / std_wave)
     phis = scipy.stats.norm.cdf(sig_sort)
     xs = np.arange(1, n_sig + 1)
-    A2 = -n_sig - 1 / n_sig * np.sum((2 * xs - 1) * np.log(phis) + (2 * (n_sig - xs) + 1) * np.log(1 - phis))
-    A2Star = A2 * (1 + 4 / n_sig - 25 / n_sig**2)
+    A2: float = -n_sig - 1 / n_sig * np.sum((2 * xs - 1) * np.log(phis) + (2 * (n_sig - xs) + 1) * np.log(1 - phis))
+    A2Star: float = A2 * (1 + 4 / n_sig - 25 / n_sig**2)
     if verbose:
         print(A2Star, A2_cut)
 
-    mean_stat = np.abs(mean_wave) / std_wave * np.sqrt(n_sig)
-    std_stat = np.abs(std_wave - 1.0) / std_std_wave
-    test1 = mean_stat < sig_thresh
-    test2 = std_stat < sig_thresh
-    test3 = A2Star < A2_cut  # should be less than cutoff value
+    mean_stat: float = np.abs(mean_wave) / std_wave * np.sqrt(n_sig)
+    std_stat: float = np.abs(std_wave - 1.0) / std_std_wave
+    test1: bool = mean_stat < sig_thresh
+    test2: bool = std_stat < sig_thresh
+    test3: bool = bool(A2Star < A2_cut)  # should be less than cutoff value
+
+    test_combo: bool = test1 and test2 and test3
 
     # check mean and variance
     if do_assert:
@@ -42,4 +48,4 @@ def unit_normal_battery(signal: NDArray[float], *, mult: float=1.0, sig_thresh: 
         assert test2
         assert test3
 
-    return test1 and test2 and test3, A2Star, mean_stat, std_stat
+    return test_combo, A2Star, mean_stat, std_stat

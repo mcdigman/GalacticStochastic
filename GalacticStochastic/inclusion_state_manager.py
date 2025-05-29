@@ -1,6 +1,7 @@
 """Class to store information about the binaries in the galactic background"""
 
 from time import perf_counter
+from typing import Tuple
 
 import numpy as np
 
@@ -53,8 +54,8 @@ class BinaryInclusionState(StateManager):
         self.params_gb = params_gb_in[self.argbinmap]
         self.n_bin_use = self.argbinmap.size
 
-        params_gb_in = None
-        faints_in = None
+        del params_gb_in
+        del faints_in
 
         self.snrs_upper = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use, lc.nc_snr))
         self.snrs_lower = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use, lc.nc_snr))
@@ -85,18 +86,18 @@ class BinaryInclusionState(StateManager):
             self.snrs_tot_upper[itrn, self.decided[itrn]] = self.snrs_tot_upper[itrn - 1, self.decided[itrn]]
             self.snrs_upper[itrn, self.decided[itrn]] = self.snrs_upper[itrn - 1, self.decided[itrn]]
 
-    def oscillation_check_helper(self) -> (bool, bool, bool):
+    def oscillation_check_helper(self) -> Tuple[bool, bool, bool]:
         """Helper used by fit_state to decide if the bright binaries are oscillating without converging"""
         osc1 = False
         osc2 = False
         osc3 = False
 
         if self.itrn > 1:
-            osc1 = np.all(self.brights[self.itrn - 1] == self.brights[self.itrn - 2])
+            osc1 = bool(np.all(self.brights[self.itrn - 1] == self.brights[self.itrn - 2]))
         if self.itrn > 2:
-            osc2 = np.all(self.brights[self.itrn - 1] == self.brights[self.itrn - 3])
+            osc2 = bool(np.all(self.brights[self.itrn - 1] == self.brights[self.itrn - 3]))
         if self.itrn > 3:
-            osc3 = np.all(self.brights[self.itrn - 1] == self.brights[self.itrn - 4])
+            osc3 = bool(np.all(self.brights[self.itrn - 1] == self.brights[self.itrn - 4]))
 
         converged_or_cycling = osc1 or osc2 or osc3
         old_match = osc2 or osc3
@@ -159,7 +160,7 @@ class BinaryInclusionState(StateManager):
         if ~np.isfinite(self.snrs_tot_upper[itrn, itrb]) or ~np.isfinite(self.snrs_tot_lower[itrn, itrb]):
             raise ValueError('Non-finite value detected in snr at ' + str(itrn) + ', ' + str(itrb))
 
-    def decision_helper(self, itrb: int) -> (bool, bool):
+    def decision_helper(self, itrb: int) -> Tuple[bool, bool]:
         """Helper to decide whether a binary is bright or faint by the current noise spectrum"""
         itrn = self.itrn
         if self.fit_state.get_preprocess_mode() == 1:
@@ -218,14 +219,13 @@ class BinaryInclusionState(StateManager):
             else:
                 # binary neither faint nor bright enough to decide
                 self.noise_manager.bgd.add_undecided(wavelet_waveform)
+        # binary is faint enough to decide
+        elif itrn == 0:
+            self.faints_cur[itrn, itrb] = False
+            self.faints_old[itrb] = True
+            self.noise_manager.bgd.add_floor(wavelet_waveform)
         else:
-            # binary is faint enough to decide
-            if itrn == 0:
-                self.faints_cur[itrn, itrb] = False
-                self.faints_old[itrb] = True
-                self.noise_manager.bgd.add_floor(wavelet_waveform)
-            else:
-                self.noise_manager.bgd.add_faint(wavelet_waveform)
+            self.noise_manager.bgd.add_faint(wavelet_waveform)
 
     def advance_state(self) -> None:
         """Handle any logic necessary to advance the state of the object to the next iteration"""

@@ -61,9 +61,9 @@ def get_iteration_config(config: dict) -> IterationConfig:
     snr_min[1:] = snr_low_mult * snr_low_initial
 
     # the list of periods to allow in the cyclostationary model
-    period_list = np.array(config['iterative_fit_constants'].get('period_list'), dtype=float)
-    assert np.all(period_list >= 0.0)
-    period_list = tuple(period_list)
+    period_list_in = np.array(config['iterative_fit_constants'].get('period_list'), dtype=float)
+    assert np.all(period_list_in >= 0.0)
+    period_list = tuple(period_list_in)
 
     # final frequency smoothing length for galactic spectrum in log frequency bins
     smooth_lengthf_fix = float(config['iterative_fit_constants']['smooth_lengthf_fix'])

@@ -19,6 +19,7 @@ def phase_wrap_helper(
     AET_waveform: StationaryWaveformTime, waveform: StationaryWaveformTime, wrap_thresh: float = 6.0
 ) -> None:
     """Wrap the tdi perturbations to the phases by appropriate factors of 2 pi.
+
     Parameters
     ----------
     AET_waveform: StationaryWaveformTime
@@ -27,10 +28,12 @@ def phase_wrap_helper(
         Object containing the intrinsic waveform, with shape (n_t)
     wrap_thresh: float
         Threshold above which to consider the phase large enough to wrap by 2 pi.
+
     Returns
     -------
     None
         Results are stored in place in the PT attribute of AET_waveform.
+
     """
     AET_PT = AET_waveform.PT
 
@@ -75,15 +78,20 @@ def phase_wrap_helper(
 @njit()
 def spacecraft_channel_deriv_helper(spacecraft_channels: SpacecraftChannels, dt: float) -> None:
     """Get the derivatives of the RR and II components of the TDI and store them in dRR and dII.
+
     Parameters
     ----------
     spacecraft_channels: SpacecraftChannels
         Object containing the spacecraft channels with RR, II, dRR, and dII attributes,
         with RR and II already computed.
+    dt: float
+        The time spacing of the uniformally spaced samples need for computing the gradient
+
     Returns
     -------
     None
         Results are stored in place in dRR and dII attributes of spacecraft_channels
+
     """
     # get and store the derivatives
     gradient_uniform_inplace(spacecraft_channels.RR, spacecraft_channels.dRR, dt)
@@ -137,6 +145,7 @@ def get_time_tdi_amp_phase_helper(
     -------
     None
         Results are stored in-place in AET_waveform
+
     """
     # Note that if RR and II are both very near zero, there can be a step function
     # in the phase that would correspond to a dirac delta function in the frequency,
@@ -263,6 +272,7 @@ def get_time_tdi_amp_phase(
     -------
     None
         Results are stored in-place in AET_waveform
+
     """
     # get and store dRR and dII in the object
     spacecraft_channel_deriv_helper(spacecraft_channels, dt)

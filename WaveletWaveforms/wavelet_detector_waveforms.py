@@ -1,7 +1,7 @@
 """subroutines for running lisa binary monte carlo search"""
 
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.ra_waveform_time import BinaryTimeWaveformAmpFreqD, StationaryWaveformTime
+from LisaWaveformTools.ra_waveform_time import BinaryTimeWaveformAmpFreqD
 from WaveletWaveforms.coefficientsWDM_time_helpers import (
     WaveletTaylorTimeCoeffs,
     get_empty_sparse_taylor_time_waveform,
@@ -39,7 +39,7 @@ class BinaryWaveletAmpFreqDT:
 
         # get a blank waveform in the sparse wavelet domain
         # when consistent is set it will be correct
-        self.wavelet_waveform: StationaryWaveformTime = get_empty_sparse_taylor_time_waveform(self.lc.nc_waveform, wc)
+        self.wavelet_waveform: SparseWaveletWaveform = get_empty_sparse_taylor_time_waveform(self.lc.nc_waveform, wc)
 
         self.consistent = False
 
