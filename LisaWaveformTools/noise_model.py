@@ -1,6 +1,7 @@
 """get the instrument noise profile"""
 
 from abc import ABC, abstractmethod
+from typing import override
 
 import numpy as np
 
@@ -8,7 +9,7 @@ import numpy as np
 from numba import njit
 from numpy.typing import NDArray
 
-from WaveletWaveforms.sparse_waveform_functions import SparseWaveletWaveform
+from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, SparseWaveletWaveform
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 # from numba.experimental import jitclass
@@ -27,7 +28,7 @@ class DenseNoiseModel(ABC):
         """Generate random noise for full matrix"""
 
     @abstractmethod
-    def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_min=0, nt_max=-1) -> NDArray[np.float64]:
+    def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_lim_snr: PixelTimeRange) -> NDArray[np.float64]:
         """Get S/N of waveform in each TDI channel"""
 
     @abstractmethod
@@ -62,8 +63,7 @@ class DenseNoiseModel(ABC):
 @njit()
 def get_sparse_snr_helper(
     wavelet_waveform: SparseWaveletWaveform,
-    nt_min,
-    nt_max,
+    nt_lim_snr: PixelTimeRange,
     wc: WDMWaveletConstants,
     inv_chol_S: NDArray[np.float64],
     nc_snr,
@@ -74,8 +74,8 @@ def get_sparse_snr_helper(
     ----------
     wavelet_waveform: SparseWaveletWaveform
         a sparse wavelet domain waveform
-    nt_min
-    nt_max
+    nt_lim_snr: PixelTimeRange
+        the range of time pixels to allow
     wc : namedtuple
         constants for WDM wavelet basis also from wdm_config.py
     inv_chol_S :
@@ -85,14 +85,12 @@ def get_sparse_snr_helper(
     -------
 
     """
-    if nt_max == -1:
-        nt_max = wc.Nt
     snr2s = np.zeros(nc_snr)
     for itrc in range(nc_snr):
         i_itrs = np.mod(wavelet_waveform.pixel_index[itrc, : wavelet_waveform.n_set[itrc]], wc.Nf).astype(np.int64)
         j_itrs = (wavelet_waveform.pixel_index[itrc, : wavelet_waveform.n_set[itrc]] - i_itrs) // wc.Nf
         for mm in range(wavelet_waveform.n_set[itrc]):
-            if nt_min <= j_itrs[mm] < nt_max:
+            if nt_lim_snr.nt_min <= j_itrs[mm] < nt_lim_snr.nt_max:
                 mult = inv_chol_S[j_itrs[mm], i_itrs[mm], itrc] * wavelet_waveform.wave_value[itrc, mm]
                 snr2s[itrc] += mult * mult
     return np.sqrt(snr2s)
@@ -112,7 +110,7 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
     instrument noise model to feed to snr and fisher matrix calculations
     """
 
-    def __init__(self, S: NDArray[np.float64], wc: WDMWaveletConstants, prune, nc_snr: int, seed=-1) -> None:
+    def __init__(self, S: NDArray[np.float64], wc: WDMWaveletConstants, prune, nc_snr: int, seed: int=-1) -> None:
         """Initialize the fully diagonal, nonstationary noise model
 
         Parameters
@@ -170,6 +168,7 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
             self.inv_chol_S[:, 0, :] = 0.0
             self.inv_S[:, 0, :] = 0.0
 
+    @override
     def generate_dense_noise(self) -> NDArray[np.float64]:
         """Generate random noise for full matrix
 
@@ -195,26 +194,32 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
             noise_res[j, :, :] = rng.normal(0.0, 1.0, (self.wc.Nf, self.nc_noise)) * self.chol_S[j, :, :]
         return noise_res
 
-    def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_min=0, nt_max=-1) -> NDArray[np.float64]:
+    @override
+    def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_lim_snr: PixelTimeRange) -> NDArray[np.float64]:
         """Get snr of waveform in each channel"""
-        return get_sparse_snr_helper(wavelet_waveform, nt_min, nt_max, self.wc, self.inv_chol_S, self.nc_snr)
+        return get_sparse_snr_helper(wavelet_waveform, nt_lim_snr, self.wc, self.inv_chol_S, self.nc_snr)
 
+    @override
     def get_S_stat_m(self) -> NDArray[np.float64]:
         """Get the mean noise covariance matrix as a function of time"""
         return np.mean(self.S, axis=0)
 
+    @override
     def get_inv_chol_S(self) -> NDArray[np.float64]:
         """Get the inverse cholesky decomposition of the dense noise covariance matrix"""
         return self.inv_chol_S
 
+    @override
     def get_inv_S(self) -> NDArray[np.float64]:
         """Get the inverse of the dense noise covariance matrix"""
         return self.inv_S
 
+    @override
     def get_chol_S(self) -> NDArray[np.float64]:
         """Get the cholesky decomposition of the dense noise covariance matrix"""
         return self.chol_S
 
+    @override
     def get_S(self) -> NDArray[np.float64]:
         """Get the dense noise covariance matrix"""
         return self.chol_S
@@ -239,7 +244,7 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
     noise model to feed to snr and fisher matrix calculations
     """
 
-    def __init__(self, S_stat_m, wc: WDMWaveletConstants, prune, nc_snr: int, seed=-1) -> None:
+    def __init__(self, S_stat_m: NDArray[float], wc: WDMWaveletConstants, prune, nc_snr: int, seed: int=-1) -> None:
         """Initialize the stationary instrument noise model
 
         Parameters
@@ -313,6 +318,7 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
                     self.inv_chol_S[j, 0, itrc] = self.inv_chol_S_stat_m[0, itrc]
                     self.chol_S[j, 0, itrc] = self.chol_S_stat_m[0, itrc]
 
+    @override
     def generate_dense_noise(self) -> NDArray[np.float64]:
         """Generate random noise for full matrix
 
@@ -338,7 +344,8 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
             noise_res[j, :, :] = rng.normal(0.0, 1.0, (self.wc.Nf, self.nc_noise)) * self.chol_S[j, :, :]
         return noise_res
 
-    def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_min=0, nt_max=-1) -> NDArray[np.float64]:
+    @override
+    def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_lim_snr: PixelTimeRange) -> NDArray[np.float64]:
         """Get s/n of waveform in each TDI channel. Parameters usually come from
         BinaryWaveletAmpFreqDT.get_unsorted_coeffs() from
         wavelet_detector_waveforms.
@@ -347,10 +354,8 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
         ----------
         wavelet_waveform: SparseWaveletWaveform
             a sparse wavelet domain waveform
-        nt_min : int, default=0
-            time pixels that are start/end of slice for evaluating.
-            Used for selecting a subset of time pixels
-        nt_max : int, default=-1
+        nt_lim_snr: PixelTimeRange
+            the range of time pixels to consider for snr calculations
 
         Returns
         -------
@@ -358,26 +363,29 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
             an array of shape (nc_noise) which is the S/N for each TDI channel represented.
 
         """
-        if nt_max == -1:
-            nt_max = self.wc.Nt
-        return get_sparse_snr_helper(wavelet_waveform, nt_min, nt_max, self.wc, self.inv_chol_S, self.nc_snr)
+        return get_sparse_snr_helper(wavelet_waveform, nt_lim_snr, self.wc, self.inv_chol_S, self.nc_snr)
 
+    @override
     def get_S_stat_m(self) -> NDArray[np.float64]:
         """Get the mean noise covariance matrix as a function of time"""
         return self.S_stat_m
 
+    @override
     def get_inv_chol_S(self) -> NDArray[np.float64]:
         """Get the inverse cholesky decomposition of the dense noise covariance matrix"""
         return self.inv_chol_S
 
+    @override
     def get_inv_S(self) -> NDArray[np.float64]:
         """Get the inverse of the dense noise covariance matrix"""
         return self.inv_S
 
+    @override
     def get_chol_S(self) -> NDArray[np.float64]:
         """Get the cholesky decomposition of the dense noise covariance matrix"""
         return self.chol_S
 
+    @override
     def get_S(self) -> NDArray[np.float64]:
         """Get the dense noise covariance matrix"""
         return self.chol_S

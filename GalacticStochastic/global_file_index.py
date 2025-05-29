@@ -11,6 +11,7 @@ from LisaWaveformTools import lisa_config
 from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
 from LisaWaveformTools.lisa_config import LISAConstants
 from WaveletWaveforms import wdm_config
+from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 n_par_gb = 8
@@ -66,7 +67,7 @@ def get_galaxy_filename(galaxy_file, galaxy_dir):
     return galaxy_dir + galaxy_file
 
 
-def get_processed_gb_filename(galaxy_dir, stat_only, snr_thresh, wc: WDMWaveletConstants, nt_min, nt_max):
+def get_processed_gb_filename(galaxy_dir, stat_only, snr_thresh, wc: WDMWaveletConstants, nt_lim_snr: PixelTimeRange):
     return (
         galaxy_dir
         + ('gb8_processed_snr=%.2f' % snr_thresh)
@@ -78,9 +79,9 @@ def get_processed_gb_filename(galaxy_dir, stat_only, snr_thresh, wc: WDMWaveletC
         + '_const='
         + str(stat_only)
         + '_nt_min='
-        + str(nt_min)
+        + str(nt_lim_snr.nt_min)
         + '_nt_max='
-        + str(nt_max)
+        + str(nt_lim_snr.nt_max)
         + '.hdf5'
     )
 
@@ -243,10 +244,10 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
 
 
 def load_processed_gb_file(
-    galaxy_dir, snr_thresh, wc: WDMWaveletConstants, lc: LISAConstants, nt_min, nt_max, *, stat_only
+    galaxy_dir, snr_thresh, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_snr: PixelTimeRange, *, stat_only
 ):
     # TODO loading should produce a galactic background decomposition object
-    filename_in = get_processed_gb_filename(galaxy_dir, stat_only, snr_thresh, wc, nt_min, nt_max)
+    filename_in = get_processed_gb_filename(galaxy_dir, stat_only, snr_thresh, wc, nt_lim_snr)
     hf_in = h5py.File(filename_in, 'r')
 
     # check parameters in file match current parameters
@@ -339,8 +340,7 @@ def store_processed_gb_file(
     wc: WDMWaveletConstants,
     lc: LISAConstants,
     ic: IterationConfig,
-    nt_min,
-    nt_max,
+    nt_lim_snr: PixelTimeRange,
     bgd: BGDecomposition,
     period_list,
     n_bin_use,
@@ -356,7 +356,7 @@ def store_processed_gb_file(
 ) -> None:
     filename_gb_init = get_preliminary_filename(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
     filename_gb_common = get_common_noise_filename(galaxy_dir, ic.snr_thresh, wc)
-    filename_out = get_processed_gb_filename(galaxy_dir, stat_only, ic.snr_thresh, wc, nt_min, nt_max)
+    filename_out = get_processed_gb_filename(galaxy_dir, stat_only, ic.snr_thresh, wc, nt_lim_snr)
 
     hf_out = h5py.File(filename_out, 'w')
     hf_out.create_group('S')

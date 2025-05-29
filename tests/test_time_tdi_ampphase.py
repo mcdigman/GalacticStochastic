@@ -20,7 +20,7 @@ from WaveletWaveforms.coefficientsWDM_time_helpers import (
     get_empty_sparse_taylor_time_waveform,
     get_taylor_table_time,
 )
-from WaveletWaveforms.sparse_waveform_functions import sparse_addition_helper
+from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, sparse_addition_helper
 from WaveletWaveforms.taylor_wdm_funcs import wavemaket_multi_inplace
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
@@ -754,7 +754,8 @@ def test_time_tdi_inplace_transform(f0_mult, rr_model, f0p_mult):
 
     # get the sparse wavelet waveform
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(lc.nc_waveform, wc)
-    wavemaket_multi_inplace(wavelet_waveform, AET_waveform, 0, wc.Nt, wc, taylor_time_table, force_nulls=False)
+    nt_lim = PixelTimeRange(0, wc.Nt)
+    wavemaket_multi_inplace(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table, force_nulls=False)
 
     # get the dense wavelet waveform
     wavelet_dense = np.zeros((nt_loc * wc.Nf, nc_waveform))

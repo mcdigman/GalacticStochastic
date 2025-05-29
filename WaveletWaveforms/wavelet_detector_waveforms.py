@@ -7,7 +7,7 @@ from WaveletWaveforms.coefficientsWDM_time_helpers import (
     get_empty_sparse_taylor_time_waveform,
     get_taylor_table_time,
 )
-from WaveletWaveforms.sparse_waveform_functions import SparseWaveletWaveform
+from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, SparseWaveletWaveform
 from WaveletWaveforms.taylor_wdm_funcs import wavemaket_multi_inplace
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
@@ -15,15 +15,11 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 class BinaryWaveletAmpFreqDT:
     """class to store a sparse binary wavelet and update for search"""
 
-    def __init__(self, params, wc: WDMWaveletConstants, lc: LISAConstants, nt_min=0, nt_max=-1) -> None:
+    def __init__(self, params, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelTimeRange) -> None:
         """Construct a binary wavelet object, if NMF_use is not -1 it overrides the default"""
         self.wc = wc
         self.lc = lc
-        if nt_max == -1:
-            self.nt_max = self.wc.Nt
-        else:
-            self.nt_max = nt_max
-        self.nt_min = nt_min
+        self.nt_lim_waveform = nt_lim_waveform
 
         self.params = params
 
@@ -34,7 +30,7 @@ class BinaryWaveletAmpFreqDT:
 
         # get the waveform in frequency space
         self.fwt = BinaryTimeWaveformAmpFreqD(
-            self.params, self.nt_min, self.nt_max, self.lc, self.wc, self.lc.nc_waveform
+            self.params, self.nt_lim_waveform, self.lc, self.wc, self.lc.nc_waveform
         )
 
         # get a blank waveform in the sparse wavelet domain
@@ -56,8 +52,7 @@ class BinaryWaveletAmpFreqDT:
         wavemaket_multi_inplace(
             self.wavelet_waveform,
             self.fwt.AET_waveform,
-            self.nt_min,
-            self.nt_max,
+            self.nt_lim_waveform,
             self.wc,
             self.taylor_time_table,
             force_nulls=False,

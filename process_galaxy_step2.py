@@ -11,6 +11,7 @@ from GalacticStochastic.iterative_fit_manager import IterativeFitManager
 from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
 from GalacticStochastic.noise_manager import NoiseModelManager
 from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
+from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
 
 if __name__ == '__main__':
     a = np.array([])
@@ -27,6 +28,8 @@ if __name__ == '__main__':
     preprocess_mode = True
     nt_min = 0
     nt_max = wc.Nt
+    nt_lim_snr = PixelTimeRange(nt_min, nt_max)
+    nt_lim_waveform = PixelTimeRange(nt_min, nt_max)
 
     params_gb, _, _, _, _ = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
 
@@ -34,9 +37,9 @@ if __name__ == '__main__':
 
     bgd = BGDecomposition(wc, ic.nc_galaxy)
 
-    noise_manager = NoiseModelManager(ic, wc, lc, fit_state, bgd, S_inst_m, stat_only, nt_min, nt_max)
+    noise_manager = NoiseModelManager(ic, wc, lc, fit_state, bgd, S_inst_m, stat_only, nt_lim_snr)
 
-    bis = BinaryInclusionState(wc, ic, lc, params_gb, noise_manager, fit_state)
+    bis = BinaryInclusionState(wc, ic, lc, params_gb, noise_manager, fit_state, nt_lim_waveform)
 
     ifm = IterativeFitManager(ic, fit_state, noise_manager, bis)
 

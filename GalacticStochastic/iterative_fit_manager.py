@@ -1,6 +1,7 @@
 """object to run everything related to the iterative processing of galactic background"""
 
 from time import perf_counter
+from typing import override
 
 from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
 from GalacticStochastic.iteration_config import IterationConfig
@@ -54,6 +55,7 @@ class IterativeFitManager(StateManager):
         self.log_state()
         self.state_check()
 
+    @override
     def advance_state(self) -> None:
         """Advance the state of the iteration and determine whether convergence is achieved"""
         t0n = perf_counter()
@@ -74,12 +76,14 @@ class IterativeFitManager(StateManager):
         print('made bg %3d in time %7.3fs fit time %7.3fs'
               % (self.itrn, t1n - t0n, t2n - t1n))
 
+    @override
     def log_state(self) -> None:
         """Perform any internal logging that should be done after advance_state is run."""
         self.bis.log_state()
         self.fit_state.log_state()
         self.noise_manager.log_state()
 
+    @override
     def loop_finalize(self) -> None:
         """Perform any logic desired after convergence has been achieved and the loop ends"""
         self.bis.loop_finalize()
@@ -94,12 +98,14 @@ class IterativeFitManager(StateManager):
             return True
         return False
 
+    @override
     def print_report(self) -> None:
         """Do any printing desired after convergence has been achieved and the loop ends"""
         self.bis.print_report()
         self.fit_state.print_report()
         self.noise_manager.print_report()
 
+    @override
     def state_check(self) -> None:
         """Perform any sanity checks that should be performed at the end of each iteration"""
         self.bis.state_check()

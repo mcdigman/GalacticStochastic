@@ -1,6 +1,9 @@
 """object to manage noise models for the iterative_fit_manager"""
 
+from typing import override
+
 import numpy as np
+from numpy.typing import NDArray
 
 from GalacticStochastic.background_decomposition import BGDecomposition
 from GalacticStochastic.iteration_config import IterationConfig
@@ -9,6 +12,7 @@ from GalacticStochastic.state_manager import StateManager
 from GalacticStochastic.testing_tools import unit_normal_battery
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.noise_model import DiagonalNonstationaryDenseNoiseModel
+from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
@@ -22,10 +26,9 @@ class NoiseModelManager(StateManager):
         lc: LISAConstants,
         fit_state: IterativeFitState,
         bgd: BGDecomposition,
-        S_inst_m,
+        S_inst_m: NDArray[np.float64],
         stat_only,
-        nt_min,
-        nt_max,
+        nt_lim_snr: PixelTimeRange
     ) -> None:
         """Create the noise model manager"""
         self.ic = ic
@@ -35,8 +38,7 @@ class NoiseModelManager(StateManager):
         self.fit_state = fit_state
         self.S_inst_m = S_inst_m
         self.stat_only = stat_only
-        self.nt_min = nt_min
-        self.nt_max = nt_max
+        self.nt_lim_snr = nt_lim_snr
 
         self.itrn = 0
 
@@ -53,16 +55,16 @@ class NoiseModelManager(StateManager):
         self.S_record_lower = np.zeros((self.idx_S_save.size, wc.Nt, wc.Nf, self.bgd.nc_galaxy))
         self.S_final = np.zeros((wc.Nt, wc.Nf, self.bgd.nc_galaxy))
 
-        S_upper = np.zeros((wc.Nt, wc.Nf, self.bgd.nc_galaxy))
+        S_upper: NDArray[float] = np.zeros((wc.Nt, wc.Nf, self.bgd.nc_galaxy))
         S_upper[:] = self.S_inst_m
 
-        S_lower = np.zeros((wc.Nt, wc.Nf, self.bgd.nc_galaxy))
+        S_lower: NDArray[float] = np.zeros((wc.Nt, wc.Nf, self.bgd.nc_galaxy))
         S_lower[:] = self.S_inst_m
         if self.idx_S_save[self.itr_save] == 0:
             self.S_record_upper[0] = S_upper[:, :, :]
             self.S_record_lower[0] = S_lower[:, :, :]
             self.itr_save += 1
-        S_lower = np.min([S_lower, S_upper], axis=0)
+        S_lower = np.asarray(np.min([S_lower, S_upper], axis=0), dtype=np.float64)
 
         self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, wc, prune=True, nc_snr=lc.nc_snr)
         self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, wc, prune=True, nc_snr=lc.nc_snr)
@@ -70,6 +72,7 @@ class NoiseModelManager(StateManager):
         del S_upper
         del S_lower
 
+    @override
     def log_state(self) -> None:
         """Perform any internal logging that should be done after advance_state is run."""
         if self.itr_save < self.idx_S_save.size and self.itrn - 1 == self.idx_S_save[self.itr_save]:
@@ -78,26 +81,29 @@ class NoiseModelManager(StateManager):
             self.itr_save += 1
         self.bgd.log_state(self.S_inst_m)
 
+    @override
     def loop_finalize(self) -> None:
         """Perform any logic desired after convergence has been achieved and the loop ends"""
         self.S_final[:] = self.noise_upper.S[:, :, :]
 
+    @override
     def state_check(self) -> None:
         """Perform any sanity checks that should be performed at the end of each iteration"""
         self.bgd.state_check()
 
+    @override
     def print_report(self) -> None:
         """Do any printing desired after convergence has been achieved and the loop ends"""
-        res_mask = ((self.noise_upper.S[:, :, 0] - self.S_inst_m[:, 0]).mean(axis=0) > 0.1 * self.S_inst_m[:, 0]) & (
+        res_mask = np.asarray(((self.noise_upper.S[:, :, 0] - self.S_inst_m[:, 0]).mean(axis=0) > 0.1 * self.S_inst_m[:, 0]) & (
             self.S_inst_m[:, 0] > 0.0
-        )
+        ), dtype=np.bool_)
         galactic_below_high = self.bgd.get_galactic_below_high()
         noise_divide = np.sqrt(
-            self.noise_upper.S[self.nt_min:self.nt_max, res_mask, :2] - self.S_inst_m[res_mask, :2]
+            self.noise_upper.S[self.nt_lim_snr.nt_min:self.nt_lim_snr.nt_max, res_mask, :2] - self.S_inst_m[res_mask, :2]
         )
         points_res = (
             galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy)[
-                self.nt_min:self.nt_max, res_mask, :2
+                self.nt_lim_snr.nt_min:self.nt_lim_snr.nt_max, res_mask, :2
             ]
             / noise_divide
         )
@@ -121,6 +127,7 @@ class NoiseModelManager(StateManager):
                 % (n_points, a2score, mean_rat, std_rat)
             )
 
+    @override
     def advance_state(self) -> None:
         """Handle any logic necessary to advance the state of the object to the next iteration"""
         noise_safe_upper = self.fit_state.get_noise_safe_upper()
@@ -153,7 +160,7 @@ class NoiseModelManager(StateManager):
             # use lower estimate of galactic bg
             filter_periods = not self.stat_only
             S_lower = self.bgd.get_S_below_low(self.S_inst_m, self.ic.smooth_lengthf_fix, filter_periods, period_list)
-            S_lower = np.min([S_lower, self.noise_upper.S], axis=0)
+            S_lower = np.asarray(np.min([S_lower, self.noise_upper.S], axis=0), dtype=np.float64)
             self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, self.wc, prune=True, nc_snr=self.lc.nc_snr)
             del S_lower
         self.itrn += 1

@@ -1,6 +1,6 @@
 """State machine that handles the state of the iterator, deciding whether it has converged or not"""
 
-from typing import Tuple
+from typing import Tuple, override
 
 import numpy as np
 
@@ -95,6 +95,7 @@ class IterativeFitState(StateManager):
         """Get whether we are currently in pre-processing mode"""
         return self.preprocess_mode
 
+    @override
     def advance_state(self) -> None:
         """Set the current state for the next iteration to be the state requested after faint_convergence_decision"""
         self.current_state = self.faint_state_request
@@ -120,6 +121,7 @@ class IterativeFitState(StateManager):
         """Get whether we are trying to force convergence"""
         return self.current_state[3]
 
+    @override
     def log_state(self) -> None:
         """Store the state in arrays for diagnostic purposes"""
         (do_faint_check, bright_converged, faint_converged, force_converge) = self.get_state()
@@ -265,6 +267,7 @@ class IterativeFitState(StateManager):
         self.noise_safe_lower = noise_safe
         return noise_safe
 
+    @override
     def state_check(self) -> None:
         """Check some things we expect to be true about the state given current rules"""
         assert self.get_do_faint_check() == self.do_faint_check[self.itrn]
@@ -272,10 +275,12 @@ class IterativeFitState(StateManager):
         if self.do_faint_check[self.itrn]:
             assert not self.bright_converged[self.itrn]
 
+    @override
     def loop_finalize(self) -> None:
         """Perform any logic desired after convergence has been achieved and the loop ends"""
         return
 
+    @override
     def print_report(self) -> None:
         """Do any printing desired after convergence has been achieved and the loop ends"""
         return

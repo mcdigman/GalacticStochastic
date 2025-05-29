@@ -6,7 +6,7 @@ from numba import njit
 from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime
 from WaveletWaveforms.coefficientsWDM_time_funcs import get_taylor_pixel_direct
 from WaveletWaveforms.coefficientsWDM_time_helpers import WaveletTaylorTimeCoeffs
-from WaveletWaveforms.sparse_waveform_functions import SparseWaveletWaveform
+from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, SparseWaveletWaveform
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
@@ -14,8 +14,7 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 def wavemaket_multi_inplace(
     wavelet_waveform: SparseWaveletWaveform,
     waveform: StationaryWaveformTime,
-    nt_min,
-    nt_max,
+    nt_lim_waveform: PixelTimeRange,
     wc: WDMWaveletConstants,
     taylor_table: WaveletTaylorTimeCoeffs,
     *,
@@ -30,7 +29,7 @@ def wavemaket_multi_inplace(
         mm = 0
         nf_min = 0
         nf_max = wc.Nf - 1
-        for j in range(nt_min, nt_max):
+        for j in range(nt_lim_waveform.nt_min, nt_lim_waveform.nt_max):
             # keep j_ind separate in case we want to apply a time offset in the future
             j_ind = j
 
@@ -140,8 +139,7 @@ def wavemaket_multi_inplace(
 def wavemaket_exact(
     wavelet_waveform: SparseWaveletWaveform,
     waveform: StationaryWaveformTime,
-    nt_min,
-    nt_max,
+    nt_lim_waveform: PixelTimeRange,
     wc: WDMWaveletConstants,
     taylor_table: WaveletTaylorTimeCoeffs,
 ) -> None:
@@ -162,7 +160,7 @@ def wavemaket_exact(
         nf_min = 0
         nf_max = wc.Nf - 1
 
-        for j in range(nt_min, nt_max):
+        for j in range(nt_lim_waveform.nt_min, nt_lim_waveform.nt_max):
             j_ind = j # keep j_ind separate in case we want to apply a time offset in the future
 
             c = waveform.AT[itrc, j] * np.cos(waveform.PT[itrc, j])

@@ -1,7 +1,7 @@
 """Class to store information about the binaries in the galactic background"""
 
 from time import perf_counter
-from typing import Tuple
+from typing import Tuple, override
 
 import numpy as np
 
@@ -11,6 +11,7 @@ from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
 from GalacticStochastic.noise_manager import NoiseModelManager
 from GalacticStochastic.state_manager import StateManager
 from LisaWaveformTools.lisa_config import LISAConstants
+from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
 from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
@@ -26,12 +27,14 @@ class BinaryInclusionState(StateManager):
         params_gb_in,
         noise_manager: NoiseModelManager,
         fit_state: IterativeFitState,
+        nt_lim_waveform:  PixelTimeRange,
         snrs_tot_in=None,
     ) -> None:
         """Class that stores information about which component of the galactic signal binaries belong to."""
         self.wc = wc
         self.ic = ic
         self.lc = lc
+        self.nt_lim_waveform = nt_lim_waveform
         self.noise_manager = noise_manager
         self.fit_state = fit_state
 
@@ -66,7 +69,7 @@ class BinaryInclusionState(StateManager):
         self.faints_cur = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use), dtype=np.bool_)
 
         params0 = self.params_gb[0].copy()
-        self.waveform_manager = BinaryWaveletAmpFreqDT(params0.copy(), wc, self.lc)
+        self.waveform_manager = BinaryWaveletAmpFreqDT(params0.copy(), wc, self.lc, self.nt_lim_waveform)
 
         self.itrn = 0
 
@@ -136,7 +139,7 @@ class BinaryInclusionState(StateManager):
 
         if not self.fit_state.get_faint_converged():
             self.snrs_lower[itrn, itrb] = self.noise_manager.noise_lower.get_sparse_snrs(
-                wavelet_waveform, self.noise_manager.nt_min, self.noise_manager.nt_max
+                wavelet_waveform, self.noise_manager.nt_lim_snr
             )
             self.snrs_tot_lower[itrn, itrb] = np.linalg.norm(self.snrs_lower[itrn, itrb])
         else:
@@ -146,7 +149,7 @@ class BinaryInclusionState(StateManager):
 
         if not self.fit_state.get_bright_converged():
             self.snrs_upper[itrn, itrb] = self.noise_manager.noise_upper.get_sparse_snrs(
-                wavelet_waveform, self.noise_manager.nt_min, self.noise_manager.nt_max
+                wavelet_waveform, self.noise_manager.nt_lim_snr
             )
             self.snrs_tot_upper[itrn, itrb] = np.linalg.norm(self.snrs_upper[itrn, itrb])
         else:
@@ -227,6 +230,7 @@ class BinaryInclusionState(StateManager):
         else:
             self.noise_manager.bgd.add_faint(wavelet_waveform)
 
+    @override
     def advance_state(self) -> None:
         """Handle any logic necessary to advance the state of the object to the next iteration"""
         if self.itrn == 0:
@@ -271,6 +275,7 @@ class BinaryInclusionState(StateManager):
 
         self.itrn += 1
 
+    @override
     def state_check(self) -> None:
         """Do any self consistency checks based on the current state"""
         if self.itrn > 0:
@@ -282,9 +287,10 @@ class BinaryInclusionState(StateManager):
                 assert self.itrn > 1
                 assert np.all(self.faints_cur[self.itrn - 1] == self.faints_cur[self.itrn - 2])
 
+    @override
     def print_report(self) -> None:
         """Do any printing desired after convergence has been achieved and the loop ends"""
-        Tobs_consider_yr = (self.noise_manager.nt_max - self.noise_manager.nt_min) * self.wc.DT / gc.SECSYEAR
+        Tobs_consider_yr = (self.noise_manager.nt_lim_snr.nt_max - self.noise_manager.nt_lim_snr.nt_min) * self.wc.DT / gc.SECSYEAR
         n_consider = self.n_bin_use
         n_faint = self.faints_old.sum()
         n_faint2 = self.faints_cur[self.itrn - 1].sum()
@@ -306,10 +312,12 @@ class BinaryInclusionState(StateManager):
 
         assert n_ambiguous + n_bright + n_faint + n_faint2 == n_consider
 
+    @override
     def log_state(self) -> None:
         """Perform any internal logging that should be done after advance_state is run."""
         return
 
+    @override
     def loop_finalize(self) -> None:
         """Perform any logic desired after convergence has been achieved and the loop ends"""
         return

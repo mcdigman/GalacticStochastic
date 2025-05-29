@@ -38,6 +38,12 @@ N_max: integer
     which is determined by the shape of the interpolation table
 """
 
+PixelTimeRange = namedtuple('PixelTimeRange', ['nt_min', 'nt_max'])
+
+PixelTimeRange.__doc__ = """
+namedtuple object to contain range of time pixels for analysis.
+"""
+
 def sparse_addition_helper(sparse_waveform: SparseWaveletWaveform, dense_representation: NDArray[np.float64]) -> None:
     """Take a sparse wavelet representation from SparseWaveletWaveform
     and add it to a dense wavelet representation

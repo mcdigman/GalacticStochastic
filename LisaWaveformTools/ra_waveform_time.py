@@ -8,6 +8,7 @@ from numba import njit, prange
 from LisaWaveformTools.algebra_tools import gradient_uniform_inplace, stabilized_gradient_uniform_inplace
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_freq import RAantenna_inplace, get_tensor_basis, get_xis_inplace, spacecraft_vec
+from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 StationaryWaveformTime = namedtuple('StationaryWaveformTime', ['T', 'PT', 'FT', 'FTd', 'AT'])
@@ -322,17 +323,16 @@ class BinaryTimeWaveformAmpFreqD:
     assuming input binary format based on amplitude, frequency, and frequency derivative
     """
 
-    def __init__(self, params, nt_min, nt_max, lc: LISAConstants, wc: WDMWaveletConstants, nc_waveform) -> None:
+    def __init__(self, params, nt_lim_waveform: PixelTimeRange, lc: LISAConstants, wc: WDMWaveletConstants, nc_waveform: int) -> None:
         """Initalize the object"""
         self.params = params
-        self.nt_min = nt_min
-        self.nt_max = nt_max
-        self.nt_range = self.nt_max - self.nt_min
+        self.nt_lim_waveform = nt_lim_waveform
+        self.nt_range = self.nt_lim_waveform.nt_max - self.nt_lim_waveform.nt_min
         self.lc = lc
         self.wc = wc
         self.nc_waveform = nc_waveform
 
-        self.TTs = self.wc.DT * np.arange(self.nt_min, self.nt_max)
+        self.TTs = self.wc.DT * np.arange(self.nt_lim_waveform.nt_min, self.nt_lim_waveform.nt_max)
 
         AmpTs = np.zeros(self.nt_range)
         PPTs = np.zeros(self.nt_range)

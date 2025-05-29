@@ -23,7 +23,7 @@ def unit_normal_battery(signal: NDArray[np.float64], *, mult: float=1.0, sig_thr
     sig_adjust = signal / mult
     mean_wave = np.mean(sig_adjust)
     std_wave = np.std(sig_adjust)
-    std_std_wave = np.std(sig_adjust) * np.sqrt(2 / n_sig)
+    std_std_wave: float = float(np.std(sig_adjust) * np.sqrt(2 / n_sig))
 
     # anderson darling test statistic assuming true mean and variance are unknown
     sig_sort = np.sort((sig_adjust - mean_wave) / std_wave)
@@ -34,8 +34,8 @@ def unit_normal_battery(signal: NDArray[np.float64], *, mult: float=1.0, sig_thr
     if verbose:
         print(A2Star, A2_cut)
 
-    mean_stat: float = np.abs(mean_wave) / std_wave * np.sqrt(n_sig)
-    std_stat: float = np.abs(std_wave - 1.0) / std_std_wave
+    mean_stat: float = float(np.abs(mean_wave) / std_wave * np.sqrt(n_sig))
+    std_stat: float = float(np.abs(std_wave - 1.0) / std_std_wave)
     test1: bool = mean_stat < sig_thresh
     test2: bool = std_stat < sig_thresh
     test3: bool = bool(A2Star < A2_cut)  # should be less than cutoff value

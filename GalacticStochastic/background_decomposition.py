@@ -122,28 +122,28 @@ class BGDecomposition:
 
     def log_state(self, S_mean: NDArray[np.float64]) -> None:
         """Record any diagnostics we want to track about this iteration"""
-        power_undecided = np.sum(
+        power_undecided = np.asarray(np.sum(
             np.sum((self.galactic_undecided**2).reshape(self.shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0
-        )
-        power_above = np.sum(
+        ), dtype=np.float64)
+        power_above = np.asarray(np.sum(
             np.sum((self.galactic_above**2).reshape(self.shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0
-        )
+        ), dtype=np.float64)
 
-        power_total = np.sum(
+        power_total = np.asarray(np.sum(
             np.sum((self.get_galactic_total(bypass_check=True) ** 2).reshape(self.shape2)[:, 1:, :], axis=0)
             / S_mean[1:, :],
             axis=0,
-        )
-        power_below_high = np.sum(
+        ), dtype=np.float64)
+        power_below_high = np.asarray(np.sum(
             np.sum((self.get_galactic_below_high(bypass_check=True) ** 2).reshape(self.shape2)[:, 1:, :], axis=0)
             / S_mean[1:, :],
             axis=0,
-        )
-        power_below_low = np.sum(
+        ), dtype=np.float64)
+        power_below_low = np.asarray(np.sum(
             np.sum((self.get_galactic_below_low(bypass_check=True) ** 2).reshape(self.shape2)[:, 1:, :], axis=0)
             / S_mean[1:, :],
             axis=0,
-        )
+        ), dtype=np.float64)
 
         self.power_galactic_undecided.append(power_undecided)
         self.power_galactic_above.append(power_above)
