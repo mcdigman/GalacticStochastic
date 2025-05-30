@@ -25,12 +25,12 @@ class BinaryWaveletAmpFreqDT:
 
         # interpolation for wavelet taylor expansion
         self.taylor_time_table: WaveletTaylorTimeCoeffs = get_taylor_table_time(
-            self.wc, cache_mode='skip', output_mode='skip'
+            self.wc, cache_mode='skip', output_mode='skip',
         )
 
         # get the waveform in frequency space
         self.fwt = LinearFrequencyWaveformTime(
-            self.params, self.nt_lim_waveform, self.lc, self.wc
+            self.params, self.nt_lim_waveform, self.lc, self.wc,
         )
 
         # get a blank waveform in the sparse wavelet domain

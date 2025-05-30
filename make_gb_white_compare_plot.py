@@ -86,7 +86,7 @@ if __name__ == '__main__':
 
     filter_periods = True
     S_cyclo_model, _, _, _, _ = get_S_cyclo(
-        galactic_cyclo, S_inst_m, wc, 0, filter_periods, period_list=(1, 2, 3, 4, 5)
+        galactic_cyclo, S_inst_m, wc, 0, filter_periods, period_list=(1, 2, 3, 4, 5),
     )
 
     fs = np.arange(1, wc.Nf) * wc.DF

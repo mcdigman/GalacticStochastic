@@ -28,7 +28,7 @@ class NoiseModelManager(StateManager):
         bgd: BGDecomposition,
         S_inst_m: NDArray[np.float64],
         stat_only,
-        nt_lim_snr: PixelTimeRange
+        nt_lim_snr: PixelTimeRange,
     ) -> None:
         """Create the noise model manager"""
         self.ic = ic
@@ -47,7 +47,7 @@ class NoiseModelManager(StateManager):
                 np.arange(0, min(10, self.fit_state.get_n_itr_cut())),
                 np.arange(min(10, self.fit_state.get_n_itr_cut()), 4),
                 self.fit_state.get_n_itr_cut() - 1,
-            ]
+            ],
         )
         self.itr_save = 0
 
@@ -99,11 +99,11 @@ class NoiseModelManager(StateManager):
         ), dtype=np.bool_)
         galactic_below_high = self.bgd.get_galactic_below_high()
         noise_divide = np.sqrt(
-            self.noise_upper.S[self.nt_lim_snr.nt_min:self.nt_lim_snr.nt_max, res_mask, :2] - self.S_inst_m[res_mask, :2]
+            self.noise_upper.S[self.nt_lim_snr.nt_min:self.nt_lim_snr.nt_max, res_mask, :2] - self.S_inst_m[res_mask, :2],
         )
         points_res = (
             galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy)[
-                self.nt_lim_snr.nt_min:self.nt_lim_snr.nt_max, res_mask, :2
+                self.nt_lim_snr.nt_min:self.nt_lim_snr.nt_max, res_mask, :2,
             ]
             / noise_divide
         )
@@ -113,18 +113,18 @@ class NoiseModelManager(StateManager):
         del galactic_below_high
         del res_mask
         unit_normal_res, a2score, mean_rat, std_rat = unit_normal_battery(
-            points_res.flatten(), A2_cut=2.28, sig_thresh=5.0, do_assert=False
+            points_res.flatten(), A2_cut=2.28, sig_thresh=5.0, do_assert=False,
         )
         del points_res
         if unit_normal_res:
             print(
                 'Background PASSES normality: points=%12d A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f'
-                % (n_points, a2score, mean_rat, std_rat)
+                % (n_points, a2score, mean_rat, std_rat),
             )
         else:
             print(
                 'Background FAILS  normality: points=%12d A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f'
-                % (n_points, a2score, mean_rat, std_rat)
+                % (n_points, a2score, mean_rat, std_rat),
             )
 
     @override
@@ -149,7 +149,7 @@ class NoiseModelManager(StateManager):
 
             # use higher estimate of galactic bg
             S_upper = self.bgd.get_S_below_high(
-                self.S_inst_m, self.ic.smooth_lengthf[self.itrn], filter_periods, period_list
+                self.S_inst_m, self.ic.smooth_lengthf[self.itrn], filter_periods, period_list,
             )
             self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, self.wc, prune=True, nc_snr=self.lc.nc_snr)
 

@@ -774,8 +774,8 @@ def get_sc_scalar_pos(lc: LISAConstants, t: float, sc_phasing: SpacecraftRelativ
 
 
 @njit(fastmath=True)
-def RAantenna_inplace(
-    sc_channels: SpacecraftChannels, params_extrinsic: ExtrinsicParams, ts, FFs, nf_low, NTs, kdotx, lc: LISAConstants
+def rigid_adiabatic_antenna(
+    sc_channels: SpacecraftChannels, params_extrinsic: ExtrinsicParams, ts, FFs, nf_low, NTs, kdotx, lc: LISAConstants,
 ) -> None:
     """Get the waveform for LISA given polarization angle, spacecraft, tensor basis and Fs, channel order AET."""
     RRs = sc_channels.RR

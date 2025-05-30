@@ -14,7 +14,7 @@ StationaryWaveformTime = namedtuple('StationaryWaveformTime', ['T', 'PT', 'FT', 
 
 @njit()
 def phase_wrap_helper(
-    AET_waveform: StationaryWaveformTime, waveform: StationaryWaveformTime, wrap_thresh: float = 6.0
+    AET_waveform: StationaryWaveformTime, waveform: StationaryWaveformTime, wrap_thresh: float = 6.0,
 ) -> None:
     """Wrap the tdi perturbations to the phases by appropriate factors of 2 pi.
 

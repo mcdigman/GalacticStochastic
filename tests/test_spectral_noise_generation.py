@@ -99,7 +99,7 @@ def test_unit_noise_generation_cyclo_time(var_select) -> None:
     for itrc in range(nc_noise):
         for itrt in range(wc.Nt):
             unit_normal_battery(
-                noise_realization_var[itrt, :, itrc].flatten(), mult=np.sqrt(r_cyclo[itrt, itrc]), do_assert=True
+                noise_realization_var[itrt, :, itrc].flatten(), mult=np.sqrt(r_cyclo[itrt, itrc]), do_assert=True,
             )
 
     for itrc in range(nc_noise):

@@ -163,7 +163,7 @@ class BinaryInclusionState(StateManager):
 
         if not self.fit_state.get_faint_converged():
             self.snrs_lower[itrn, itrb] = self.noise_manager.noise_lower.get_sparse_snrs(
-                wavelet_waveform, self.noise_manager.nt_lim_snr
+                wavelet_waveform, self.noise_manager.nt_lim_snr,
             )
             self.snrs_tot_lower[itrn, itrb] = np.linalg.norm(self.snrs_lower[itrn, itrb])
         else:
@@ -173,7 +173,7 @@ class BinaryInclusionState(StateManager):
 
         if not self.fit_state.get_bright_converged():
             self.snrs_upper[itrn, itrb] = self.noise_manager.noise_upper.get_sparse_snrs(
-                wavelet_waveform, self.noise_manager.nt_lim_snr
+                wavelet_waveform, self.noise_manager.nt_lim_snr,
             )
             self.snrs_tot_upper[itrn, itrb] = np.linalg.norm(self.snrs_upper[itrn, itrb])
         else:
@@ -286,7 +286,7 @@ class BinaryInclusionState(StateManager):
                 tcb = perf_counter()
                 print(
                     'Starting binary # %11d of %11d to consider at t=%9.2f s of iteration %4d'
-                    % (itrb, idxbs.size, (tcb - tib), self.itrn)
+                    % (itrb, idxbs.size, (tcb - tib), self.itrn),
                 )
 
             self.run_binary_coadd(itrb)
@@ -322,11 +322,11 @@ class BinaryInclusionState(StateManager):
         n_ambiguous = (~(self.faints_old | self.brights[self.itrn - 1] | self.faints_cur[self.itrn - 1])).sum()
         print(
             'Out of %10d total binaries, %10d were deemed undetectable by a previous run, %10d were considered here.'
-            % (self.n_tot, self.n_tot - n_consider, n_consider)
+            % (self.n_tot, self.n_tot - n_consider, n_consider),
         )
         print(
             'The iterative procedure deemed (%5.3f yr observation at threshold snr=%5.3f):'
-            % (Tobs_consider_yr, self.ic.snr_thresh)
+            % (Tobs_consider_yr, self.ic.snr_thresh),
         )
         print('       %10d undetectable due to instrument noise' % n_faint)
         print('       %10d undetectable due to galactic confusion' % n_faint2)

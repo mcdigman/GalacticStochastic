@@ -55,14 +55,14 @@ if __name__ == '__main__':
 
     for itrk in range(nk):
         _, galactic_below_high = gfi.load_processed_gb_file(
-            galaxy_dir, snr_thresh, wc, lc, nt_mins[itrk], nt_maxs[itrk], stat_only
+            galaxy_dir, snr_thresh, wc, lc, nt_mins[itrk], nt_maxs[itrk], stat_only,
         )
         S_stat_m[itrk] = np.mean(galactic_below_high, axis=0)
 
         S_stat_smooth_m[itrk, 0, :] = S_stat_m[itrk, 0, :]
 
         (_, r_tots[itrk], S_stat_smooth_m[itrk], _, _) = get_S_cyclo(
-            galactic_below_high, S_inst_m, wc, smooth_targ_length, not stat_only, period_list=period_list, Nt_loc=wc.Nt
+            galactic_below_high, S_inst_m, wc, smooth_targ_length, not stat_only, period_list=period_list, Nt_loc=wc.Nt,
         )
 
         for itrc in range(2):
@@ -72,7 +72,7 @@ if __name__ == '__main__':
     fit_mask = (fs > 1.0e-5) & (fs < fs[arg_cut])
 
     S_fit_evolve_m, _ = fit_gb_spectrum_evolve(
-        S_stat_smooth_m[itrl_fit:, fit_mask, :], fs[fit_mask], fs[1:], nt_ranges[itrl_fit:], S_stat_offset[fit_mask], wc
+        S_stat_smooth_m[itrl_fit:, fit_mask, :], fs[fit_mask], fs[1:], nt_ranges[itrl_fit:], S_stat_offset[fit_mask], wc,
     )
 
     fig = plt.figure(figsize=(5.4, 3.5))

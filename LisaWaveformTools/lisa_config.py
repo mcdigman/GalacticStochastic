@@ -8,7 +8,7 @@ import numpy as np
 import GalacticStochastic.global_const as gc
 
 LISAConstants = namedtuple(
-    'LISAConstants', ['Larm', 'Sps', 'Sacc', 'kappa0', 'lambda0', 'fstr', 'ec', 'fm', 'nc_waveform', 'nc_snr']
+    'LISAConstants', ['Larm', 'Sps', 'Sacc', 'kappa0', 'lambda0', 'fstr', 'ec', 'fm', 'nc_waveform', 'nc_snr'],
 )
 
 

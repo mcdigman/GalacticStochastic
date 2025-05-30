@@ -37,7 +37,7 @@ def S_gal_model_alt(f, A, alpha, beta, kappa, gamma, fknee) -> NDArray[np.float6
 
 
 def filter_periods_fft(
-    r_mean: NDArray[np.float64], Nt_loc, period_list, wc: WDMWaveletConstants, *, period_tolerance: float =0.01, angle_small: float=-0.1
+    r_mean: NDArray[np.float64], Nt_loc, period_list, wc: WDMWaveletConstants, *, period_tolerance: float =0.01, angle_small: float=-0.1,
 ) -> Tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     """Filter to a specific set of periods using an fft.
     period_list is in multiples of wc.Tobs/gc.SECSYEAR
@@ -110,7 +110,7 @@ def filter_periods_fft(
                 angle_fftm[4 * mult],
                 abs_fft[5 * mult],
                 angle_fftm[5 * mult],
-            )
+            ),
         )
         r[:, itrc] = rec
     return r, amp_got, angle_got
@@ -236,7 +236,7 @@ def get_S_cyclo(
 
 
 def fit_gb_spectrum_evolve(
-    S_goals: NDArray[np.float64], fs: NDArray[np.float64], fs_report: NDArray[np.float64], nt_ranges, offset, wc: WDMWaveletConstants
+    S_goals: NDArray[np.float64], fs: NDArray[np.float64], fs_report: NDArray[np.float64], nt_ranges, offset, wc: WDMWaveletConstants,
 ) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
     a1 = -0.25
     b1 = -2.70
@@ -268,7 +268,7 @@ def fit_gb_spectrum_evolve(
                     np.log10(np.abs(S_gal_model(fs, log10A, log10f2, log10f1, log10fknee, alpha)) + offset)
                     - log_S_goals[itry, :, :].T
                 ).flatten()
-                ** 2
+                ** 2,
             )
         return resid
 

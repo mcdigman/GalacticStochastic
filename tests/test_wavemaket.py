@@ -44,7 +44,7 @@ def get_aet_waveform_helper(lc, rr_model, p_input, f_input, fp_input, fpp_input,
 
     # generate the waveform in the wavelet domain and transform it
     waveform, AET_waveform, arg_cut = get_waveform_helper(
-        p_input, f_input, fp_input, fpp_input, amp_input, nt_loc, dt_loc, nc_waveform, max_f=f_high_cut
+        p_input, f_input, fp_input, fpp_input, amp_input, nt_loc, dt_loc, nc_waveform, max_f=f_high_cut,
     )
     T = waveform.T
 

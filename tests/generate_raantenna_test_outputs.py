@@ -5,12 +5,12 @@ import numpy as np
 import tomllib
 
 from LisaWaveformTools.lisa_config import get_lisa_constants
-from LisaWaveformTools.ra_waveform_freq import ExtrinsicParams, RAantenna_inplace, SpacecraftChannels
+from LisaWaveformTools.ra_waveform_freq import ExtrinsicParams, SpacecraftChannels, rigid_adiabatic_antenna
 
 # If you need a toml config, import get_lisa_constants, Path, tomllib, etc., and update generate_test_inputs accordingly.
 
 def generate_test_inputs(seed, nt_loc=128):
-    """Programmatically create varied yet deterministic test inputs for RAantenna_inplace."""
+    """Programmatically create varied yet deterministic test inputs for rigid_adiabatic_antenna."""
     toml_filename = 'tests/raantenna_test_config1.toml'
     with Path.open(toml_filename, 'rb') as f:
         config = tomllib.load(f)
@@ -64,10 +64,10 @@ def main(seeds, output_path):
             # Generate inputs and run
             spacecraft_channels, params_extrinsic, ts, FFs, nf_low, NTs, kdotx, lc = generate_test_inputs(seed)
             kdotx_mut = kdotx.copy()  # Don't overwrite for future runs
-            RAantenna_inplace(
+            rigid_adiabatic_antenna(
                 spacecraft_channels,
                 params_extrinsic,
-                ts, FFs, nf_low, NTs, kdotx_mut, lc
+                ts, FFs, nf_low, NTs, kdotx_mut, lc,
             )
             # Prepare group
             realization = realizations.create_group(str(seed))

@@ -63,7 +63,7 @@ def gradient_uniform_inplace(ys: NDArray[np.float64], result: NDArray[np.float64
 
 @njit()
 def stabilized_gradient_uniform_inplace(
-    x: NDArray[np.float64], dxdt: NDArray[np.float64], y: NDArray[np.float64], dydt: NDArray[np.float64], dt: float
+    x: NDArray[np.float64], dxdt: NDArray[np.float64], y: NDArray[np.float64], dydt: NDArray[np.float64], dt: float,
 ) -> None:
     """Get a second-order central stabilized gradient of y and store it in dydt.
 

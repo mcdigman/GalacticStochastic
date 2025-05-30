@@ -178,7 +178,7 @@ class IterativeFitState(StateManager):
                     print(
                         'bright adaptation predicted initial converged at '
                         + str(self.itrn)
-                        + ' next iteration will be check iteration'
+                        + ' next iteration will be check iteration',
                     )
                     self.bright_state_request = (True, False, faint_converged_in, force_converge_loc)
 

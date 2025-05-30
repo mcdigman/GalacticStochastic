@@ -100,10 +100,10 @@ def get_wavelet_norm(wc: WDMWaveletConstants) -> NDArray[np.float64]:
     DX[0] = wc.insDOM
 
     DX[1:np.int64(wc.K / 2) + 1] = np.sqrt(wc.dt) * phitilde_vec(
-        wc.dom * wc.dt * np.arange(1, np.int64(wc.K / 2) + 1), wc.Nf, wc.nx
+        wc.dom * wc.dt * np.arange(1, np.int64(wc.K / 2) + 1), wc.Nf, wc.nx,
     )
     DX[np.int64(wc.K / 2) + 1:] = np.sqrt(wc.dt) * phitilde_vec(
-        -wc.dom * wc.dt * np.arange(np.int64(wc.K / 2) - 1, 0, -1), wc.Nf, wc.nx
+        -wc.dom * wc.dt * np.arange(np.int64(wc.K / 2) - 1, 0, -1), wc.Nf, wc.nx,
     )
 
     DX = spf.fft(DX, wc.K, overwrite_x=True)

@@ -21,7 +21,7 @@ if __name__ == '__main__':
     galaxy_dir = config['files']['galaxy_dir']
 
     galactic_below_in, snrs_tot_in, S_inst_m, wc, lc = gfi.load_preliminary_galactic_file(
-        galaxy_file, galaxy_dir, ic.snr_thresh, wc, lc
+        galaxy_file, galaxy_dir, ic.snr_thresh, wc, lc,
     )
 
     for itrm in range(1):

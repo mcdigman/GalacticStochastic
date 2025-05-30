@@ -1,9 +1,9 @@
-"""Testing file to ensure RAantenna_inplace behavior is unchanged"""
+"""Testing file to ensure rigid_adiabatic_antenna behavior is unchanged"""
 import h5py
 import numpy as np
 import pytest
 
-from LisaWaveformTools.ra_waveform_freq import RAantenna_inplace
+from LisaWaveformTools.ra_waveform_freq import rigid_adiabatic_antenna
 from tests.generate_raantenna_test_outputs import generate_test_inputs
 
 KNOWN_HDF5_PATH = 'tests/known_raantenna_outputs.hdf5'
@@ -33,10 +33,10 @@ def test_raantenna_inplace_parametrized(seed):
     spacecraft_channels, params_extrinsic, ts, FFs, nf_low, NTs, kdotx, lc = generate_test_inputs(seed)
     ref_RR, ref_II, ref_kdotx = _outputs_dict[seed]
     kdotx_test = kdotx.copy()
-    RAantenna_inplace(
+    rigid_adiabatic_antenna(
         spacecraft_channels,
         params_extrinsic,
-        ts, FFs, nf_low, NTs, kdotx_test, lc
+        ts, FFs, nf_low, NTs, kdotx_test, lc,
     )
     np.testing.assert_allclose(spacecraft_channels.RR, ref_RR, rtol=1e-14, atol=1e-14)
     np.testing.assert_allclose(spacecraft_channels.II, ref_II, rtol=1e-14, atol=1e-14)

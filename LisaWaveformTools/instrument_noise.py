@@ -57,7 +57,7 @@ def instrument_noise_AET(f: NDArray[np.float64], lc: LISAConstants) -> NDArray[n
 
 
 def instrument_noise_AET_wdm_loop(
-    phif: NDArray[np.float64], lc: LISAConstants, wc: WDMWaveletConstants
+    phif: NDArray[np.float64], lc: LISAConstants, wc: WDMWaveletConstants,
 ) -> NDArray[np.float64]:
     """Helper to get the instrument noise for wdm"""
     # realistically this really only needs run once and is fast enough without jit

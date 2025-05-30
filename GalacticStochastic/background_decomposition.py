@@ -117,16 +117,16 @@ class BGDecomposition:
             else:
                 # check all contributions to the total signal are tracked accurately
                 assert np.allclose(
-                    self.galactic_total_cache, self.get_galactic_total(bypass_check=True), atol=1.0e-300, rtol=1.0e-6
+                    self.galactic_total_cache, self.get_galactic_total(bypass_check=True), atol=1.0e-300, rtol=1.0e-6,
                 )
 
     def log_state(self, S_mean: NDArray[np.float64]) -> None:
         """Record any diagnostics we want to track about this iteration"""
         power_undecided = np.asarray(np.sum(
-            np.sum((self.galactic_undecided**2).reshape(self.shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0
+            np.sum((self.galactic_undecided**2).reshape(self.shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0,
         ), dtype=np.float64)
         power_above = np.asarray(np.sum(
-            np.sum((self.galactic_above**2).reshape(self.shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0
+            np.sum((self.galactic_above**2).reshape(self.shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0,
         ), dtype=np.float64)
 
         power_total = np.asarray(np.sum(
@@ -168,7 +168,7 @@ class BGDecomposition:
         """Get the upper estimate of the galactic power spectrum"""
         galactic_loc = self.get_galactic_below_high(bypass_check=True)
         S, _, _, _, _ = get_S_cyclo(
-            galactic_loc, S_mean, self.wc, smooth_lengthf, filter_periods, period_list=period_list
+            galactic_loc, S_mean, self.wc, smooth_lengthf, filter_periods, period_list=period_list,
         )
         return S
 
@@ -176,7 +176,7 @@ class BGDecomposition:
         """Get the lower estimate of the galactic power spectrum"""
         galactic_loc = self.get_galactic_below_low(bypass_check=True)
         S, _, _, _, _ = get_S_cyclo(
-            galactic_loc, S_mean, self.wc, smooth_lengthf, filter_periods, period_list=period_list
+            galactic_loc, S_mean, self.wc, smooth_lengthf, filter_periods, period_list=period_list,
         )
         return S
 

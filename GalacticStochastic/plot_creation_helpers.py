@@ -36,7 +36,7 @@ def plot_noise_spectrum_evolve(ifm: IterativeFitManager) -> None:
         np.arange(1, wc.Nf) * wc.DF,
         (
             ifm.noise_manager.bgd.get_galactic_total().reshape((wc.Nt, wc.Nf, ifm.noise_manager.bgd.nc_galaxy))[
-                :, 1:, 0:2
+                :, 1:, 0:2,
             ]
             ** 2
         )
