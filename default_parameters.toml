@@ -163,6 +163,9 @@ ec = 0.0048241852175
 # LISA modulation frequency (Hz)
 fm = 3.168753575e-8
 
+# LISA orbital radius in AU
+r_au = 1.0
+
 # Number of channels to calculate in the waveform
 nc_waveform = 3
 

@@ -8,7 +8,7 @@ import numpy as np
 import GalacticStochastic.global_const as gc
 
 LISAConstants = namedtuple(
-    'LISAConstants', ['Larm', 'Sps', 'Sacc', 'kappa0', 'lambda0', 'fstr', 'ec', 'fm', 'nc_waveform', 'nc_snr'],
+    'LISAConstants', ['Larm', 'Sps', 'Sacc', 'kappa0', 'lambda0', 'fstr', 't_arm', 'r_orbit', 'ec', 'fm', 'nc_waveform', 'nc_snr'],
 )
 
 
@@ -41,6 +41,18 @@ def get_lisa_constants(config: dict) -> LISAConstants:
             stacklevel=2,
         )
 
+    # Light travel time across arm length
+    t_arm = float(Larm / gc.CLIGHT)
+
+    # Lisa orbital radius in units of AU
+    r_au = float(config['lisa_constants']['r_au'])
+
+    # Lisa orbital radius in meters
+    r_m = float(r_au*gc.AU)
+
+    # Lisa orbital radius in units of arm lengths
+    r_orbit = float(r_m/Larm)
+
     # LISA orbital eccentricity; should be fixed to Larm/(2*AU*np.sqrt(3))?
     ec = float(config['lisa_constants']['ec'])
     if not np.isclose(ec, Larm / (2 * gc.AU * np.sqrt(3)), atol=1.0e-10, rtol=1.0e-3):
@@ -63,4 +75,4 @@ def get_lisa_constants(config: dict) -> LISAConstants:
     assert nc_snr <= 3
     assert nc_snr <= nc_waveform
 
-    return LISAConstants(Larm, Sps, Sacc, kappa0, lambda0, fstr, ec, fm, nc_waveform, nc_snr)
+    return LISAConstants(Larm, Sps, Sacc, kappa0, lambda0, fstr, t_arm, r_orbit, ec, fm, nc_waveform, nc_snr)

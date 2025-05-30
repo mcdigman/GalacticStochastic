@@ -71,6 +71,9 @@ fstr = 0.01908538064
 # LISA orbital eccentricity; should be Larm/(2*AU*np.sqrt(3))
 ec = 0.0048241852175
 
+# LISA orbital radius in AU
+r_au = 1.0
+
 # LISA modulation frequency (Hz)
 fm = 3.168753575e-8
 

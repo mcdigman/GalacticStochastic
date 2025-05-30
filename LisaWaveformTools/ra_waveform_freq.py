@@ -278,9 +278,9 @@ def get_oribtal_phase_constants(lc: LISAConstants, n_sc: int) -> SpacecraftRelat
         SpacecraftRelativePhases:
             A named tuple containing:
                 - sin_beta: ndarray of shape (n_sc,)
-                    The sine of each spacecraft's initial orbital phase offset.
+                    The sine of each spacecraft's initial orbital phase offset times orbital radius and eccentricity.
                 - cos_beta: ndarray of shape (n_sc,)
-                    The cosine of each spacecraft's initial orbital phase offset.
+                    The cosine of each spacecraft's initial orbital phase offset times orbital rasius and eccentricity.
                 - betas: ndarray of shape (n_sc,)
                     The initial orbital phase offsets (in radians) for the spacecraft.
 
@@ -297,8 +297,8 @@ def get_oribtal_phase_constants(lc: LISAConstants, n_sc: int) -> SpacecraftRelat
     cos_beta = np.zeros(n_sc)
     for itrc in range(n_sc):
         betas[itrc] = 2.0 / 3.0 * np.pi * itrc + lc.lambda0
-        sin_beta[itrc] = (AU / lc.Larm * lc.ec) * np.sin(betas[itrc])
-        cos_beta[itrc] = (AU / lc.Larm * lc.ec) * np.cos(betas[itrc])
+        sin_beta[itrc] = (lc.r_orbit * lc.ec) * np.sin(betas[itrc])
+        cos_beta[itrc] = (lc.r_orbit * lc.ec) * np.cos(betas[itrc])
     return SpacecraftRelativePhases(sin_beta, cos_beta, betas)
 
 @njit()
@@ -694,7 +694,7 @@ def compute_separation_vectors(lc: LISAConstants, tb: TensorBasis, sc_pos: Space
     za = (z[0] + z[1] + z[2]) / n_sc
 
     # manual dot product with n_sc
-    kdotx = (lc.Larm / CLIGHT) * (xa * kv[0] + ya * kv[1] + za * kv[2])
+    kdotx = lc.t_arm * (xa * kv[0] + ya * kv[1] + za * kv[2])
 
     r12 = sc_sep.r12
     r13 = sc_sep.r13
@@ -729,11 +729,11 @@ def compute_separation_vectors(lc: LISAConstants, tb: TensorBasis, sc_pos: Space
 
 @njit()
 def get_sc_scalar_pos(lc: LISAConstants, t: float, sc_phasing: SpacecraftRelativePhases, sc_pos: SpacecraftScalarPosition) -> None:
-    """Compute the Cartesian positions of the LISA spacecraft relative to the constellation's guiding center at a given time.
+    """Compute the Cartesian positions of the LISA spacecraft at a given time.
 
-    This function calculates the (x, y, z) positions for each spacecraft in normalized units (typically scaled by the LISA arm length),
-    given the current time, orbital, and phasing parameters. The spacecraft orbits are constructed analytically using trigonometric
-    expressions that describe their motion in the rotating triangular configuration.
+    This function calculates the (x, y, z) positions for each spacecraft in units scaled by the LISA arm length,
+    given the current time, orbital, and phasing parameters. The spacecraft orbits are constructed analytically using
+    rotation matrices that describe their motion in the rotating triangular configuration.
 
     Parameters
     ----------
@@ -766,11 +766,9 @@ def get_sc_scalar_pos(lc: LISAConstants, t: float, sc_phasing: SpacecraftRelativ
 
     n_sc = x.shape[0]
     for itrc in range(n_sc):
-        x[itrc] = (AU / lc.Larm) * ca + sa * ca * sin_beta[itrc] - (1.0 + sa * sa) * cos_beta[itrc]
-        y[itrc] = (AU / lc.Larm) * sa + sa * ca * cos_beta[itrc] - (1.0 + ca * ca) * sin_beta[itrc]
+        x[itrc] = lc.r_orbit * ca + sa * ca * sin_beta[itrc] - (1.0 + sa * sa) * cos_beta[itrc]
+        y[itrc] = lc.r_orbit * sa + sa * ca * cos_beta[itrc] - (1.0 + ca * ca) * sin_beta[itrc]
         z[itrc] = -np.sqrt(3.0) * (ca * cos_beta[itrc] + sa * sin_beta[itrc])
-
-# TODO eliminate need for constants by storing e.g. Larm_AU
 
 
 @njit(fastmath=True)
@@ -784,17 +782,14 @@ def rigid_adiabatic_antenna(
     tb: TensorBasis = get_tensor_basis(params_extrinsic)
 
     n_space = 3  # number of spatial dimensions (must be 3)
-    assert n_space == 3
 
     assert tb.kv.shape == (n_space,)
     assert tb.e_plus.shape == (n_space, n_space)
     assert tb.e_cross.shape == (n_space, n_space)
 
     n_sc = 3  # number of spacecraft (currently must be 3)
-    assert n_sc == 3
 
     n_arm = 3  # number of arms (currently must be 3)
-    assert n_arm == 3
 
     nc_waveform = RRs.shape[0]  # number of channels in the output waveform
     assert IIs.shape[0] == nc_waveform
@@ -803,7 +798,6 @@ def rigid_adiabatic_antenna(
     assert nc_generate >= nc_waveform
 
     nc_michelson = 3  # number of michelson combinations (currently must be 3)
-    assert nc_michelson == 3
     assert nc_michelson >= nc_generate
 
     polarization_response = DetectorPolarizationResponse(np.zeros((n_arm, n_arm)), np.zeros((n_arm, n_arm)))
@@ -882,7 +876,7 @@ def get_wavefront_time(lc: LISAConstants, tb: TensorBasis, ts: NDArray[np.float6
         None. The function updates `waveform_time` in place.
 
     """
-    kdotx = (sv.xas * tb.kv[0] + sv.yas * tb.kv[1] + sv.zas * tb.kv[2]) * (lc.Larm / CLIGHT)
+    kdotx = lc.t_arm * (sv.xas * tb.kv[0] + sv.yas * tb.kv[1] + sv.zas * tb.kv[2])
     wavefront_time[:] = ts - kdotx
 
 @njit()
@@ -930,9 +924,9 @@ def get_spacecraft_vec(ts: NDArray[np.float64], lc: LISAConstants) -> Spacecraft
         beta = i * 2 / 3 * np.pi + lc.lambda0
         sb = np.sin(beta)
         cb = np.cos(beta)
-        xs[i] = AU / lc.Larm * ca + AU / lc.Larm * lc.ec * (sa * ca * sb - (1.0 + sa * sa) * cb)
-        ys[i] = AU / lc.Larm * sa + AU / lc.Larm * lc.ec * (sa * ca * cb - (1.0 + ca * ca) * sb)
-        zs[i] = -np.sqrt(3) * AU / lc.Larm * lc.ec * (ca * cb + sa * sb)
+        xs[i] = lc.r_orbit * ca + lc.r_orbit * lc.ec * (sa * ca * sb - (1.0 + sa * sa) * cb)
+        ys[i] = lc.r_orbit * sa + lc.r_orbit * lc.ec * (sa * ca * cb - (1.0 + ca * ca) * sb)
+        zs[i] = -np.sqrt(3) * lc.r_orbit * lc.ec * (ca * cb + sa * sb)
 
     # guiding center
     xas = (xs[0] + xs[1] + xs[2]) / n_sc
