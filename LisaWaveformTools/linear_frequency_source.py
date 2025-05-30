@@ -7,7 +7,7 @@ from numba import njit
 from numpy.typing import NDArray
 
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.ra_waveform_freq import RAantenna_inplace, SpacecraftChannels, get_spacecraft_vec, get_tensor_basis, get_xis_inplace
+from LisaWaveformTools.ra_waveform_freq import RAantenna_inplace, SpacecraftChannels, get_spacecraft_vec, get_tensor_basis, get_wavefront_time
 from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime, get_time_tdi_amp_phase
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
@@ -115,7 +115,7 @@ class LinearFrequencyWaveformTime:
 
         self.spacecraft_orbits = get_spacecraft_vec(self.TTs, self.lc)
 
-        self.xis = np.zeros(self.nt_range)
+        self.wavefront_time = np.zeros(self.nt_range)
         self.kdotx = np.zeros(self.nt_range)
 
         AET_AmpTs = np.zeros((self.nc_waveform, self.nt_range))
@@ -140,9 +140,9 @@ class LinearFrequencyWaveformTime:
     def update_intrinsic(self) -> None:
         """Get amplitude and phase for TaylorT3"""
         tb = get_tensor_basis(self.params.extrinsic)
-        get_xis_inplace(self.lc, tb, self.TTs, self.spacecraft_orbits, self.xis)
+        get_wavefront_time(self.lc, tb, self.TTs, self.spacecraft_orbits, self.wavefront_time)
 
-        linear_frequency_intrinsic(self.waveform, self.params.intrinsic, self.xis)
+        linear_frequency_intrinsic(self.waveform, self.params.intrinsic, self.wavefront_time)
 
     def update_extrinsic(self) -> None:
         # Calculate cos and sin of sky position, inclination, polarization

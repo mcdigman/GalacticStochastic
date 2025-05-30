@@ -88,7 +88,7 @@ def spacecraft_channel_deriv_helper(spacecraft_channels: SpacecraftChannels, dt:
     Returns
     -------
     None
-        Results are stored in place in dRR and dII attributes of spacecraft_channels
+        Results are stored in place in dRR and dII attributes of sc_channels
 
     """
     # get and store the derivatives
@@ -107,7 +107,7 @@ def get_time_tdi_amp_phase_helper(
 
     This function perturbs the intrinsic amplitude, phase, and frequency of a time domain waveform
     from the stationary wave approximation to compute the TDI waveform in the stationary wave approximation.
-    Uses the real (RR) and imaginary (II) components already computed and stored in spacecraft_channels
+    Uses the real (RR) and imaginary (II) components already computed and stored in sc_channels
     using the rigid adiabatic approximation.
     Results are stored in-place in the AET_waveform parameter. The function handles the general case
     and a subset of special cases where the real (RR) and imaginary (II) components are zero.
@@ -135,7 +135,7 @@ def get_time_tdi_amp_phase_helper(
     - The frequency derivative calculation ignores potential delta functions that
       can occur from step functions in the phase when RR or II pass through zero
     - All input arrays must be properly sized:
-      - spacecraft_channels.RR shape: (nc_channel, n_t)
+      - sc_channels.RR shape: (nc_channel, n_t)
       - waveform.PT shape: (n_t,)
       - AET_waveform.PT shape: (nc_channel, n_t)
 
@@ -227,7 +227,7 @@ def get_time_tdi_amp_phase(
 
     This function perturbs the intrinsic amplitude, phase, frequency, and frequency derivative of a time domain waveform
     from the stationary wave approximation to compute the TDI waveform in the stationary wave approximation.
-    Uses the real (RR) and imaginary (II) components already computed and stored in spacecraft_channels
+    Uses the real (RR) and imaginary (II) components already computed and stored in sc_channels
     using the rigid adiabatic approximation.
     Results are stored in-place in the AET_waveform parameter. The function handles the general case
     and a subset of special cases where the real (RR) and imaginary (II) components are zero.
@@ -262,7 +262,7 @@ def get_time_tdi_amp_phase(
     - The frequency derivative calculation ignores potential delta functions that
       can occur from step functions in the phase when RR or II pass through zero
     - All input arrays must be properly sized:
-      - spacecraft_channels.RR shape: (nc_channel, n_t)
+      - sc_channels.RR shape: (nc_channel, n_t)
       - waveform.PT shape: (n_t,)
       - AET_waveform.PT shape: (nc_channel, n_t)
 
