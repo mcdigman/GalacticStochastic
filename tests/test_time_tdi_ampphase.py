@@ -28,7 +28,7 @@ from WaveletWaveforms.wdm_config import get_wavelet_model
 # the table takes a while to compute so share it between tests
 toml_filename_in = 'tests/galactic_fit_test_config1.toml'
 
-with Path.open(toml_filename_in, 'rb') as f:
+with Path(toml_filename_in).open('rb') as f:
     config_in = tomllib.load(f)
 
 wc_in = get_wavelet_model(config_in)
@@ -44,7 +44,7 @@ def get_waveform_helper(p_input, f_input, fp_input, fpp_input, amp_input, nt_loc
     AT = np.full(nt_loc, amp_input)
 
     if np.any((max_f < FT) | (FT < 0.0)):
-        arg_cut = np.argmax((max_f < FT) | (FT < 0.0))
+        arg_cut = int(np.argmax((max_f < FT) | (FT < 0.0)))
         PT[arg_cut:] = PT[arg_cut]
         FTd[arg_cut:] = 0.0
         AT[arg_cut:] = 0.0
@@ -53,7 +53,7 @@ def get_waveform_helper(p_input, f_input, fp_input, fpp_input, amp_input, nt_loc
         else:
             FT[arg_cut:] = max_f
     else:
-        arg_cut = nt_loc
+        arg_cut = int(nt_loc)
 
     AET_PT = np.zeros((nc_waveform, nt_loc))
     AET_FT = np.zeros((nc_waveform, nt_loc))
@@ -149,7 +149,7 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult, rr_model, f0p_mult):
     """Test the extraction in some easier cases"""
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 
-    with Path.open(toml_filename, 'rb') as f:
+    with Path(toml_filename).open('rb') as f:
         config = tomllib.load(f)
 
     wc = get_wavelet_model(config)
@@ -423,7 +423,7 @@ def test_time_tdi_inplace_nearzero(f0_mult, rr_model, f0p_mult):
     """Test extraction in cases where the RR or II or both go near zero"""
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 
-    with Path.open(toml_filename, 'rb') as f:
+    with Path(toml_filename).open('rb') as f:
         config = tomllib.load(f)
 
     wc = get_wavelet_model(config)
@@ -706,7 +706,7 @@ def test_time_tdi_inplace_transform(f0_mult, rr_model, f0p_mult):
     """
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 
-    with Path.open(toml_filename, 'rb') as f:
+    with Path(toml_filename).open('rb') as f:
         config = tomllib.load(f)
 
     wc = get_wavelet_model(config)

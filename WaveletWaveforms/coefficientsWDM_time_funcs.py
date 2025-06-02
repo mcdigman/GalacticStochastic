@@ -40,13 +40,13 @@ def wavelet(wc: WDMWaveletConstants, m: int, nrm: np.floating) -> NDArray[np.flo
 def get_taylor_table_time_helper(wavelet_norm: NDArray[np.float64], wc: WDMWaveletConstants) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
     """Helper function to take advantage of jit compiler in t calculation"""
     fd = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)  # set f-dot increments
-    Nfsam = ((wc.BW + np.abs(fd) * wc.Tw) / wc.df).astype(np.int64)
+    Nfsam = ((wc.BW + np.abs(fd) * wc.Tw) / wc.df_bw).astype(np.int64)
     Nfsam[Nfsam % 2 == 1] += 1
 
     evcs = np.zeros((wc.Nfd, np.max(Nfsam)))
     evss = np.zeros((wc.Nfd, np.max(Nfsam)))
     zadd = np.pi / 16
-    zpre = np.pi * wc.df * wc.dt
+    zpre = np.pi * wc.df_bw * wc.dt
     zquads = np.zeros(wc.K)
     for jj in range(wc.Nfd):
         for k in range(wc.K):
@@ -69,11 +69,11 @@ def get_taylor_table_time_helper(wavelet_norm: NDArray[np.float64], wc: WDMWavel
 def get_taylor_pixel_direct(fa: float, fda: float, k_in: int, wavelet_norm: NDArray[np.float64], wc: WDMWaveletConstants) -> Tuple[float, float]:
     """Helper function to take advantage of jit compiler in t calculation"""
     dfa = fa - wc.DF*k_in
-    xk = np.abs(dfa)/wc.df
+    xk = np.abs(dfa)/wc.df_bw
     fd_mid = fda
 
     zadd = np.pi / 16
-    zpre = 2 * np.pi * wc.df * wc.dt * xk
+    zpre = 2 * np.pi * wc.df_bw * wc.dt * xk
     zquads_mid = np.zeros(wc.K)
     for k in range(wc.K):
         zquads_mid[k] = np.pi * wc.dt**2 * fd_mid * (k - wc.K // 2) ** 2

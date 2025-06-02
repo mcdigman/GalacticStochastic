@@ -15,7 +15,7 @@ from WaveletWaveforms.wdm_config import get_wavelet_model
 toml_filename = 'tests/galactic_fit_test_config1.toml'
 
 # we  can use the same baise noise for most things and modulate it as necessary
-with Path.open(toml_filename, 'rb') as f:
+with Path(toml_filename).open('rb') as f:
     config = tomllib.load(f)
 
 wc = get_wavelet_model(config)

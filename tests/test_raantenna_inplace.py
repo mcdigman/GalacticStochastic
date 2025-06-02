@@ -36,8 +36,7 @@ def test_raantenna_inplace_parametrized(seed):
     rigid_adiabatic_antenna(
         spacecraft_channels,
         params_extrinsic,
-        ts, FFs, nf_low, NTs, kdotx_test, lc,
-    )
+        ts, FFs, nf_low, NTs, kdotx_test, lc)
     np.testing.assert_allclose(spacecraft_channels.RR, ref_RR, rtol=1e-14, atol=1e-14)
     np.testing.assert_allclose(spacecraft_channels.II, ref_II, rtol=1e-14, atol=1e-14)
     np.testing.assert_allclose(kdotx_test, ref_kdotx, rtol=1e-14, atol=1e-14)

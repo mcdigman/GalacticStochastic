@@ -45,13 +45,13 @@ def wavemaket_multi_inplace(
                 dy = y0 - ny
                 assert 0.0 <= dy <= 1.0
                 fa = waveform.FT[itrc, j]
-                za = fa / wc.df
+                za = fa / wc.df_bw
 
                 Nfsam1_loc = taylor_table.Nfsam[n_ind]
                 # assert Nfsam1_loc == int(wc.Nsf + 2 / 3 * np.abs(ny) * wc.dfdot * wc.Nsf)
                 Nfsam2_loc = taylor_table.Nfsam[n_ind + 1]
                 # assert Nfsam2_loc == int(wc.Nsf + 2 / 3 * np.abs(ny + 1) * wc.dfdot * wc.Nsf)
-                HBW = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df / 2
+                HBW = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df_bw / 2
 
                 # lowest frequency layer
                 kmin = max(nf_min, int(np.ceil((fa - HBW) / wc.DF)))
@@ -60,7 +60,7 @@ def wavemaket_multi_inplace(
                 kmax = min(nf_max, int(np.floor((fa + HBW) / wc.DF)))
 
                 for k in range(kmin, kmax + 1):
-                    zmid = (wc.DF / wc.df) * k
+                    zmid = (wc.DF / wc.df_bw) * k
 
                     # we apparently need za - zmid to be positive
                     if za < zmid:
@@ -112,11 +112,11 @@ def wavemaket_multi_inplace(
                 # we could just actually calculate the non-precomputed coefficient
                 fa = waveform.FT[itrc, j]
 
-                Nfsam1_loc = int((wc.BW + wc.dfd * wc.Tw * ny) / wc.df)
+                Nfsam1_loc = int((wc.BW + wc.dfd * wc.Tw * ny) / wc.df_bw)
                 if Nfsam1_loc % 2 == 1:
                     Nfsam1_loc += 1
 
-                HBW = (Nfsam1_loc - 1) * wc.df / 2
+                HBW = (Nfsam1_loc - 1) * wc.df_bw / 2
                 # lowest frequency layer
                 kmin = max(0, int(np.ceil((fa - HBW) / wc.DF)))
 
@@ -174,7 +174,7 @@ def wavemaket_exact(
             Nfsam1_loc = int(wc.Nsf + 2 / 3 * np.abs(ny) * wc.dfdot * wc.Nsf)
             Nfsam2_loc = int(wc.Nsf + 2 / 3 * np.abs(ny + 1) * wc.dfdot * wc.Nsf)
             # TODO why - 1?
-            HBW = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df / 2
+            HBW = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df_bw / 2
 
             # lowest frequency layer
             kmin = int(np.ceil((fa - HBW) / wc.DF))

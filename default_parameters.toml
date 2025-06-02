@@ -157,10 +157,10 @@ lambda0 = 0.0
 # Transfer frequency (Hz); should be c/(2*pi*Larm)
 fstr = 0.01908538064
 
-# LISA orbital eccentricity; should be Larm/(2*AU*np.sqrt(3))
+# LISA orbital eccentricity; should be Larm/(2*oribtal radius*np.sqrt(3))
 ec = 0.0048241852175
 
-# LISA modulation frequency (Hz)
+# LISA orbital modulation frequency (i.e. 1/orbital period) (Hz)
 fm = 3.168753575e-8
 
 # LISA orbital radius in AU

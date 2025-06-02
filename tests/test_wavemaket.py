@@ -93,16 +93,17 @@ def get_wavelet_alternative_representation_helper(wavelet_waveform, wc, tukey_al
     analytic[nt_max_cut:] = 0.
 
     if nt_max_cut < wc.Nt*wc.Nf:
-        tukey(analytic[:, itrc], tukey_alpha, nt_max_cut)
+        for itrc in range(nc_waveform):
+            tukey(analytic[:, itrc], tukey_alpha, nt_max_cut)
 
     envelope = np.abs(analytic)
 
-    p_envelope = np.unwrap(np.angle(analytic), axis=0)
+    p_envelope = np.asarray(np.unwrap(np.angle(analytic), axis=0), dtype=np.float64)
     f_envelope = np.gradient(p_envelope, wc.dt, axis=0) / (2 * np.pi)
     fd_envelope = np.gradient(f_envelope, wc.dt, axis=0)
 
 
-    envelope = filtfilt(b, a, envelope, axis=0)
+    envelope = np.asarray(filtfilt(b, a, envelope, axis=0), dtype=np.float64)
 
     for itrc in range(nc_waveform):
         tukey(envelope[:, itrc], tukey_alpha, nt_max_cut)
@@ -112,7 +113,7 @@ def get_wavelet_alternative_representation_helper(wavelet_waveform, wc, tukey_al
     for itrc in range(nc_waveform):
         tukey(f_envelope[:, itrc], tukey_alpha, nt_max_cut)
 
-    f_envelope = filtfilt(b, a, f_envelope, axis=0)
+    f_envelope = np.asarray(filtfilt(b, a, f_envelope, axis=0), dtype=np.float64)
 
     for itrc in range(nc_waveform):
         tukey(f_envelope[:, itrc], tukey_alpha, nt_max_cut)
@@ -122,7 +123,7 @@ def get_wavelet_alternative_representation_helper(wavelet_waveform, wc, tukey_al
     for itrc in range(nc_waveform):
         tukey(fd_envelope[:, itrc], tukey_alpha, nt_max_cut)
 
-    fd_envelope = filtfilt(b, a, fd_envelope, axis=0)
+    fd_envelope = np.asarray(filtfilt(b, a, fd_envelope, axis=0), dtype=np.float64)
 
     for itrc in range(nc_waveform):
         tukey(fd_envelope[:, itrc], tukey_alpha, nt_max_cut)
@@ -131,7 +132,7 @@ def get_wavelet_alternative_representation_helper(wavelet_waveform, wc, tukey_al
     for itrc in range(nc_waveform):
         tukey(p_envelope[:, itrc], tukey_alpha, nt_max_cut)
 
-    p_envelope = filtfilt(b, a, f_envelope, axis=0)
+    p_envelope = np.asarray(filtfilt(b, a, f_envelope, axis=0), dtype=np.float64)
 
     p_envelope[nt_max_cut:] = 0.
 
@@ -144,11 +145,11 @@ def get_wavelet_alternative_representation_helper(wavelet_waveform, wc, tukey_al
     min_mag = min_mag_mult*np.max(mag_got)
 
     # fft phases
-    angle_got = np.angle(signal_freq)
+    angle_got = np.asarray(np.angle(signal_freq), dtype=np.float64)
 
     # find the frequency range where both signals have non-trivial amplitude
-    itr_low_cut = np.argmax(mag_got[:,0] >= min_mag)
-    itr_high_cut = max(itr_low_cut, mag_got.shape[0] - np.argmax(mag_got[::-1,0] >= min_mag))
+    itr_low_cut = int(np.argmax(mag_got[:,0] >= min_mag))
+    itr_high_cut = int(max(itr_low_cut, int(mag_got.shape[0] - np.argmax(mag_got[::-1,0] >= min_mag))))
 
 
     # trim out irrelevant/numerically unstable fft angles at faint amplitudes
@@ -167,13 +168,13 @@ def multishape_method_match_helper(p_offset, f0_mult, f0p_mult, f0pp_mult, rr_mo
     # get the config for the first (Nf, Nt) pair
     toml_filename_in = 'tests/wavemaket_test_config1.toml'
 
-    with Path.open(toml_filename_in, 'rb') as f:
+    with Path(toml_filename_in).open('rb') as f:
         config_in1 = tomllib.load(f)
     Nf = int(config_in1['wavelet_constants']['Nf'])
     Nt = int(config_in1['wavelet_constants']['Nt'])
 
     # get the config for the second (Nf, Nt) pair
-    with Path.open(toml_filename_in, 'rb') as f:
+    with Path(toml_filename_in).open('rb') as f:
         config_in2 = tomllib.load(f)
 
     # replace the Nf and Nt from the file
@@ -199,7 +200,7 @@ def multishape_method_match_helper(p_offset, f0_mult, f0p_mult, f0pp_mult, rr_mo
     fpp_input = f0pp_mult * f_input / wc.Tobs**2
     amp_input = 1.0
 
-    f_lowpass = 10*wc.df #f_input / 2000.0 #wc1.DF*(wc1.Nf/4)
+    f_lowpass = 10*wc.df_bw #f_input / 2000.0 #wc1.DF*(wc1.Nf/4)
     b, a = butter(4, f_lowpass, fs=fs_loc, btype='low', analog=False)
 
     AET_waveform, arg_cut = get_aet_waveform_helper(lc, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha_in, wc.Nt, wc.DT)
@@ -322,13 +323,13 @@ def test_wavemaket_extreme_size(p_offset, f0_mult, direct):
     # get the config for the first (Nf, Nt) pair
     toml_filename_in = 'tests/wavemaket_test_config1.toml'
 
-    with Path.open(toml_filename_in, 'rb') as f:
+    with Path(toml_filename_in).open('rb') as f:
         config_in = tomllib.load(f)
 
     wc = get_wavelet_model(config_in)
     taylor_time_table = get_taylor_table_time(wc, cache_mode='check', output_mode='hf')
 
-    f_lowpass = 10*wc.df #f_input / 2000.0 #wc1.DF*(wc1.Nf/4)
+    f_lowpass = 10*wc.df_bw #f_input / 2000.0 #wc1.DF*(wc1.Nf/4)
     b, a = butter(4, f_lowpass, fs=1./wc.dt, btype='low', analog=False)
 
     nc_waveform = 1
@@ -345,11 +346,11 @@ def test_wavemaket_extreme_size(p_offset, f0_mult, direct):
     T_fine = wc.dt * np.arange(0,nd_loc)
     fd_design = 1.0*dfmax*(-1)**(np.arange(0, nd_loc)//(64*wc.Nf))
     #fd_design = dfmax*np.cos(w_design*T_fine)
-    f_design = cumtrapz(fd_design, T_fine, initial=0.)
-    p_design = 2*np.pi*cumtrapz(f_design, T_fine, initial=0.) + p_offset
+    f_design = cumtrapz(fd_design, T_fine, initial=0)
+    p_design = 2*np.pi*cumtrapz(f_design, T_fine, initial=0) + p_offset
     f_design += f_input
     p_design += 2*np.pi*(f_input*T_fine)
-    assert np.allclose(f_design, cumtrapz(fd_design, T_fine, initial=0.) + f_input)
+    assert np.allclose(f_design, cumtrapz(fd_design, T_fine, initial=0) + f_input)
     a_design = np.full(nd_loc, 1.)
     time_design = a_design * np.cos(p_design)
 
@@ -386,29 +387,29 @@ def test_wavemaket_extreme_size(p_offset, f0_mult, direct):
 
     # mimic filtering for plotting
 
-    envelope_design = filtfilt(b, a, envelope_design, axis=0)
+    envelope_design = np.asarray(filtfilt(b, a, envelope_design, axis=0), dtype=np.float64)
 
     tukey(envelope_design, tukey_alpha, envelope_design.shape[0])
 
     tukey(f_design, tukey_alpha, f_design.shape[0])
 
-    f_design = filtfilt(b, a, f_design, axis=0)
+    f_design = np.asarray(filtfilt(b, a, f_design, axis=0), dtype=np.float64)
 
     tukey(f_design, tukey_alpha, f_design.shape[0])
 
     tukey(fd_design, tukey_alpha, fd_design.shape[0])
 
-    fd_design = filtfilt(b, a, fd_design, axis=0)
+    fd_design = np.asarray(filtfilt(b, a, fd_design, axis=0))
 
     tukey(fd_design, tukey_alpha, fd_design.shape[0])
 
     tukey(p_design, tukey_alpha, p_design.shape[0])
 
-    p_design = filtfilt(b, a, p_design, axis=0)
+    p_design = np.asarray(filtfilt(b, a, p_design, axis=0))
 
     assert_allclose(f_envelope[:,0], f_design, atol=1.e-2*np.max(f_design), rtol=1.e-2)
     assert_allclose(envelope[:,0], envelope_design, atol=1.e-1*np.max(envelope_design), rtol=1.e-1)
-    assert_allclose(fd_envelope[:,0], fd_design, atol=2.e-2*np.max(fd_design), rtol=1.e-2)
+    assert_allclose(fd_envelope[:,0], fd_design, atol=2.e-2*float(np.max(fd_design)), rtol=1.e-2)
     mask = wavelet_dense[:,:,0] != 0.
 
     # can't guarantee all pixels are good because of the corners, but most should be
@@ -442,7 +443,7 @@ def test_wavemaket_dimension_comparison_midevolve2(p_offset, f0_mult, f0p_mult, 
     # get the config for the first (Nf, Nt) pair
     toml_filename_in = 'tests/wavemaket_test_config1.toml'
 
-    with Path.open(toml_filename_in, 'rb') as f:
+    with Path(toml_filename_in).open('rb') as f:
         config_in1 = tomllib.load(f)
 
     wc1 = get_wavelet_model(config_in1)
@@ -450,7 +451,7 @@ def test_wavemaket_dimension_comparison_midevolve2(p_offset, f0_mult, f0p_mult, 
     taylor_time_table1 = get_taylor_table_time(wc1, cache_mode='check', output_mode='hf')
 
     # get the config for the second (Nf, Nt) pair
-    with Path.open(toml_filename_in, 'rb') as f:
+    with Path(toml_filename_in).open('rb') as f:
         config_in2 = tomllib.load(f)
 
     # replace the Nf and Nt from the file
@@ -495,7 +496,7 @@ def test_wavemaket_dimension_comparison_midevolve2(p_offset, f0_mult, f0p_mult, 
         return
 
 
-    f_lowpass = 10*wc1.df #f_input / 2000.0 #wc1.DF*(wc1.Nf/4)
+    f_lowpass = 10*wc1.df_bw #f_input / 2000.0 #wc1.DF*(wc1.Nf/4)
     b, a = butter(4, f_lowpass, fs=fs_loc, btype='low', analog=False)
 
     AET_waveform1, _ = get_aet_waveform_helper(lc1, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha_in, wc1.Nt, wc1.DT)
@@ -586,7 +587,7 @@ def test_wavemaket_dimension_comparison_slowevolve(p_offset, f0_mult, f0p_mult, 
     # get the config for the first (Nf, Nt) pair
     toml_filename_in = 'tests/wavemaket_test_config1.toml'
 
-    with Path.open(toml_filename_in, 'rb') as f:
+    with Path(toml_filename_in).open('rb') as f:
         config_in1 = tomllib.load(f)
 
     wc1 = get_wavelet_model(config_in1)
@@ -594,7 +595,7 @@ def test_wavemaket_dimension_comparison_slowevolve(p_offset, f0_mult, f0p_mult, 
     taylor_time_table1 = get_taylor_table_time(wc1, cache_mode='check', output_mode='hf')
 
     # get the config for the second (Nf, Nt) pair
-    with Path.open(toml_filename_in, 'rb') as f:
+    with Path(toml_filename_in).open('rb') as f:
         config_in2 = tomllib.load(f)
 
     # replace the Nf and Nt from the file
@@ -625,7 +626,7 @@ def test_wavemaket_dimension_comparison_slowevolve(p_offset, f0_mult, f0p_mult, 
     fpp_input = f0pp_mult * f_input / wc1.Tobs**2
     amp_input = 1.0
 
-    f_lowpass = 10*wc1.df #f_input / 2000.0 #wc1.DF*(wc1.Nf/4)
+    f_lowpass = 10*wc1.df_bw #f_input / 2000.0 #wc1.DF*(wc1.Nf/4)
     b, a = butter(4, f_lowpass, fs=fs_loc, btype='low', analog=False)
 
     AET_waveform1, _ = get_aet_waveform_helper(lc1, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha_in, wc1.Nt, wc1.DT)
@@ -737,7 +738,7 @@ def test_wavemaket_dimension_comparison_midevolve(p_offset, f0_mult, f0p_mult, f
     # get the config for the first (Nf, Nt) pair
     toml_filename_in = 'tests/wavemaket_test_config1.toml'
 
-    with Path.open(toml_filename_in, 'rb') as f:
+    with Path(toml_filename_in).open('rb') as f:
         config_in1 = tomllib.load(f)
 
     wc1 = get_wavelet_model(config_in1)
@@ -745,7 +746,7 @@ def test_wavemaket_dimension_comparison_midevolve(p_offset, f0_mult, f0p_mult, f
     taylor_time_table1 = get_taylor_table_time(wc1, cache_mode='check', output_mode='hf')
 
     # get the config for the second (Nf, Nt) pair
-    with Path.open(toml_filename_in, 'rb') as f:
+    with Path(toml_filename_in).open('rb') as f:
         config_in2 = tomllib.load(f)
 
     # replace the Nf and Nt from the file
@@ -776,7 +777,7 @@ def test_wavemaket_dimension_comparison_midevolve(p_offset, f0_mult, f0p_mult, f
     fpp_input = f0pp_mult * f_input / wc1.Tobs**2
     amp_input = 1.0
 
-    f_lowpass = 10*wc1.df #f_input / 2000.0 #wc1.DF*(wc1.Nf/4)
+    f_lowpass = 10*wc1.df_bw #f_input / 2000.0 #wc1.DF*(wc1.Nf/4)
     b, a = butter(4, f_lowpass, fs=fs_loc, btype='low', analog=False)
 
     AET_waveform1, _ = get_aet_waveform_helper(lc1, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha_in, wc1.Nt, wc1.DT)
@@ -863,7 +864,7 @@ def test_wavemaket_1d(f0_mult, f0p_mult, f0pp_mult, rr_model):
     # get the config for the first (Nf, Nt) pair
     toml_filename_in = 'tests/wavemaket_test_config2.toml'
 
-    with Path.open(toml_filename_in, 'rb') as f:
+    with Path(toml_filename_in).open('rb') as f:
         config_in1 = tomllib.load(f)
 
     wc1 = get_wavelet_model(config_in1)
@@ -986,6 +987,8 @@ def test_wavemaket_1d(f0_mult, f0p_mult, f0pp_mult, rr_model):
     power_diff = np.abs((power_got - power_pred)/power_got)
 
     # maximum predicted wavelet value to scale closeness check
+    wave_pred_sparse_cos = wavelet_waveform_sparse_cos.wave_value[0, :wavelet_waveform.n_set[0]]
+    wave_got_sparse = wavelet_waveform.wave_value[0, :wavelet_waveform.n_set[0]]
     max_wave = max(np.max(np.abs(wave_pred_sparse_cos)), 1.e-5)
 
     nrm_sparse_got = np.linalg.norm(wave_got_sparse)
@@ -1002,7 +1005,7 @@ def test_wavemaket_1d(f0_mult, f0p_mult, f0pp_mult, rr_model):
 
     # isolate stricter comparison to just the part largely unaffected by windowing
     nt_low_center = int((tukey_alpha + 0.05)*arg_cut)
-    nt_high_center = max(arg_cut- nt_low_center, nt_low_center)
+    nt_high_center = max(int(arg_cut- nt_low_center), nt_low_center)
     residual_max_center = np.sqrt(np.max(signal_wave_pred_cos_unmatched[nt_low_center:nt_high_center, :, 0]**2))/max_wave
     residual_rms_center = np.sqrt(np.mean(signal_wave_pred_cos_unmatched[nt_low_center:nt_high_center, :, 0]**2))/max_wave
 

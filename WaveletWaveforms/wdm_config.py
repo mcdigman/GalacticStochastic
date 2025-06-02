@@ -21,7 +21,7 @@ WDMWaveletConstants = namedtuple(
         'DT',
         'nx',
         'dfd',
-        'df',
+        'df_bw',
         'BW',
         'Tw',
         'K',
@@ -122,7 +122,7 @@ def get_wavelet_model(config: dict) -> WDMWaveletConstants:
     BW = (A + B) / np.pi
 
     # nonzero terms in phi transform (only need 0 and positive)
-    df = BW / Nsf
+    df_bw = BW / Nsf
 
     # step size in FTd
     dfd = DF / Tw * dfdot
@@ -145,7 +145,7 @@ def get_wavelet_model(config: dict) -> WDMWaveletConstants:
         DT,
         nx,
         dfd,
-        df,
+        df_bw,
         BW,
         Tw,
         K,

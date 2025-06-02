@@ -53,15 +53,15 @@ def get_lisa_constants(config: dict) -> LISAConstants:
     # Lisa orbital radius in units of arm lengths
     r_orbit = float(r_m/Larm)
 
-    # LISA orbital eccentricity; should be fixed to Larm/(2*AU*np.sqrt(3))?
+    # LISA orbital eccentricity; should be fixed to Larm/(2*r_m*np.sqrt(3))
     ec = float(config['lisa_constants']['ec'])
-    if not np.isclose(ec, Larm / (2 * gc.AU * np.sqrt(3)), atol=1.0e-10, rtol=1.0e-3):
+    if not np.isclose(ec, Larm / (2 * r_m * np.sqrt(3)), atol=1.0e-10, rtol=1.0e-3):
         warn(
-            'expected ec=Larm/(2*AU*np.sqrt(3))=%+.6e, got %+.6e' % (Larm / (2 * gc.AU * np.sqrt(3)), fstr),
+            'expected ec=Larm/(2*r_m*np.sqrt(3))=%+.6e, got %+.6e' % (Larm / (2 * r_m * np.sqrt(3)), ec),
             stacklevel=2,
         )
 
-    # LISA modulation frequency
+    # LISA orbital modulation frequency (i.e. 1/orbital period) (Hz)
     fm = float(config['lisa_constants']['fm'])
     assert fm > 0.0
 

@@ -20,7 +20,7 @@ def test_unit_noise_generation_stat(scale_mult) -> None:
     """Test unit normal noise for stationary model produced with input spectrum S_stat_m = 1"""
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 
-    with Path.open(toml_filename, 'rb') as f:
+    with Path(toml_filename).open('rb') as f:
         config = tomllib.load(f)
 
     wc = get_wavelet_model(config)
@@ -57,7 +57,7 @@ def test_unit_noise_generation_cyclo_time(var_select) -> None:
     """Test unit normal noise for nonstationary model produced with input spectrum S_stat_m = 1"""
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 
-    with Path.open(toml_filename, 'rb') as f:
+    with Path(toml_filename).open('rb') as f:
         config = tomllib.load(f)
 
     wc = get_wavelet_model(config)
@@ -118,7 +118,7 @@ def test_noise_normalization_match() -> None:
     """Test ability to generate noise matching known spectrum through wavelet methods"""
     toml_filename = 'tests/spectral_noise_test_config1.toml'
 
-    with Path.open(toml_filename, 'rb') as f:
+    with Path(toml_filename).open('rb') as f:
         config = tomllib.load(f)
 
     wc = get_wavelet_model(config)

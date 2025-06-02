@@ -82,7 +82,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str='skip', ou
     fds = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)
 
     # number of samples for each frequency derivative layer (grow with increasing BW)
-    Nfsam = ((wc.BW + np.abs(fds) * wc.Tw) / wc.df).astype(np.int64)
+    Nfsam = ((wc.BW + np.abs(fds) * wc.Tw) / wc.df_bw).astype(np.int64)
     Nfsam[Nfsam % 2 != 0] += 1  # makes sure it is an even number
 
     wavelet_norm = get_wavelet_norm(wc)
@@ -123,7 +123,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str='skip', ou
 
         print('%e %.14e %.14e %e %e' % (wc.DT, wc.DF, wc.DOM / (2 * np.pi), fd[1], fd[wc.Nfd - 1]))
 
-        Nfsam = ((wc.BW + np.abs(fd) * wc.Tw) / wc.df).astype(np.int64)
+        Nfsam = ((wc.BW + np.abs(fd) * wc.Tw) / wc.df_bw).astype(np.int64)
         odd_mask = np.mod(Nfsam, 2) != 0
         Nfsam[odd_mask] += 1
 
@@ -141,17 +141,15 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str='skip', ou
         evcs, evss = get_taylor_table_time_helper(wavelet_norm, wc)
         tf = time()
         print('Got Time Taylor Table in %f s' % (tf - t1))
-
         if output_mode == 'hf':
             hf = h5py.File(filename_cache, 'w')
 
-            hf.create_group('wc')
+            wc_group = hf.create_group('wc')
             for key in wc._fields:
-                hf['wc'].create_dataset(key, data=getattr(wc, key))
+                wc_group.create_dataset(key, data=getattr(wc, key))
 
             hf.create_dataset('wavelet_norm', data=wavelet_norm, compression='gzip')
             hf.create_dataset('fd', data=fd, compression='gzip')
-
             hf.create_dataset('Nfsam', data=Nfsam, compression='gzip')
             hf.create_dataset('evcs', data=evcs, compression='gzip')
             hf.create_dataset('evss', data=evss, compression='gzip')
