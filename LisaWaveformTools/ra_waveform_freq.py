@@ -7,10 +7,7 @@ from numpy.typing import NDArray
 
 from LisaWaveformTools.lisa_config import LISAConstants
 
-CLIGHT = 2.99792458e8  # Speed of light in m/s
-AU = 1.4959787e11  # Astronomical Unit in meters
-
-SpacecraftChannels = namedtuple('SpacecraftChannels', ['T', 'RR', 'II', 'dRR', 'dII'])
+AntennaResponseChannels = namedtuple('AntennaResponseChannels', ['T', 'RR', 'II', 'dRR', 'dII'])
 
 ExtrinsicParams = namedtuple('ExtrinsicParams', ['costh', 'phi', 'cosi', 'psi'])
 ExtrinsicParams.__doc__ = """
@@ -773,7 +770,7 @@ def get_sc_scalar_pos(lc: LISAConstants, t: float, sc_phasing: SpacecraftRelativ
 
 @njit(fastmath=True)
 def rigid_adiabatic_antenna(
-    sc_channels: SpacecraftChannels, params_extrinsic: ExtrinsicParams, ts, FFs, nf_low, NTs, kdotx, lc: LISAConstants,
+    sc_channels: AntennaResponseChannels, params_extrinsic: ExtrinsicParams, ts, FFs, nf_low, NTs, kdotx, lc: LISAConstants,
 ) -> None:
     """Get the waveform for LISA given polarization angle, spacecraft, tensor basis and Fs, channel order AET."""
     RRs = sc_channels.RR

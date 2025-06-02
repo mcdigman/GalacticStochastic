@@ -7,7 +7,7 @@ from numba import njit, prange
 
 from LisaWaveformTools.algebra_tools import gradient_uniform_inplace, stabilized_gradient_uniform_inplace
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.ra_waveform_freq import SpacecraftChannels
+from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels
 
 StationaryWaveformTime = namedtuple('StationaryWaveformTime', ['T', 'PT', 'FT', 'FTd', 'AT'])
 
@@ -74,7 +74,7 @@ def phase_wrap_helper(
 
 
 @njit()
-def spacecraft_channel_deriv_helper(spacecraft_channels: SpacecraftChannels, dt: float) -> None:
+def spacecraft_channel_deriv_helper(spacecraft_channels: AntennaResponseChannels, dt: float) -> None:
     """Get the derivatives of the RR and II components of the TDI and store them in dRR and dII.
 
     Parameters
@@ -98,7 +98,7 @@ def spacecraft_channel_deriv_helper(spacecraft_channels: SpacecraftChannels, dt:
 
 @njit(fastmath=True, parallel=True)
 def get_time_tdi_amp_phase_helper(
-    spacecraft_channels: SpacecraftChannels,
+    spacecraft_channels: AntennaResponseChannels,
     AET_waveform: StationaryWaveformTime,
     waveform: StationaryWaveformTime,
     lc: LISAConstants,
@@ -216,7 +216,7 @@ def get_time_tdi_amp_phase_helper(
 
 @njit()
 def get_time_tdi_amp_phase(
-    spacecraft_channels: SpacecraftChannels,
+    spacecraft_channels: AntennaResponseChannels,
     AET_waveform: StationaryWaveformTime,
     waveform: StationaryWaveformTime,
     lc: LISAConstants,

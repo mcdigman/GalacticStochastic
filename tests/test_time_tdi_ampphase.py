@@ -15,7 +15,7 @@ from WDMWaveletTransforms.wavelet_transforms import inverse_wavelet_time
 
 from LisaWaveformTools.algebra_tools import gradient_uniform_inplace
 from LisaWaveformTools.lisa_config import get_lisa_constants
-from LisaWaveformTools.ra_waveform_freq import SpacecraftChannels
+from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels
 from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime, get_time_tdi_amp_phase
 from WaveletWaveforms.coefficientsWDM_time_helpers import (
     get_empty_sparse_taylor_time_waveform,
@@ -240,7 +240,7 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult, rr_model, f0p_mult):
     dII = np.zeros((nc_waveform, nt_loc))
     ddRR = np.zeros((nc_waveform, nt_loc))
     ddII = np.zeros((nc_waveform, nt_loc))
-    spacecraft_channels = SpacecraftChannels(T, RR.copy(), II.copy(), dRR, dII)
+    spacecraft_channels = AntennaResponseChannels(T, RR.copy(), II.copy(), dRR, dII)
 
     # Call the function
     get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, wc.DT)
@@ -554,7 +554,7 @@ def test_time_tdi_inplace_nearzero(f0_mult, rr_model, f0p_mult):
     dII = np.zeros((nc_waveform, nt_loc))
     ddRR = np.zeros((nc_waveform, nt_loc))
     ddII = np.zeros((nc_waveform, nt_loc))
-    spacecraft_channels = SpacecraftChannels(T, RR.copy(), II.copy(), dRR, dII)
+    spacecraft_channels = AntennaResponseChannels(T, RR.copy(), II.copy(), dRR, dII)
 
     # Call the function
     get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, wc.DT)
@@ -746,8 +746,8 @@ def test_time_tdi_inplace_transform(f0_mult, rr_model, f0p_mult):
     dII = np.zeros((nc_waveform, nt_loc))
     dRR_fine = np.zeros((nc_waveform, nt_loc * wc.Nf))
     dII_fine = np.zeros((nc_waveform, nt_loc * wc.Nf))
-    spacecraft_channels = SpacecraftChannels(T, RR, II, dRR, dII)
-    spacecraft_channels_fine = SpacecraftChannels(T_fine, RR_fine, II_fine, dRR_fine, dII_fine)
+    spacecraft_channels = AntennaResponseChannels(T, RR, II, dRR, dII)
+    spacecraft_channels_fine = AntennaResponseChannels(T_fine, RR_fine, II_fine, dRR_fine, dII_fine)
 
     # Call the function
     get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, wc.DT)

@@ -15,7 +15,7 @@ from WDMWaveletTransforms.transform_freq_funcs import tukey
 from WDMWaveletTransforms.wavelet_transforms import inverse_wavelet_freq, inverse_wavelet_freq_time, transform_wavelet_freq, transform_wavelet_freq_time
 
 from LisaWaveformTools.lisa_config import get_lisa_constants
-from LisaWaveformTools.ra_waveform_freq import SpacecraftChannels
+from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels
 from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime, get_time_tdi_amp_phase
 from tests.test_time_tdi_ampphase import get_RR_t_mult, get_waveform_helper
 from WaveletWaveforms.coefficientsWDM_time_helpers import (
@@ -53,7 +53,7 @@ def get_aet_waveform_helper(lc, rr_model, p_input, f_input, fp_input, fpp_input,
     II = np.outer(II_scale_mult, II_t_mult)
     dRR = np.zeros((nc_waveform, nt_loc))
     dII = np.zeros((nc_waveform, nt_loc))
-    spacecraft_channels = SpacecraftChannels(T, RR, II, dRR, dII)
+    spacecraft_channels = AntennaResponseChannels(T, RR, II, dRR, dII)
     get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, dt_loc)
 
     # tukey window the amplitudes to cut down on edge artifacts

@@ -7,7 +7,7 @@ from numba import njit
 from numpy.typing import NDArray
 
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.ra_waveform_freq import SpacecraftChannels, get_spacecraft_vec, get_tensor_basis, get_wavefront_time, rigid_adiabatic_antenna
+from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels, get_spacecraft_vec, get_tensor_basis, get_wavefront_time, rigid_adiabatic_antenna
 from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime, get_time_tdi_amp_phase
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
@@ -106,7 +106,7 @@ class LinearFrequencyWaveformTime:
         dRRs = np.zeros((self.nc_waveform, self.nt_range))
         dIIs = np.zeros((self.nc_waveform, self.nt_range))
 
-        self.spacecraft_channels = SpacecraftChannels(self.TTs, RRs, IIs, dRRs, dIIs)
+        self.spacecraft_channels = AntennaResponseChannels(self.TTs, RRs, IIs, dRRs, dIIs)
 
         del RRs
         del IIs

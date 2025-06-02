@@ -5,7 +5,7 @@ import numpy as np
 import tomllib
 
 from LisaWaveformTools.lisa_config import get_lisa_constants
-from LisaWaveformTools.ra_waveform_freq import ExtrinsicParams, SpacecraftChannels, rigid_adiabatic_antenna
+from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels, ExtrinsicParams, rigid_adiabatic_antenna
 
 # If you need a toml config, import get_lisa_constants, Path, tomllib, etc., and update generate_test_inputs accordingly.
 
@@ -46,7 +46,7 @@ def generate_test_inputs(seed, nt_loc=128):
         ts = TTs
 
 
-    spacecraft_channels = SpacecraftChannels(TTs, RR.copy(), II.copy(), dRR.copy(), dII.copy())
+    spacecraft_channels = AntennaResponseChannels(TTs, RR.copy(), II.copy(), dRR.copy(), dII.copy())
 
     params_extrinsic = ExtrinsicParams(
         costh=rng.uniform(-1., 1.), phi=rng.uniform(0, 2*np.pi), cosi=rng.uniform(-1., 1.), psi=rng.uniform(0, 2*np.pi),
