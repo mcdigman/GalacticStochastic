@@ -22,15 +22,16 @@ wc = get_wavelet_model(config)
 
 nc_galaxy = 3
 
-np.random.seed(3141592)
-bg_base = np.random.normal(0.0, 1.0, (wc.Nt, wc.Nf, nc_galaxy))
+seed = 3141592
+rng_in = np.random.default_rng(seed)
+bg_base = rng_in.normal(0.0, 1.0, (wc.Nt, wc.Nf, nc_galaxy))
 
 
 @pytest.mark.parametrize('sign_high', [1, -1])
 @pytest.mark.parametrize('sign_low', [1, -1])
 def test_filter_periods_fft_full(sign_low, sign_high) -> None:
     """Test filtering max period with ffts for fixed fourier amplitude"""
-    np.random.seed(442)
+    rng = np.random.default_rng(442)
 
     period_list = tuple(
         np.arange(
@@ -40,15 +41,15 @@ def test_filter_periods_fft_full(sign_low, sign_high) -> None:
 
     amp_exp = np.zeros((len(period_list), nc_galaxy))
 
-    amp_exp[:, 0] = np.random.uniform(0.0, 1.0, len(period_list))
-    amp_exp[:, 1] = np.random.uniform(0.0, 1.0, len(period_list))
-    amp_exp[:, 2] = np.random.uniform(0.0, 1.0, len(period_list))
+    amp_exp[:, 0] = rng.uniform(0.0, 1.0, len(period_list))
+    amp_exp[:, 1] = rng.uniform(0.0, 1.0, len(period_list))
+    amp_exp[:, 2] = rng.uniform(0.0, 1.0, len(period_list))
 
     angle_exp = np.zeros((len(period_list), nc_galaxy))
 
-    angle_exp[:, 0] = np.random.uniform(0.0, 2 * np.pi, len(period_list))
-    angle_exp[:, 1] = np.random.uniform(0.0, 2 * np.pi, len(period_list))
-    angle_exp[:, 2] = np.random.uniform(0.0, 2 * np.pi, len(period_list))
+    angle_exp[:, 0] = rng.uniform(0.0, 2 * np.pi, len(period_list))
+    angle_exp[:, 1] = rng.uniform(0.0, 2 * np.pi, len(period_list))
+    angle_exp[:, 2] = rng.uniform(0.0, 2 * np.pi, len(period_list))
 
     ts = np.arange(0, wc.Nt) * wc.DT
     xs = np.zeros((wc.Nt, nc_galaxy))
@@ -86,7 +87,7 @@ def test_filter_periods_fft_full(sign_low, sign_high) -> None:
 
 def test_filter_periods_fft_full2() -> None:
     """Test filtering max period with ffts for random data"""
-    np.random.seed(442)
+    rng = np.random.default_rng(442)
 
     period_list = tuple(
         np.arange(
@@ -94,7 +95,7 @@ def test_filter_periods_fft_full2() -> None:
         ),
     )
 
-    xs = np.random.normal(0.0, 1.0, (wc.Nt, nc_galaxy))
+    xs = rng.normal(0.0, 1.0, (wc.Nt, nc_galaxy))
 
     xs += 1.0
 
@@ -137,7 +138,9 @@ def test_stationary_mean_scramble_invariance() -> None:
 
     # get scrambled time indices
     idx_sel2 = np.arange(0, wc.Nt)
-    np.random.shuffle(idx_sel2)
+
+    rng = np.random.default_rng(442)
+    rng.shuffle(idx_sel2)
 
     # get the same background with time indices scrambled
     bg_here2 = bg_here1[idx_sel2].copy()
