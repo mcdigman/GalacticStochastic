@@ -293,13 +293,13 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult, rr_model, f0p_mult):
         # same rules as the gradients, but test the integrals match too
         assert_allclose(
             AET_waveform.PT[itrc],
-            2 * np.pi * cumtrapz(AET_waveform.FT[itrc], T, initial=0.0) + AET_waveform.PT[itrc, 0],
+            2 * np.pi * cumtrapz(AET_waveform.FT[itrc], T, initial=0) + AET_waveform.PT[itrc, 0],
             atol=1.0e-8 * f0_mult * wc.DT,
             rtol=1.0e-9 * f0_mult * wc.DT,
         )
         assert_allclose(
             AET_waveform.FT[itrc],
-            cumtrapz(AET_waveform.FTd[itrc], T, initial=0.0) + AET_waveform.FT[itrc, 0],
+            cumtrapz(AET_waveform.FTd[itrc], T, initial=0) + AET_waveform.FT[itrc, 0],
             atol=1.0e-9 * f0_mult,
             rtol=1.0e-12 * f0_mult,
         )

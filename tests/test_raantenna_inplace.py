@@ -1,4 +1,6 @@
 """Testing file to ensure rigid_adiabatic_antenna behavior is unchanged"""
+from typing import Tuple
+
 import h5py
 import numpy as np
 import pytest
@@ -8,21 +10,33 @@ from tests.generate_raantenna_test_outputs import generate_test_inputs
 
 KNOWN_HDF5_PATH = 'tests/known_raantenna_outputs.hdf5'
 
-def load_known_outputs(hdf5_path):
+def load_known_outputs(hdf5_path) -> Tuple[dict, list[int]]:
     """Load reference sc_channels and kdotx arrays from HDF5."""
     with h5py.File(hdf5_path, 'r') as f:
-        seeds = []
+        seeds: list[int] = []
         results = {}
 
-        for seed in f['realizations']:
-            seeds.append(int(seed))
+        realizations = f['realizations']
+        if not isinstance(realizations, h5py.Group):
+            msg = 'Unrecognized hdf5 file format'
+            raise TypeError(msg)
 
-            realize_loc = f['realizations'][seed]
+        for seed in realizations:
+            if seed is None:
+                msg = 'Unrecognized hdf5 file format'
+                raise TypeError(msg)
+            seeds.append(int(str(seed)))
 
+            realize_loc = realizations[seed]
+
+            if not isinstance(realize_loc, h5py.Group):
+                msg = 'Unrecognized hdf5 file format'
+                raise TypeError(msg)
             ref_RR = np.array(realize_loc['spacecraft_channels_RR'])
             ref_II = np.array(realize_loc['spacecraft_channels_II'])
             ref_kdotx = np.array(realize_loc['kdotx'])
             results[int(seed)] = (ref_RR, ref_II, ref_kdotx)
+
     return results, seeds
 
 _outputs_dict, _all_seeds = load_known_outputs(KNOWN_HDF5_PATH)

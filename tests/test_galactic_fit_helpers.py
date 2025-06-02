@@ -631,8 +631,7 @@ def test_stationary_noise_power(bg_model, noise_model) -> None:
 
 
 @pytest.mark.parametrize(
-    'bg_model', ['sin1', 'sin2', 'sin3', 'powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2'], False,
-)
+    'bg_model', ['sin1', 'sin2', 'sin3', 'powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2'])
 @pytest.mark.parametrize('noise_model', ['white_equal'])
 @pytest.mark.parametrize('smooth_lengthf', [1.0])
 def test_stationary_filter_bg_(bg_model, noise_model, smooth_lengthf) -> None:
@@ -643,7 +642,7 @@ def test_stationary_filter_bg_(bg_model, noise_model, smooth_lengthf) -> None:
 
 
 @pytest.mark.parametrize(
-    'bg_model', ['sin1', 'sin2', 'sin3', 'powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2'], False,
+    'bg_model', ['sin1', 'sin2', 'sin3', 'powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2'],
 )
 @pytest.mark.parametrize('noise_model', ['white_equal'])
 @pytest.mark.parametrize('smooth_lengthf', [0.1, 1.0, 10.0, 100.0])

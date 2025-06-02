@@ -12,7 +12,7 @@ from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels, Extrinsi
 def generate_test_inputs(seed, nt_loc=128):
     """Programmatically create varied yet deterministic test inputs for rigid_adiabatic_antenna."""
     toml_filename = 'tests/raantenna_test_config1.toml'
-    with Path.open(toml_filename, 'rb') as f:
+    with Path(toml_filename).open('rb') as f:
         config = tomllib.load(f)
 
     lc = get_lisa_constants(config)
