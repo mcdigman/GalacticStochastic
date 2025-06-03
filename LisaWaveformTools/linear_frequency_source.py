@@ -7,12 +7,9 @@ import numpy as np
 from numba import njit
 from numpy.typing import NDArray
 
-from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels, get_spacecraft_vec, get_tensor_basis, get_wavefront_time, rigid_adiabatic_antenna
-from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
-from LisaWaveformTools.stationary_source_waveform import SourceParams, StationarySourceWaveform, StationaryWaveformTime
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
-from WaveletWaveforms.wdm_config import WDMWaveletConstants
+from LisaWaveformTools.ra_waveform_freq import get_tensor_basis, get_wavefront_time
+from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
+from LisaWaveformTools.stationary_time_source import StationarySourceWaveformTime
 
 LinearFrequencyIntrinsicParams = namedtuple('LinearFrequencyIntrinsicParams', ['amp0_t', 'phi0', 'F0', 'FTd0'])
 
@@ -79,87 +76,19 @@ def linear_frequency_intrinsic(waveform: StationaryWaveformTime, intrinsic_param
 
 
 # TODO do consistency checks
-class LinearFrequencySourceWaveformTime(StationarySourceWaveform):
+class LinearFrequencySourceWaveformTime(StationarySourceWaveformTime):
     """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain.
     """
-
-    def __init__(self, params: SourceParams, nt_lim_waveform: PixelTimeRange, lc: LISAConstants, wc: WDMWaveletConstants) -> None:
-        """Initalize the object"""
-        self.nt_lim_waveform: PixelTimeRange = nt_lim_waveform
-        self.nt_range: int = self.nt_lim_waveform.nt_max - self.nt_lim_waveform.nt_min
-        self.lc: LISAConstants = lc
-        self.wc: WDMWaveletConstants = wc
-        self.nc_waveform: int = self.lc.nc_waveform
-
-        self.TTs: NDArray[np.float64] = self.wc.DT * np.arange(self.nt_lim_waveform.nt_min, self.nt_lim_waveform.nt_max)
-
-        AmpTs = np.zeros(self.nt_range)
-        PPTs = np.zeros(self.nt_range)
-        FTs = np.zeros(self.nt_range)
-        FTds = np.zeros(self.nt_range)
-
-        intrinsic_waveform = StationaryWaveformTime(self.TTs, PPTs, FTs, FTds, AmpTs)
-
-        del AmpTs
-        del PPTs
-        del FTs
-        del FTds
-
-        RRs = np.zeros((self.nc_waveform, self.nt_range))
-        IIs = np.zeros((self.nc_waveform, self.nt_range))
-        dRRs = np.zeros((self.nc_waveform, self.nt_range))
-        dIIs = np.zeros((self.nc_waveform, self.nt_range))
-
-        self.spacecraft_channels = AntennaResponseChannels(self.TTs, RRs, IIs, dRRs, dIIs)
-
-        del RRs
-        del IIs
-        del dRRs
-        del dIIs
-
-        self.spacecraft_orbits = get_spacecraft_vec(self.TTs, self.lc)
-
-        self.wavefront_time = np.zeros(self.nt_range)
-        self.kdotx = np.zeros(self.nt_range)
-
-        AET_AmpTs = np.zeros((self.nc_waveform, self.nt_range))
-        AET_PPTs = np.zeros((self.nc_waveform, self.nt_range))
-        AET_FTs = np.zeros((self.nc_waveform, self.nt_range))
-        AET_FTds = np.zeros((self.nc_waveform, self.nt_range))
-
-        tdi_waveform = StationaryWaveformTime(self.TTs, AET_PPTs, AET_FTs, AET_FTds, AET_AmpTs)
-
-        del AET_AmpTs
-        del AET_PPTs
-        del AET_FTs
-        del AET_FTds
-
-        super().__init__(params, intrinsic_waveform, tdi_waveform)
 
     @override
     def _update_intrinsic(self) -> None:
         """Update the intrinsic_waveform with respect to the intrinsic parameters."""
+        if not isinstance(self.params.intrinsic, LinearFrequencyIntrinsicParams):
+            msg = 'Intrinsic parameters must be of type LinearFrequencyIntrinsicParams.'
+            raise TypeError(msg)
+
         tb = get_tensor_basis(self.params.extrinsic)
-        get_wavefront_time(self.lc, tb, self.TTs, self.spacecraft_orbits, self.wavefront_time)
+        get_wavefront_time(self._lc, tb, self._TTs, self._spacecraft_orbits, self._wavefront_time)
 
-        linear_frequency_intrinsic(self._intrinsic_waveform, self.params.intrinsic, self.wavefront_time)
+        linear_frequency_intrinsic(self._intrinsic_waveform, self.params.intrinsic, self._wavefront_time)
         self._consistent_intrinsic = True
-
-    @override
-    def _update_extrinsic(self) -> None:
-        """Update the intrinsic_waveform with respect to the extrinsic parameters."""
-        # TODO fix F_min and nf_range
-        rigid_adiabatic_antenna(
-            self.spacecraft_channels,
-            self.params.extrinsic,
-            self.TTs,
-            self.intrinsic_waveform.FT,
-            0,
-            self.nt_range,
-            self.kdotx,
-            self.lc,
-        )
-        get_time_tdi_amp_phase(
-            self.spacecraft_channels, self._tdi_waveform, self.intrinsic_waveform, self.lc, self.wc.DT,
-        )
-        self._consistent_extrinsic = True

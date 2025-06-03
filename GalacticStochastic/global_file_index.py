@@ -91,11 +91,11 @@ def get_noise_common(galaxy_dir, snr_thresh, wc: WDMWaveletConstants):
     hf_in = h5py.File(filename_gb_common, 'r')
     noise_realization_common = np.asarray(hf_in['S']['noise_realization'])
 
-    # wc2 = wdm_config.WDMWaveletConstants(**{key: hf_in['wc'][key][()] for key in wc._fields})
-    # lc2 = lisa_config.LISAConstants(**{key: hf_in['lc'][key][()] for key in lc._fields})
+    # wc2 = wdm_config.WDMWaveletConstants(**{key: hf_in['_wc'][key][()] for key in _wc._fields})
+    # lc2 = lisa_config.LISAConstants(**{key: hf_in['_lc'][key][()] for key in _lc._fields})
 
-    # assert wc == wc2
-    # assert lc == lc2
+    # assert _wc == wc2
+    # assert _lc == lc2
 
     hf_in.close()
     return noise_realization_common
@@ -157,11 +157,11 @@ def load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, wc: WDMW
     # check the stored file matches necessary current parameters
 
     # load the wavelet constants
-    # wc_in = wdm_config.WDMWaveletConstants(**{key: hf_in['configuration']['wc'][key][()] for key in wc._fields})
-    # assert wc_in == wc
+    # wc_in = wdm_config.WDMWaveletConstants(**{key: hf_in['configuration']['_wc'][key][()] for key in _wc._fields})
+    # assert wc_in == _wc
 
     # load the lisa constants
-    # lc_in = lisa_config.LISAConstants(**{key: hf_in['configuration']['lc'][key][()] for key in lc._fields})
+    # lc_in = lisa_config.LISAConstants(**{key: hf_in['configuration']['_lc'][key][()] for key in _lc._fields})
     lc_in = lc
     assert lc_in == lc
 
@@ -190,8 +190,8 @@ def load_preliminary_galactic_file_old(galaxy_file, galaxy_dir, snr_thresh, Nf, 
 
     hf_in = h5py.File(preliminary_gb_filename, 'r')
 
-    wc = wdm_config.WDMWaveletConstants(**{key: hf_in['wc'][key][()] for key in hf_in['wc']})
-    lc = lisa_config.LISAConstants(**{key: hf_in['lc'][key][()] for key in hf_in['lc']})
+    wc = wdm_config.WDMWaveletConstants(**{key: hf_in['_wc'][key][()] for key in hf_in['_wc']})
+    lc = lisa_config.LISAConstants(**{key: hf_in['_lc'][key][()] for key in hf_in['_lc']})
 
     gb_file_source = hf_in['S']['source_gb_file'][()].decode()
     full_galactic_params_filename = get_galaxy_filename(galaxy_file, galaxy_dir)
@@ -217,11 +217,11 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
 
     # check given parameters match expectations
 
-    wc = wdm_config.WDMWaveletConstants(**{key: hf_in['wc'][key][()] for key in hf_in['wc']})
-    lc = lisa_config.LISAConstants(**{key: hf_in['lc'][key][()] for key in hf_in['lc']})
+    wc = wdm_config.WDMWaveletConstants(**{key: hf_in['_wc'][key][()] for key in hf_in['_wc']})
+    lc = lisa_config.LISAConstants(**{key: hf_in['_lc'][key][()] for key in hf_in['_lc']})
     snr_min = hf_in['preliminary_ic']['snr_min'][()]
 
-    # TODO add check for wc and lc match expectations
+    # TODO add check for _wc and _lc match expectations
     try:
         galactic_below_in = np.asarray(hf_in['S']['galactic_below'])
     except KeyError:
@@ -251,10 +251,10 @@ def load_processed_gb_file(
     hf_in = h5py.File(filename_in, 'r')
 
     # check parameters in file match current parameters
-    # wc2 = wdm_config.WDMWaveletConstants(**{key: hf_in['wc'][key][()] for key in wc._fields})
-    # lc2 = lisa_config.LISAConstants(**{key: hf_in['lc'][key][()] for key in lc._fields})
+    # wc2 = wdm_config.WDMWaveletConstants(**{key: hf_in['_wc'][key][()] for key in _wc._fields})
+    # lc2 = lisa_config.LISAConstants(**{key: hf_in['_lc'][key][()] for key in _lc._fields})
     lc2 = lc
-    # assert wc2 == wc
+    # assert wc2 == _wc
     assert lc2 == lc
 
     galactic_below = np.asarray(hf_in['S']['galactic_below'])
@@ -306,20 +306,20 @@ def store_preliminary_gb_file(
 
     # store configuration parameters
     hf_out.create_group('configuration')
-    hf_out['configuration'].create_group('wc')
+    hf_out['configuration'].create_group('_wc')
     hf_out['configuration'].create_group('ic')
-    hf_out['configuration'].create_group('lc')
+    hf_out['configuration'].create_group('_lc')
     hf_out['configuration'].create_group('config_text')
 
     # store all the configuration objects to the file
 
     # the wavelet constants
     for key in wc._fields:
-        hf_out['configuration']['wc'].create_dataset(key, data=getattr(wc, key))
+        hf_out['configuration']['_wc'].create_dataset(key, data=getattr(wc, key))
 
     # lisa related constants
     for key in lc._fields:
-        hf_out['configuration']['lc'].create_dataset(key, data=getattr(lc, key))
+        hf_out['configuration']['_lc'].create_dataset(key, data=getattr(lc, key))
 
     # iterative fit related constants
     for key in ic._fields:
@@ -381,13 +381,13 @@ def store_processed_gb_file(
     hf_out['S'].create_dataset('init_gb_file', data=filename_gb_init)
     hf_out['S'].create_dataset('common_gb_noise_file', data=filename_gb_common)
 
-    hf_out.create_group('wc')
+    hf_out.create_group('_wc')
     for key in wc._fields:
-        hf_out['wc'].create_dataset(key, data=getattr(wc, key))
+        hf_out['_wc'].create_dataset(key, data=getattr(wc, key))
 
-    hf_out.create_group('lc')
+    hf_out.create_group('_lc')
     for key in lc._fields:
-        hf_out['lc'].create_dataset(key, data=getattr(lc, key))
+        hf_out['_lc'].create_dataset(key, data=getattr(lc, key))
 
     hf_out.create_group('ic')
     for key in ic._fields:

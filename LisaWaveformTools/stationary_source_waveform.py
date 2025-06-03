@@ -179,3 +179,8 @@ class StationarySourceWaveform(ABC):
             msg = 'Source parameters have not been updated yet.'
             raise ValueError(msg)
         return self._intrinsic_waveform
+
+    @property
+    @abstractmethod
+    def nc_waveform(self) -> int:
+        """Get the number of channels in the waveform."""

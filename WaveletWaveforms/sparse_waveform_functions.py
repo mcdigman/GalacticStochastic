@@ -22,11 +22,11 @@ wave_value : numpy.ndarray
     stores the actual intrinsic_waveform as the values of the wavelet pixels
     at the pixel indices specified by lists_pixels.
     All values with index >= n_set should be set to 0.
-    Shape is the same as lists_pixels: shape: (nc_waveform, N_max)
+    Shape is the same as lists_pixels: shape: (_nc_waveform, N_max)
 pixel_index : numpy.ndarray
     stores the indices of x,y coordinates of all pixels that are
     currently set. All values with index >= n_set should be set to -1
-    shape: (nc_waveform, N_max) number of TDI channels x maximum number
+    shape: (_nc_waveform, N_max) number of TDI channels x maximum number
     of pixels possible in sparse representation.
 n_set : numpy.ndarray of integers
     number of wavelet coefficients that are *currently* set
@@ -94,8 +94,8 @@ def wavelet_sparse_to_dense(wavelet_waveform: SparseWaveletWaveform, wc: WDMWave
             i = pixel_index[itrc, itrp] % wc.Nf
             j = (pixel_index[itrc, itrp] - i) // wc.Nf
             result[j, i, itrc] = wave_value[itrc, itrp]
-        # i = np.mod(pixel_index[itrc, :n_set[itrc]], wc.Nf).astype(np.int64)
-        # j = ((pixel_index[itrc, :n_set[itrc]] - i) // wc.Nf).astype(np.int64)
+        # i = np.mod(pixel_index[itrc, :n_set[itrc]], _wc.Nf).astype(np.int64)
+        # j = ((pixel_index[itrc, :n_set[itrc]] - i) // _wc.Nf).astype(np.int64)
         # result[j, i, itrc] = wave_value[itrc, :n_set[itrc]]
 
     return result

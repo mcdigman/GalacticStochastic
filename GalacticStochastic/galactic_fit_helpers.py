@@ -40,7 +40,7 @@ def filter_periods_fft(
     r_mean: NDArray[np.float64], Nt_loc, period_list, wc: WDMWaveletConstants, *, period_tolerance: float = 0.01, angle_small: float = -0.1,
 ) -> Tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     """Filter to a specific set of periods using an fft.
-    period_list is in multiples of wc.Tobs/gc.SECSYEAR
+    period_list is in multiples of _wc.Tobs/gc.SECSYEAR
     """
     # get the same number of frequencies as the input r
     nc_loc = r_mean.shape[1]

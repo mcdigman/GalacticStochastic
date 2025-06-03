@@ -319,7 +319,7 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult, rr_model, f0p_mult):
         # p_offset = np.unwrap(np.arctan2(II[itrc], RR[itrc]) % (2 * np.pi))
         # assert_allclose(tdi_waveform.PT[itrc] - 2*np.pi*T*tdi_waveform.FT[itrc],
         #    (intrinsic_waveform.PT - 2*np.pi*T*intrinsic_waveform.FT + p_offset)
-        #    % (2*np.pi), atol=1.e-14*f0_mult*wc.DT, rtol=1.e-14*f0_mult*wc.DT)
+        #    % (2*np.pi), atol=1.e-14*f0_mult*_wc.DT, rtol=1.e-14*f0_mult*_wc.DT)
 
     gradient_uniform_inplace(dII, ddII, wc.DT)
     gradient_uniform_inplace(dRR, ddRR, wc.DT)
@@ -662,17 +662,17 @@ def test_time_tdi_inplace_nearzero(f0_mult, rr_model, f0p_mult):
 
         # check that derivative of offset phases matches analytic expectation
         # assert_allclose(dp_offset0, dp_offset1, atol=1.e-8*f_input, rtol=1.e-5)
-        # assert_allclose(ddp_offset0, ddp_offset1, atol=1.e-7*f_input/wc.DT, rtol=1.e-5)
-        # assert_allclose(ddp_offset1, ddp_offset2, atol=1.e-11*f_input/wc.DT, rtol=1.e-12)
+        # assert_allclose(ddp_offset0, ddp_offset1, atol=1.e-7*f_input/_wc.DT, rtol=1.e-5)
+        # assert_allclose(ddp_offset1, ddp_offset2, atol=1.e-11*f_input/_wc.DT, rtol=1.e-12)
 
-    # for itrc in range(nc_waveform):
+    # for itrc in range(_nc_waveform):
     #    # test the gradients respect expected rules
     #    #assert_allclose(np.gradient(tdi_waveform.PT[itrc], T, edge_order=2)/(2*np.pi),
     #       tdi_waveform.FT[itrc], atol=1.e-7*f_input,rtol=1.e-8)
 
     #    # same rules as the gradients, but test the integrals match too
     #    #assert_allclose(tdi_waveform.PT[itrc], 2*np.pi*cumtrapz(tdi_waveform.FT[itrc], T, initial=0.)
-    #       +tdi_waveform.PT[itrc, 0], atol=1.e-8*f0_mult*wc.DT, rtol=1.e-9*f0_mult*wc.DT)
+    #       +tdi_waveform.PT[itrc, 0], atol=1.e-8*f0_mult*_wc.DT, rtol=1.e-9*f0_mult*_wc.DT)
     #    #assert_allclose(np.cos(tdi_waveform.PT[itrc]),
     #        np.cos(2*np.pi*cumtrapz(tdi_waveform.FT[itrc], T, initial=0.)
     #        + tdi_waveform.PT[itrc, 0]), atol=1.e-8, rtol=1.e-9)

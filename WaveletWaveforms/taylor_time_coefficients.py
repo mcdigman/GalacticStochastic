@@ -73,7 +73,7 @@ def wavelet(wc: WDMWaveletConstants, m: int, nrm: np.floating) -> NDArray[np.flo
     Construct and normalize a wavelet basis function for the specified frequency bin.
 
     This function generates a real-valued wavelet basis function in the time domain, corresponding to
-    a chosen frequency bin index `m`, using the configuration provided in `wc`.
+    a chosen frequency bin index `m`, using the configuration provided in `_wc`.
 
     Parameters
     ----------
@@ -89,7 +89,7 @@ def wavelet(wc: WDMWaveletConstants, m: int, nrm: np.floating) -> NDArray[np.flo
     -------
     wave : np.ndarray
         The real-valued, normalized wavelet as a 1D NumPy array.
-        The length matches the total number of time samples specified in `wc`.
+        The length matches the total number of time samples specified in `_wc`.
 
     Notes
     -----
@@ -185,7 +185,7 @@ def get_wavelet_norm(wc: WDMWaveletConstants) -> NDArray[np.float64]:
     Compute a normalized reference wavelet needed for the time-domain Taylor coefficient table.
 
     This function constructs and normalizes a single reference WDM wavelet according
-    to the configuration specified by `wc`. The normalized wavelet is required both for
+    to the configuration specified by `_wc`. The normalized wavelet is required both for
     assembling the Taylor time coefficients table and for certain getting the pixel directly.
 
     Parameters
@@ -199,7 +199,7 @@ def get_wavelet_norm(wc: WDMWaveletConstants) -> NDArray[np.float64]:
     -------
     wavelet_norm : np.ndarray
         The normalized reference wavelet, as a 1D array, matching
-        the configuration in `wc`.
+        the configuration in `_wc`.
     """
     phi = np.zeros(wc.K)
     DX = np.zeros(wc.K, dtype=np.complex128)
@@ -229,7 +229,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str = 'skip', 
 
     Depending on the specified caching and output modes, this function either loads the
     coefficient table from cache (if available) or computes it on the fly according to the
-    configuration in `wc`. Optionally, it can write the newly generated table to disk for
+    configuration in `_wc`. Optionally, it can write the newly generated table to disk for
     future reuse. The resulting interpolation table is organized over a grid of frequency
     derivative layers and sampled frequencies, enabling efficient evaluation of Taylor-expanded
     wavelet coefficients used in time-domain to wavelet-domain transforms.
@@ -263,7 +263,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str = 'skip', 
     -------
     WaveletTaylorTimeCoeffs
         Precomputed table of Taylor expansion coefficients and normalization values,
-        indexed according to the frequency and frequency-derivative grid defined by `wc`.
+        indexed according to the frequency and frequency-derivative grid defined by `_wc`.
 
     Raises
     ------
@@ -380,7 +380,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str = 'skip', 
         if output_mode == 'hf':
             hf = h5py.File(filename_cache, 'w')
 
-            wc_group = hf.create_group('wc')
+            wc_group = hf.create_group('_wc')
             for key in wc._fields:
                 wc_group.create_dataset(key, data=getattr(wc, key))
 
@@ -408,7 +408,7 @@ def get_taylor_time_pixel_direct(fa: float, fda: float, k_in: int, wavelet_norm:
 
     This function performs a direct, on-the-fly calculation of the Taylor expansion
     coefficients required for wavelet-domain interpolation at the given time pixel.
-    The computation is carried out using the wavelet configuration parameters in `wc`. This pixel-by-pixel
+    The computation is carried out using the wavelet configuration parameters in `_wc`. This pixel-by-pixel
     approach provides somewhat higher accuracy and can be used for validation,
     testing, or situations where precomputed tables would be excessively large or slow to compute.
     Note while more accurate than the table-based method, it is still only the first-order Taylor approximation,

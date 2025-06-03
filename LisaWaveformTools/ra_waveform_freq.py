@@ -251,7 +251,7 @@ def get_oribtal_phase_constants(lc: LISAConstants, n_sc: int) -> SpacecraftRelat
 
     Parameters
     ----------
-        lc (LISAConstants):
+        _lc (LISAConstants):
             An object containing the fundamental LISA configuration constants, such as initial orientation, arm length, and
             orbital eccentricity parameters.
         n_sc (int):
@@ -651,7 +651,7 @@ def compute_separation_vectors(lc: LISAConstants, tb: TensorBasis, sc_pos: Space
 
     Parameters
     ----------
-        lc (LISAConstants): LISA configuration constants, including arm length.
+        _lc (LISAConstants): LISA configuration constants, including arm length.
         tb (TensorBasis): Contains the gravitational-wave propagation direction vector.
         sc_pos (SpacecraftScalarPosition): Current positions (x, y, z) of the three spacecraft.
         sc_sep (SpacecraftSeparationVectors): Object to be populated with the computed separation vectors.
@@ -722,7 +722,7 @@ def get_sc_scalar_pos(lc: LISAConstants, t: float, sc_phasing: SpacecraftRelativ
 
     Parameters
     ----------
-        lc (LISAConstants): LISA system constants and orbital parameters (e.g., mean motion, phase offset, arm length).
+        _lc (LISAConstants): LISA system constants and orbital parameters (e.g., mean motion, phase offset, arm length).
         t (float): Time at which to evaluate the positions.
         sc_phasing (SpacecraftRelativePhases): Precomputed sine and cosine of the relative phase angles for each spacecraft.
         sc_pos (SpacecraftScalarPosition): Object whose x, y, and z arrays will be populated with the spacecraft positions.
@@ -840,11 +840,11 @@ def get_wavefront_time(lc: LISAConstants, tb: TensorBasis, ts: NDArray[np.float6
     t - (k · x), is reached at each spacecraft. The calculation accounts for the projected position of each spacecraft
     along the direction of wave propagation, properly normalized by the LISA arm length and the speed of light.
     The output array is overwritten with the resulting wavefront times.
-    wavefront_time is called xi in [Phys. Rev. D 101, 124008 (2020), Eq. (B3)].
+    _wavefront_time is called xi in [Phys. Rev. D 101, 124008 (2020), Eq. (B3)].
 
     Parameters
     ----------
-        lc (LISAConstants):
+        _lc (LISAConstants):
             LISA configuration constants, including arm length and geometry.
         tb (TensorBasis):
             The tensor basis structure, containing the propagation direction unit vector (kv).

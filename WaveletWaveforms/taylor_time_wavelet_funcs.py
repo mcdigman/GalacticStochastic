@@ -27,7 +27,7 @@ def wavemaket(
 
     This function updates the `wavelet_waveform` object in place with values derived from the
     supplied time-domain intrinsic_waveform over the pixel range set in
-    `nt_lim_waveform`. `wc` is an object with configuration parameters for the wavelet decomposition.
+    `_nt_lim_waveform`. `_wc` is an object with configuration parameters for the wavelet decomposition.
     Precomputed Taylor expansion coefficients, used to interpolate intrinsic_waveform values, are looked up from `taylor_table`.
 
     Parameters
@@ -98,9 +98,9 @@ def wavemaket(
                 za = fa / wc.df_bw
 
                 Nfsam1_loc = taylor_table.Nfsam[n_ind]
-                # assert Nfsam1_loc == int(wc.Nsf + 2 / 3 * np.abs(ny) * wc.dfdot * wc.Nsf)
+                # assert Nfsam1_loc == int(_wc.Nsf + 2 / 3 * np.abs(ny) * _wc.dfdot * _wc.Nsf)
                 Nfsam2_loc = taylor_table.Nfsam[n_ind + 1]
-                # assert Nfsam2_loc == int(wc.Nsf + 2 / 3 * np.abs(ny + 1) * wc.dfdot * wc.Nsf)
+                # assert Nfsam2_loc == int(_wc.Nsf + 2 / 3 * np.abs(ny + 1) * _wc.dfdot * _wc.Nsf)
                 HBW = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df_bw / 2
 
                 # lowest frequency layer
@@ -197,7 +197,7 @@ def wavemaket_direct(
     Construct a sparse wavelet-domain representation of a time-domain intrinsic_waveform without interpolation.
 
     This function updates the `wavelet_waveform` object in place with values derived from the
-    supplied time-domain intrinsic_waveform over the pixel range specified by `nt_lim_waveform`.
+    supplied time-domain intrinsic_waveform over the pixel range specified by `_nt_lim_waveform`.
     Unlike `wavemaket`, which uses precomputed interpolation tables,
     `wavemaket_direct` evaluates Taylor coefficients directly at each pixel, providing a more accurate
     calculation when the interpolation table is insufficiently dense or at points where rapid

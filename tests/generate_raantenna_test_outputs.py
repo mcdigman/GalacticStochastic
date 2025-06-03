@@ -72,7 +72,7 @@ def main(seeds, output_path):
             realization = realizations.create_group(str(seed))
             realization.create_dataset('spacecraft_channels_RR', data=spacecraft_channels.RR)
             realization.create_dataset('spacecraft_channels_II', data=spacecraft_channels.II)
-            realization.create_dataset('kdotx', data=kdotx_mut)
+            realization.create_dataset('_kdotx', data=kdotx_mut)
     print(f'Saved results for {len(seeds)} seeds to {output_path}')
 
 

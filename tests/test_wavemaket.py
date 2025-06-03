@@ -193,7 +193,7 @@ def multishape_method_match_helper(p_offset, f0_mult, f0p_mult, f0pp_mult, rr_mo
     # Create fake input data for a pure sine wave
     p_input = p_offset
     f_input = wc.DF * wc.Nf * f0_mult
-    # fp_input = f0p_mult * f_input / wc.Tobs
+    # fp_input = f0p_mult * f_input / _wc.Tobs
     fp_input = f0p_mult * wc.dfd
     fpp_input = f0pp_mult * f_input / wc.Tobs**2
     amp_input = 1.0
