@@ -11,7 +11,7 @@ SparseWaveletWaveform = namedtuple('SparseWaveletWaveform', ['wave_value', 'pixe
 
 SparseWaveletWaveform.__doc__ = """
 namedtuple object that contains a sparse representation of a wavelet waveform,
-as computed using the taylor approximation in e.g. wavemaket_multi_inplace
+as computed using the taylor approximation in e.g. wavemaket
 because the actual array size needed isn't known in advance,
 it internally stores arrays that are the maximum size possible in
 the approximation, and records the number of pixels that are actually set in

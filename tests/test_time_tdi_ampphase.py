@@ -17,12 +17,12 @@ from LisaWaveformTools.algebra_tools import gradient_uniform_inplace
 from LisaWaveformTools.lisa_config import get_lisa_constants
 from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels
 from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime, get_time_tdi_amp_phase
-from WaveletWaveforms.coefficientsWDM_time_helpers import (
+from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, sparse_addition_helper
+from WaveletWaveforms.taylor_time_coefficients import (
     get_empty_sparse_taylor_time_waveform,
     get_taylor_table_time,
 )
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, sparse_addition_helper
-from WaveletWaveforms.taylor_wdm_funcs import wavemaket_multi_inplace
+from WaveletWaveforms.taylor_time_wavelet_funcs import wavemaket
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
 # the table takes a while to compute so share it between tests
@@ -756,7 +756,7 @@ def test_time_tdi_inplace_transform(f0_mult, rr_model, f0p_mult):
     # get the sparse wavelet waveform
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(lc.nc_waveform, wc)
     nt_lim = PixelTimeRange(0, wc.Nt)
-    wavemaket_multi_inplace(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table, force_nulls=False)
+    wavemaket(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table, force_nulls=False)
 
     # get the dense wavelet waveform
     wavelet_dense = np.zeros((nt_loc * wc.Nf, nc_waveform))

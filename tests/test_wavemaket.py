@@ -18,12 +18,12 @@ from LisaWaveformTools.lisa_config import get_lisa_constants
 from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels
 from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime, get_time_tdi_amp_phase
 from tests.test_time_tdi_ampphase import get_RR_t_mult, get_waveform_helper
-from WaveletWaveforms.coefficientsWDM_time_helpers import (
+from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, sparse_addition_helper
+from WaveletWaveforms.taylor_time_coefficients import (
     get_empty_sparse_taylor_time_waveform,
     get_taylor_table_time,
 )
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, sparse_addition_helper
-from WaveletWaveforms.taylor_wdm_funcs import wavemaket_exact, wavemaket_multi_inplace
+from WaveletWaveforms.taylor_time_wavelet_funcs import wavemaket, wavemaket_direct
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
 
@@ -214,9 +214,9 @@ def multishape_method_match_helper(p_offset, f0_mult, f0p_mult, f0pp_mult, rr_mo
     nt_lim = PixelTimeRange(0, wc.Nt)
 
     # call wavemaket
-    wavemaket_multi_inplace(wavelet_waveform1, AET_waveform, nt_lim, wc, taylor_time_table, force_nulls=False)
+    wavemaket(wavelet_waveform1, AET_waveform, nt_lim, wc, taylor_time_table, force_nulls=False)
 
-    wavemaket_exact(wavelet_waveform2, AET_waveform, nt_lim, wc, taylor_time_table)
+    wavemaket_direct(wavelet_waveform2, AET_waveform, nt_lim, wc, taylor_time_table)
 
     wavelet_dense1, _, signal_freq1, mag_got1, angle_got1, envelope1, p_envelope1, f_envelope1, fd_envelope1, itr_low_cut1, itr_high_cut1 = get_wavelet_alternative_representation_helper(wavelet_waveform1, wc, tukey_alpha, f_lowpass, 8.e-2)
     wavelet_dense2, _, signal_freq2, mag_got2, angle_got2, envelope2, p_envelope2, f_envelope2, fd_envelope2, itr_low_cut2, itr_high_cut2 = get_wavelet_alternative_representation_helper(wavelet_waveform2, wc, tukey_alpha, f_lowpass, 8.e-2)
@@ -378,9 +378,9 @@ def test_wavemaket_extreme_size(p_offset, f0_mult, direct):
     nt_lim = PixelTimeRange(0, wc.Nt)
 
     if direct:
-        wavemaket_exact(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table)
+        wavemaket_direct(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table)
     else:
-        wavemaket_multi_inplace(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table, force_nulls=False)
+        wavemaket(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table, force_nulls=False)
     print(wavelet_waveform.n_set)
 
     wavelet_dense, signal_time, signal_freq, mag_got, angle_got, envelope, p_envelope, f_envelope, fd_envelope, itr_low_cut, itr_high_cut = get_wavelet_alternative_representation_helper(wavelet_waveform, wc, tukey_alpha, f_lowpass)
@@ -510,11 +510,11 @@ def test_wavemaket_dimension_comparison_midevolve2(p_offset, f0_mult, f0p_mult, 
     nt_lim2 = PixelTimeRange(0, wc2.Nt)
     # call wavemaket
     if direct:
-        wavemaket_exact(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1)
-        wavemaket_exact(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2)
+        wavemaket_direct(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1)
+        wavemaket_direct(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2)
     else:
-        wavemaket_multi_inplace(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1, force_nulls=False)
-        wavemaket_multi_inplace(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2, force_nulls=False)
+        wavemaket(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1, force_nulls=False)
+        wavemaket(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2, force_nulls=False)
 
 
     wavelet_dense1, _, signal_freq1, mag_got1, angle_got1, envelope1, p_envelope1, f_envelope1, fd_envelope1, itr_low_cut1, itr_high_cut1 = get_wavelet_alternative_representation_helper(wavelet_waveform1, wc1, tukey_alpha, f_lowpass, 8.e-2)
@@ -642,11 +642,11 @@ def test_wavemaket_dimension_comparison_slowevolve(p_offset, f0_mult, f0p_mult, 
 
     # call wavemaket
     if direct:
-        wavemaket_exact(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1)
-        wavemaket_exact(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2)
+        wavemaket_direct(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1)
+        wavemaket_direct(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2)
     else:
-        wavemaket_multi_inplace(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1, force_nulls=False)
-        wavemaket_multi_inplace(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2, force_nulls=False)
+        wavemaket(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1, force_nulls=False)
+        wavemaket(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2, force_nulls=False)
 
     wavelet_dense1, _, signal_freq1, mag_got1, angle_got1, envelope1, p_envelope1, f_envelope1, fd_envelope1, itr_low_cut1, itr_high_cut1 = get_wavelet_alternative_representation_helper(wavelet_waveform1, wc1, tukey_alpha, f_lowpass, 8.e-2)
     wavelet_dense2, _, signal_freq2, mag_got2, angle_got2, envelope2, p_envelope2, f_envelope2, fd_envelope2, itr_low_cut2, itr_high_cut2 = get_wavelet_alternative_representation_helper(wavelet_waveform2, wc2, tukey_alpha, f_lowpass, 8.e-2)
@@ -793,11 +793,11 @@ def test_wavemaket_dimension_comparison_midevolve(p_offset, f0_mult, f0p_mult, f
 
     # call wavemaket
     if direct:
-        wavemaket_exact(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1)
-        wavemaket_exact(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2)
+        wavemaket_direct(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1)
+        wavemaket_direct(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2)
     else:
-        wavemaket_multi_inplace(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1, force_nulls=False)
-        wavemaket_multi_inplace(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2, force_nulls=False)
+        wavemaket(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1, force_nulls=False)
+        wavemaket(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2, force_nulls=False)
 
     wavelet_dense1, _, signal_freq1, mag_got1, angle_got1, envelope1, p_envelope1, f_envelope1, fd_envelope1, itr_low_cut1, itr_high_cut1 = get_wavelet_alternative_representation_helper(wavelet_waveform1, wc1, tukey_alpha, f_lowpass, 8.e-2)
     wavelet_dense2, _, signal_freq2, mag_got2, angle_got2, envelope2, p_envelope2, f_envelope2, fd_envelope2, itr_low_cut2, itr_high_cut2 = get_wavelet_alternative_representation_helper(wavelet_waveform2, wc2, tukey_alpha, f_lowpass, 8.e-2)
@@ -914,7 +914,7 @@ def test_wavemaket_1d(f0_mult, f0p_mult, f0pp_mult, rr_model):
 
     # call wavemaket
     nt_lim1 = PixelTimeRange(0, wc1.Nt)
-    wavemaket_multi_inplace(wavelet_waveform, AET_waveform, nt_lim1, wc1, taylor_time_table1, force_nulls=False)
+    wavemaket(wavelet_waveform, AET_waveform, nt_lim1, wc1, taylor_time_table1, force_nulls=False)
     print(wavelet_waveform.n_set)
     wavelet_dense, signal_time, signal_freq, mag_got, angle_got, envelope, p_envelope, f_envelope, fd_envelope, itr_low_cut, itr_high_cut = get_wavelet_alternative_representation_helper(wavelet_waveform, wc1, tukey_alpha, f_lowpass, 1.e-3)
 

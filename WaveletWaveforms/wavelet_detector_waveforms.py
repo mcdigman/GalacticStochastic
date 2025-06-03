@@ -2,13 +2,13 @@
 
 from LisaWaveformTools.linear_frequency_source import LinearFrequencyWaveformTime
 from LisaWaveformTools.lisa_config import LISAConstants
-from WaveletWaveforms.coefficientsWDM_time_helpers import (
+from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, SparseWaveletWaveform
+from WaveletWaveforms.taylor_time_coefficients import (
     WaveletTaylorTimeCoeffs,
     get_empty_sparse_taylor_time_waveform,
     get_taylor_table_time,
 )
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, SparseWaveletWaveform
-from WaveletWaveforms.taylor_wdm_funcs import wavemaket_multi_inplace
+from WaveletWaveforms.taylor_time_wavelet_funcs import wavemaket
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
@@ -49,7 +49,7 @@ class BinaryWaveletAmpFreqDT:
 
         self.fwt.update_params(params_in)
 
-        wavemaket_multi_inplace(
+        wavemaket(
             self.wavelet_waveform,
             self.fwt.AET_waveform,
             self.nt_lim_waveform,

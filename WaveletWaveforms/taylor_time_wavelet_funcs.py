@@ -4,13 +4,13 @@ import numpy as np
 from numba import njit
 
 from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime
-from WaveletWaveforms.coefficientsWDM_time_helpers import WaveletTaylorTimeCoeffs, get_taylor_pixel_direct
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, SparseWaveletWaveform
+from WaveletWaveforms.taylor_time_coefficients import WaveletTaylorTimeCoeffs, get_taylor_pixel_direct
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 @njit(fastmath=True)
-def wavemaket_multi_inplace(
+def wavemaket(
     wavelet_waveform: SparseWaveletWaveform,
     waveform: StationaryWaveformTime,
     nt_lim_waveform: PixelTimeRange,
@@ -135,14 +135,14 @@ def wavemaket_multi_inplace(
             wavelet_waveform.wave_value[itrc, itrm] = 0.0
 
 @njit()
-def wavemaket_exact(
+def wavemaket_direct(
     wavelet_waveform: SparseWaveletWaveform,
     waveform: StationaryWaveformTime,
     nt_lim_waveform: PixelTimeRange,
     wc: WDMWaveletConstants,
     taylor_table: WaveletTaylorTimeCoeffs,
 ) -> None:
-    """Compute the wavelet values analogousely to wavemaket using the taylor time method.
+    """Compute the wavelet values analogously to wavemaket using the taylor time method.
     Computes the value at every wavelet pixel directly, without the precomputed interpolation table.
     Useful for testing accuracy/if the interpolation table is dense enough, if only a small
     number of points need to be evaluated, if slopes are too large for the interpolation table to be
