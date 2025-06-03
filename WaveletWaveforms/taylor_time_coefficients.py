@@ -1,5 +1,5 @@
-"""C 2023 Matthew C. Digman
-test the wdm time functions
+"""C 2025 Matthew C. Digman
+Get Taylor time-domain coefficients for wavelet transforms.
 """
 
 from collections import namedtuple
@@ -23,7 +23,36 @@ WaveletTaylorTimeCoeffs = namedtuple('WaveletTaylorTimeCoeffs', ['Nfsam', 'evcs'
 
 
 def get_empty_sparse_taylor_time_waveform(nc_waveform: int, wc: WDMWaveletConstants) -> SparseWaveletWaveform:
-    """Get a blank SparseWaveletWaveform object for the Taylor time approximation methods."""
+    """
+    Create an empty SparseWaveletWaveform data structure for Taylor time-domain methods.
+
+    This function initializes and returns a blank sparse wavelet object, sized according
+    to the expected maximum number of nonzero wavelet coefficients for a Taylor-based
+    time-domain decomposition. The returned object includes arrays for coefficient
+    values, corresponding pixel indices, and counters for the number of coefficients
+    set per waveform channel.
+
+    Parameters
+    ----------
+    nc_waveform : int
+        Number of waveform channels (e.g., polarization states, detectors, or modes).
+    wc : WDMWaveletConstants
+        Wavelet transform configuration, used to determine necessary array sizes
+        and structure for proper allocation.
+
+    Returns
+    -------
+    SparseWaveletWaveform
+        An empty, preallocated object ready to be filled with Taylor time-domain
+        wavelet coefficients and their pixel indices during waveform synthesis
+        or analysis.
+
+    Notes
+    -----
+    This helper ensures efficient memory allocation and organization
+    for sparse operations in the Taylor time-domain framework, accounting for
+    the maximum number of time pixels based on the frequency derivative bins.
+    """
     # need the frequency derivatives to calculate the maximum possible size
     fds = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)
     # calculate maximum possible number of pixels
@@ -38,7 +67,34 @@ def get_empty_sparse_taylor_time_waveform(nc_waveform: int, wc: WDMWaveletConsta
     return SparseWaveletWaveform(wave_value, pixel_index, n_set, N_max)
 
 def wavelet(wc: WDMWaveletConstants, m: int, nrm: np.floating) -> NDArray[np.float64]:
-    """Computes wavelet, modifies wave in place"""
+    """
+    Construct and normalize a wavelet basis function for the specified frequency bin.
+
+    This function generates a real-valued wavelet basis function in the time domain, corresponding to
+    a chosen frequency bin index `m`, using the configuration provided in `wc`.
+
+    Parameters
+    ----------
+    wc : WDMWaveletConstants
+        Wavelet decomposition configuration, specifying time sampling,
+        frequency grid, windowing, and FFT parameters.
+    m : int
+        The index of the frequency bin around which to center the wavelet.
+    nrm : float
+        Normalization factor to scale the resulting wavelet.
+
+    Returns
+    -------
+    wave : np.ndarray
+        The real-valued, normalized wavelet as a 1D NumPy array.
+        The length matches the total number of time samples specified in `wc`.
+
+    Notes
+    -----
+    The wavelet is constructed in the frequency domain and transformed back to the
+    time domain using the FFT, then normalized. This function is used to generate
+    reference wavelets for coefficient tables and waveform synthesis.
+    """
     wave = np.zeros(wc.K)
     halfN = np.int64(wc.K / 2)
 
@@ -62,7 +118,39 @@ def wavelet(wc: WDMWaveletConstants, m: int, nrm: np.floating) -> NDArray[np.flo
 
 @njit(parallel=True)
 def get_taylor_table_time_helper(wavelet_norm: NDArray[np.float64], wc: WDMWaveletConstants) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
-    """Helper function to take advantage of jit compiler in t calculation"""
+    """
+    Compute cosine and sine Taylor expansion coefficient tables for a grid of frequency derivative values.
+
+    This function leverages numba's Just-In-Time (JIT) compilation for efficient parallelized computation
+    of the Taylor coefficient tables needed in the time-domain wavelet transform. For each
+    frequency-derivative layer, it calculates arrays of cosine and sine coefficients
+    for linear interpolation in the first-order Taylor expansion.
+
+    Parameters
+    ----------
+    wavelet_norm : np.ndarray
+        The normalized reference wavelet sampled on the relevant time grid.
+    wc : WDMWaveletConstants
+        Wavelet decomposition configuration, specifying time step,
+        bandwidth, number of frequency derivatives, and related parameters.
+
+    Returns
+    -------
+    evcs : np.ndarray
+        Table of cosine coefficients in the first order Taylor expansion, shaped
+        (number of frequency derivative layers, number of samples per layer).
+    evss : np.ndarray
+        Table of sine coefficients in the first order Taylor explansion, matching
+        the shape of `evcs`. Used for reconstructing the wavelet basis
+        functions and interpolating waveforms efficiently.
+
+    Notes
+    -----
+    The returned tables are used for lookup and linear interpolation of Taylor-expanded wavelet
+    coefficients, improving the speed of waveform computation for time-domain waveforms.
+
+    This function can be time consuming for large tables, and so exploits parallel loops where feasible.
+    """
     fd = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)  # set f-dot increments
     Nfsam = ((wc.BW + np.abs(fd) * wc.Tw) / wc.df_bw).astype(np.int64)
     Nfsam[Nfsam % 2 == 1] += 1
@@ -90,8 +178,25 @@ def get_taylor_table_time_helper(wavelet_norm: NDArray[np.float64], wc: WDMWavel
     return evcs, evss
 
 def get_wavelet_norm(wc: WDMWaveletConstants) -> NDArray[np.float64]:
-    """Get the normalized wavelet needed for the taylor time coefficients table.
-    Also used in the exact version of wavemaket.
+    """
+    Compute a normalized reference wavelet needed for the time-domain Taylor coefficient table.
+
+    This function constructs and normalizes a single reference WDM wavelet according
+    to the configuration specified by `wc`. The normalized wavelet is required both for
+    assembling the Taylor time coefficients table and for certain getting the pixel directly.
+
+    Parameters
+    ----------
+    wc : WDMWaveletConstants
+        Wavelet decomposition configuration, specifying time step,
+        frequency grid, windowing, and shape parameters required
+        to construct the standard wavelet basis.
+
+    Returns
+    -------
+    wavelet_norm : np.ndarray
+        The normalized reference wavelet, as a 1D array, matching
+        the configuration in `wc`.
     """
     phi = np.zeros(wc.K)
     DX = np.zeros(wc.K, dtype=np.complex128)
@@ -115,18 +220,66 @@ def get_wavelet_norm(wc: WDMWaveletConstants) -> NDArray[np.float64]:
     return wavelet(wc, kwave, nrm)
 
 
-
-
 def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str='skip', output_mode: str='skip', cache_dir: str='coeffs/', filename_base: str='taylor_time_table_') -> WaveletTaylorTimeCoeffs:
-    """Helper to get the ev matrices
-    cache_mode:
-        'skip':
-            do not check if a cached coefficient table is available
-        'check':
-            check if a cached coefficient table is available
-    output_mode:
-        'skip': just return, do not output to a file
-        'hf': output to an hdf5 file in the coeffs/ directory
+    """
+    Construct or retrieve the precomputed table of Taylor-expansion coefficients
+    for interpolating time-domain waveforms in the wavelet domain.
+
+    Depending on the specified caching and output modes, this function either loads the
+    coefficient table from cache (if available) or computes it on the fly according to the
+    configuration in `wc`. Optionally, it can write the newly generated table to disk for
+    future reuse. The resulting interpolation table is organized over a grid of frequency
+    derivative layers and sampled frequencies, enabling efficient evaluation of Taylor-expanded
+    wavelet coefficients used in time-domain to wavelet-domain transforms.
+
+    Parameters
+    ----------
+    wc : WDMWaveletConstants
+        Configuration parameters for the wavelet decomposition; these
+        define the frequency range, resolution, and grid structure
+        used to generate the Taylor coefficient table.
+
+    cache_mode : str, optional
+        Specifies caching behavior for the coefficient table:
+        - 'skip': Always compute a new table, do not check for a cache.
+        - 'check': Attempt to load from a previously computed cached table; if not found, compute a new table.
+
+    output_mode : str, optional
+        Specifies behavior for saving the resulting table:
+        - 'skip': Do not write any output file.
+        - 'hf': Write the output to an HDF5 file in the specified cache directory.
+
+    cache_dir : str, optional
+        Directory in which to look for or write cached HDF5 files.
+        (default is 'coeffs/')
+
+    filename_base : str, optional
+        Base file name for the cache file (before appending grid parameters).
+        (default is 'taylor_time_table_')
+
+    Returns
+    -------
+    WaveletTaylorTimeCoeffs
+        Precomputed table of Taylor expansion coefficients and normalization values,
+        indexed according to the frequency and frequency-derivative grid defined by `wc`.
+
+    Raises
+    ------
+    ValueError
+        If the requested interpolation grid parameters exceed the valid range
+        for the Taylor approximation, or if grid settings are inconsistent.
+
+    Notes
+    -----
+    The precomputed coefficient table accelerates wavelet-domain interpolation of
+    time-domain waveforms and is used by `wavemaket` for fast evaluation.
+    Use direct Taylor evaluation when higher accuracy is required at individual pixels
+    or when the table grid is insufficiently dense.
+
+    See Also
+    --------
+    wavemaket : Use the precomputed Taylor table for sparse wavelet construction.
+    wavemaket_direct : Direct Taylor evaluation without table lookup.
     """
     t0 = time()
 
@@ -208,7 +361,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str='skip', ou
         odd_mask = np.mod(Nfsam, 2) != 0
         Nfsam[odd_mask] += 1
 
-        # The odd wavelets coefficienst can be obtained from the even.
+        # The odd wavelets coefficiens can be obtained from the even.
         # odd cosine = -even sine, odd sine = even cosine
 
         # each wavelet covers a frequency band of width DW
@@ -246,8 +399,49 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str='skip', ou
     return WaveletTaylorTimeCoeffs(Nfsam, evcs, evss, wavelet_norm)
 
 @njit()
-def get_taylor_pixel_direct(fa: float, fda: float, k_in: int, wavelet_norm: NDArray[np.float64], wc: WDMWaveletConstants) -> Tuple[float, float]:
-    """Helper function to take advantage of jit compiler in t calculation"""
+def get_taylor_time_pixel_direct(fa: float, fda: float, k_in: int, wavelet_norm: NDArray[np.float64], wc: WDMWaveletConstants) -> Tuple[float, float]:
+    """
+    Compute Taylor expansion coefficients for a single time pixel in the wavelet domain.
+
+    This function performs a direct, on-the-fly calculation of the Taylor expansion
+    coefficients required for wavelet-domain interpolation at the given time pixel.
+    The computation is carried out using the wavelet configuration parameters in `wc`. This pixel-by-pixel
+    approach provides somewhat higher accuracy and can be used for validation,
+    testing, or situations where precomputed tables would be excessively large or slow to compute.
+    Note while more accurate than the table-based method, it is still only the first-order Taylor approximation,
+    so the overall reconstruction accuracy may not improve significantly.
+
+    Parameters
+    ----------
+    fa: float
+        The frequency at which to compute the Taylor expansion coefficients.
+    fda: float
+        The frequency derivative at which to compute the Taylor expansion coefficients.
+    k_in: int
+        The frequency index of the wavelet pixel for which to compute the coefficients.
+    wavelet_norm: NDArray[np.float64]
+        A single precomputed and normalized wavelet for reference.
+    wc : WDMWaveletConstants
+        Wavelet decomposition configuration containing resolution, frequency grid,
+        and windowing information.
+
+    Returns
+    -------
+    evc: float
+        The cosine component of the Taylor expansion coefficient for the given time pixel.
+    evs: float
+        The sine component of the Taylor expansion coefficient for the given time pixel.
+
+    Notes
+    -----
+    This method does not use or require precomputed interpolation tables. It is best suited
+    for use cases demanding somewhat higher precision.
+
+    See Also
+    --------
+    get_taylor_table_time : Compute or retrieve Taylor coefficient tables for a grid of points.
+    wavemaket_direct : Construct sparse wavelet representations using direct coefficient evaluation.
+    """
     dfa = fa - wc.DF*k_in
     xk = np.abs(dfa)/wc.df_bw
     fd_mid = fda

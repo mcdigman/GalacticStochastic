@@ -8,7 +8,7 @@ from numba import njit
 
 from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, SparseWaveletWaveform
-from WaveletWaveforms.taylor_time_coefficients import WaveletTaylorTimeCoeffs, get_taylor_pixel_direct
+from WaveletWaveforms.taylor_time_coefficients import WaveletTaylorTimeCoeffs, get_taylor_time_pixel_direct
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
@@ -281,7 +281,7 @@ def wavemaket_direct(
             for k in range(kmin, kmax + 1):
                 wavelet_waveform.pixel_index[itrc, mm] = j_ind * wc.Nf + k
 
-                y, z = get_taylor_pixel_direct(fa, waveform.FTd[itrc, j], k, wavelet_norm, wc)
+                y, z = get_taylor_time_pixel_direct(fa, waveform.FTd[itrc, j], k, wavelet_norm, wc)
 
                 if (j_ind + k) % 2:
                     wavelet_waveform.wave_value[itrc, mm] = -(c * z + s * y)
