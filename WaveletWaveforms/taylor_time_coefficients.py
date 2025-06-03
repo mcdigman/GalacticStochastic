@@ -1,5 +1,7 @@
-"""C 2025 Matthew C. Digman
+"""
 Get Taylor time-domain coefficients for wavelet transforms.
+
+C 2025 Matthew C. Digman
 """
 
 from collections import namedtuple
@@ -19,7 +21,6 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 SECSYEAR = 24 * 365 * 3600  # Number of seconds in a calendar year
 
 WaveletTaylorTimeCoeffs = namedtuple('WaveletTaylorTimeCoeffs', ['Nfsam', 'evcs', 'evss', 'wavelet_norm'])
-
 
 
 def get_empty_sparse_taylor_time_waveform(nc_waveform: int, wc: WDMWaveletConstants) -> SparseWaveletWaveform:
@@ -65,6 +66,7 @@ def get_empty_sparse_taylor_time_waveform(nc_waveform: int, wc: WDMWaveletConsta
     n_set = np.zeros(nc_waveform, dtype=np.int64)
 
     return SparseWaveletWaveform(wave_value, pixel_index, n_set, N_max)
+
 
 def wavelet(wc: WDMWaveletConstants, m: int, nrm: np.floating) -> NDArray[np.float64]:
     """
@@ -172,10 +174,11 @@ def get_taylor_table_time_helper(wavelet_norm: NDArray[np.float64], wc: WDMWavel
                 evc += wavelet_norm[k] * np.cos(zs)
                 evs += wavelet_norm[k] * np.sin(zs)
             assert evc != 0.0
-            #assert evs != 0.0  # the sin component can be extremely close to zero, perhaps exactly by coincidence
+            # assert evs != 0.0  # the sin component can be extremely close to zero, perhaps exactly by coincidence
             evcs[jj, i] = evc
             evss[jj, i] = evs
     return evcs, evss
+
 
 def get_wavelet_norm(wc: WDMWaveletConstants) -> NDArray[np.float64]:
     """
@@ -220,10 +223,9 @@ def get_wavelet_norm(wc: WDMWaveletConstants) -> NDArray[np.float64]:
     return wavelet(wc, kwave, nrm)
 
 
-def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str='skip', output_mode: str='skip', cache_dir: str='coeffs/', filename_base: str='taylor_time_table_') -> WaveletTaylorTimeCoeffs:
+def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str = 'skip', output_mode: str = 'skip', cache_dir: str = 'coeffs/', filename_base: str = 'taylor_time_table_') -> WaveletTaylorTimeCoeffs:
     """
-    Construct or retrieve the precomputed table of Taylor-expansion coefficients
-    for interpolating time-domain waveforms in the wavelet domain.
+    Construct or retrieve the precomputed table of Taylor-expansion coefficients.
 
     Depending on the specified caching and output modes, this function either loads the
     coefficient table from cache (if available) or computes it on the fly according to the
@@ -292,7 +294,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str='skip', ou
     filename_cache = (
         cache_dir
         + filename_base
-        +'Nsf='
+        + 'Nsf='
         + str(wc.Nsf)
         + '_mult='
         + str(wc.mult)
@@ -329,8 +331,8 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str='skip', ou
         try:
             hf_in = h5py.File(filename_cache, 'r')
             wavelet_norm = np.asarray(hf_in['wavelet_norm'])
-            evcs[:] =  np.asarray(hf_in['evcs'])
-            evss[:] =  np.asarray(hf_in['evss'])
+            evcs[:] = np.asarray(hf_in['evcs'])
+            evss[:] = np.asarray(hf_in['evss'])
             hf_in.close()
             cache_good = True
         except OSError:
@@ -347,7 +349,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str='skip', ou
         fd = wc.DF / wc.Tw * wc.dfdot * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)  # set f-dot increments
 
         max_fd = np.max(np.abs(fd))
-        if max_fd > 8 * wc.DF/wc.Tw:
+        if max_fd > 8 * wc.DF / wc.Tw:
             msg = 'Requested interpolation grid exceeds valid range of time domain taylor approximation'
             raise ValueError(msg)
 
@@ -398,6 +400,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str='skip', ou
 
     return WaveletTaylorTimeCoeffs(Nfsam, evcs, evss, wavelet_norm)
 
+
 @njit()
 def get_taylor_time_pixel_direct(fa: float, fda: float, k_in: int, wavelet_norm: NDArray[np.float64], wc: WDMWaveletConstants) -> Tuple[float, float]:
     """
@@ -442,8 +445,8 @@ def get_taylor_time_pixel_direct(fa: float, fda: float, k_in: int, wavelet_norm:
     get_taylor_table_time : Compute or retrieve Taylor coefficient tables for a grid of points.
     wavemaket_direct : Construct sparse wavelet representations using direct coefficient evaluation.
     """
-    dfa = fa - wc.DF*k_in
-    xk = np.abs(dfa)/wc.df_bw
+    dfa = fa - wc.DF * k_in
+    xk = np.abs(dfa) / wc.df_bw
     fd_mid = fda
 
     zadd = np.pi / 16

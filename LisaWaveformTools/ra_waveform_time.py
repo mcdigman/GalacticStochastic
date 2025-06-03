@@ -44,7 +44,6 @@ def phase_wrap_helper(
     nc_loc = AET_PT.shape[0]
     n_t = AET_PT.shape[1]
 
-
     for itrc in range(nc_loc):
         # Get the starting perturbation to the phase
         p_old = (AET_PT[itrc, 0] - waveform.PT[0]) % (2 * np.pi)

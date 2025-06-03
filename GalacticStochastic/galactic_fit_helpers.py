@@ -37,7 +37,7 @@ def S_gal_model_alt(f, A, alpha, beta, kappa, gamma, fknee) -> NDArray[np.float6
 
 
 def filter_periods_fft(
-    r_mean: NDArray[np.float64], Nt_loc, period_list, wc: WDMWaveletConstants, *, period_tolerance: float =0.01, angle_small: float=-0.1,
+    r_mean: NDArray[np.float64], Nt_loc, period_list, wc: WDMWaveletConstants, *, period_tolerance: float = 0.01, angle_small: float = -0.1,
 ) -> Tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     """Filter to a specific set of periods using an fft.
     period_list is in multiples of wc.Tobs/gc.SECSYEAR

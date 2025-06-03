@@ -9,6 +9,7 @@ from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels, Extrinsi
 
 # If you need a toml config, import get_lisa_constants, Path, tomllib, etc., and update generate_test_inputs accordingly.
 
+
 def generate_test_inputs(seed, nt_loc=128):
     """Programmatically create varied yet deterministic test inputs for rigid_adiabatic_antenna."""
     toml_filename = 'tests/raantenna_test_config1.toml'
@@ -16,7 +17,6 @@ def generate_test_inputs(seed, nt_loc=128):
         config = tomllib.load(f)
 
     lc = get_lisa_constants(config)
-
 
     rng = np.random.default_rng(seed)
 
@@ -29,33 +29,32 @@ def generate_test_inputs(seed, nt_loc=128):
     f_scatter = 0.01
     t_scatter = 0.1
 
-
     RR = np.zeros((n_channels, nt_loc))
     II = np.zeros((n_channels, nt_loc))
     dRR = np.zeros((n_channels, nt_loc))
     dII = np.zeros((n_channels, nt_loc))
     kdotx = np.zeros(nt_loc)
     t_model = rng.integers(0, 2)
-    if t_model==0:
-        TTs = dt*np.arange(0, nt_loc)
+    if t_model == 0:
+        TTs = dt * np.arange(0, nt_loc)
         ts = TTs
-        FFs = np.abs(f0 + dfdt*TTs + dfdt*rng.normal(f_scatter, size=nt_loc))
+        FFs = np.abs(f0 + dfdt * TTs + dfdt * rng.normal(f_scatter, size=nt_loc))
     else:
-        FFs = np.arange(1, nt_loc+1)*DF
-        TTs = dtdf*FFs + rng.normal(t_scatter, size=nt_loc)
+        FFs = np.arange(1, nt_loc + 1) * DF
+        TTs = dtdf * FFs + rng.normal(t_scatter, size=nt_loc)
         ts = TTs
-
 
     spacecraft_channels = AntennaResponseChannels(TTs, RR.copy(), II.copy(), dRR.copy(), dII.copy())
 
     params_extrinsic = ExtrinsicParams(
-        costh=rng.uniform(-1., 1.), phi=rng.uniform(0, 2*np.pi), cosi=rng.uniform(-1., 1.), psi=rng.uniform(0, 2*np.pi),
+        costh=rng.uniform(-1., 1.), phi=rng.uniform(0, 2 * np.pi), cosi=rng.uniform(-1., 1.), psi=rng.uniform(0, 2 * np.pi),
     )
 
     nf_low = 0
     NTs = nt_loc
 
     return spacecraft_channels, params_extrinsic, ts, FFs, nf_low, NTs, kdotx, lc
+
 
 def main(seeds, output_path):
     with h5py.File(output_path, 'w') as f:

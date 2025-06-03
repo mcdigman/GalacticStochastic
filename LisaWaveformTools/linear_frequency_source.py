@@ -47,6 +47,7 @@ FTd0: float
     The frequency derivative with respect to time dF/dt at t=0
 """
 
+
 # TODO check factor of 2pi
 @njit()
 def linear_frequency_intrinsic(waveform: StationaryWaveformTime, intrinsic_params: LinearFrequencyIntrinsicParams, t_in: NDArray[np.float64]) -> None:

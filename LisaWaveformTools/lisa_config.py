@@ -48,10 +48,10 @@ def get_lisa_constants(config: dict) -> LISAConstants:
     r_au = float(config['lisa_constants']['r_au'])
 
     # Lisa orbital radius in meters
-    r_m = float(r_au*gc.AU)
+    r_m = float(r_au * gc.AU)
 
     # Lisa orbital radius in units of arm lengths
-    r_orbit = float(r_m/Larm)
+    r_orbit = float(r_m / Larm)
 
     # LISA orbital eccentricity; should be fixed to Larm/(2*r_m*np.sqrt(3))
     ec = float(config['lisa_constants']['ec'])

@@ -37,7 +37,7 @@ e_cross : numpy.ndarray
 """
 
 SpacecraftOrbits = namedtuple('SpacecraftOrbits', ['xs', 'ys', 'zs', 'xas', 'yas', 'zas'])
-SpacecraftOrbits.__doc__= """
+SpacecraftOrbits.__doc__ = """
 Store the spacecraft positions and guiding center coordinates.
 Parameters
 ----------
@@ -254,6 +254,7 @@ def get_tensor_basis(params_extrinsic: ExtrinsicParams) -> TensorBasis:
             e_cross[i, j] = u[i] * v[j] + v[i] * u[j]
     return TensorBasis(kv, e_plus, e_cross)
 
+
 @njit()
 def get_oribtal_phase_constants(lc: LISAConstants, n_sc: int) -> SpacecraftRelativePhases:
     """Calculate the initial orbital phase offsets and their sine and cosine values for each spacecraft in the LISA constellation.
@@ -298,6 +299,7 @@ def get_oribtal_phase_constants(lc: LISAConstants, n_sc: int) -> SpacecraftRelat
         cos_beta[itrc] = (lc.r_orbit * lc.ec) * np.cos(betas[itrc])
     return SpacecraftRelativePhases(sin_beta, cos_beta, betas)
 
+
 @njit()
 def get_detector_amplitude_phase_combinations(params_extrinsic: ExtrinsicParams) -> DetectorAmplitudePhaseCombinations:
     """Compute the amplitude and phase factors required for the detector's response to a gravitational-wave signal.
@@ -341,6 +343,7 @@ def get_detector_amplitude_phase_combinations(params_extrinsic: ExtrinsicParams)
     A_cross = -cosi
 
     return DetectorAmplitudePhaseCombinations(A_plus, A_cross, cos_psi, sin_psi)
+
 
 @njit()
 def get_aet_combinations(tdi_xyz: TDIComplexAntennaPattern, tdi_aet: TDIComplexAntennaPattern) -> None:
@@ -537,7 +540,6 @@ def get_projected_detector_response(tb: TensorBasis, sc_sep: SpacecraftSeparatio
     d_cross[2, 0] = d_cross[0, 2]
 
 
-
 @njit()
 def get_separation_wave_projection(tb: TensorBasis, sc_sep: SpacecraftSeparationVectors, sc_wave_proj: SpacecraftSeparationWaveProjection) -> None:
     """Project the gravitational-wave propagation vector onto the separation vectors.
@@ -593,6 +595,7 @@ def get_separation_wave_projection(tb: TensorBasis, sc_sep: SpacecraftSeparation
         k_sc_gc_sep[1] += kv[k] * r20[k]
         k_sc_gc_sep[2] += kv[k] * r30[k]
 
+
 @njit()
 def get_transfer_function(fr: float, sc_wave_proj: SpacecraftSeparationWaveProjection,
                           transfer_function: ComplexTransferFunction) -> None:
@@ -646,7 +649,6 @@ def get_transfer_function(fr: float, sc_wave_proj: SpacecraftSeparationWaveProje
             # save ops computing other triangle simultaneously
             TR[j, i] = sincq2 * np.cos(q5) + sincq1 * np.cos(q6)  # goes to 1 when f/fstar small
             TI[j, i] = sincq2 * np.sin(q5) + sincq1 * np.sin(q6)  # goes to 0 when f/fstar small
-
 
 
 @njit()
@@ -818,7 +820,6 @@ def rigid_adiabatic_antenna(
 
     A_psi = get_detector_amplitude_phase_combinations(params_extrinsic)
 
-
     # Main Loop
     for n in prange(NTs):
         # get the spacecraft response for the current time step
@@ -843,6 +844,7 @@ def rigid_adiabatic_antenna(
         for itrc in range(nc_waveform):
             RRs[itrc, n] = tdi_aet.FpR[itrc] - tdi_aet.FcI[itrc]
             IIs[itrc, n] = tdi_aet.FcR[itrc] + tdi_aet.FpI[itrc]
+
 
 @njit()
 def get_wavefront_time(lc: LISAConstants, tb: TensorBasis, ts: NDArray[np.float64], sv: SpacecraftOrbits, wavefront_time: NDArray[np.float64]) -> None:
@@ -875,6 +877,7 @@ def get_wavefront_time(lc: LISAConstants, tb: TensorBasis, ts: NDArray[np.float6
     """
     kdotx = lc.t_arm * (sv.xas * tb.kv[0] + sv.yas * tb.kv[1] + sv.zas * tb.kv[2])
     wavefront_time[:] = ts - kdotx
+
 
 @njit()
 def get_spacecraft_vec(ts: NDArray[np.float64], lc: LISAConstants) -> SpacecraftOrbits:

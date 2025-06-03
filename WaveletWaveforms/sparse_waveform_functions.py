@@ -44,6 +44,7 @@ PixelTimeRange.__doc__ = """
 namedtuple object to contain range of time pixels for analysis.
 """
 
+
 def sparse_addition_helper(sparse_waveform: SparseWaveletWaveform, dense_representation: NDArray[np.float64]) -> None:
     """Take a sparse wavelet representation from SparseWaveletWaveform
     and add it to a dense wavelet representation
@@ -66,6 +67,7 @@ def sparse_addition_helper(sparse_waveform: SparseWaveletWaveform, dense_represe
     for itrc in range(nc_loc):
         dense_representation[pixel_index[itrc, : n_set[itrc]], itrc] += wave_value[itrc, : n_set[itrc]]
 
+
 @njit()
 def wavelet_sparse_to_dense(wavelet_waveform: SparseWaveletWaveform, wc: WDMWaveletConstants) -> NDArray[np.float64]:
     """Unpack a sparse wavelet representation to a dense wavelet representation."""
@@ -84,7 +86,7 @@ def wavelet_sparse_to_dense(wavelet_waveform: SparseWaveletWaveform, wc: WDMWave
 
     result = np.zeros((wc.Nt, wc.Nf, nc_waveform))
 
-    #unpack the signal
+    # unpack the signal
     for itrc in range(nc_waveform):
         assert n_set[itrc] <= wavelet_waveform.N_max
         for itrp in range(n_set[itrc]):

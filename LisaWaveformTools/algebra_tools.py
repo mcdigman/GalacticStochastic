@@ -61,6 +61,7 @@ def gradient_uniform_inplace(ys: NDArray[np.float64], result: NDArray[np.float64
         for itrc in range(nc_loc):
             result[itrc, i] = (ys[itrc, i + 1] - ys[itrc, i - 1]) / (2 * dx)
 
+
 @njit()
 def stabilized_gradient_uniform_inplace(
     x: NDArray[np.float64], dxdt: NDArray[np.float64], y: NDArray[np.float64], dydt: NDArray[np.float64], dt: float,

@@ -20,11 +20,10 @@ def wavemaket(
     wc: WDMWaveletConstants,
     taylor_table: WaveletTaylorTimeCoeffs,
     *,
-    force_nulls: int=0,
+    force_nulls: int = 0,
 ) -> None:
     """
-    Construct a sparse wavelet-domain representation of a time-domain waveform
-    using Taylor-expansion coefficients and precomputed interpolation tables.
+    Construct a sparse wavelet-domain representation of a time-domain waveform using interpolation tables.
 
     This function updates the `wavelet_waveform` object in place with values derived from the
     supplied time-domain waveform over the pixel range set in
@@ -146,7 +145,6 @@ def wavemaket(
                         y = (1.0 - dy) * y + dy * yy
                         z = (1.0 - dy) * z + dy * zz
 
-
                         if (j_ind + k) % 2:
                             wavelet_waveform.wave_value[itrc, mm] = -(c * z + s * y)
                         else:
@@ -186,6 +184,7 @@ def wavemaket(
             wavelet_waveform.pixel_index[itrc, itrm] = -1
             wavelet_waveform.wave_value[itrc, itrm] = 0.0
 
+
 @njit()
 def wavemaket_direct(
     wavelet_waveform: SparseWaveletWaveform,
@@ -195,8 +194,7 @@ def wavemaket_direct(
     taylor_table: WaveletTaylorTimeCoeffs,
 ) -> None:
     """
-    Construct a sparse wavelet-domain representation of a time-domain waveform
-    using Taylor-expansion coefficients computed directly for each pixel.
+    Construct a sparse wavelet-domain representation of a time-domain waveform without interpolation.
 
     This function updates the `wavelet_waveform` object in place with values derived from the
     supplied time-domain waveform over the pixel range specified by `nt_lim_waveform`.
@@ -253,7 +251,7 @@ def wavemaket_direct(
         nf_max = wc.Nf - 1
 
         for j in range(nt_lim_waveform.nt_min, nt_lim_waveform.nt_max):
-            j_ind = j # keep j_ind separate in case we want to apply a time offset in the future
+            j_ind = j  # keep j_ind separate in case we want to apply a time offset in the future
 
             c = waveform.AT[itrc, j] * np.cos(waveform.PT[itrc, j])
             s = waveform.AT[itrc, j] * np.sin(waveform.PT[itrc, j])

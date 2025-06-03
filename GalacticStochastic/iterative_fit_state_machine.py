@@ -11,7 +11,7 @@ from GalacticStochastic.state_manager import StateManager
 class IterativeFitState(StateManager):
     """State machine that handles the state of the iterator"""
 
-    def __init__(self, ic: IterationConfig, preprocess_mode: int=0) -> None:
+    def __init__(self, ic: IterationConfig, preprocess_mode: int = 0) -> None:
         """Create the state machine object"""
         self.ic = ic
         self.preprocess_mode = preprocess_mode

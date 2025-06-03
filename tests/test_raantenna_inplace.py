@@ -10,6 +10,7 @@ from tests.generate_raantenna_test_outputs import generate_test_inputs
 
 KNOWN_HDF5_PATH = 'tests/known_raantenna_outputs.hdf5'
 
+
 def load_known_outputs(hdf5_path) -> Tuple[dict, list[int]]:
     """Load reference sc_channels and kdotx arrays from HDF5."""
     with h5py.File(hdf5_path, 'r') as f:
@@ -38,6 +39,7 @@ def load_known_outputs(hdf5_path) -> Tuple[dict, list[int]]:
             results[int(seed)] = (ref_RR, ref_II, ref_kdotx)
 
     return results, seeds
+
 
 _outputs_dict, _all_seeds = load_known_outputs(KNOWN_HDF5_PATH)
 

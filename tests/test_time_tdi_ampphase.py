@@ -38,8 +38,8 @@ taylor_time_table = get_taylor_table_time(wc_in, cache_mode='check', output_mode
 def get_waveform_helper(p_input, f_input, fp_input, fpp_input, amp_input, nt_loc, DT, nc_waveform, max_f):
     """Help get waveform objects."""
     T = np.arange(nt_loc) * DT
-    PT = 2 * np.pi * (f_input + 1.0 / 2.0 * fp_input * T + 1.0/6.0 * fpp_input * T**2) * T + p_input
-    FT = f_input + fp_input * T + 1.0 / 2.0 *fpp_input * T**2
+    PT = 2 * np.pi * (f_input + 1.0 / 2.0 * fp_input * T + 1.0 / 6.0 * fpp_input * T**2) * T + p_input
+    FT = f_input + fp_input * T + 1.0 / 2.0 * fpp_input * T**2
     FTd = fp_input + fpp_input * T
     AT = np.full(nt_loc, amp_input)
 
@@ -62,6 +62,7 @@ def get_waveform_helper(p_input, f_input, fp_input, fpp_input, amp_input, nt_loc
     waveform = StationaryWaveformTime(T, PT, FT, FTd, AT)
     AET_waveform = StationaryWaveformTime(T, AET_PT, AET_FT, AET_FTd, AET_AT)
     return waveform, AET_waveform, arg_cut
+
 
 def get_RR_t_mult(rr_model, nt_loc, nf_loc, dt):
     """Get a multiplier for RR and II for testing"""
@@ -112,6 +113,7 @@ def get_RR_t_mult(rr_model, nt_loc, nf_loc, dt):
         msg = 'unrecognized option for rr_model=' + str(rr_model)
         raise ValueError(msg)
     return RR_t_mult, II_t_mult
+
 
 @pytest.mark.parametrize(
     'f0_mult',
@@ -369,6 +371,7 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult, rr_model, f0p_mult):
         )
         assert_allclose(AET_waveform.FTd[itrc] - ddp_offset2, fp_input, atol=1.0e-7 * f_input / wc.DT, rtol=1.0e-8)
 
+
 @pytest.mark.parametrize(
     'f0_mult',
     [
@@ -616,7 +619,7 @@ def test_time_tdi_inplace_nearzero(f0_mult, rr_model, f0p_mult):
     # Checks specitic for static sine wave
     for itrc in range(nc_waveform):
         p_offset0 = np.arctan2(II[itrc], RR[itrc]) % (2 * np.pi)
-        #dp_offset0 = np.gradient(p_offset0, T, edge_order=1) / (2 * np.pi)
+        # dp_offset0 = np.gradient(p_offset0, T, edge_order=1) / (2 * np.pi)
         with np.errstate(divide='ignore', invalid='ignore'):
             dp_offset1 = (
                 -(II[itrc] * spacecraft_channels.dRR[itrc] - RR[itrc] * spacecraft_channels.dII[itrc])
@@ -656,7 +659,7 @@ def test_time_tdi_inplace_nearzero(f0_mult, rr_model, f0p_mult):
         )
         assert_allclose(AET_waveform.FTd[itrc] - ddp_offset1, fp_input, atol=1.0e-7 * f_input / wc.DT, rtol=1.0e-5)
 
-        ## check that derivative of offset phases matches analytic expectation
+        # check that derivative of offset phases matches analytic expectation
         # assert_allclose(dp_offset0, dp_offset1, atol=1.e-8*f_input, rtol=1.e-5)
         # assert_allclose(ddp_offset0, ddp_offset1, atol=1.e-7*f_input/wc.DT, rtol=1.e-5)
         # assert_allclose(ddp_offset1, ddp_offset2, atol=1.e-11*f_input/wc.DT, rtol=1.e-12)
@@ -672,8 +675,6 @@ def test_time_tdi_inplace_nearzero(f0_mult, rr_model, f0p_mult):
     #    #assert_allclose(np.cos(AET_waveform.PT[itrc]),
     #        np.cos(2*np.pi*cumtrapz(AET_waveform.FT[itrc], T, initial=0.)
     #        + AET_waveform.PT[itrc, 0]), atol=1.e-8, rtol=1.e-9)
-
-
 
 
 @pytest.mark.parametrize(
@@ -717,12 +718,12 @@ def test_time_tdi_inplace_transform(f0_mult, rr_model, f0p_mult):
     nc_waveform = lc.nc_waveform
 
     # Create fake input data for a pure sine wave
-    p_input = np.pi/2.
+    p_input = np.pi / 2.
     f_input = wc.DF * wc.Nf * f0_mult
     fp_input = f0p_mult * f_input / wc.Tobs
     fpp_input = 0.
     amp_input = 1.0
-    waveform, AET_waveform, arg_cut = get_waveform_helper(
+    waveform, AET_waveform, _ = get_waveform_helper(
         p_input, f_input, fp_input, fpp_input, amp_input, nt_loc, wc.DT, nc_waveform, max_f=1 / (2 * wc.dt) - 1 / wc.Tobs,
     )
     waveform_fine, AET_waveform_fine, arg_cut_fine = get_waveform_helper(

@@ -128,7 +128,7 @@ def get_wavelet_model(config: dict) -> WDMWaveletConstants:
     dfd = DF / Tw * dfdot
 
     # double check some known relationships between the parameters hold
-    assert DF**2 == DF/(2*DT)
+    assert DF**2 == DF / (2 * DT)
 
     return WDMWaveletConstants(
         Nf,
