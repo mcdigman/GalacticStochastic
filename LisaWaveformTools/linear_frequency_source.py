@@ -1,4 +1,4 @@
-"""subroutines for running lisa code"""
+"""A source with linearly increasing frequency and constant amplitude."""
 
 from collections import namedtuple
 
@@ -9,6 +9,7 @@ from numpy.typing import NDArray
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels, get_spacecraft_vec, get_tensor_basis, get_wavefront_time, rigid_adiabatic_antenna
 from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime, get_time_tdi_amp_phase
+from LisaWaveformTools.stationary_source_waveform import StationarySourceWaveform
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
@@ -51,13 +52,28 @@ FTd0: float
 # TODO check factor of 2pi
 @njit()
 def linear_frequency_intrinsic(waveform: StationaryWaveformTime, intrinsic_params: LinearFrequencyIntrinsicParams, t_in: NDArray[np.float64]) -> None:
-    """Get time domain waveform for a linearly increasing frequency source with constant amplitude.
+    """
+    Get time domain waveform for a linearly increasing frequency source with constant amplitude.
 
     For use in the stationary phase approximation. The actual waveform would be given:
     h = amp_t*np.cos(-phi0 + 2*pi*F0*t + pi*FTd0*t**2)
     Note that t_in is not the same as the time coordinate in the input waveform object;
     it may be a different time coordinate, due to the need to convert from the solar system barycenter
     frame to the constellation guiding center frame (or the frames of the individual spacecraft).
+
+    Parameters
+    ----------
+    waveform : StationaryWaveformTime
+        The waveform object to be updated in place with the time domain waveform.
+    intrinsic_params : LinearFrequencyIntrinsicParams
+        Dictionary or namespace containing intrinsic parameters of the source.
+    t_in : np.ndarray
+        Array of arrival times (or evaluation times) for the signal.
+
+    Returns
+    -------
+    None
+        The function updates the input `waveform` object in place.
     """
     AT = waveform.AT
     PT = waveform.PT
@@ -75,11 +91,11 @@ def linear_frequency_intrinsic(waveform: StationaryWaveformTime, intrinsic_param
 
 
 # TODO do consistency checks
-class LinearFrequencyWaveformTime:
+class LinearFrequencyWaveformTime(StationarySourceWaveform):
     """Store a binary waveform with linearly increasing frequency and constant amplitude in the time domain.
     """
 
-    def __init__(self, params, nt_lim_waveform: PixelTimeRange, lc: LISAConstants, wc: WDMWaveletConstants) -> None:
+    def __init__(self, params: LinearFrequencyParams, nt_lim_waveform: PixelTimeRange, lc: LISAConstants, wc: WDMWaveletConstants) -> None:
         """Initalize the object"""
         self.params: LinearFrequencyParams = params
         self.nt_lim_waveform: PixelTimeRange = nt_lim_waveform
@@ -133,21 +149,15 @@ class LinearFrequencyWaveformTime:
 
         self.update_params(params)
 
-    def update_params(self, params: LinearFrequencyParams) -> None:
-        self.params = params
-        self.update_intrinsic()
-        self.update_extrinsic()
-
-    def update_intrinsic(self) -> None:
-        """Get amplitude and phase for TaylorT3"""
+    def _update_intrinsic(self) -> None:
+        """Update the waveform with respect to the intrinsic parameters."""
         tb = get_tensor_basis(self.params.extrinsic)
         get_wavefront_time(self.lc, tb, self.TTs, self.spacecraft_orbits, self.wavefront_time)
 
         linear_frequency_intrinsic(self.waveform, self.params.intrinsic, self.wavefront_time)
 
-    def update_extrinsic(self) -> None:
-        # Calculate cos and sin of sky position, inclination, polarization
-
+    def _update_extrinsic(self) -> None:
+        """Update the waveform with respect to the extrinsic parameters."""
         # TODO fix F_min and nf_range
         rigid_adiabatic_antenna(
             self.spacecraft_channels,
@@ -162,3 +172,9 @@ class LinearFrequencyWaveformTime:
         get_time_tdi_amp_phase(
             self.spacecraft_channels, self.AET_waveform, self.waveform, self.lc, self.wc.DT,
         )
+
+    def update_params(self, params: LinearFrequencyParams) -> None:
+        """Update the waveform to match the given input parameters."""
+        self.params = params
+        self._update_intrinsic()
+        self._update_extrinsic()

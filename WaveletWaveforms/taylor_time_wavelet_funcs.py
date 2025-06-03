@@ -263,7 +263,7 @@ def wavemaket_direct(
 
             Nfsam1_loc = int(wc.Nsf + 2 / 3 * np.abs(ny) * wc.dfdot * wc.Nsf)
             Nfsam2_loc = int(wc.Nsf + 2 / 3 * np.abs(ny + 1) * wc.dfdot * wc.Nsf)
-            # TODO why - 1?
+            # not sure the - 1 is strictly necessary
             HBW = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df_bw / 2
 
             # lowest frequency layer
