@@ -88,7 +88,7 @@ def get_wavelet_alternative_representation_helper(wavelet_waveform, wc, tukey_al
     for itrc in range(nc_waveform):
         signal_freq[:, itrc] = inverse_wavelet_freq(wavelet_dense[:, :, itrc], wc.Nf, wc.Nt)
 
-    analytic = hilbert(signal_time, axis=0)
+    analytic = np.asarray(hilbert(signal_time, axis=0), dtype=np.complex128)
 
     analytic[nt_max_cut:] = 0.
 
@@ -399,7 +399,7 @@ def test_wavemaket_extreme_size(p_offset, f0_mult, direct):
 
     tukey(fd_design, tukey_alpha, fd_design.shape[0])
 
-    fd_design = np.asarray(filtfilt(b, a, fd_design, axis=0))
+    fd_design = np.asarray(filtfilt(b, a, fd_design, axis=0), dtype=np.float64)
 
     tukey(fd_design, tukey_alpha, fd_design.shape[0])
 

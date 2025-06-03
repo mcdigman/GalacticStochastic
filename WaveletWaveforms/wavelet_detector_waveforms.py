@@ -16,7 +16,7 @@ class BinaryWaveletAmpFreqDT:
     """class to store a sparse binary wavelet and update for search"""
 
     def __init__(self, params, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelTimeRange) -> None:
-        """Construct a binary wavelet object, if NMF_use is not -1 it overrides the default"""
+        """Construct a binary wavelet object."""
         self.wc = wc
         self.lc = lc
         self.nt_lim_waveform = nt_lim_waveform

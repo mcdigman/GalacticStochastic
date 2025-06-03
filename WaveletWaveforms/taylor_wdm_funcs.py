@@ -4,8 +4,7 @@ import numpy as np
 from numba import njit
 
 from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime
-from WaveletWaveforms.coefficientsWDM_time_funcs import get_taylor_pixel_direct
-from WaveletWaveforms.coefficientsWDM_time_helpers import WaveletTaylorTimeCoeffs
+from WaveletWaveforms.coefficientsWDM_time_helpers import WaveletTaylorTimeCoeffs, get_taylor_pixel_direct
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, SparseWaveletWaveform
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
