@@ -21,13 +21,13 @@ Store the intrinsic parameters for a source with linearly increasing frequency.
 
 Galactic binaries are the prototypical example of such a source.
 The amplitude is assumed constant in the time domain.
-The time domain waveform is given
+The time domain intrinsic_waveform is given
 h(t) = amp_t*cos(-phi0 + 2*pi*F0*t + pi*FTd0*t^2)
 
 Parameters
 ----------
 amp0_t: float
-    The constant time domain waveform amplitude
+    The constant time domain intrinsic_waveform amplitude
 phi0: float
     The time domain phase at t=0
 F0: float
@@ -41,18 +41,18 @@ FTd0: float
 @njit()
 def linear_frequency_intrinsic(waveform: StationaryWaveformTime, intrinsic_params: LinearFrequencyIntrinsicParams, t_in: NDArray[np.float64]) -> None:
     """
-    Get time domain waveform for a linearly increasing frequency source with constant amplitude.
+    Get time domain intrinsic_waveform for a linearly increasing frequency source with constant amplitude.
 
-    For use in the stationary phase approximation. The actual waveform would be given:
+    For use in the stationary phase approximation. The actual intrinsic_waveform would be given:
     h = amp_t*np.cos(-phi0 + 2*pi*F0*t + pi*FTd0*t**2)
-    Note that t_in is not the same as the time coordinate in the input waveform object;
+    Note that t_in is not the same as the time coordinate in the input intrinsic_waveform object;
     it may be a different time coordinate, due to the need to convert from the solar system barycenter
     frame to the constellation guiding center frame (or the frames of the individual spacecraft).
 
     Parameters
     ----------
     waveform : StationaryWaveformTime
-        The waveform object to be updated in place with the time domain waveform.
+        The intrinsic_waveform object to be updated in place with the time domain intrinsic_waveform.
     intrinsic_params : LinearFrequencyIntrinsicParams
         Dictionary or namespace containing intrinsic parameters of the source.
     t_in : np.ndarray
@@ -61,7 +61,7 @@ def linear_frequency_intrinsic(waveform: StationaryWaveformTime, intrinsic_param
     Returns
     -------
     None
-        The function updates the input `waveform` object in place.
+        The function updates the input `intrinsic_waveform` object in place.
     """
     AT = waveform.AT
     PT = waveform.PT
@@ -79,13 +79,12 @@ def linear_frequency_intrinsic(waveform: StationaryWaveformTime, intrinsic_param
 
 
 # TODO do consistency checks
-class LinearFrequencyWaveformTime(StationarySourceWaveform):
-    """Store a binary waveform with linearly increasing frequency and constant amplitude in the time domain.
+class LinearFrequencySourceWaveformTime(StationarySourceWaveform):
+    """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain.
     """
 
     def __init__(self, params: SourceParams, nt_lim_waveform: PixelTimeRange, lc: LISAConstants, wc: WDMWaveletConstants) -> None:
         """Initalize the object"""
-        self.params: SourceParams = params
         self.nt_lim_waveform: PixelTimeRange = nt_lim_waveform
         self.nt_range: int = self.nt_lim_waveform.nt_max - self.nt_lim_waveform.nt_min
         self.lc: LISAConstants = lc
@@ -99,7 +98,7 @@ class LinearFrequencyWaveformTime(StationarySourceWaveform):
         FTs = np.zeros(self.nt_range)
         FTds = np.zeros(self.nt_range)
 
-        self.waveform = StationaryWaveformTime(self.TTs, PPTs, FTs, FTds, AmpTs)
+        intrinsic_waveform = StationaryWaveformTime(self.TTs, PPTs, FTs, FTds, AmpTs)
 
         del AmpTs
         del PPTs
@@ -128,68 +127,39 @@ class LinearFrequencyWaveformTime(StationarySourceWaveform):
         AET_FTs = np.zeros((self.nc_waveform, self.nt_range))
         AET_FTds = np.zeros((self.nc_waveform, self.nt_range))
 
-        self.AET_waveform = StationaryWaveformTime(self.TTs, AET_PPTs, AET_FTs, AET_FTds, AET_AmpTs)
+        tdi_waveform = StationaryWaveformTime(self.TTs, AET_PPTs, AET_FTs, AET_FTds, AET_AmpTs)
 
         del AET_AmpTs
         del AET_PPTs
         del AET_FTs
         del AET_FTds
 
-        self.update_params(params)
+        super().__init__(params, intrinsic_waveform, tdi_waveform)
 
     @override
     def _update_intrinsic(self) -> None:
-        """Update the waveform with respect to the intrinsic parameters."""
+        """Update the intrinsic_waveform with respect to the intrinsic parameters."""
         tb = get_tensor_basis(self.params.extrinsic)
         get_wavefront_time(self.lc, tb, self.TTs, self.spacecraft_orbits, self.wavefront_time)
 
-        linear_frequency_intrinsic(self.waveform, self.params.intrinsic, self.wavefront_time)
+        linear_frequency_intrinsic(self._intrinsic_waveform, self.params.intrinsic, self.wavefront_time)
+        self._consistent_intrinsic = True
 
     @override
     def _update_extrinsic(self) -> None:
-        """Update the waveform with respect to the extrinsic parameters."""
+        """Update the intrinsic_waveform with respect to the extrinsic parameters."""
         # TODO fix F_min and nf_range
         rigid_adiabatic_antenna(
             self.spacecraft_channels,
             self.params.extrinsic,
             self.TTs,
-            self.waveform.FT,
+            self.intrinsic_waveform.FT,
             0,
             self.nt_range,
             self.kdotx,
             self.lc,
         )
         get_time_tdi_amp_phase(
-            self.spacecraft_channels, self.AET_waveform, self.waveform, self.lc, self.wc.DT,
+            self.spacecraft_channels, self._tdi_waveform, self.intrinsic_waveform, self.lc, self.wc.DT,
         )
-
-    @override
-    def update_params(self, params: SourceParams) -> None:
-        """Update the waveform to match the given input parameters."""
-        self.params = params
-        self._update_intrinsic()
-        self._update_extrinsic()
-
-    @override
-    def get_tdi_waveform(self) -> StationaryWaveformTime:
-        """
-        Get the TDI waveform channels for the source.
-
-        Returns
-        -------
-        AET_waveform: StationaryWaveformTime
-            The TDI waveform channels computed from the source parameters.
-        """
-        return self.AET_waveform
-
-    @override
-    def get_intrinsic_waveform(self) -> StationaryWaveformTime:
-        """
-        Get the intrinsic waveform channels for the source.
-
-        Returns
-        -------
-        waveform: StationaryWaveformTime
-            The intrinsic waveform computed for the source parameters.
-        """
-        return self.waveform
+        self._consistent_extrinsic = True

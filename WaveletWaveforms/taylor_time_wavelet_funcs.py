@@ -23,12 +23,12 @@ def wavemaket(
     force_nulls: int = 0,
 ) -> None:
     """
-    Construct a sparse wavelet-domain representation of a time-domain waveform using interpolation tables.
+    Construct a sparse wavelet-domain representation of a time-domain intrinsic_waveform using interpolation tables.
 
     This function updates the `wavelet_waveform` object in place with values derived from the
-    supplied time-domain waveform over the pixel range set in
+    supplied time-domain intrinsic_waveform over the pixel range set in
     `nt_lim_waveform`. `wc` is an object with configuration parameters for the wavelet decomposition.
-    Precomputed Taylor expansion coefficients, used to interpolate waveform values, are looked up from `taylor_table`.
+    Precomputed Taylor expansion coefficients, used to interpolate intrinsic_waveform values, are looked up from `taylor_table`.
 
     Parameters
     ----------
@@ -36,7 +36,7 @@ def wavemaket(
         The output object that will be populated with the sparse wavelet-domain coefficients.
         Modified in place.
     waveform : StationaryWaveformTime
-        The input time-domain waveform data with amplitude and phase arrays for each pixel.
+        The input time-domain intrinsic_waveform data with amplitude and phase arrays for each pixel.
     nt_lim_waveform : PixelTimeRange
         Limits and properties of the time pixel range to be processed.
     wc : WDMWaveletConstants
@@ -52,7 +52,7 @@ def wavemaket(
 
 
     taylor_table : WaveletTaylorTimeCoeffs
-        Precomputed Taylor expansion coefficients for linear interpolation of the waveform.
+        Precomputed Taylor expansion coefficients for linear interpolation of the intrinsic_waveform.
     force_nulls : int, optional
         If 1, sets the wavelet coefficients to zero outside the precomputed table.
         If 0, pixels outside the precomputed table are dropped from the sparse representation.
@@ -178,7 +178,7 @@ def wavemaket(
                     mm += 1
         wavelet_waveform.n_set[itrc] = mm
 
-    # clean up any pixels that were set in the old waveform but aren't anymore
+    # clean up any pixels that were set in the old intrinsic_waveform but aren't anymore
     for itrc in range(nc_waveform):
         for itrm in range(wavelet_waveform.n_set[itrc], n_set_old[itrc]):
             wavelet_waveform.pixel_index[itrc, itrm] = -1
@@ -194,14 +194,14 @@ def wavemaket_direct(
     taylor_table: WaveletTaylorTimeCoeffs,
 ) -> None:
     """
-    Construct a sparse wavelet-domain representation of a time-domain waveform without interpolation.
+    Construct a sparse wavelet-domain representation of a time-domain intrinsic_waveform without interpolation.
 
     This function updates the `wavelet_waveform` object in place with values derived from the
-    supplied time-domain waveform over the pixel range specified by `nt_lim_waveform`.
+    supplied time-domain intrinsic_waveform over the pixel range specified by `nt_lim_waveform`.
     Unlike `wavemaket`, which uses precomputed interpolation tables,
     `wavemaket_direct` evaluates Taylor coefficients directly at each pixel, providing a more accurate
     calculation when the interpolation table is insufficiently dense or at points where rapid
-    parameter variation occurs, as can happen near nulls in the waveform.
+    parameter variation occurs, as can happen near nulls in the intrinsic_waveform.
 
     Parameters
     ----------
@@ -209,7 +209,7 @@ def wavemaket_direct(
         The output object that will be populated with the sparse wavelet-domain coefficients.
         Modified in place.
     waveform : StationaryWaveformTime
-        The input time-domain waveform data with amplitude and phase arrays for each pixel.
+        The input time-domain intrinsic_waveform data with amplitude and phase arrays for each pixel.
     nt_lim_waveform : PixelTimeRange
         Limits and properties of the time pixel range to be processed.
     wc : WDMWaveletConstants
@@ -233,7 +233,7 @@ def wavemaket_direct(
     This direct evaluation is particularly useful for:
         - Testing the accuracy of the table-based approach (`wavemaket`)
         - Scenarios where the interpolation table is not sufficiently dense
-        - Pixels near waveform nulls or with large parameter slopes
+        - Pixels near intrinsic_waveform nulls or with large parameter slopes
 
     See Also
     --------
@@ -291,7 +291,7 @@ def wavemaket_direct(
 
         wavelet_waveform.n_set[itrc] = mm
 
-    # clean up any pixels that were set in the old waveform but aren't anymore
+    # clean up any pixels that were set in the old intrinsic_waveform but aren't anymore
     for itrc in range(nc_waveform):
         for itrm in range(wavelet_waveform.n_set[itrc], n_set_old[itrc]):
             wavelet_waveform.pixel_index[itrc, itrm] = -1

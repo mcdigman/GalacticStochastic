@@ -29,7 +29,7 @@ class DenseNoiseModel(ABC):
 
     @abstractmethod
     def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_lim_snr: PixelTimeRange) -> NDArray[np.float64]:
-        """Get S/N of waveform in each TDI channel"""
+        """Get S/N of intrinsic_waveform in each TDI channel"""
 
     @abstractmethod
     def get_S_stat_m(self) -> NDArray[np.float64]:
@@ -68,12 +68,12 @@ def get_sparse_snr_helper(
     inv_chol_S: NDArray[np.float64],
     nc_snr,
 ) -> NDArray[np.float64]:
-    """Calculates the S/N ratio for each TDI channel for a given waveform.
+    """Calculates the S/N ratio for each TDI channel for a given intrinsic_waveform.
 
     Parameters
     ----------
     wavelet_waveform: SparseWaveletWaveform
-        a sparse wavelet domain waveform
+        a sparse wavelet domain intrinsic_waveform
     nt_lim_snr: PixelTimeRange
         the range of time pixels to allow
     wc : namedtuple
@@ -196,7 +196,7 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
 
     @override
     def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_lim_snr: PixelTimeRange) -> NDArray[np.float64]:
-        """Get snr of waveform in each channel"""
+        """Get snr of intrinsic_waveform in each channel"""
         return get_sparse_snr_helper(wavelet_waveform, nt_lim_snr, self.wc, self.inv_chol_S, self.nc_snr)
 
     @override
@@ -346,14 +346,14 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
 
     @override
     def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_lim_snr: PixelTimeRange) -> NDArray[np.float64]:
-        """Get s/n of waveform in each TDI channel. Parameters usually come from
-        BinaryWaveletAmpFreqDT.get_unsorted_coeffs() from
+        """Get s/n of intrinsic_waveform in each TDI channel. Parameters usually come from
+        LinearFrequencyWaveletWaveformTime.get_unsorted_coeffs() from
         wavelet_detector_waveforms.
 
         Parameters
         ----------
         wavelet_waveform: SparseWaveletWaveform
-            a sparse wavelet domain waveform
+            a sparse wavelet domain intrinsic_waveform
         nt_lim_snr: PixelTimeRange
             the range of time pixels to consider for snr calculations
 

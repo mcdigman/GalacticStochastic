@@ -166,7 +166,7 @@ fm = 3.168753575e-8
 # LISA orbital radius in AU
 r_au = 1.0
 
-# Number of channels to calculate in the waveform
+# Number of channels to calculate in the intrinsic_waveform
 nc_waveform = 3
 
 # Number of channels to evaluate snr

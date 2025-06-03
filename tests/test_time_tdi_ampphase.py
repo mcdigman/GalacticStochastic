@@ -37,7 +37,7 @@ taylor_time_table = get_taylor_table_time(wc_in, cache_mode='check', output_mode
 
 
 def get_waveform_helper(p_input, f_input, fp_input, fpp_input, amp_input, nt_loc, DT, nc_waveform, max_f):
-    """Help get waveform objects."""
+    """Help get intrinsic_waveform objects."""
     T = np.arange(nt_loc) * DT
     PT = 2 * np.pi * (f_input + 1.0 / 2.0 * fp_input * T + 1.0 / 6.0 * fpp_input * T**2) * T + p_input
     FT = f_input + fp_input * T + 1.0 / 2.0 * fpp_input * T**2
@@ -317,8 +317,8 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult, rr_model, f0p_mult):
 
         # check that phases match
         # p_offset = np.unwrap(np.arctan2(II[itrc], RR[itrc]) % (2 * np.pi))
-        # assert_allclose(AET_waveform.PT[itrc] - 2*np.pi*T*AET_waveform.FT[itrc],
-        #    (waveform.PT - 2*np.pi*T*waveform.FT + p_offset)
+        # assert_allclose(tdi_waveform.PT[itrc] - 2*np.pi*T*tdi_waveform.FT[itrc],
+        #    (intrinsic_waveform.PT - 2*np.pi*T*intrinsic_waveform.FT + p_offset)
         #    % (2*np.pi), atol=1.e-14*f0_mult*wc.DT, rtol=1.e-14*f0_mult*wc.DT)
 
     gradient_uniform_inplace(dII, ddII, wc.DT)
@@ -606,8 +606,8 @@ def test_time_tdi_inplace_nearzero(f0_mult, rr_model, f0p_mult):
         )
 
         # same rules as the gradients, but test the integrals match too
-        # assert_allclose(AET_waveform.FT[itrc], cumtrapz(AET_waveform.FTd[itrc], T, initial=0.)
-        #    + AET_waveform.FT[itrc, 0], atol=1.e-7*f0_mult, rtol=1.e-12*f0_mult)
+        # assert_allclose(tdi_waveform.FT[itrc], cumtrapz(tdi_waveform.FTd[itrc], T, initial=0.)
+        #    + tdi_waveform.FT[itrc, 0], atol=1.e-7*f0_mult, rtol=1.e-12*f0_mult)
 
         # check that the amplitudes match the known answer
         assert_allclose(
@@ -653,7 +653,7 @@ def test_time_tdi_inplace_nearzero(f0_mult, rr_model, f0p_mult):
             atol=1.0e-8,
             rtol=1.0e-8,
         )
-        # assert_allclose(AET_waveform.PT[itrc] - p_offset0, 2*np.pi*(f_input+1./2*fp_input*T)*T,
+        # assert_allclose(tdi_waveform.PT[itrc] - p_offset0, 2*np.pi*(f_input+1./2*fp_input*T)*T,
         #   atol=1.e-13*2*np.pi*f_input*T.max(),rtol=1.e-13)
         assert_allclose(
             AET_waveform.FT[itrc] - dp_offset1, f_input + fp_input * T, atol=1.0e-11 * f_input, rtol=1.0e-12,
@@ -667,15 +667,15 @@ def test_time_tdi_inplace_nearzero(f0_mult, rr_model, f0p_mult):
 
     # for itrc in range(nc_waveform):
     #    # test the gradients respect expected rules
-    #    #assert_allclose(np.gradient(AET_waveform.PT[itrc], T, edge_order=2)/(2*np.pi),
-    #       AET_waveform.FT[itrc], atol=1.e-7*f_input,rtol=1.e-8)
+    #    #assert_allclose(np.gradient(tdi_waveform.PT[itrc], T, edge_order=2)/(2*np.pi),
+    #       tdi_waveform.FT[itrc], atol=1.e-7*f_input,rtol=1.e-8)
 
     #    # same rules as the gradients, but test the integrals match too
-    #    #assert_allclose(AET_waveform.PT[itrc], 2*np.pi*cumtrapz(AET_waveform.FT[itrc], T, initial=0.)
-    #       +AET_waveform.PT[itrc, 0], atol=1.e-8*f0_mult*wc.DT, rtol=1.e-9*f0_mult*wc.DT)
-    #    #assert_allclose(np.cos(AET_waveform.PT[itrc]),
-    #        np.cos(2*np.pi*cumtrapz(AET_waveform.FT[itrc], T, initial=0.)
-    #        + AET_waveform.PT[itrc, 0]), atol=1.e-8, rtol=1.e-9)
+    #    #assert_allclose(tdi_waveform.PT[itrc], 2*np.pi*cumtrapz(tdi_waveform.FT[itrc], T, initial=0.)
+    #       +tdi_waveform.PT[itrc, 0], atol=1.e-8*f0_mult*wc.DT, rtol=1.e-9*f0_mult*wc.DT)
+    #    #assert_allclose(np.cos(tdi_waveform.PT[itrc]),
+    #        np.cos(2*np.pi*cumtrapz(tdi_waveform.FT[itrc], T, initial=0.)
+    #        + tdi_waveform.PT[itrc, 0]), atol=1.e-8, rtol=1.e-9)
 
 
 @pytest.mark.parametrize(
@@ -755,12 +755,12 @@ def test_time_tdi_inplace_transform(f0_mult, rr_model, f0p_mult):
     get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, wc.DT)
     get_time_tdi_amp_phase(spacecraft_channels_fine, AET_waveform_fine, waveform_fine, lc, wc.dt)
 
-    # get the sparse wavelet waveform
+    # get the sparse wavelet intrinsic_waveform
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(lc.nc_waveform, wc)
     nt_lim = PixelTimeRange(0, wc.Nt)
     wavemaket(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table, force_nulls=False)
 
-    # get the dense wavelet waveform
+    # get the dense wavelet intrinsic_waveform
     wavelet_dense = np.zeros((nt_loc * wc.Nf, nc_waveform))
     sparse_addition_helper(wavelet_waveform, wavelet_dense)
     wavelet_dense = wavelet_dense.reshape((nt_loc, wc.Nf, nc_waveform))

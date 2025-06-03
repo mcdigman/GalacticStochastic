@@ -1,14 +1,10 @@
-"""Abstract class for stationary wave approximation-based TDI waveform models."""
+"""Abstract class for stationary wave approximation-based TDI intrinsic_waveform models."""
 from abc import ABC, abstractmethod
 from collections import namedtuple
 
-from LisaWaveformTools.lisa_config import LISAConstants
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
-from WaveletWaveforms.wdm_config import WDMWaveletConstants
-
 ExtrinsicParams = namedtuple('ExtrinsicParams', ['costh', 'phi', 'cosi', 'psi'])
 ExtrinsicParams.__doc__ = """
-Store the extrinsic parameters common to most detector waveform models.
+Store the extrinsic parameters common to most detector intrinsic_waveform models.
 
 Parameters
 ----------
@@ -39,48 +35,40 @@ StationaryWaveformTime = namedtuple('StationaryWaveformTime', ['T', 'PT', 'FT', 
 
 
 class StationarySourceWaveform(ABC):
-    """Abstract base class for waveform models to be used in the stationary wave approximation."""
+    """Abstract base class for intrinsic_waveform models to be used in the stationary wave approximation."""
 
-    @abstractmethod
     def __init__(
         self,
         params: SourceParams,
-        nt_lim_waveform: PixelTimeRange,
-        lc: LISAConstants,
-        wc: WDMWaveletConstants,
+        intrinsic_waveform: StationaryWaveformTime,
+        tdi_waveform: StationaryWaveformTime,
     ) -> None:
         """
-        Initialize the waveform object for use in the stationary wave approximation.
+        Initialize the intrinsic_waveform object for use in the stationary wave approximation.
 
         Parameters
         ----------
         params : SourceParams
             Model-specific parameters (intrinsic and extrinsic) for the source.
-        nt_lim_waveform : PixelTimeRange
-            Object describing the range of waveform time samples to generate.
-        lc : LISAConstants
-            LISA or detector configuration parameters required for the waveform.
-        wc : WDMWaveletConstants
-            Configuration parameters of the wavelet transform parameters.
         """
+        self._consistent: bool = False
+        self._consistent_intrinsic: bool = False
+        self._consistent_extrinsic: bool = False
+        self._params: SourceParams = params
 
-    @abstractmethod
-    def update_params(self, params: SourceParams) -> None:
-        """
-        Update the waveform to match a new set of model parameters.
+        self._intrinsic_waveform: StationaryWaveformTime = intrinsic_waveform
+        self._tdi_waveform: StationaryWaveformTime = tdi_waveform
 
-        Typically should call both _update_intrinsic and _update_extrinsic.
+        self.update_params(params)
 
-        Parameters
-        ----------
-        params : namedtuple
-            Updated parameters (intrinsic and extrinsic) for the source.
-        """
+        assert self.consistent_instrinsic, 'StationarySourceWaveform failed to initialize consistently.'
+        assert self.consistent_extrinsic, 'StationarySourceWaveform failed to initialize consistently.'
+        assert self.consistent, 'StationarySourceWaveform failed to initialize consistently.'
 
     @abstractmethod
     def _update_intrinsic(self) -> None:
         """
-        Update source waveform quantities specific to the stored intrinsic source parameters.
+        Update source intrinsic_waveform quantities specific to the stored intrinsic source parameters.
 
         Compute e.g. amplitude, phase, frequency, and frequency derivative arrays for the source signal.
         To be called by update_params.
@@ -89,30 +77,105 @@ class StationarySourceWaveform(ABC):
     @abstractmethod
     def _update_extrinsic(self) -> None:
         """
-        Compute the TDI waveform channels specific to the stored extrinsic source parameters.
+        Compute the TDI intrinsic_waveform channels specific to the stored extrinsic source parameters.
 
         Typical extrinsic parameters include the ecliptic longitude, ecliptic colatitude, inclination, and polarization.
         To be called by update_params.
         """
 
-    @abstractmethod
-    def get_tdi_waveform(self) -> StationaryWaveformTime:
+    def update_params(self, params: SourceParams) -> None:
         """
-        Get the TDI waveform channels for the source.
+        Update the intrinsic_waveform to match a new set of model parameters.
+
+        Typically should call both _update_intrinsic and _update_extrinsic.
+
+        Parameters
+        ----------
+        params : namedtuple
+            Updated parameters (intrinsic and extrinsic) for the source.
+        """
+        self.params = params
+        self._update_intrinsic()
+        self._update_extrinsic()
+        self._consistent = True
+
+    @property
+    def consistent(self) -> bool:
+        """Check if the internal representation is consistent with the input parameters.
+
+        Returns
+        ----------
+        consistent : bool
+            Whether the internal representation is consistent with the input parameters.
+
+        """
+        return self._consistent
+
+    @property
+    def consistent_instrinsic(self) -> bool:
+        """Check if the intrinsic representation is consistent with the input parameters.
+
+        Returns
+        ----------
+        consistent : bool
+            Whether the internal representation is consistent with the intrinsic parameters.
+
+        """
+        return self._consistent_intrinsic
+
+    @property
+    def consistent_extrinsic(self) -> bool:
+        """Check if the extrinsic representation is consistent with the input parameters.
+
+        Returns
+        ----------
+        consistent : bool
+            Whether the internal representation is consistent with the extrinsic parameters.
+
+        """
+        return self._consistent_extrinsic
+
+    @property
+    def params(self) -> SourceParams:
+        """Get the current source parameters."""
+        return self._params
+
+    @params.setter
+    def params(self, params_in: SourceParams) -> None:
+        """Set the source parameters without updating the waveform. If called directly without
+        calling `update_params`, the internal representation will not be consistent.
+        """
+        self._consistent_intrinsic = False
+        self._consistent_extrinsic = False
+        self._consistent = False
+        self._params = params_in
+
+    @property
+    def tdi_waveform(self) -> StationaryWaveformTime:
+        """
+        Get the TDI intrinsic_waveform channels for the source.
 
         Returns
         -------
-        StationaryWaveformTime
-            The TDI waveform channels computed from the source parameters.
+        tdi_waveform: StationaryWaveformTime
+            The TDI intrinsic_waveform channels computed from the source parameters.
         """
+        if not self.consistent_extrinsic:
+            msg = 'Source parameters have not been updated yet.'
+            raise ValueError(msg)
+        return self._tdi_waveform
 
-    @abstractmethod
-    def get_intrinsic_waveform(self) -> StationaryWaveformTime:
+    @property
+    def intrinsic_waveform(self) -> StationaryWaveformTime:
         """
-        Get the intrinsic waveform channels for the source.
+        Get the intrinsic intrinsic_waveform channels for the source.
 
         Returns
         -------
-        StationaryWaveformTime
-            The intrinsic waveform computed for the source parameters.
+        intrinsic_waveform: StationaryWaveformTime
+            The intrinsic intrinsic_waveform computed for the source parameters.
         """
+        if not self.consistent_instrinsic:
+            msg = 'Source parameters have not been updated yet.'
+            raise ValueError(msg)
+        return self._intrinsic_waveform

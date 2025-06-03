@@ -65,7 +65,7 @@ def get_lisa_constants(config: dict) -> LISAConstants:
     fm = float(config['lisa_constants']['fm'])
     assert fm > 0.0
 
-    # number of waveform channels that must be evaluated
+    # number of intrinsic_waveform channels that must be evaluated
     nc_waveform = int(config['lisa_constants']['nc_waveform'])
     assert nc_waveform >= 0
     assert nc_waveform <= 3

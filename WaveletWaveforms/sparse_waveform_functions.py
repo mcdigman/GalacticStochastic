@@ -10,7 +10,7 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 SparseWaveletWaveform = namedtuple('SparseWaveletWaveform', ['wave_value', 'pixel_index', 'n_set', 'N_max'])
 
 SparseWaveletWaveform.__doc__ = """
-namedtuple object that contains a sparse representation of a wavelet waveform,
+namedtuple object that contains a sparse representation of a wavelet intrinsic_waveform,
 as computed using the taylor approximation in e.g. wavemaket
 because the actual array size needed isn't known in advance,
 it internally stores arrays that are the maximum size possible in
@@ -19,7 +19,7 @@ n_set. In pixel_index, it additionally uses indicator values of -1 to indicate p
 which are not set. The pixel indices don't need to be listed in any particular order,
 Although for some applications it could be convenient for them to be sorted.
 wave_value : numpy.ndarray
-    stores the actual waveform as the values of the wavelet pixels
+    stores the actual intrinsic_waveform as the values of the wavelet pixels
     at the pixel indices specified by lists_pixels.
     All values with index >= n_set should be set to 0.
     Shape is the same as lists_pixels: shape: (nc_waveform, N_max)
@@ -49,7 +49,7 @@ def sparse_addition_helper(sparse_waveform: SparseWaveletWaveform, dense_represe
     """Take a sparse wavelet representation from SparseWaveletWaveform
     and add it to a dense wavelet representation
     sparse_waveform: namedtuple SparseTaylorTimeWaveform
-        the sparse representation of waveform, with
+        the sparse representation of intrinsic_waveform, with
         at least as many channels as dense_representation
     dense_representation: nd.ndarray
         the dense wavelet representation

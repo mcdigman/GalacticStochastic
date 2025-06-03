@@ -29,7 +29,7 @@ from WaveletWaveforms.wdm_config import get_wavelet_model
 
 
 def tukey_waveform_amp(AET_waveform: StationaryWaveformTime, tukey_alpha, arg_cut):
-    """Apply a tukey filter to the input waveform's tdi amplitude.
+    """Apply a tukey filter to the input intrinsic_waveform's tdi amplitude.
     Cut off everything beyond arg_cut to 0.0
     """
     AT = AET_waveform.AT
@@ -44,7 +44,7 @@ def get_aet_waveform_helper(lc, rr_model, p_input, f_input, fp_input, fpp_input,
     RR_scale_mult = np.array([1.0])
     II_scale_mult = np.array([1.0])
 
-    # generate the waveform in the wavelet domain and transform it
+    # generate the intrinsic_waveform in the wavelet domain and transform it
     waveform, AET_waveform, arg_cut = get_waveform_helper(
         p_input, f_input, fp_input, fpp_input, amp_input, nt_loc, dt_loc, nc_waveform, max_f=f_high_cut,
     )
@@ -202,7 +202,7 @@ def multishape_method_match_helper(p_offset, f0_mult, f0p_mult, f0pp_mult, rr_mo
 
     AET_waveform, _ = get_aet_waveform_helper(lc, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha_in, wc.Nt, wc.DT)
 
-    # get the sparse wavelet waveform
+    # get the sparse wavelet intrinsic_waveform
     wavelet_waveform1 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc)
 
     wavelet_waveform2 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc)
@@ -226,7 +226,7 @@ def multishape_method_match_helper(p_offset, f0_mult, f0p_mult, f0pp_mult, rr_mo
 
     angle_got_diff = (angle_got1[itr_low_cut:itr_high_cut] - angle_got2[itr_low_cut:itr_high_cut] + np.pi) % (2 * np.pi) - np.pi
 
-    # check the full signals are similar in the part of the waveform that is bright
+    # check the full signals are similar in the part of the intrinsic_waveform that is bright
     diff_bright = signal_freq2[itr_low_cut:itr_high_cut, 0] - signal_freq1[itr_low_cut:itr_high_cut, 0]
     abs_diff_bright = np.abs(diff_bright)**2
 
@@ -492,7 +492,7 @@ def test_wavemaket_dimension_comparison_midevolve2(p_offset, f0_mult, f0p_mult, 
     AET_waveform1, _ = get_aet_waveform_helper(lc1, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha_in, wc1.Nt, wc1.DT)
     AET_waveform2, _ = get_aet_waveform_helper(lc2, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha_in, wc2.Nt, wc2.DT)
 
-    # get the sparse wavelet waveform
+    # get the sparse wavelet intrinsic_waveform
     wavelet_waveform1 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc1)
     wavelet_waveform2 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc2)
 
@@ -518,7 +518,7 @@ def test_wavemaket_dimension_comparison_midevolve2(p_offset, f0_mult, f0p_mult, 
 
     angle_got_diff = (angle_got1[itr_low_cut:itr_high_cut] - angle_got2[itr_low_cut:itr_high_cut] + np.pi) % (2 * np.pi) - np.pi
 
-    # check the full signals are similar in the part of the waveform that is bright
+    # check the full signals are similar in the part of the intrinsic_waveform that is bright
     diff_bright = signal_freq2[itr_low_cut:itr_high_cut, 0] - signal_freq1[itr_low_cut:itr_high_cut, 0]
     abs_diff_bright = np.abs(diff_bright)**2
 
@@ -617,7 +617,7 @@ def test_wavemaket_dimension_comparison_slowevolve(p_offset, f0_mult, f0p_mult, 
     AET_waveform1, _ = get_aet_waveform_helper(lc1, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha_in, wc1.Nt, wc1.DT)
     AET_waveform2, _ = get_aet_waveform_helper(lc2, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha_in, wc2.Nt, wc2.DT)
 
-    # get the sparse wavelet waveform
+    # get the sparse wavelet intrinsic_waveform
     wavelet_waveform1 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc1)
     wavelet_waveform2 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc2)
 
@@ -675,7 +675,7 @@ def test_wavemaket_dimension_comparison_slowevolve(p_offset, f0_mult, f0p_mult, 
 
     angle_got_diff = (angle_got1[itr_low_cut:itr_high_cut] - angle_got2[itr_low_cut:itr_high_cut] + np.pi) % (2 * np.pi) - np.pi
 
-    # check the full signals are similar in the part of the waveform that is bright
+    # check the full signals are similar in the part of the intrinsic_waveform that is bright
     diff_bright = signal_freq2[itr_low_cut:itr_high_cut, 0] - signal_freq1[itr_low_cut:itr_high_cut, 0]
     abs_diff_bright = np.abs(diff_bright)**2
 
@@ -764,7 +764,7 @@ def test_wavemaket_dimension_comparison_midevolve(p_offset, f0_mult, f0p_mult, f
     AET_waveform1, _ = get_aet_waveform_helper(lc1, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha_in, wc1.Nt, wc1.DT)
     AET_waveform2, _ = get_aet_waveform_helper(lc2, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha_in, wc2.Nt, wc2.DT)
 
-    # get the sparse wavelet waveform
+    # get the sparse wavelet intrinsic_waveform
     wavelet_waveform1 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc1)
     wavelet_waveform2 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc2)
 
@@ -800,7 +800,7 @@ def test_wavemaket_dimension_comparison_midevolve(p_offset, f0_mult, f0p_mult, f
 
     angle_got_diff = (angle_got1[itr_low_cut:itr_high_cut] - angle_got2[itr_low_cut:itr_high_cut] + np.pi) % (2 * np.pi) - np.pi
 
-    # check the full signals are similar in the part of the waveform that is bright
+    # check the full signals are similar in the part of the intrinsic_waveform that is bright
     diff_bright = signal_freq2[itr_low_cut:itr_high_cut, 0] - signal_freq1[itr_low_cut:itr_high_cut, 0]
     abs_diff_bright = np.abs(diff_bright)**2
 
@@ -883,7 +883,7 @@ def test_wavemaket_1d(f0_mult, f0p_mult, f0pp_mult, rr_model):
 
     AET_waveform, arg_cut = get_aet_waveform_helper(lc1, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha, nt_loc, wc1.DT)
 
-    # get the sparse wavelet waveform
+    # get the sparse wavelet intrinsic_waveform
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(nc_waveform, wc1)
 
     # call wavemaket
@@ -905,14 +905,14 @@ def test_wavemaket_1d(f0_mult, f0p_mult, f0pp_mult, rr_model):
 
         wave_got_sparse = wavelet_waveform.wave_value[itrc, :wavelet_waveform.n_set[itrc]]
 
-    # get dense representation of just the part of the waveform that matches
+    # get dense representation of just the part of the intrinsic_waveform that matches
     signal_wave_pred_cos_matched = np.zeros((nt_loc * wc1.Nf, nc_waveform))
 
     sparse_addition_helper(wavelet_waveform_sparse_cos, signal_wave_pred_cos_matched)
 
     signal_wave_pred_cos_matched = signal_wave_pred_cos_matched.reshape((nt_loc, wc1.Nf, nc_waveform))
 
-    # get dense representation of just the part of the waveform that is not in the sparse representation
+    # get dense representation of just the part of the intrinsic_waveform that is not in the sparse representation
     signal_wave_pred_cos_unmatched = signal_wave_pred_cos - signal_wave_pred_cos_matched
 
     # get the frequency domain signal from the wavelets for just the pixels mutually on
@@ -948,7 +948,7 @@ def test_wavemaket_1d(f0_mult, f0p_mult, f0pp_mult, rr_model):
     angle_pred[itr_high_cut:] = 0.
     angle_got[itr_high_cut:] = 0.
 
-    # check the full signals are similar in the part of the waveform that is bright
+    # check the full signals are similar in the part of the intrinsic_waveform that is bright
     abs_diff_bright = np.abs(signal_freq_pred_cos[:, 0] - signal_freq[:, 0])[itr_low_cut:itr_high_cut]**2
 
     power_got_bright_freq = np.sum(mag_got[itr_low_cut:itr_high_cut]**2)

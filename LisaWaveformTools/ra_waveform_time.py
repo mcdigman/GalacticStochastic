@@ -19,16 +19,16 @@ def phase_wrap_helper(
     Parameters
     ----------
     AET_waveform: StationaryWaveformTime
-        Object containing the TDI waveform, with shape (nc_channel, n_t).
+        Object containing the TDI intrinsic_waveform, with shape (nc_channel, n_t).
     waveform: StationaryWaveformTime
-        Object containing the intrinsic waveform, with shape (n_t)
+        Object containing the intrinsic intrinsic_waveform, with shape (n_t)
     wrap_thresh: float
         Threshold above which to consider the phase large enough to wrap by 2 pi.
 
     Returns
     -------
     None
-        Results are stored in place in the PT attribute of AET_waveform.
+        Results are stored in place in the PT attribute of tdi_waveform.
 
     """
     AET_PT = AET_waveform.PT
@@ -57,7 +57,7 @@ def phase_wrap_helper(
             # It might be possible to detect wrapping by multiple factors of 2 pi
             # using the analytic part of the perturbation in AET_FTs.
             # Note that wrapping due to the linear part of the frequency is assumed
-            # to have already been done in the original waveform generation.
+            # to have already been done in the original intrinsic_waveform generation.
             if p - p_old > wrap_thresh:
                 j -= 2 * np.pi
             elif p_old - p > wrap_thresh:
@@ -100,13 +100,13 @@ def get_time_tdi_amp_phase_helper(
     waveform: StationaryWaveformTime,
     lc: LISAConstants,
 ) -> None:
-    """Compute TDI (Time Delay Interferometry) modifications for the amplitude, phase, and frequency of a waveform.
+    """Compute TDI (Time Delay Interferometry) modifications for the amplitude, phase, and frequency of a intrinsic_waveform.
 
-    This function perturbs the intrinsic amplitude, phase, and frequency of a time domain waveform
-    from the stationary wave approximation to compute the TDI waveform in the stationary wave approximation.
+    This function perturbs the intrinsic amplitude, phase, and frequency of a time domain intrinsic_waveform
+    from the stationary wave approximation to compute the TDI intrinsic_waveform in the stationary wave approximation.
     Uses the real (RR) and imaginary (II) components already computed and stored in sc_channels
     using the rigid adiabatic approximation.
-    Results are stored in-place in the AET_waveform parameter. The function handles the general case
+    Results are stored in-place in the tdi_waveform parameter. The function handles the general case
     and a subset of special cases where the real (RR) and imaginary (II) components are zero.
 
     Parameters
@@ -115,10 +115,10 @@ def get_time_tdi_amp_phase_helper(
         Object containing the real (RR) and imaginary (II) components of the spacecraft
         response, along with their derivatives (dRR, dII)
     AET_waveform : StationaryWaveformTime
-        Target waveform object where the modified TDI amplitude and phase will be stored.
+        Target intrinsic_waveform object where the modified TDI amplitude and phase will be stored.
         Modified in-place with computed values
     waveform : StationaryWaveformTime
-        Input waveform object containing the original phase (PT) and amplitude (AT) data
+        Input intrinsic_waveform object containing the original phase (PT) and amplitude (AT) data
     lc : LISAConstants
         LISA constellation constants containing the strain frequency (fstr)
 
@@ -133,13 +133,13 @@ def get_time_tdi_amp_phase_helper(
       can occur from step functions in the phase when RR or II pass through zero
     - All input arrays must be properly sized:
       - sc_channels.RR shape: (nc_channel, n_t)
-      - waveform.PT shape: (n_t,)
-      - AET_waveform.PT shape: (nc_channel, n_t)
+      - intrinsic_waveform.PT shape: (n_t,)
+      - tdi_waveform.PT shape: (nc_channel, n_t)
 
     Returns
     -------
     None
-        Results are stored in-place in AET_waveform
+        Results are stored in-place in tdi_waveform
 
     """
     # Note that if RR and II are both very near zero, there can be a step function
@@ -220,13 +220,13 @@ def get_time_tdi_amp_phase(
     dt: float,
     phase_wrap_mode: int = 0,
 ) -> None:
-    """Compute TDI modifications for the amplitude, phase, frequency, and frequency derivative of a waveform.
+    """Compute TDI modifications for the amplitude, phase, frequency, and frequency derivative of a intrinsic_waveform.
 
-    This function perturbs the intrinsic amplitude, phase, frequency, and frequency derivative of a time domain waveform
-    from the stationary wave approximation to compute the TDI waveform in the stationary wave approximation.
+    This function perturbs the intrinsic amplitude, phase, frequency, and frequency derivative of a time domain intrinsic_waveform
+    from the stationary wave approximation to compute the TDI intrinsic_waveform in the stationary wave approximation.
     Uses the real (RR) and imaginary (II) components already computed and stored in sc_channels
     using the rigid adiabatic approximation.
-    Results are stored in-place in the AET_waveform parameter. The function handles the general case
+    Results are stored in-place in the tdi_waveform parameter. The function handles the general case
     and a subset of special cases where the real (RR) and imaginary (II) components are zero.
 
     Parameters
@@ -235,10 +235,10 @@ def get_time_tdi_amp_phase(
         Object containing the real (RR) and imaginary (II) components of the spacecraft
         response, along with their derivatives (dRR, dII)
     AET_waveform : StationaryWaveformTime
-        Target waveform object where the modified TDI amplitude and phase will be stored.
+        Target intrinsic_waveform object where the modified TDI amplitude and phase will be stored.
         Modified in-place with computed values
     waveform : StationaryWaveformTime
-        Input waveform object containing the original phase (PT) and amplitude (AT) data
+        Input intrinsic_waveform object containing the original phase (PT) and amplitude (AT) data
     lc : LISAConstants
         LISA constellation constants containing the strain frequency (fstr)
     dt: float
@@ -246,7 +246,7 @@ def get_time_tdi_amp_phase(
     phase_wrap_mode: int
         Select which model to use for phase wrapping: current options are 0 (no wrapping)
         and 1 (using phase_wrap_helper).
-        Likelihood, snr, and waveform calculations generally should be ok with no wrapping,
+        Likelihood, snr, and intrinsic_waveform calculations generally should be ok with no wrapping,
         but some applications like semi-analytic fisher matrix calculation might need it.
 
     Notes
@@ -260,13 +260,13 @@ def get_time_tdi_amp_phase(
       can occur from step functions in the phase when RR or II pass through zero
     - All input arrays must be properly sized:
       - sc_channels.RR shape: (nc_channel, n_t)
-      - waveform.PT shape: (n_t,)
-      - AET_waveform.PT shape: (nc_channel, n_t)
+      - intrinsic_waveform.PT shape: (n_t,)
+      - tdi_waveform.PT shape: (nc_channel, n_t)
 
     Returns
     -------
     None
-        Results are stored in-place in AET_waveform
+        Results are stored in-place in tdi_waveform
 
     """
     # get and store dRR and dII in the object

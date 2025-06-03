@@ -14,7 +14,7 @@ from LisaWaveformTools.linear_frequency_source import LinearFrequencyIntrinsicPa
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
-from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
+from WaveletWaveforms.wavelet_detector_waveforms import LinearFrequencyWaveletWaveformTime
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 if TYPE_CHECKING:
@@ -92,7 +92,7 @@ class BinaryInclusionState(StateManager):
         self.faints_cur = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use), dtype=np.bool_)
 
         params0 = unpack_params_gb(self.params_gb[0])
-        self.waveform_manager = BinaryWaveletAmpFreqDT(params0, wc, self.lc, self.nt_lim_waveform)
+        self.waveform_manager = LinearFrequencyWaveletWaveformTime(params0, wc, self.lc, self.nt_lim_waveform)
 
         self.itrn = 0
 
@@ -147,7 +147,7 @@ class BinaryInclusionState(StateManager):
         return delta_brights
 
     def run_binary_coadd(self, itrb) -> None:
-        """Get the waveform for a binary, store its snr, and decide which spectrum to add it to."""
+        """Get the intrinsic_waveform for a binary, store its snr, and decide which spectrum to add it to."""
         itrn = self.itrn
         params_loc = unpack_params_gb(self.params_gb[itrb])
         self.waveform_manager.update_params(params_loc)

@@ -405,7 +405,7 @@ def get_michelson_combinations(polarization_response: DetectorPolarizationRespon
         transfer_function (ComplexTransferFunction):
             Provides the complex (real and imaginary) transfer functions for each arm, representing the propagation and time-delay effects.
         A_psi (DetectorAmplitudePhaseCombinations):
-            Holds the waveform amplitude for each polarization and the polarization angle.
+            Holds the intrinsic_waveform amplitude for each polarization and the polarization angle.
         tdi_xyz (TDIComplexAntennaPattern):
             Output object to be filled with the resulting Michelson TDI channel antenna pattern components in the complex domain.
 
@@ -760,7 +760,7 @@ def get_sc_scalar_pos(lc: LISAConstants, t: float, sc_phasing: SpacecraftRelativ
 def rigid_adiabatic_antenna(
     sc_channels: AntennaResponseChannels, params_extrinsic: ExtrinsicParams, ts, FFs, nf_low, NTs, kdotx, lc: LISAConstants,
 ) -> None:
-    """Get the waveform for LISA given polarization angle, spacecraft, tensor basis and Fs, channel order AET."""
+    """Get the intrinsic_waveform for LISA given polarization angle, spacecraft, tensor basis and Fs, channel order AET."""
     RRs = sc_channels.RR
     IIs = sc_channels.II
 
@@ -776,7 +776,7 @@ def rigid_adiabatic_antenna(
 
     n_arm = 3  # number of arms (currently must be 3)
 
-    nc_waveform = RRs.shape[0]  # number of channels in the output waveform
+    nc_waveform = RRs.shape[0]  # number of channels in the output intrinsic_waveform
     assert IIs.shape[0] == nc_waveform
 
     nc_generate = 3  # number of combinations to generate internally (currently must be 3)
@@ -893,7 +893,7 @@ def get_spacecraft_vec(ts: NDArray[np.float64], lc: LISAConstants) -> Spacecraft
         - All arrays have shape (3, n_t) for spacecraft coordinates, and (n_t,) for guiding center coordinates.
         - The positions are normalized such that the arm length scaling (Larm) is explicit in the expressions.
         - The model assumes three spacecraft arranged in a near-equilateral triangle orbiting the Sun with fixed geometry.
-        - This function is suitable for generating the nominal orbits for waveform simulation and TDI calculation.
+        - This function is suitable for generating the nominal orbits for intrinsic_waveform simulation and TDI calculation.
 
     """
     n_sc = 3  # number of spacecraft (currently must be 3)

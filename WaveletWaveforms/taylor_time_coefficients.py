@@ -31,12 +31,12 @@ def get_empty_sparse_taylor_time_waveform(nc_waveform: int, wc: WDMWaveletConsta
     to the expected maximum number of nonzero wavelet coefficients for a Taylor-based
     time-domain decomposition. The returned object includes arrays for coefficient
     values, corresponding pixel indices, and counters for the number of coefficients
-    set per waveform channel.
+    set per intrinsic_waveform channel.
 
     Parameters
     ----------
     nc_waveform : int
-        Number of waveform channels (e.g., polarization states, detectors, or modes).
+        Number of intrinsic_waveform channels (e.g., polarization states, detectors, or modes).
     wc : WDMWaveletConstants
         Wavelet transform configuration, used to determine necessary array sizes
         and structure for proper allocation.
@@ -45,7 +45,7 @@ def get_empty_sparse_taylor_time_waveform(nc_waveform: int, wc: WDMWaveletConsta
     -------
     SparseWaveletWaveform
         An empty, preallocated object ready to be filled with Taylor time-domain
-        wavelet coefficients and their pixel indices during waveform synthesis
+        wavelet coefficients and their pixel indices during intrinsic_waveform synthesis
         or analysis.
 
     Notes
@@ -95,7 +95,7 @@ def wavelet(wc: WDMWaveletConstants, m: int, nrm: np.floating) -> NDArray[np.flo
     -----
     The wavelet is constructed in the frequency domain and transformed back to the
     time domain using the FFT, then normalized. This function is used to generate
-    reference wavelets for coefficient tables and waveform synthesis.
+    reference wavelets for coefficient tables and intrinsic_waveform synthesis.
     """
     wave = np.zeros(wc.K)
     halfN = np.int64(wc.K / 2)
@@ -149,7 +149,7 @@ def get_taylor_table_time_helper(wavelet_norm: NDArray[np.float64], wc: WDMWavel
     Notes
     -----
     The returned tables are used for lookup and linear interpolation of Taylor-expanded wavelet
-    coefficients, improving the speed of waveform computation for time-domain waveforms.
+    coefficients, improving the speed of intrinsic_waveform computation for time-domain waveforms.
 
     This function can be time consuming for large tables, and so exploits parallel loops where feasible.
     """

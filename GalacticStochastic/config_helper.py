@@ -22,7 +22,7 @@ def get_config_objects(toml_filename):
 
     ic = get_iteration_config(config)
 
-    assert ic.nc_galaxy <= lc.nc_waveform, 'cannot compute background for channels without waveform'
+    assert ic.nc_galaxy <= lc.nc_waveform, 'cannot compute background for channels without intrinsic_waveform'
     assert ic.nc_galaxy <= lc.nc_snr, 'cannot compute background for channels not included in snr calculation'
 
     return config, wc, lc, ic

@@ -77,7 +77,7 @@ r_au = 1.0
 # LISA modulation frequency (Hz)
 fm = 3.168753575e-8
 
-# Number of channels to calculate in the waveform
+# Number of channels to calculate in the intrinsic_waveform
 nc_waveform = 3
 
 # Number of channels to evaluate snr
