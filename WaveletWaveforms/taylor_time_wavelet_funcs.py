@@ -1,4 +1,7 @@
-"""helper functions for Chirp_WDM"""
+"""Functions for constructing wavelet-domain representations of time-domain waveforms.
+
+The functions use the WDM wavelet basis.
+"""
 
 import numpy as np
 from numba import njit
@@ -19,7 +22,56 @@ def wavemaket(
     *,
     force_nulls: int=0,
 ) -> None:
-    """Compute the actual wavelets using taylor time method"""
+    """
+    Construct a sparse wavelet-domain representation of a time-domain waveform
+    using Taylor-expansion coefficients and precomputed interpolation tables.
+
+    This function updates the `wavelet_waveform` object in place with values derived from the
+    supplied time-domain waveform over the pixel range set in
+    `nt_lim_waveform`. `wc` is an object with configuration parameters for the wavelet decomposition.
+    Precomputed Taylor expansion coefficients, used to interpolate waveform values, are looked up from `taylor_table`.
+
+    Parameters
+    ----------
+    wavelet_waveform : SparseWaveletWaveform
+        The output object that will be populated with the sparse wavelet-domain coefficients.
+        Modified in place.
+    waveform : StationaryWaveformTime
+        The input time-domain waveform data with amplitude and phase arrays for each pixel.
+    nt_lim_waveform : PixelTimeRange
+        Limits and properties of the time pixel range to be processed.
+    wc : WDMWaveletConstants
+        Configuration parameters for the wavelet decomposition, including:
+        - `Nf`: Number of frequency layers in the wavelet decomposition.
+        - `DF`: Frequency resolution of the wavelet decomposition.
+        - `dfd`: Spacing of frequency derivative layers in the interpolation table.
+        - `dfdot`: Fractional spacing frequency derivative layers increment.
+        - `Nfd`: Total number of frequency derivative layers.
+        - `Nfd_negative`: Number of negative frequency derivative layers.
+        - `df_bw`: Spacing of frequency layers in the interpolation table.
+        - `Nsf`: Number of frequency samples in the interpolation table.
+
+
+    taylor_table : WaveletTaylorTimeCoeffs
+        Precomputed Taylor expansion coefficients for linear interpolation of the waveform.
+    force_nulls : int, optional
+        If 1, sets the wavelet coefficients to zero outside the precomputed table.
+        If 0, pixels outside the precomputed table are dropped from the sparse representation.
+        If the table is large, pixels outside the table typically represent nulls where the
+        amplitude is zero or very small, and thus dropping them is acceptable for some applications.
+        For snr calculations, plotting, or computing coadded galactic backgrounds, force_nulls=1 has little benefit.
+        However, for likelihood calculations, force_nulls=1 appropriately penalizes data that has power in nulls.
+
+
+    Returns
+    -------
+    None
+        This function modifies `wavelet_waveform` in place and does not return a value.
+
+    See Also
+    --------
+    wavemaket_direct : Direct computation of wavelet coefficients without table lookup.
+    """
     n_set_old = wavelet_waveform.n_set.copy()
 
     nc_waveform = wavelet_waveform.wave_value.shape[0]
@@ -142,11 +194,52 @@ def wavemaket_direct(
     wc: WDMWaveletConstants,
     taylor_table: WaveletTaylorTimeCoeffs,
 ) -> None:
-    """Compute the wavelet values analogously to wavemaket using the taylor time method.
-    Computes the value at every wavelet pixel directly, without the precomputed interpolation table.
-    Useful for testing accuracy/if the interpolation table is dense enough, if only a small
-    number of points need to be evaluated, if slopes are too large for the interpolation table to be
-    practical, as can happen near nulls in the waveform.
+    """
+    Construct a sparse wavelet-domain representation of a time-domain waveform
+    using Taylor-expansion coefficients computed directly for each pixel.
+
+    This function updates the `wavelet_waveform` object in place with values derived from the
+    supplied time-domain waveform over the pixel range specified by `nt_lim_waveform`.
+    Unlike `wavemaket`, which uses precomputed interpolation tables,
+    `wavemaket_direct` evaluates Taylor coefficients directly at each pixel, providing a more accurate
+    calculation when the interpolation table is insufficiently dense or at points where rapid
+    parameter variation occurs, as can happen near nulls in the waveform.
+
+    Parameters
+    ----------
+    wavelet_waveform : SparseWaveletWaveform
+        The output object that will be populated with the sparse wavelet-domain coefficients.
+        Modified in place.
+    waveform : StationaryWaveformTime
+        The input time-domain waveform data with amplitude and phase arrays for each pixel.
+    nt_lim_waveform : PixelTimeRange
+        Limits and properties of the time pixel range to be processed.
+    wc : WDMWaveletConstants
+        Configuration parameters for the wavelet decomposition, including:
+        - `Nf`: Number of frequency layers in the wavelet decomposition.
+        - `DF`: Frequency resolution of the wavelet decomposition.
+        - `dfd`: Spacing of frequency derivative layers.
+        - `dfdot`: Fractional spacing increment for frequency derivative layers.
+        - `Nsf`: Number of frequency samples per table entry.
+        - `df_bw`: Spacing of frequency layers (bandwidth) in frequency direction.
+    taylor_table : WaveletTaylorTimeCoeffs
+        Taylor expansion coefficients and normalization factors required for direct evaluation.
+
+    Returns
+    -------
+    None
+        This function modifies `wavelet_waveform` in place and does not return a value.
+
+    Notes
+    -----
+    This direct evaluation is particularly useful for:
+        - Testing the accuracy of the table-based approach (`wavemaket`)
+        - Scenarios where the interpolation table is not sufficiently dense
+        - Pixels near waveform nulls or with large parameter slopes
+
+    See Also
+    --------
+    wavemaket : Table-based computation of wavelet coefficients using precomputed interpolation.
     """
     n_set_old = wavelet_waveform.n_set.copy()
 
