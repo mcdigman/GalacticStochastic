@@ -35,6 +35,8 @@ extrinsic: ExtrinsicParams
     The extrinsic parameters for the source
 """
 
+StationaryWaveformTime = namedtuple('StationaryWaveformTime', ['T', 'PT', 'FT', 'FTd', 'AT'])
+
 
 class StationarySourceWaveform(ABC):
     """Abstract base class for waveform models to be used in the stationary wave approximation."""
@@ -91,4 +93,26 @@ class StationarySourceWaveform(ABC):
 
         Typical extrinsic parameters include the ecliptic longitude, ecliptic colatitude, inclination, and polarization.
         To be called by update_params.
+        """
+
+    @abstractmethod
+    def get_tdi_waveform(self) -> StationaryWaveformTime:
+        """
+        Get the TDI waveform channels for the source.
+
+        Returns
+        -------
+        StationaryWaveformTime
+            The TDI waveform channels computed from the source parameters.
+        """
+
+    @abstractmethod
+    def get_intrinsic_waveform(self) -> StationaryWaveformTime:
+        """
+        Get the intrinsic waveform channels for the source.
+
+        Returns
+        -------
+        StationaryWaveformTime
+            The intrinsic waveform computed for the source parameters.
         """

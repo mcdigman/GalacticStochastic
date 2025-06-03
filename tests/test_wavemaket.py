@@ -16,7 +16,8 @@ from WDMWaveletTransforms.wavelet_transforms import inverse_wavelet_freq, invers
 
 from LisaWaveformTools.lisa_config import get_lisa_constants
 from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels
-from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime, get_time_tdi_amp_phase
+from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
+from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
 from tests.test_time_tdi_ampphase import get_RR_t_mult, get_waveform_helper
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, sparse_addition_helper
 from WaveletWaveforms.taylor_time_coefficients import (

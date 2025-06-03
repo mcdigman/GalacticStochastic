@@ -1,6 +1,5 @@
 """subroutines for running lisa code"""
 
-from collections import namedtuple
 
 import numpy as np
 from numba import njit, prange
@@ -8,8 +7,7 @@ from numba import njit, prange
 from LisaWaveformTools.algebra_tools import gradient_uniform_inplace, stabilized_gradient_uniform_inplace
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels
-
-StationaryWaveformTime = namedtuple('StationaryWaveformTime', ['T', 'PT', 'FT', 'FTd', 'AT'])
+from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
 
 
 @njit()

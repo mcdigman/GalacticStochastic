@@ -43,7 +43,7 @@ class BinaryWaveletAmpFreqDT:
         # initialize to input parameters
         self.update_params(params)
 
-    def update_params(self, params_in) -> None:
+    def update_params(self, params_in: SourceParams) -> None:
         """Update the internal wavelet representation to match the input parameters"""
         self.consistent = False
         self.params = params_in
@@ -52,7 +52,7 @@ class BinaryWaveletAmpFreqDT:
 
         wavemaket(
             self.wavelet_waveform,
-            self.fwt.AET_waveform,
+            self.fwt.get_tdi_waveform(),
             self.nt_lim_waveform,
             self.wc,
             self.taylor_time_table,

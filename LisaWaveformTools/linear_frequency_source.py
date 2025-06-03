@@ -1,6 +1,7 @@
 """A source with linearly increasing frequency and constant amplitude."""
 
 from collections import namedtuple
+from typing import override
 
 import numpy as np
 from numba import njit
@@ -8,8 +9,8 @@ from numpy.typing import NDArray
 
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels, get_spacecraft_vec, get_tensor_basis, get_wavefront_time, rigid_adiabatic_antenna
-from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime, get_time_tdi_amp_phase
-from LisaWaveformTools.stationary_source_waveform import SourceParams, StationarySourceWaveform
+from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
+from LisaWaveformTools.stationary_source_waveform import SourceParams, StationarySourceWaveform, StationaryWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
@@ -136,6 +137,7 @@ class LinearFrequencyWaveformTime(StationarySourceWaveform):
 
         self.update_params(params)
 
+    @override
     def _update_intrinsic(self) -> None:
         """Update the waveform with respect to the intrinsic parameters."""
         tb = get_tensor_basis(self.params.extrinsic)
@@ -143,6 +145,7 @@ class LinearFrequencyWaveformTime(StationarySourceWaveform):
 
         linear_frequency_intrinsic(self.waveform, self.params.intrinsic, self.wavefront_time)
 
+    @override
     def _update_extrinsic(self) -> None:
         """Update the waveform with respect to the extrinsic parameters."""
         # TODO fix F_min and nf_range
@@ -160,8 +163,33 @@ class LinearFrequencyWaveformTime(StationarySourceWaveform):
             self.spacecraft_channels, self.AET_waveform, self.waveform, self.lc, self.wc.DT,
         )
 
+    @override
     def update_params(self, params: SourceParams) -> None:
         """Update the waveform to match the given input parameters."""
         self.params = params
         self._update_intrinsic()
         self._update_extrinsic()
+
+    @override
+    def get_tdi_waveform(self) -> StationaryWaveformTime:
+        """
+        Get the TDI waveform channels for the source.
+
+        Returns
+        -------
+        AET_waveform: StationaryWaveformTime
+            The TDI waveform channels computed from the source parameters.
+        """
+        return self.AET_waveform
+
+    @override
+    def get_intrinsic_waveform(self) -> StationaryWaveformTime:
+        """
+        Get the intrinsic waveform channels for the source.
+
+        Returns
+        -------
+        waveform: StationaryWaveformTime
+            The intrinsic waveform computed for the source parameters.
+        """
+        return self.waveform

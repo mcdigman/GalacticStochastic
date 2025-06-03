@@ -6,7 +6,7 @@ The functions use the WDM wavelet basis.
 import numpy as np
 from numba import njit
 
-from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime
+from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, SparseWaveletWaveform
 from WaveletWaveforms.taylor_time_coefficients import WaveletTaylorTimeCoeffs, get_taylor_time_pixel_direct
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
