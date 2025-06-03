@@ -9,22 +9,9 @@ from numpy.typing import NDArray
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels, get_spacecraft_vec, get_tensor_basis, get_wavefront_time, rigid_adiabatic_antenna
 from LisaWaveformTools.ra_waveform_time import StationaryWaveformTime, get_time_tdi_amp_phase
-from LisaWaveformTools.stationary_source_waveform import StationarySourceWaveform
+from LisaWaveformTools.stationary_source_waveform import SourceParams, StationarySourceWaveform
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
-
-LinearFrequencyParams = namedtuple('LinearFrequencyParams', ['intrinsic', 'extrinsic'])
-
-LinearFrequencyParams.__doc__ = """
-Store the parameters for a source with linearly increasing frequency.
-Galactic binaries are the prototypical example of such a source.
-Parameters
-----------
-intrinsic: LinearFrequencyIntrinsicParams
-    The intrinsic parameters for the source, see LinearFrequencyIntrinsicParams
-extrinsic: ExtrinsicParams
-    The extrinsic parameters for the source, see ExtrinsicParams
-"""
 
 LinearFrequencyIntrinsicParams = namedtuple('LinearFrequencyIntrinsicParams', ['amp0_t', 'phi0', 'F0', 'FTd0'])
 
@@ -95,9 +82,9 @@ class LinearFrequencyWaveformTime(StationarySourceWaveform):
     """Store a binary waveform with linearly increasing frequency and constant amplitude in the time domain.
     """
 
-    def __init__(self, params: LinearFrequencyParams, nt_lim_waveform: PixelTimeRange, lc: LISAConstants, wc: WDMWaveletConstants) -> None:
+    def __init__(self, params: SourceParams, nt_lim_waveform: PixelTimeRange, lc: LISAConstants, wc: WDMWaveletConstants) -> None:
         """Initalize the object"""
-        self.params: LinearFrequencyParams = params
+        self.params: SourceParams = params
         self.nt_lim_waveform: PixelTimeRange = nt_lim_waveform
         self.nt_range: int = self.nt_lim_waveform.nt_max - self.nt_lim_waveform.nt_min
         self.lc: LISAConstants = lc
@@ -173,7 +160,7 @@ class LinearFrequencyWaveformTime(StationarySourceWaveform):
             self.spacecraft_channels, self.AET_waveform, self.waveform, self.lc, self.wc.DT,
         )
 
-    def update_params(self, params: LinearFrequencyParams) -> None:
+    def update_params(self, params: SourceParams) -> None:
         """Update the waveform to match the given input parameters."""
         self.params = params
         self._update_intrinsic()

@@ -10,9 +10,9 @@ from GalacticStochastic.iteration_config import IterationConfig
 from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
 from GalacticStochastic.noise_manager import NoiseModelManager
 from GalacticStochastic.state_manager import StateManager
-from LisaWaveformTools.linear_frequency_source import LinearFrequencyIntrinsicParams, LinearFrequencyParams
+from LisaWaveformTools.linear_frequency_source import LinearFrequencyIntrinsicParams
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.ra_waveform_freq import ExtrinsicParams
+from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
 from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
@@ -36,7 +36,7 @@ def unpack_params_gb(params_in):
     phi0 = params_in[6] + np.pi
     params_extrinsic = ExtrinsicParams(costh, phi, cosi, psi)
     params_intrinsic = LinearFrequencyIntrinsicParams(amp0_t, phi0, F0, FTd0)
-    return LinearFrequencyParams(intrinsic=params_intrinsic, extrinsic=params_extrinsic)
+    return SourceParams(intrinsic=params_intrinsic, extrinsic=params_extrinsic)
 
 
 class BinaryInclusionState(StateManager):

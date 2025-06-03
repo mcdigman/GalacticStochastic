@@ -1,7 +1,8 @@
-"""subroutines for running lisa binary monte carlo search"""
+"""Store a sparse binary wavelet waveform."""
 
 from LisaWaveformTools.linear_frequency_source import LinearFrequencyWaveformTime
 from LisaWaveformTools.lisa_config import LISAConstants
+from LisaWaveformTools.stationary_source_waveform import SourceParams
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, SparseWaveletWaveform
 from WaveletWaveforms.taylor_time_coefficients import (
     WaveletTaylorTimeCoeffs,
@@ -13,9 +14,9 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 class BinaryWaveletAmpFreqDT:
-    """class to store a sparse binary wavelet and update for search"""
+    """Store a sparse binary wavelet and update if for search."""
 
-    def __init__(self, params, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelTimeRange) -> None:
+    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelTimeRange) -> None:
         """Construct a binary wavelet object."""
         self.wc = wc
         self.lc = lc

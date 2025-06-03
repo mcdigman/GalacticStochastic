@@ -6,24 +6,10 @@ from numba import njit, prange
 from numpy.typing import NDArray
 
 from LisaWaveformTools.lisa_config import LISAConstants
+from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams
 
 AntennaResponseChannels = namedtuple('AntennaResponseChannels', ['T', 'RR', 'II', 'dRR', 'dII'])
 
-ExtrinsicParams = namedtuple('ExtrinsicParams', ['costh', 'phi', 'cosi', 'psi'])
-ExtrinsicParams.__doc__ = """
-Store the extrinsic parameters common to most detector waveform models.
-
-Parameters
-----------
-costh : float
-    Cosine of the source's ecliptic colatitude
-phi : float
-    Source's ecliptic longitude in radians
-cosi : float
-    Cosine of the source's inclination angle
-psi : float
-    Source polarization angle in radians
-"""
 
 TensorBasis = namedtuple('TensorBasis', ['kv', 'e_plus', 'e_cross'])
 
