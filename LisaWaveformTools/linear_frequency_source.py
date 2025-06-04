@@ -7,9 +7,13 @@ import numpy as np
 from numba import njit
 from numpy.typing import NDArray
 
+from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_freq import get_tensor_basis, get_wavefront_time
-from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
+from LisaWaveformTools.stationary_source_waveform import SourceParams, StationaryWaveformTime
 from LisaWaveformTools.stationary_time_source import StationarySourceWaveformTime
+from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
+from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletTaylorTime
+from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 LinearFrequencyIntrinsicParams = namedtuple('LinearFrequencyIntrinsicParams', ['amp0_t', 'phi0', 'F0', 'FTd0'])
 
@@ -92,3 +96,18 @@ class LinearFrequencySourceWaveformTime(StationarySourceWaveformTime):
 
         linear_frequency_intrinsic(self._intrinsic_waveform, self.params.intrinsic, self._wavefront_time)
         self._consistent_intrinsic = True
+
+
+class LinearFrequencyWaveletWaveformTime(BinaryWaveletTaylorTime):
+    """Store a sparse wavelet intrinsic_waveform for a source with linearly increasing frequency and constant amplitude,
+    using the Taylor time method.
+    """
+
+    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelTimeRange, *, wavelet_mode: int = 1) -> None:
+        """Construct a binary wavelet object."""
+        # get the intrinsic_waveform
+        source_waveform = LinearFrequencySourceWaveformTime(
+            params, nt_lim_waveform, lc, wc,
+        )
+
+        super().__init__(params, wc, lc, nt_lim_waveform, source_waveform, wavelet_mode=wavelet_mode)

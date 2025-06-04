@@ -33,6 +33,8 @@ extrinsic: ExtrinsicParams
 
 StationaryWaveformTime = namedtuple('StationaryWaveformTime', ['T', 'PT', 'FT', 'FTd', 'AT'])
 
+StationaryWaveformFreq = namedtuple('StationaryWaveformFreq', ['F', 'PF', 'TF', 'TFp', 'AF'])
+
 
 class StationarySourceWaveform(ABC):
     """Abstract base class for intrinsic_waveform models to be used in the stationary wave approximation."""

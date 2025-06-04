@@ -60,6 +60,8 @@ def wavemaket(
         amplitude is zero or very small, and thus dropping them is acceptable for some applications.
         For snr calculations, plotting, or computing coadded galactic backgrounds, force_nulls=1 has little benefit.
         However, for likelihood calculations, force_nulls=1 appropriately penalizes data that has power in nulls.
+        force_nulls=2 is reserved for calculating wavelet coefficients outside the precomputed table directly,
+        but currently returns a NotImplementedError
 
 
     Returns
@@ -176,6 +178,13 @@ def wavemaket(
                     wavelet_waveform.pixel_index[itrc, mm] = j_ind * wc.Nf + k
                     wavelet_waveform.wave_value[itrc, mm] = 0.0
                     mm += 1
+            elif force_nulls == 2:
+                msg = 'Direct computation of values outside the table is not implemented yet'
+                raise NotImplementedError(msg)
+            else:
+                msg = 'Unrecognized force_nulls option. Valid options are 0, 1, or 2.'
+                raise NotImplementedError(msg)
+
         wavelet_waveform.n_set[itrc] = mm
 
     # clean up any pixels that were set in the old intrinsic_waveform but aren't anymore

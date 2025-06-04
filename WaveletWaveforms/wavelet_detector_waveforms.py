@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 from typing import override
 from warnings import warn
 
-from LisaWaveformTools.linear_frequency_source import LinearFrequencySourceWaveformTime
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.stationary_source_waveform import SourceParams, StationarySourceWaveform
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, SparseWaveletWaveform
@@ -166,18 +165,3 @@ class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform):
         else:
             msg = 'Unrecognized wavelet mode: {}. Valid modes are 0, 1, 2 or 3.'.format(self._wavelet_mode)
             raise NotImplementedError(msg)
-
-
-class LinearFrequencyWaveletWaveformTime(BinaryWaveletTaylorTime):
-    """Store a sparse wavelet intrinsic_waveform for a source with linearly increasing frequency and constant amplitude,
-    using the Taylor time method.
-    """
-
-    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelTimeRange, *, wavelet_mode: int = 1) -> None:
-        """Construct a binary wavelet object."""
-        # get the intrinsic_waveform
-        source_waveform = LinearFrequencySourceWaveformTime(
-            params, nt_lim_waveform, lc, wc,
-        )
-
-        super().__init__(params, wc, lc, nt_lim_waveform, source_waveform, wavelet_mode=wavelet_mode)
