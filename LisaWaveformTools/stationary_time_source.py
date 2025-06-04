@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
-class StationarySourceWaveformTime(StationarySourceWaveform):
+class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTime]):
     """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain.
     """
 
@@ -70,6 +70,9 @@ class StationarySourceWaveformTime(StationarySourceWaveform):
         del AET_PPTs
         del AET_FTs
         del AET_FTds
+
+        self._tdi_waveform: StationaryWaveformTime = tdi_waveform
+        self._intrinsic_waveform: StationaryWaveformTime = intrinsic_waveform
 
         super().__init__(params, intrinsic_waveform, tdi_waveform)
 

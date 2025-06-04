@@ -179,11 +179,13 @@ def wavemaket(
                     wavelet_waveform.wave_value[itrc, mm] = 0.0
                     mm += 1
             elif force_nulls == 2:
-                msg = 'Direct computation of values outside the table is not implemented yet'
-                raise NotImplementedError(msg)
+                msg1 = 'Direct computation of values outside the table is not implemented yet'
+                raise NotImplementedError(msg1)
+            elif force_nulls == 0:
+                pass
             else:
-                msg = 'Unrecognized force_nulls option. Valid options are 0, 1, or 2.'
-                raise NotImplementedError(msg)
+                msg2 = 'Unrecognized force_nulls option. Valid options are 0, 1, or 2.'
+                raise NotImplementedError(msg2)
 
         wavelet_waveform.n_set[itrc] = mm
 

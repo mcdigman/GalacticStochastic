@@ -8,7 +8,7 @@ import numpy as np
 import GalacticStochastic.global_const as gc
 
 LISAConstants = namedtuple(
-    'LISAConstants', ['Larm', 'Sps', 'Sacc', 'kappa0', 'lambda0', 'fstr', 't_arm', 'r_orbit', 'ec', 'fm', 'nc_waveform', 'nc_snr'],
+    'LISAConstants', ['Larm', 'Sps', 'Sacc', 'kappa0', 'lambda0', 'fstr', 't_arm', 'r_orbit', 'ec', 'fm', 'nc_waveform', 'nc_snr', 't0', 't_rise'],
 )
 
 
@@ -75,4 +75,13 @@ def get_lisa_constants(config: dict) -> LISAConstants:
     assert nc_snr <= 3
     assert nc_snr <= nc_waveform
 
-    return LISAConstants(Larm, Sps, Sacc, kappa0, lambda0, fstr, t_arm, r_orbit, ec, fm, nc_waveform, nc_snr)
+    # Global time offset of start of lisa observations
+    t0 = float(config['lisa_constants'].get('t0', 0.0))
+    assert t0 == 0.0, 'Not all methods currently support nonzero t0'
+
+    # Rise time for antenna pattern in frequency domain
+    t_rise = float(config['lisa_constants'].get('t_rise', 0.0))
+
+    assert t_rise == 0.0, 'Some methods may not support nonzero t_rise'
+
+    return LISAConstants(Larm, Sps, Sacc, kappa0, lambda0, fstr, t_arm, r_orbit, ec, fm, nc_waveform, nc_snr, t0, t_rise)

@@ -171,3 +171,9 @@ nc_waveform = 3
 
 # Number of channels to evaluate snr
 nc_snr = 3
+
+# Global offset of observations times
+t0 = 0.0
+
+# Rise time of antenna pattern in frequency domain
+t_rise = 0.0

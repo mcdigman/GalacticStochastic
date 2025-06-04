@@ -1,6 +1,9 @@
 """Abstract class for stationary wave approximation-based TDI intrinsic_waveform models."""
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections import namedtuple
+from typing import Generic, TypeVar
 
 ExtrinsicParams = namedtuple('ExtrinsicParams', ['costh', 'phi', 'cosi', 'psi'])
 ExtrinsicParams.__doc__ = """
@@ -31,19 +34,31 @@ extrinsic: ExtrinsicParams
     The extrinsic parameters for the source
 """
 
-StationaryWaveformTime = namedtuple('StationaryWaveformTime', ['T', 'PT', 'FT', 'FTd', 'AT'])
 
-StationaryWaveformFreq = namedtuple('StationaryWaveformFreq', ['F', 'PF', 'TF', 'TFp', 'AF'])
+class StationaryWaveform:
+    """Abstract base class for waveforms in the stationary wave approximation."""
 
 
-class StationarySourceWaveform(ABC):
+class StationaryWaveformTime(namedtuple('StationaryWaveformTime', ['T', 'PT', 'FT', 'FTd', 'AT']), StationaryWaveform):
+    pass
+
+
+class StationaryWaveformFreq(namedtuple('StationaryWaveformFreq', ['F', 'PF', 'TF', 'TFp', 'AF']), StationaryWaveform):
+    pass
+
+
+# Subclasses can be either in time or frequency domain
+StationaryWaveformType = TypeVar('StationaryWaveformType', bound=StationaryWaveform)
+
+
+class StationarySourceWaveform(Generic[StationaryWaveformType], ABC):
     """Abstract base class for intrinsic_waveform models to be used in the stationary wave approximation."""
 
     def __init__(
         self,
         params: SourceParams,
-        intrinsic_waveform: StationaryWaveformTime,
-        tdi_waveform: StationaryWaveformTime,
+        intrinsic_waveform: StationaryWaveformType,
+        tdi_waveform: StationaryWaveformType,
     ) -> None:
         """
         Initialize the intrinsic_waveform object for use in the stationary wave approximation.
@@ -58,8 +73,8 @@ class StationarySourceWaveform(ABC):
         self._consistent_extrinsic: bool = False
         self._params: SourceParams = params
 
-        self._intrinsic_waveform: StationaryWaveformTime = intrinsic_waveform
-        self._tdi_waveform: StationaryWaveformTime = tdi_waveform
+        self._intrinsic_waveform: StationaryWaveformType = intrinsic_waveform
+        self._tdi_waveform: StationaryWaveformType = tdi_waveform
 
         self.update_params(params)
 
@@ -153,13 +168,13 @@ class StationarySourceWaveform(ABC):
         self._params = params_in
 
     @property
-    def tdi_waveform(self) -> StationaryWaveformTime:
+    def tdi_waveform(self) -> StationaryWaveformType:
         """
         Get the TDI intrinsic_waveform channels for the source.
 
         Returns
         -------
-        tdi_waveform: StationaryWaveformTime
+        tdi_waveform: StationaryWaveformType
             The TDI intrinsic_waveform channels computed from the source parameters.
         """
         if not self.consistent_extrinsic:
@@ -168,13 +183,13 @@ class StationarySourceWaveform(ABC):
         return self._tdi_waveform
 
     @property
-    def intrinsic_waveform(self) -> StationaryWaveformTime:
+    def intrinsic_waveform(self) -> StationaryWaveformType:
         """
         Get the intrinsic intrinsic_waveform channels for the source.
 
         Returns
         -------
-        intrinsic_waveform: StationaryWaveformTime
+        intrinsic_waveform: StationaryWaveformType
             The intrinsic intrinsic_waveform computed for the source parameters.
         """
         if not self.consistent_instrinsic:
