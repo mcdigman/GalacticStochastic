@@ -251,7 +251,7 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
         F_min = self._wc.DF * self.nf_offset
 
         rigid_adiabatic_antenna(self._spacecraft_channels, self.params.extrinsic, self.intrinsic_waveform.TF, self.FFs, self.nf_low, self.nf_range, self.kdotx, self._lc)
-        Extrinsic_inplace(self.tdi_waveform, self.intrinsic_waveform, self._spacecraft_channels, self._lc, self._wc.DF, self.nf_range, self.nf_low, F_min, self.kdotx, Tend=self.Tend)
+        Extrinsic_inplace(self._tdi_waveform, self.intrinsic_waveform, self._spacecraft_channels, self._lc, self._wc.DF, self.nf_range, self.nf_low, F_min, self.kdotx, Tend=self.Tend)
         self._consistent_extrinsic = True
 
     @override
@@ -266,3 +266,9 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
         if not self.freeze_extrinsic:
             self._update_extrinsic()
             self._consistent = True
+
+    @property
+    @override
+    def nc_waveform(self) -> int:
+        """Return the number of channels in the waveform."""
+        return self._nc_waveform

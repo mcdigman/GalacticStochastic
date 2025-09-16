@@ -100,6 +100,12 @@ class StationarySourceWaveform(Generic[StationaryWaveformType], ABC):
         To be called by update_params.
         """
 
+    def _update(self) -> None:
+        """Update both intrinsic and extrinsic parts of the waveform."""
+        self._update_intrinsic()
+        self._update_extrinsic()
+        self._consistent = True
+
     def update_params(self, params: SourceParams) -> None:
         """
         Update the intrinsic_waveform to match a new set of model parameters.
@@ -112,9 +118,7 @@ class StationarySourceWaveform(Generic[StationaryWaveformType], ABC):
             Updated parameters (intrinsic and extrinsic) for the source.
         """
         self.params = params
-        self._update_intrinsic()
-        self._update_extrinsic()
-        self._consistent = True
+        self._update()
 
     @property
     def consistent(self) -> bool:

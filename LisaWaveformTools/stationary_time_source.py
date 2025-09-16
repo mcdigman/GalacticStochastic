@@ -1,8 +1,9 @@
 """A source with linearly increasing frequency and constant amplitude."""
 
-from typing import TYPE_CHECKING, override
+from typing import override
 
 import numpy as np
+from numpy.typing import NDArray
 
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels, SpacecraftOrbits, get_spacecraft_vec, rigid_adiabatic_antenna
@@ -10,9 +11,6 @@ from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
 from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams, StationarySourceWaveform, StationaryWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
-
-if TYPE_CHECKING:
-    from numpy.typing import NDArray
 
 
 class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTime]):
@@ -104,3 +102,10 @@ class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTi
     def nc_waveform(self) -> int:
         """Return the number of channels in the waveform."""
         return self._nc_waveform
+
+    @property
+    def wavefront_time(self) -> NDArray[np.float64]:
+        """Get the wavefront arrival times at the guiding center."""
+        if not self.consistent:
+            self._update()
+        return self._wavefront_time
