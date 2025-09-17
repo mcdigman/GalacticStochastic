@@ -5,7 +5,7 @@ import numpy as np
 from numba import njit
 from numpy.typing import NDArray
 
-from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
+from LisaWaveformTools.stationary_source_waveform import StationaryWaveformFreq, StationaryWaveformTime
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 LinearChirpletIntrinsicParams = namedtuple('LinearChirpletIntrinsicParams', ['amp_center_f', 'phi0', 'f_center', 't_center', 'tau', 'gamma'])
@@ -22,20 +22,44 @@ def chirplet_time_intrinsic(waveform: StationaryWaveformTime, intrinsic_params: 
     nt_loc = t_in.size
 
     # amplitude multiplier to convert from frequency domain amplitude to time domain amplitude
-    amp_center_t = np.sqrt(intrinsic_params.gamma / intrinsic_params.tau) * intrinsic_params.amp_center_f
-
     phase_center_t = - np.pi / 4. - intrinsic_params.phi0
+    ftd = intrinsic_params.gamma / intrinsic_params.tau
+    amp_center_t = np.sqrt(ftd) * intrinsic_params.amp_center_f
+
     #  compute the intrinsic frequency, phase and amplitude
     for n in range(nt_loc):
         t = t_in[n]
         delta_t = t - intrinsic_params.t_center
         x = delta_t / intrinsic_params.tau
-        FT[n] = intrinsic_params.gamma * x + intrinsic_params.f_center
+
+        FT[n] = ftd * delta_t + intrinsic_params.f_center
 
         # TODO check sign convention on phase
-        PT[n] = phase_center_t + 2. * np.pi * delta_t * FT[n] - np.pi * intrinsic_params.gamma * intrinsic_params.tau * x ** 2
+        PT[n] = phase_center_t + 2.0 * np.pi * delta_t * FT[n] - np.pi * ftd * delta_t ** 2
         AT[n] = amp_center_t * np.exp(-x**2 / 2.0)
-        FTd[n] = intrinsic_params.gamma / intrinsic_params.tau
+        FTd[n] = ftd
+
+
+@njit()
+def chirplet_freq_intrinsic(waveform: StationaryWaveformFreq, intrinsic_params: LinearChirpletIntrinsicParams, f_in: NDArray[np.float64]) -> None:
+    AF = waveform.AF
+    PF = waveform.PF
+    TF = waveform.TF
+    TFp = waveform.TFp
+
+    nf_loc = f_in.size
+    #  compute the intrinsic frequency, phase and amplitude
+    ftd = intrinsic_params.gamma / intrinsic_params.tau
+    tfp = 1. / ftd
+
+    for n in range(nf_loc):
+        f = f_in[n]
+        delta_f = f - intrinsic_params.f_center
+        x = delta_f / intrinsic_params.gamma
+        PF[n] = intrinsic_params.phi0 + 2.0 * np.pi * intrinsic_params.t_center * f + np.pi * tfp * delta_f ** 2
+        TF[n] = tfp * delta_f + intrinsic_params.t_center
+        TFp[n] = tfp
+        AF[n] = intrinsic_params.amp_center_f * np.exp(-x ** 2 / 2.0)
 
 
 # @njit(fastmath=True)
