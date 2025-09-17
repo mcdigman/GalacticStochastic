@@ -2,11 +2,40 @@
 from collections import namedtuple
 
 import numpy as np
+from numba import njit
+from numpy.typing import NDArray
 
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 LinearChirpletIntrinsicParams = namedtuple('LinearChirpletIntrinsicParams', ['amp_center_f', 'phi0', 'f_center', 't_center', 'tau', 'gamma'])
+
+
+@njit()
+def chirplet_time_intrinsic(waveform: StationaryWaveformTime, intrinsic_params: LinearChirpletIntrinsicParams, t_in: NDArray[np.float64]) -> None:
+    """Get amplitude and phase for chirp_time"""
+    AT = waveform.AT
+    PT = waveform.PT
+    FT = waveform.FT
+    FTd = waveform.FTd
+
+    nt_loc = t_in.size
+
+    # amplitude multiplier to convert from frequency domain amplitude to time domain amplitude
+    amp_center_t = np.sqrt(intrinsic_params.gamma / intrinsic_params.tau) * intrinsic_params.amp_center_f
+
+    phase_center_t = - np.pi / 4. - intrinsic_params.phi0
+    #  compute the intrinsic frequency, phase and amplitude
+    for n in range(nt_loc):
+        t = t_in[n]
+        delta_t = t - intrinsic_params.t_center
+        x = delta_t / intrinsic_params.tau
+        FT[n] = intrinsic_params.gamma * x + intrinsic_params.f_center
+
+        # TODO check sign convention on phase
+        PT[n] = phase_center_t + 2. * np.pi * delta_t * FT[n] - np.pi * intrinsic_params.gamma * intrinsic_params.tau * x ** 2
+        AT[n] = amp_center_t * np.exp(-x**2 / 2.0)
+        FTd[n] = intrinsic_params.gamma / intrinsic_params.tau
 
 
 # @njit(fastmath=True)
