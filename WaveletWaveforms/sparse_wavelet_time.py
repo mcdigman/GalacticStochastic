@@ -34,7 +34,6 @@ def sparse_time_DX_assign_loop(params, cM, sM, wc: WDMWaveletConstants):
     dtds = wc.dt * p  # downsampled data spacing in time
 
     Phases, Amps, _, _ = amp_phase_t(dtds * np.arange(0, M), params)
-    Phases = -Phases
     cP = Amps * np.cos(Phases)
     sP = Amps * np.sin(Phases)
     iis = nn * np.arange(0, wc.Nt)

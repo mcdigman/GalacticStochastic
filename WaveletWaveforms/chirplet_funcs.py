@@ -6,18 +6,19 @@ import numpy as np
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
-LinearChirpletIntrinsicParams = namedtuple('LinearChirpletIntrinsicParams', ['amp0_t', 'phi0', 'F0', 'FTd0'])
+LinearChirpletIntrinsicParams = namedtuple('LinearChirpletIntrinsicParams', ['amp_center_f', 'phi0', 'f_center', 't_center', 'tau', 'gamma'])
 
 
 # @njit(fastmath=True)
-def amp_phase_t(ts, params):
+def amp_phase_t(ts, params: LinearChirpletIntrinsicParams):
     """Get amplitude and phase for chirp_time"""
-    xs = (ts - params[8]) / params[0]
-    fs = params[7] * xs + params[9]
-    fac = np.sqrt(params[7] / params[0])
-    phase = params[6] + 2. * np.pi * (params[8] - ts) * fs + np.pi * params[7] * params[0] * xs**2 + np.pi / 4.
-    amp = fac * params[3] * np.exp(-xs**2 / 2.0)
-    fds = np.full(xs.shape, params[7] / params[0])
+    xs = (ts - params.t_center) / params.tau
+    fs = params.gamma * xs + params.f_center
+    amp_center_t = np.sqrt(params.gamma / params.tau) * params.amp_center_f
+    # TODO check sign convention on phase
+    phase = - params.phi0 + 2. * np.pi * (ts - params.t_center) * fs - np.pi * params.gamma * params.tau * xs**2 - np.pi / 4.
+    amp = amp_center_t * np.exp(-xs**2 / 2.0)
+    fds = np.full(xs.shape, params.gamma / params.tau)
     return phase, amp, fs, fds
 
 
@@ -26,7 +27,6 @@ def chirp_time(params, wc: WDMWaveletConstants):
     ts = wc.dt * np.arange(0, wc.Nf * wc.Nt)
 
     Phases, Amps, fas, fdas = amp_phase_t(ts, params)
-    Phases = - Phases
 
     hs = Amps * np.cos(Phases)
 
@@ -35,11 +35,12 @@ def chirp_time(params, wc: WDMWaveletConstants):
 
 
 # @njit(fastmath=True)
-def amp_phase_f(fs, params):
+def amp_phase_f(fs, params: LinearChirpletIntrinsicParams):
     """Get amplitude and phase for frequency chirp"""
-    xs = (fs - params[9]) / params[7]
-    Phase = params[6] + 2.0 * np.pi * params[8] * fs + np.pi * params[0] * params[7] * xs**2
-    Amp = params[3] * np.exp(-xs**2 / 2.0)
+    xs = (fs - params.f_center) / params.gamma
+    # TODO check sign convention on phase
+    Phase = params.phi0 + 2.0 * np.pi * params.t_center * fs + np.pi * params.tau * params.gamma * xs**2
+    Amp = params.amp_center_f * np.exp(-xs**2 / 2.0)
     return Phase, Amp
 
 
@@ -47,19 +48,18 @@ def ChirpWaveletT(params, TFs, wc):
     """Get the wavelet in time domain"""
     TFs = np.arange(0, wc.Nt) * wc.DT
     Phases, Amps, fas, fdas = amp_phase_t(TFs, params)
-    Phases = - Phases
 
     # get the intrinsic intrinsic_waveform
     return StationaryWaveformTime(TFs, np.array([Phases]), np.array([fas]), np.array([fdas]), np.array([Amps]))
 
 
 # @njit(fastmath=True)
-def toff(f, params):
+def toff(f, params: LinearChirpletIntrinsicParams):
     """Get times for sparse freq method"""
-    return params[0] * (f - params[9]) / params[7] + params[8]
+    return params.tau * (f - params.f_center) / params.gamma + params.t_center
 
 
 # @njit(fastmath=True)
-def foft(t, params):
+def foft(t, params: LinearChirpletIntrinsicParams):
     """Get frequencies for sparse time method"""
-    return params[7] * (t - params[8]) / params[0] + params[9]
+    return params.gamma * (t - params.t_center) / params.tau + params.f_center

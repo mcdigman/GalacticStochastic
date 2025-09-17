@@ -8,7 +8,7 @@ import tomllib
 from numpy.testing import assert_allclose
 from WDMWaveletTransforms.wavelet_transforms import transform_wavelet_freq, transform_wavelet_time
 
-from WaveletWaveforms.chirplet_funcs import amp_phase_f, chirp_time
+from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams, amp_phase_f, chirp_time
 from WaveletWaveforms.sparse_wavelet_time import wavelet_SparseT, wavelet_TaylorT
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
@@ -47,17 +47,18 @@ def test_Chirp_wdm_match4(fdot_mult):
     Phi0 = 0.
     A0 = 10000.
 
-    params = np.zeros(10)
-    params[0] = tau  # time spread
-    params[1] = 0.2  # costh
-    params[2] = 1.0  # phi
-    params[3] = A0  # amplitude
-    params[4] = -0.3  # cosi
-    params[5] = 0.8  # psi
-    params[6] = Phi0  # phi0
-    params[7] = gamma  # frequency spread
-    params[8] = tp  # central time
-    params[9] = fp  # central frequency
+    params = LinearChirpletIntrinsicParams(A0, Phi0, fp, tp, tau, gamma)
+    # params = np.zeros(10)
+    # params[0] = tau  # time spread
+    # params[1] = 0.2  # costh
+    # params[2] = 1.0  # phi
+    # params[3] = A0  # amplitude
+    # params[4] = -0.3  # cosi
+    # params[5] = 0.8  # psi
+    # params[6] = Phi0  # phi0
+    # params[7] = gamma  # frequency spread
+    # params[8] = tp  # central time
+    # params[9] = fp  # central frequency
 
     print('computing time domain waveforms')
     hs_time, waveform_long = chirp_time(params, wc)
