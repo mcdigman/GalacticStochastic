@@ -16,7 +16,7 @@ def amp_phase_t(ts, params: LinearChirpletIntrinsicParams):
     fs = params.gamma * xs + params.f_center
     amp_center_t = np.sqrt(params.gamma / params.tau) * params.amp_center_f
     # TODO check sign convention on phase
-    phase = - params.phi0 + 2. * np.pi * (ts - params.t_center) * fs - np.pi * params.gamma * params.tau * xs**2 - np.pi / 4.
+    phase = - np.pi / 4. - params.phi0 + 2. * np.pi * (ts - params.t_center) * fs - np.pi * params.gamma * params.tau * xs**2
     amp = amp_center_t * np.exp(-xs**2 / 2.0)
     fds = np.full(xs.shape, params.gamma / params.tau)
     return phase, amp, fs, fds

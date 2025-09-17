@@ -136,7 +136,6 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
         self.NF_max = NF_max
         self.nf_offset = NF_min
         self.freeze_limits = False
-        self.freeze_extrinsic = False
 
         # TODO FFs can possibly be eliminated
         self.FFs = wc.DF * np.arange(self.NF_min, self.NF_max)  # center of the pixels
@@ -233,6 +232,8 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
 
         # enforce cleanup of values that will not be reset
         if nf_range_old > self.nf_range:
+            # TODO this manipulation of kdotx should only happen if it is a private variable
+            self.kdotx[self.nf_range:nf_range_old] = 0.
             self._tdi_waveform.AF[:, self.nf_range:nf_range_old] = 0.
             self._tdi_waveform.PF[:, self.nf_range:nf_range_old] = 0.
             self._tdi_waveform.TF[:, self.nf_range:nf_range_old] = 0.
@@ -263,9 +264,8 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
         self._update_intrinsic()
         if not self.freeze_limits:
             self._update_bounds()
-        if not self.freeze_extrinsic:
-            self._update_extrinsic()
-            self._consistent = True
+        self._update_extrinsic()
+        self._consistent = True
 
     @property
     @override

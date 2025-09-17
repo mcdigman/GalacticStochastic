@@ -6,7 +6,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels, SpacecraftOrbits, get_spacecraft_vec, rigid_adiabatic_antenna
+from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels, SpacecraftOrbits, get_spacecraft_vec, get_tensor_basis, get_wavefront_time, rigid_adiabatic_antenna
 from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
 from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams, StationarySourceWaveform, StationaryWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
@@ -106,6 +106,7 @@ class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTi
     @property
     def wavefront_time(self) -> NDArray[np.float64]:
         """Get the wavefront arrival times at the guiding center."""
-        if not self.consistent:
-            self._update()
+        if not self._consistent_intrinsic:
+            tb = get_tensor_basis(self.params.extrinsic)
+            get_wavefront_time(self._lc, tb, self._TTs, self._spacecraft_orbits, self._wavefront_time)
         return self._wavefront_time

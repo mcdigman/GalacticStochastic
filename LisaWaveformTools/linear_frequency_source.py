@@ -8,7 +8,6 @@ from numba import njit
 from numpy.typing import NDArray
 
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.ra_waveform_freq import get_tensor_basis, get_wavefront_time
 from LisaWaveformTools.stationary_source_waveform import SourceParams, StationaryWaveformTime
 from LisaWaveformTools.stationary_time_source import StationarySourceWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
@@ -87,14 +86,12 @@ class LinearFrequencySourceWaveformTime(StationarySourceWaveformTime):
     @override
     def _update_intrinsic(self) -> None:
         """Update the intrinsic_waveform with respect to the intrinsic parameters."""
+        self._consistent_intrinsic = False
         if not isinstance(self.params.intrinsic, LinearFrequencyIntrinsicParams):
             msg = 'Intrinsic parameters must be of type LinearFrequencyIntrinsicParams.'
             raise TypeError(msg)
 
-        tb = get_tensor_basis(self.params.extrinsic)
-        get_wavefront_time(self._lc, tb, self._TTs, self._spacecraft_orbits, self._wavefront_time)
-
-        linear_frequency_intrinsic(self._intrinsic_waveform, self.params.intrinsic, self._wavefront_time)
+        linear_frequency_intrinsic(self._intrinsic_waveform, self.params.intrinsic, self.wavefront_time)
         self._consistent_intrinsic = True
 
 

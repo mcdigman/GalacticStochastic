@@ -834,13 +834,13 @@ def rigid_adiabatic_antenna(
 
 @njit()
 def get_wavefront_time(lc: LISAConstants, tb: TensorBasis, ts: NDArray[np.float64], sv: SpacecraftOrbits, wavefront_time: NDArray[np.float64]) -> None:
-    """Compute, in place, the wavefront (retarded) time coordinate for each spacecraft in the LISA constellation.
+    """Compute, in place, the wavefront time coordinate for each spacecraft in the LISA constellation.
 
     This function calculates the time at which a surface of constant gravitational-wave phase, defined by
     t - (k · x), is reached at each spacecraft. The calculation accounts for the projected position of each spacecraft
     along the direction of wave propagation, properly normalized by the LISA arm length and the speed of light.
     The output array is overwritten with the resulting wavefront times.
-    _wavefront_time is called xi in [Phys. Rev. D 101, 124008 (2020), Eq. (B3)].
+    wavefront_time is called xi in [Phys. Rev. D 101, 124008 (2020), Eq. (B3)].
 
     Parameters
     ----------
