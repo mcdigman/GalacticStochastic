@@ -22,7 +22,7 @@ def chirplet_time_intrinsic(waveform: StationaryWaveformTime, intrinsic_params: 
     nt_loc = t_in.size
 
     # amplitude multiplier to convert from frequency domain amplitude to time domain amplitude
-    phase_center_t = - np.pi / 4. - intrinsic_params.phi0
+    phase_center_t = - intrinsic_params.phi0
     ftd = intrinsic_params.gamma / intrinsic_params.tau
     amp_center_t = np.sqrt(ftd) * intrinsic_params.amp_center_f
 
@@ -49,6 +49,7 @@ def chirplet_freq_intrinsic(waveform: StationaryWaveformFreq, intrinsic_params: 
 
     nf_loc = f_in.size
     #  compute the intrinsic frequency, phase and amplitude
+    phase_0_f = - np.pi / 4. + intrinsic_params.phi0
     ftd = intrinsic_params.gamma / intrinsic_params.tau
     tfp = 1. / ftd
 
@@ -56,7 +57,7 @@ def chirplet_freq_intrinsic(waveform: StationaryWaveformFreq, intrinsic_params: 
         f = f_in[n]
         delta_f = f - intrinsic_params.f_center
         x = delta_f / intrinsic_params.gamma
-        PF[n] = intrinsic_params.phi0 + 2.0 * np.pi * intrinsic_params.t_center * f + np.pi * tfp * delta_f ** 2
+        PF[n] = phase_0_f + 2.0 * np.pi * intrinsic_params.t_center * f + np.pi * tfp * delta_f ** 2
         TF[n] = tfp * delta_f + intrinsic_params.t_center
         TFp[n] = tfp
         AF[n] = intrinsic_params.amp_center_f * np.exp(-x ** 2 / 2.0)
