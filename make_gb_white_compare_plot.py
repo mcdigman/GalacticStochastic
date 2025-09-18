@@ -66,10 +66,10 @@ if __name__ == '__main__':
 
     nt_min = 256 * 6
     nt_max = nt_min + 512 * 2
-    nt_lim = PixelTimeRange(nt_min, nt_max)
+    nt_lim = PixelTimeRange(nt_min, nt_max, wc.DT)
     nt_min_report = 0
     nt_max_report = nt_max - nt_min
-    nt_lim_report = PixelTimeRange(nt_min_report, nt_max_report)
+    nt_lim_report = PixelTimeRange(nt_min_report, nt_max_report, wc.DT)
 
     snr_thresh = 7.0
     smooth_lengthf = 6

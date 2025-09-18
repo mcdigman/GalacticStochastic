@@ -8,7 +8,11 @@ import tomllib
 from numpy.testing import assert_allclose
 from WDMWaveletTransforms.wavelet_transforms import transform_wavelet_freq, transform_wavelet_time
 
+from LisaWaveformTools.chirplet_source_time import LinearChirpletSourceWaveformTime
+from LisaWaveformTools.lisa_config import get_lisa_constants
+from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams
 from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams, amp_phase_f, chirp_time
+from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
 from WaveletWaveforms.sparse_wavelet_time import wavelet_SparseT, wavelet_TaylorT
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
@@ -22,6 +26,10 @@ def test_Chirp_wdm_match4(fdot_mult):
         config_in = tomllib.load(f)
 
     wc = get_wavelet_model(config_in)
+    lc = get_lisa_constants(config_in)
+
+    # nt_lim_waveform = PixelTimeRange(0, wc.Nt, wc.DT)
+    nt_lim_waveform_long = PixelTimeRange(0, wc.Nt * wc.Nf, wc.dt)
 
     # Want gamma*tau large so that the SPA is accurate
     # Pick fdot so that both the Taylor expanded time and frequency domain transforms are valid
@@ -47,7 +55,23 @@ def test_Chirp_wdm_match4(fdot_mult):
     Phi0 = 0.
     A0 = 10000.
 
-    params = LinearChirpletIntrinsicParams(A0, Phi0, fp, tp, tau, gamma)
+    intrinsic = LinearChirpletIntrinsicParams(A0, Phi0, fp, tp, tau, gamma)
+
+    extrinsic = ExtrinsicParams(costh=0.1, phi=0.1, cosi=0.2,
+                                psi=0.3)  # Replace this with a real extrinsic param object if needed
+
+    # Bundle parameters
+    params = SourceParams(
+        intrinsic=intrinsic,
+        extrinsic=extrinsic,
+    )
+
+    lf_waveform_time_long = LinearChirpletSourceWaveformTime(
+        params=params,
+        nt_lim_waveform=nt_lim_waveform_long,
+        lc=lc,
+    )
+
     # params = np.zeros(10)
     # params[0] = tau  # time spread
     # params[1] = 0.2  # costh
@@ -61,15 +85,25 @@ def test_Chirp_wdm_match4(fdot_mult):
     # params[9] = fp  # central frequency
 
     print('computing time domain waveforms')
-    hs_time, waveform_long = chirp_time(params, wc)
+    hs_time_alt = lf_waveform_time_long.intrinsic_waveform.AT * np.cos(lf_waveform_time_long.intrinsic_waveform.PT)
+    hs_time, waveform_long = chirp_time(params.intrinsic, wc)
+    # import matplotlib.pyplot as plt
+    # plt.plot(waveform_long.T, waveform_long.FT)
+    # plt.plot(lf_waveform_time_long.intrinsic_waveform.T, lf_waveform_time_long.intrinsic_waveform.FT)
+    # plt.show()
+    assert_allclose(waveform_long.FTd, lf_waveform_time_long.intrinsic_waveform.FTd, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(waveform_long.FT, lf_waveform_time_long.intrinsic_waveform.FT, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(waveform_long.PT, lf_waveform_time_long.intrinsic_waveform.PT, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(waveform_long.AT, lf_waveform_time_long.intrinsic_waveform.AT, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(hs_time, hs_time_alt, atol=1.e-20, rtol=1.e-10)
     ts = waveform_long.T
     print('finished time domain waveforms')
 
     # Time domain Taylor expansion transform
-    _TlistT, waveTT = wavelet_TaylorT(params, wc, approximation=1)
-    _TlistT_exact, waveTT_exact = wavelet_TaylorT(params, wc, approximation=0)
+    _TlistT, waveTT = wavelet_TaylorT(params.intrinsic, wc, approximation=1)
+    _TlistT_exact, waveTT_exact = wavelet_TaylorT(params.intrinsic, wc, approximation=0)
     # Time domain sparse transform
-    _TlistS, waveTS = wavelet_SparseT(params, wc)
+    _TlistS, waveTS = wavelet_SparseT(params.intrinsic, wc)
 
     maskTS = (waveTS != 0.)
     maskTT = (waveTT != 0.)
@@ -81,7 +115,7 @@ def test_Chirp_wdm_match4(fdot_mult):
 
     wave_got_time = transform_wavelet_time(hs_time, wc.Nf, wc.Nt)
     fs_fft = np.arange(0, ts.size // 2 + 1) * 1 / (wc.Tobs)
-    PPfs, AAfs = amp_phase_f(fs_fft, params)
+    PPfs, AAfs = amp_phase_f(fs_fft, params.intrinsic)
     AAfs = AAfs / (2 * wc.dt)
     hs_freq = np.exp(-1j * PPfs) * AAfs
     wave_got_freq = transform_wavelet_freq(hs_freq, wc.Nf, wc.Nt)

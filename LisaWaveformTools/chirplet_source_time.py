@@ -37,7 +37,7 @@ class LinearChirpletWaveletWaveformTime(BinaryWaveletTaylorTime):
         """Construct a binary wavelet object."""
         # get the intrinsic_waveform
         source_waveform = LinearChirpletSourceWaveformTime(
-            params, nt_lim_waveform, lc, wc,
+            params, nt_lim_waveform, lc,
         )
 
         super().__init__(params, wc, lc, nt_lim_waveform, source_waveform, wavelet_mode=wavelet_mode)

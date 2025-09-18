@@ -28,8 +28,8 @@ if __name__ == '__main__':
     preprocess_mode = True
     nt_min = 0
     nt_max = wc.Nt
-    nt_lim_snr = PixelTimeRange(nt_min, nt_max)
-    nt_lim_waveform = PixelTimeRange(nt_min, nt_max)
+    nt_lim_snr = PixelTimeRange(nt_min, nt_max, wc.DT)
+    nt_lim_waveform = PixelTimeRange(nt_min, nt_max, wc.DT)
 
     params_gb, _, _, _, _ = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
 

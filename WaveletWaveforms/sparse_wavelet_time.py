@@ -24,7 +24,7 @@ def sparse_time_DX_assign_loop(params, cM, sM, wc: WDMWaveletConstants):
     mcs = (fs / wc.DF).astype(np.int64)
     nt_min = np.argmax(mcs > -1)
     nt_max = wc.Nt - np.argmax(mcs[::-1] < wc.Nf)
-    nt_lim = PixelTimeRange(nt_min, nt_max)
+    nt_lim = PixelTimeRange(nt_min, nt_max, wc.DT)
 
     DX = np.zeros((nt_max - nt_min, wc.L), dtype=np.complex128)
 
@@ -161,7 +161,7 @@ def TaylorTime(params, wc: WDMWaveletConstants, approximation: int = 1) -> Spars
 
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(nc_waveform, wc)
     taylor_time_table = get_taylor_table_time(wc, cache_mode='check', output_mode='hf')
-    nt_lim_waveform = PixelTimeRange(0, wc.Nt)
+    nt_lim_waveform = PixelTimeRange(0, wc.Nt, wc.DT)
 
     if approximation == 0:
         wavemaket_direct(wavelet_waveform, waveform, nt_lim_waveform, wc, taylor_time_table)

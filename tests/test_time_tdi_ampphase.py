@@ -757,7 +757,7 @@ def test_time_tdi_inplace_transform(f0_mult, rr_model, f0p_mult):
 
     # get the sparse wavelet intrinsic_waveform
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(lc.nc_waveform, wc)
-    nt_lim = PixelTimeRange(0, wc.Nt)
+    nt_lim = PixelTimeRange(0, wc.Nt, wc.DT)
     wavemaket(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table, force_nulls=False)
 
     # get the dense wavelet intrinsic_waveform

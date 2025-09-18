@@ -127,6 +127,7 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
     def __init__(self, params: SourceParams, lc: LISAConstants, wc: WDMWaveletConstants, NF_min, NF_max, freeze_limits, n_pad_F=10):
         """Construct a binary wavelet object"""
         self._lc: LISAConstants = lc
+        # TODO eliminate wc as argument
         self._wc: WDMWaveletConstants = wc
         self._nc_waveform: int = self._lc.nc_waveform
         self._consistent_extrinsic: bool = False

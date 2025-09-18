@@ -207,7 +207,7 @@ def multishape_method_match_helper(p_offset, f0_mult, f0p_mult, f0pp_mult, rr_mo
 
     wavelet_waveform2 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc)
 
-    nt_lim = PixelTimeRange(0, wc.Nt)
+    nt_lim = PixelTimeRange(0, wc.Nt, wc.DT)
 
     # call wavemaket
     wavemaket(wavelet_waveform1, AET_waveform, nt_lim, wc, taylor_time_table, force_nulls=False)
@@ -369,7 +369,7 @@ def test_wavemaket_extreme_size(p_offset, f0_mult, direct):
 
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(nc_waveform, wc)
 
-    nt_lim = PixelTimeRange(0, wc.Nt)
+    nt_lim = PixelTimeRange(0, wc.Nt, wc.DT)
 
     if direct:
         wavemaket_direct(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table)
@@ -496,8 +496,8 @@ def test_wavemaket_dimension_comparison_midevolve2(p_offset, f0_mult, f0p_mult, 
     wavelet_waveform1 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc1)
     wavelet_waveform2 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc2)
 
-    nt_lim1 = PixelTimeRange(0, wc1.Nt)
-    nt_lim2 = PixelTimeRange(0, wc2.Nt)
+    nt_lim1 = PixelTimeRange(0, wc1.Nt, wc1.DT)
+    nt_lim2 = PixelTimeRange(0, wc2.Nt, wc2.DT)
     # call wavemaket
     if direct:
         wavemaket_direct(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1)
@@ -621,8 +621,8 @@ def test_wavemaket_dimension_comparison_slowevolve(p_offset, f0_mult, f0p_mult, 
     wavelet_waveform1 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc1)
     wavelet_waveform2 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc2)
 
-    nt_lim1 = PixelTimeRange(0, wc1.Nt)
-    nt_lim2 = PixelTimeRange(0, wc2.Nt)
+    nt_lim1 = PixelTimeRange(0, wc1.Nt, wc1.DT)
+    nt_lim2 = PixelTimeRange(0, wc2.Nt, wc2.DT)
 
     # call wavemaket
     if direct:
@@ -768,8 +768,8 @@ def test_wavemaket_dimension_comparison_midevolve(p_offset, f0_mult, f0p_mult, f
     wavelet_waveform1 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc1)
     wavelet_waveform2 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc2)
 
-    nt_lim1 = PixelTimeRange(0, wc1.Nt)
-    nt_lim2 = PixelTimeRange(0, wc2.Nt)
+    nt_lim1 = PixelTimeRange(0, wc1.Nt, wc1.DT)
+    nt_lim2 = PixelTimeRange(0, wc2.Nt, wc2.DT)
 
     # call wavemaket
     if direct:
@@ -887,7 +887,7 @@ def test_wavemaket_1d(f0_mult, f0p_mult, f0pp_mult, rr_model):
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(nc_waveform, wc1)
 
     # call wavemaket
-    nt_lim1 = PixelTimeRange(0, wc1.Nt)
+    nt_lim1 = PixelTimeRange(0, wc1.Nt, wc1.DT)
     wavemaket(wavelet_waveform, AET_waveform, nt_lim1, wc1, taylor_time_table1, force_nulls=False)
     print(wavelet_waveform.n_set)
     wavelet_dense, signal_time, signal_freq, mag_got, angle_got, _, _, _, _, itr_low_cut, itr_high_cut = get_wavelet_alternative_representation_helper(wavelet_waveform, wc1, tukey_alpha, f_lowpass, 1.e-3)

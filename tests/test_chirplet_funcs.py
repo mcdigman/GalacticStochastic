@@ -30,7 +30,7 @@ def test_intrinsic_waveform_agreement():
     wc = get_wavelet_model(config)
     lc = get_lisa_constants(config)
 
-    nt_lim_waveform = PixelTimeRange(0, wc.Nt)
+    nt_lim_waveform = PixelTimeRange(0, wc.Nt, wc.DT)
 
     fdot_mult = 0.1
     fdot = 3.105 * fdot_mult * wc.DF / wc.Tw  # used an irrational fraction to ensure the fdot lands between samples
@@ -77,7 +77,6 @@ def test_intrinsic_waveform_agreement():
         params=params,
         nt_lim_waveform=nt_lim_waveform,
         lc=lc,
-        wc=wc,
     )
 
     t_wave = lf_waveform_time.intrinsic_waveform
@@ -124,7 +123,7 @@ def test_intrinsic_update_consistent1_time():
     wc = get_wavelet_model(config)
     lc = get_lisa_constants(config)
 
-    nt_lim_waveform = PixelTimeRange(0, wc.Nt)
+    nt_lim_waveform = PixelTimeRange(0, wc.Nt, wc.DT)
 
     fdot_mult1 = 0.1
     fdot1 = 3.105 * fdot_mult1 * wc.DF / wc.Tw  # used an irrational fraction to ensure the fdot lands between samples
@@ -168,14 +167,12 @@ def test_intrinsic_update_consistent1_time():
         params=params1,
         nt_lim_waveform=nt_lim_waveform,
         lc=lc,
-        wc=wc,
     )
 
     lf_waveform_time22 = LinearChirpletSourceWaveformTime(
         params=params2,
         nt_lim_waveform=nt_lim_waveform,
         lc=lc,
-        wc=wc,
     )
 
     assert not np.all(lf_waveform_time11.wavefront_time == lf_waveform_time22.wavefront_time)
@@ -196,13 +193,11 @@ def test_intrinsic_update_consistent1_time():
         params=params1,
         nt_lim_waveform=nt_lim_waveform,
         lc=lc,
-        wc=wc,
     )
     lf_waveform_time21 = LinearChirpletSourceWaveformTime(
         params=params2,
         nt_lim_waveform=nt_lim_waveform,
         lc=lc,
-        wc=wc,
     )
 
     def assert_match_time(wave1, wave2):

@@ -28,8 +28,8 @@ if __name__ == '__main__':
         stat_only = False
         nt_min = 256 * (7 - itrm)
         nt_max = nt_min + 512 * (itrm + 1)
-        nt_lim_snr = PixelTimeRange(nt_min, nt_max)
-        nt_lim_waveform = PixelTimeRange(0, wc.Nt)
+        nt_lim_snr = PixelTimeRange(nt_min, nt_max, wc.DT)
+        nt_lim_waveform = PixelTimeRange(0, wc.Nt, wc.DT)
 
         print(nt_lim_snr.nt_min, nt_lim_snr.nt_max, nt_lim_waveform.nt_min, nt_lim_waveform.nt_max, wc.Nt, wc.Nf, stat_only)
 

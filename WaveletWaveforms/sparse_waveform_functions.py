@@ -38,7 +38,7 @@ N_max: integer
     which is determined by the shape of the interpolation table
 """
 
-PixelTimeRange = namedtuple('PixelTimeRange', ['nt_min', 'nt_max'])
+PixelTimeRange = namedtuple('PixelTimeRange', ['nt_min', 'nt_max', 'dt'])
 
 PixelTimeRange.__doc__ = """
 namedtuple object to contain range of time pixels for analysis.

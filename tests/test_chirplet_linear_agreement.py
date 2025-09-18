@@ -27,7 +27,7 @@ def test_cross_waveform_agreement_time():
     wc = get_wavelet_model(config)
     lc = get_lisa_constants(config)
 
-    nt_lim_waveform = PixelTimeRange(0, wc.Nt)
+    nt_lim_waveform = PixelTimeRange(0, wc.Nt, wc.DT)
 
     fdot_mult = 0.1
     fdot = 3.105 * fdot_mult * wc.DF / wc.Tw  # used an irrational fraction to ensure the fdot lands between samples
@@ -70,14 +70,12 @@ def test_cross_waveform_agreement_time():
         params=params_linear,
         nt_lim_waveform=nt_lim_waveform,
         lc=lc,
-        wc=wc,
     )
 
     chirplet_time = LinearChirpletSourceWaveformTime(
         params=params_chirplet,
         nt_lim_waveform=nt_lim_waveform,
         lc=lc,
-        wc=wc,
     )
 
     assert_allclose(linear_time.intrinsic_waveform.T, chirplet_time.intrinsic_waveform.T, atol=1.e-20, rtol=1.e-10)
@@ -107,7 +105,7 @@ def test_cross_waveform_agreement_time():
         wc = get_wavelet_model(config)
         lc = get_lisa_constants(config)
 
-        nt_lim_waveform = PixelTimeRange(0, wc.Nt)
+        nt_lim_waveform = PixelTimeRange(0, wc.Nt, wc.DT)
 
         fdot_mult = 0.1
         fdot = 3.105 * fdot_mult * wc.DF / wc.Tw  # used an irrational fraction to ensure the fdot lands between samples
@@ -151,14 +149,12 @@ def test_cross_waveform_agreement_time():
             params=params_linear,
             nt_lim_waveform=nt_lim_waveform,
             lc=lc,
-            wc=wc,
         )
 
         chirplet_time = LinearChirpletSourceWaveformTime(
             params=params_chirplet,
             nt_lim_waveform=nt_lim_waveform,
             lc=lc,
-            wc=wc,
         )
 
         assert_allclose(linear_time.intrinsic_waveform.T, chirplet_time.intrinsic_waveform.T, atol=1.e-20, rtol=1.e-10)

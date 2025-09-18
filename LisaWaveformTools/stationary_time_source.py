@@ -10,23 +10,21 @@ from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels, Spacecra
 from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
 from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams, StationarySourceWaveform, StationaryWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
-from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTime]):
     """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain.
     """
 
-    def __init__(self, params: SourceParams, nt_lim_waveform: PixelTimeRange, lc: LISAConstants, wc: WDMWaveletConstants) -> None:
+    def __init__(self, params: SourceParams, nt_lim_waveform: PixelTimeRange, lc: LISAConstants) -> None:
         """Initalize the object"""
         self._nt_lim_waveform: PixelTimeRange = nt_lim_waveform
         self._nt_range: int = self._nt_lim_waveform.nt_max - self._nt_lim_waveform.nt_min
         self._lc: LISAConstants = lc
-        self._wc: WDMWaveletConstants = wc
         self._nc_waveform: int = self._lc.nc_waveform
         self._consistent_extrinsic: bool = False
 
-        self._TTs: NDArray[np.float64] = self._wc.DT * np.arange(self._nt_lim_waveform.nt_min, self._nt_lim_waveform.nt_max)
+        self._TTs: NDArray[np.float64] = self._nt_lim_waveform.dt * np.arange(self._nt_lim_waveform.nt_min, self._nt_lim_waveform.nt_max)
 
         AmpTs = np.zeros(self._nt_range)
         PPTs = np.zeros(self._nt_range)
@@ -93,7 +91,7 @@ class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTi
             self._lc,
         )
         get_time_tdi_amp_phase(
-            self._spacecraft_channels, self._tdi_waveform, self.intrinsic_waveform, self._lc, self._wc.DT,
+            self._spacecraft_channels, self._tdi_waveform, self.intrinsic_waveform, self._lc, self._nt_lim_waveform.dt,
         )
         self._consistent_extrinsic = True
 
