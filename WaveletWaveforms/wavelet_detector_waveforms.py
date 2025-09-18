@@ -97,6 +97,7 @@ class SparseWaveletSourceWaveform(ABC):
 
         # Set consistent to True after the update is complete
         self._consistent = True
+        assert self.consistent, 'Waveform failed to update consistently.'
 
     def get_unsorted_coeffs(self) -> SparseWaveletWaveform:
         """Get wavelet coefficients in the order they are generated."""
@@ -114,7 +115,7 @@ class SparseWaveletSourceWaveform(ABC):
             Whether the internal representation is consistent with the input parameters.
 
         """
-        return self._consistent
+        return self._consistent and self.consistent_source
 
 
 class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform):

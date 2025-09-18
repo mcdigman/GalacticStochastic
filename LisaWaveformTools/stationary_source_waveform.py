@@ -105,6 +105,7 @@ class StationarySourceWaveform(Generic[StationaryWaveformType], ABC):
         self._update_intrinsic()
         self._update_extrinsic()
         self._consistent = True
+        assert self.consistent, 'Waveform failed to update consistently.'
 
     def update_params(self, params: SourceParams) -> None:
         """
@@ -130,7 +131,7 @@ class StationarySourceWaveform(Generic[StationaryWaveformType], ABC):
             Whether the internal representation is consistent with the input parameters.
 
         """
-        return self._consistent
+        return self._consistent and self._consistent_intrinsic and self._consistent_extrinsic
 
     @property
     def consistent_instrinsic(self) -> bool:

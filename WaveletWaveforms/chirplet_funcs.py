@@ -6,20 +6,26 @@ from numba import njit
 from numpy.typing import NDArray
 
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformFreq, StationaryWaveformTime
-from WaveletWaveforms.wdm_config import WDMWaveletConstants
+from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
 
 LinearChirpletIntrinsicParams = namedtuple('LinearChirpletIntrinsicParams', ['amp_center_f', 'phi0', 'f_center', 't_center', 'tau', 'gamma'])
 
 
 @njit()
-def chirplet_time_intrinsic(waveform: StationaryWaveformTime, intrinsic_params: LinearChirpletIntrinsicParams, t_in: NDArray[np.float64]) -> None:
-    """Get amplitude and phase for chirp_time"""
+def chirplet_time_intrinsic(waveform: StationaryWaveformTime, intrinsic_params: LinearChirpletIntrinsicParams, t_in: NDArray[np.float64], nt_lim: PixelTimeRange) -> None:
+    """Get amplitude, phase, frequency, and frequency derivative for the waveform.
+    Uses a separate t_in array, which may be different from the time array in the waveform object.
+    The separate t_in allows for conversion between different time coordinates, e.g., SSB to guiding center.
+    """
     AT = waveform.AT
     PT = waveform.PT
     FT = waveform.FT
     FTd = waveform.FTd
 
-    nt_loc = t_in.size
+    assert 0 <= nt_lim.nt_min < nt_lim.nt_max <= t_in.size
+    assert AT.shape == PT.shape == FT.shape == FTd.shape
+    assert len(AT.shape) == 1
+    assert AT.shape[-1] <= nt_lim.nt_max
 
     # amplitude multiplier to convert from frequency domain amplitude to time domain amplitude
     phase_center_t = - intrinsic_params.phi0
@@ -27,7 +33,7 @@ def chirplet_time_intrinsic(waveform: StationaryWaveformTime, intrinsic_params: 
     amp_center_t = np.sqrt(ftd) * intrinsic_params.amp_center_f
 
     #  compute the intrinsic frequency, phase and amplitude
-    for n in range(nt_loc):
+    for n in range(nt_lim.nt_min, nt_lim.nt_max):
         t = t_in[n]
         delta_t = t - intrinsic_params.t_center
         x = delta_t / intrinsic_params.tau
@@ -69,31 +75,29 @@ def amp_phase_t(ts, params: LinearChirpletIntrinsicParams):
     xs = (ts - params.t_center) / params.tau
     fs = params.gamma * xs + params.f_center
     amp_center_t = np.sqrt(params.gamma / params.tau) * params.amp_center_f
-    # TODO check sign convention on phase
-    phase = - np.pi / 4. - params.phi0 + 2. * np.pi * (ts - params.t_center) * fs - np.pi * params.gamma * params.tau * xs**2
+    phase = - params.phi0 + 2. * np.pi * (ts - params.t_center) * fs - np.pi * params.gamma * params.tau * xs**2
     amp = amp_center_t * np.exp(-xs**2 / 2.0)
     fds = np.full(xs.shape, params.gamma / params.tau)
     return phase, amp, fs, fds
 
 
-def chirp_time(params, wc: WDMWaveletConstants):
-    """Directly compute time domain intrinsic_waveform"""
-    ts = wc.dt * np.arange(0, wc.Nf * wc.Nt)
-
-    Phases, Amps, fas, fdas = amp_phase_t(ts, params)
-
-    hs = Amps * np.cos(Phases)
-
-    waveform = StationaryWaveformTime(ts, Phases, fas, fdas, Amps)
-    return hs, waveform
+# def chirp_time(params, wc: WDMWaveletConstants):
+#    """Directly compute time domain intrinsic_waveform"""
+#    ts = wc.dt * np.arange(0, wc.Nf * wc.Nt)
+#
+#    Phases, Amps, fas, fdas = amp_phase_t(ts, params)
+#
+#    hs = Amps * np.cos(Phases)
+#
+#    waveform = StationaryWaveformTime(ts, Phases, fas, fdas, Amps)
+#    return hs, waveform
 
 
 # @njit(fastmath=True)
 def amp_phase_f(fs, params: LinearChirpletIntrinsicParams):
     """Get amplitude and phase for frequency chirp"""
     xs = (fs - params.f_center) / params.gamma
-    # TODO check sign convention on phase
-    Phase = params.phi0 + 2.0 * np.pi * params.t_center * fs + np.pi * params.tau * params.gamma * xs**2
+    Phase = - np.pi / 4.0 + params.phi0 + 2.0 * np.pi * params.t_center * fs + np.pi * params.tau * params.gamma * xs**2
     Amp = params.amp_center_f * np.exp(-xs**2 / 2.0)
     return Phase, Amp
 
@@ -104,9 +108,17 @@ def ChirpWaveletT(params, TFs, wc):
     Phases, Amps, fas, fdas = amp_phase_t(TFs, params)
 
     # get the intrinsic intrinsic_waveform
-    return StationaryWaveformTime(TFs, np.array([Phases]), np.array([fas]), np.array([fdas]), np.array([Amps]))
+    hold1 = StationaryWaveformTime(TFs.copy(), Phases.copy(), fas.copy(), fdas.copy(), Amps.copy())
+    nt_lim = PixelTimeRange(0, wc.Nt, wc.DT)
+    chirplet_time_intrinsic(hold1, params, TFs, nt_lim)
+    assert np.allclose(Phases, hold1.PT, atol=1e-20, rtol=1.e-10)
+    assert np.allclose(Amps, hold1.AT, atol=1e-20, rtol=1.e-10)
+    assert np.allclose(fas, hold1.FT, atol=1e-20, rtol=1.e-10)
+    assert np.allclose(hold1.FTd, fdas, atol=1e-20, rtol=1.e-10)
+    return StationaryWaveformTime(TFs.copy(), np.array([Phases.copy()]), np.array([fas.copy()]), np.array([fdas.copy()]), np.array([Amps.copy()]))
 
 
+# TODO toff and foft have unclear names and are redundant with functions above
 # @njit(fastmath=True)
 def toff(f, params: LinearChirpletIntrinsicParams):
     """Get times for sparse freq method"""

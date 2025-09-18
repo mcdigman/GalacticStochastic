@@ -145,7 +145,7 @@ def wavelet_SparseT(params, wc: WDMWaveletConstants):
     return wavelet_waveform.pixel_index, wave
 
 
-def TaylorTime(params, wc: WDMWaveletConstants, approximation: int = 1) -> SparseWaveletWaveform:
+def TaylorTime(params, wc: WDMWaveletConstants, approximation: int = 1, time_table=None) -> SparseWaveletWaveform:
     """Calculate wavelet signal using time taylor method, waveT contains signal, Tlist flags of pixels in use.
     If approximation=0, use direct method without interpolating taylor coefficients.
     If approximation is positive, use approximation - 1 as the value for force_nulls in wavemaket.
@@ -160,7 +160,10 @@ def TaylorTime(params, wc: WDMWaveletConstants, approximation: int = 1) -> Spars
     nc_waveform = 1
 
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(nc_waveform, wc)
-    taylor_time_table = get_taylor_table_time(wc, cache_mode='check', output_mode='hf')
+    if time_table is None:
+        taylor_time_table = get_taylor_table_time(wc, cache_mode='check', output_mode='hf')
+    else:
+        taylor_time_table = time_table
     nt_lim_waveform = PixelTimeRange(0, wc.Nt, wc.DT)
 
     if approximation == 0:
@@ -175,10 +178,10 @@ def TaylorTime(params, wc: WDMWaveletConstants, approximation: int = 1) -> Spars
     return wavelet_waveform
 
 
-def wavelet_TaylorT(params, wc: WDMWaveletConstants, approximation: int = 1):
+def wavelet_TaylorT(params, wc: WDMWaveletConstants, approximation: int = 1, time_table=None):
     """Get wavelet transform using taylor time method"""
     # frequency spacing
 
-    wavelet_waveform = TaylorTime(params, wc, approximation=approximation)
+    wavelet_waveform = TaylorTime(params, wc, approximation=approximation, time_table=time_table)
     wave = wavelet_sparse_to_dense(wavelet_waveform, wc)[:, :, 0]
-    return wavelet_waveform.pixel_index, wave
+    return wavelet_waveform, wave

@@ -16,7 +16,7 @@ class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTi
     """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain.
     """
 
-    def __init__(self, params: SourceParams, nt_lim_waveform: PixelTimeRange, lc: LISAConstants) -> None:
+    def __init__(self, params: SourceParams, nt_lim_waveform: PixelTimeRange, lc: LISAConstants, *, response_mode: int = 0) -> None:
         """Initalize the object"""
         self._nt_lim_waveform: PixelTimeRange = nt_lim_waveform
         self._nt_range: int = self._nt_lim_waveform.nt_max - self._nt_lim_waveform.nt_min
@@ -25,6 +25,10 @@ class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTi
         self._consistent_extrinsic: bool = False
 
         self._TTs: NDArray[np.float64] = self._nt_lim_waveform.dt * np.arange(self._nt_lim_waveform.nt_min, self._nt_lim_waveform.nt_max)
+        self._spacecraft_orbits: SpacecraftOrbits = get_spacecraft_vec(self._TTs, self._lc)
+
+        self._response_mode: int = -1
+        self.response_mode = response_mode
 
         AmpTs = np.zeros(self._nt_range)
         PPTs = np.zeros(self._nt_range)
@@ -49,8 +53,6 @@ class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTi
         del IIs
         del dRRs
         del dIIs
-
-        self._spacecraft_orbits: SpacecraftOrbits = get_spacecraft_vec(self._TTs, self._lc)
 
         self._wavefront_time: NDArray[np.float64] = np.zeros(self._nt_range)
         self._kdotx: NDArray[np.float64] = np.zeros(self._nt_range)
@@ -80,19 +82,33 @@ class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTi
             raise TypeError(msg)
 
         # TODO fix F_min and nf_range
-        rigid_adiabatic_antenna(
-            self._spacecraft_channels,
-            self.params.extrinsic,
-            self._TTs,
-            self.intrinsic_waveform.FT,
-            0,
-            self._nt_range,
-            self._kdotx,
-            self._lc,
-        )
-        get_time_tdi_amp_phase(
-            self._spacecraft_channels, self._tdi_waveform, self.intrinsic_waveform, self._lc, self._nt_lim_waveform.dt,
-        )
+        if self.response_mode in (0, 1):
+            rigid_adiabatic_antenna(
+                self._spacecraft_channels,
+                self.params.extrinsic,
+                self._TTs,
+                self.intrinsic_waveform.FT,
+                0,
+                self._nt_range,
+                self._kdotx,
+                self._lc,
+            )
+            get_time_tdi_amp_phase(
+                self._spacecraft_channels, self._tdi_waveform, self.intrinsic_waveform, self._lc,
+                self._nt_lim_waveform.dt,
+            )
+        elif self.response_mode == 2:
+            # intrinsic only, no rigid adiabatic response
+            self._spacecraft_channels.RR[:] = 1.
+            self._spacecraft_channels.II[:] = 0.
+            self._spacecraft_channels.dRR[:] = 0.
+            self._spacecraft_channels.dII[:] = 0.
+            self._kdotx[:] = 0.
+            self._tdi_waveform.AT[:] = self.intrinsic_waveform.AT
+            self._tdi_waveform.PT[:] = self.intrinsic_waveform.PT
+            self._tdi_waveform.FT[:] = self.intrinsic_waveform.FT
+            self._tdi_waveform.FTd[:] = self.intrinsic_waveform.FTd
+
         self._consistent_extrinsic = True
 
     @property
@@ -104,7 +120,57 @@ class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTi
     @property
     def wavefront_time(self) -> NDArray[np.float64]:
         """Get the wavefront arrival times at the guiding center."""
-        if not self._consistent_intrinsic:
+        if self.response_mode == 2:
+            return self._TTs
+        if not self._consistent_intrinsic or not self._consistent_extrinsic:
             tb = get_tensor_basis(self.params.extrinsic)
             get_wavefront_time(self._lc, tb, self._TTs, self._spacecraft_orbits, self._wavefront_time)
+            self._consistent_extrinsic = False
         return self._wavefront_time
+
+    @property
+    def response_mode(self) -> int:
+        """Get the current response mode."""
+        return self._response_mode
+
+    @response_mode.setter
+    def response_mode(self, mode: int) -> None:
+        if mode not in (0, 1, 2):
+            msg = 'Response mode must be 0 (doppler + antenna), 1 (rotation no doppler), or 2 (intrinsic only).'
+            raise NotImplementedError(msg)
+        if self._response_mode != mode:
+            if self._response_mode == -1:  # not initialized yet
+                self._response_mode = mode
+                self._consistent_extrinsic = False
+                self._consistent_intrinsic = False
+                return
+
+            spacecraft_orbits_loc: SpacecraftOrbits = get_spacecraft_vec(self._TTs, self._lc)
+            if mode == 0:
+                pass
+            elif mode == 1:
+                # move guiding center of constellation to solar system barycenter
+                spacecraft_orbits_loc.xs[:] -= spacecraft_orbits_loc.xas
+                spacecraft_orbits_loc.ys[:] -= spacecraft_orbits_loc.yas
+                spacecraft_orbits_loc.zs[:] -= spacecraft_orbits_loc.zas
+                spacecraft_orbits_loc.xas[:] = 0.
+                spacecraft_orbits_loc.yas[:] = 0.
+                spacecraft_orbits_loc.zas[:] = 0.
+            elif mode == 2:
+                # no spacecraft motion
+                spacecraft_orbits_loc.xs[:] = 0.
+                spacecraft_orbits_loc.ys[:] = 0.
+                spacecraft_orbits_loc.zs[:] = 0.
+                spacecraft_orbits_loc.xas[:] = 0.
+                spacecraft_orbits_loc.yas[:] = 0.
+                spacecraft_orbits_loc.zas[:] = 0.
+            else:
+                msg = 'Response mode must be 0 (doppler + antenna), 1 (rotation no doppler), or 2 (intrinsic only).'
+                raise NotImplementedError(msg)
+
+            self._spacecraft_orbits = spacecraft_orbits_loc
+
+            self._response_mode = mode
+            self._consistent_extrinsic = False
+            self._consistent_intrinsic = False
+            self.update_params(self.params)

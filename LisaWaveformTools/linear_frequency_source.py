@@ -100,9 +100,9 @@ class LinearFrequencyWaveletWaveformTime(BinaryWaveletTaylorTime):
     using the Taylor time method.
     """
 
-    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelTimeRange, *, wavelet_mode: int = 1) -> None:
+    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelTimeRange, *, wavelet_mode: int = 1, response_mode=0) -> None:
         """Construct a binary wavelet object."""
         # get the intrinsic_waveform
-        source_waveform = LinearFrequencySourceWaveformTime(params, nt_lim_waveform, lc)
+        source_waveform = LinearFrequencySourceWaveformTime(params, nt_lim_waveform, lc, response_mode=response_mode)
 
         super().__init__(params, wc, lc, nt_lim_waveform, source_waveform, wavelet_mode=wavelet_mode)

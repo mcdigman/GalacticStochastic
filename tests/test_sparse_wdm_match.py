@@ -5,13 +5,13 @@ from pathlib import Path
 import numpy as np
 import pytest
 import tomllib
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_array_equal
 from WDMWaveletTransforms.wavelet_transforms import transform_wavelet_freq, transform_wavelet_time
 
-from LisaWaveformTools.chirplet_source_time import LinearChirpletSourceWaveformTime
+from LisaWaveformTools.chirplet_source_time import LinearChirpletSourceWaveformTime, LinearChirpletWaveletWaveformTime
 from LisaWaveformTools.lisa_config import get_lisa_constants
-from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams
-from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams, amp_phase_f, chirp_time
+from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams, StationaryWaveformTime
+from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams, amp_phase_f, amp_phase_t, chirplet_time_intrinsic
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
 from WaveletWaveforms.sparse_wavelet_time import wavelet_SparseT, wavelet_TaylorT
 from WaveletWaveforms.wdm_config import get_wavelet_model
@@ -28,7 +28,7 @@ def test_Chirp_wdm_match4(fdot_mult):
     wc = get_wavelet_model(config_in)
     lc = get_lisa_constants(config_in)
 
-    # nt_lim_waveform = PixelTimeRange(0, wc.Nt, wc.DT)
+    nt_lim_waveform = PixelTimeRange(0, wc.Nt, wc.DT)
     nt_lim_waveform_long = PixelTimeRange(0, wc.Nt * wc.Nf, wc.dt)
 
     # Want gamma*tau large so that the SPA is accurate
@@ -85,23 +85,59 @@ def test_Chirp_wdm_match4(fdot_mult):
     # params[9] = fp  # central frequency
 
     print('computing time domain waveforms')
-    hs_time_alt = lf_waveform_time_long.intrinsic_waveform.AT * np.cos(lf_waveform_time_long.intrinsic_waveform.PT)
-    hs_time, waveform_long = chirp_time(params.intrinsic, wc)
+    hs_time_in = lf_waveform_time_long.intrinsic_waveform.AT * np.cos(lf_waveform_time_long.intrinsic_waveform.PT)
+    # hs_time_c, waveform_long_c = chirp_time(params.intrinsic, wc)
+    PT1, AT1, FT1, FTd1 = amp_phase_t(lf_waveform_time_long.wavefront_time, params.intrinsic)
+    hs_time1 = AT1 * np.cos(PT1)
+    PT2, AT2, FT2, FTd2 = amp_phase_t(lf_waveform_time_long.intrinsic_waveform.T, params.intrinsic)
+    hs_time2 = AT2 * np.cos(PT2)
+    waveform_long_c = StationaryWaveformTime(np.arange(0, wc.Nt * wc.Nf) * wc.dt, PT2.copy(), FT2.copy(), FTd2.copy(), AT2.copy())
+    chirplet_time_intrinsic(waveform_long_c, params.intrinsic, waveform_long_c.T, nt_lim_waveform_long)
+    hs_time_c = waveform_long_c.AT * np.cos(waveform_long_c.PT)
+    assert_allclose(waveform_long_c.FTd, FTd2, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(waveform_long_c.FT, FT2, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(waveform_long_c.AT, AT2, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(waveform_long_c.PT, PT2, atol=1.e-20, rtol=1.e-10)
+
     # import matplotlib.pyplot as plt
     # plt.plot(waveform_long.T, waveform_long.FT)
     # plt.plot(lf_waveform_time_long.intrinsic_waveform.T, lf_waveform_time_long.intrinsic_waveform.FT)
     # plt.show()
-    assert_allclose(waveform_long.FTd, lf_waveform_time_long.intrinsic_waveform.FTd, atol=1.e-20, rtol=1.e-10)
-    assert_allclose(waveform_long.FT, lf_waveform_time_long.intrinsic_waveform.FT, atol=1.e-20, rtol=1.e-10)
-    assert_allclose(waveform_long.PT, lf_waveform_time_long.intrinsic_waveform.PT, atol=1.e-20, rtol=1.e-10)
-    assert_allclose(waveform_long.AT, lf_waveform_time_long.intrinsic_waveform.AT, atol=1.e-20, rtol=1.e-10)
-    assert_allclose(hs_time, hs_time_alt, atol=1.e-20, rtol=1.e-10)
-    ts = waveform_long.T
+    assert_allclose(FTd1, lf_waveform_time_long.intrinsic_waveform.FTd, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(FT1, lf_waveform_time_long.intrinsic_waveform.FT, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(PT1, lf_waveform_time_long.intrinsic_waveform.PT, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(AT1, lf_waveform_time_long.intrinsic_waveform.AT, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(hs_time1, hs_time_in, atol=1.e-14, rtol=2.e-7)
+    assert_allclose(hs_time2, hs_time_c, atol=1.e-14, rtol=2.e-7)
+    ts = waveform_long_c.T
+
     print('finished time domain waveforms')
 
     # Time domain Taylor expansion transform
-    _TlistT, waveTT = wavelet_TaylorT(params.intrinsic, wc, approximation=1)
-    _TlistT_exact, waveTT_exact = wavelet_TaylorT(params.intrinsic, wc, approximation=0)
+    # TODO replace with object method
+    waveletTT = LinearChirpletWaveletWaveformTime(params, wc, lc, nt_lim_waveform, wavelet_mode=1, response_mode=2)
+    waveletTT_exact = LinearChirpletWaveletWaveformTime(params, wc, lc, nt_lim_waveform, wavelet_mode=0, response_mode=2)
+    TlistT2 = waveletTT.wavelet_waveform.pixel_index
+    waveTT2_exact = waveletTT_exact.wavelet_waveform.wave_value
+    TlistT2_exact = waveletTT_exact.wavelet_waveform.pixel_index
+    waveTT2 = waveletTT.wavelet_waveform.wave_value
+    waveletTT0, waveTT = wavelet_TaylorT(params.intrinsic, wc, approximation=1)
+    waveletTT0_exact, waveTT_exact = wavelet_TaylorT(params.intrinsic, wc, approximation=0)
+    TlistT = waveletTT0.pixel_index
+    TlistT_exact = waveletTT0_exact.pixel_index
+    waveTT1 = waveletTT0.wave_value
+    waveTT1_exact = waveletTT0_exact.wave_value
+    print(waveletTT.wavelet_waveform.n_set)
+    print(waveletTT_exact.wavelet_waveform.n_set)
+    print(np.sum(TlistT2[0] != -1), np.sum(TlistT != -1), np.sum(TlistT_exact != -1), np.sum(TlistT2_exact[0] != -1))
+    print(waveTT_exact.shape, waveTT2_exact.shape, waveTT.shape, waveTT2.shape)
+    print(TlistT_exact.shape, TlistT2_exact.shape, TlistT.shape, TlistT2.shape)
+
+    assert_array_equal(TlistT_exact[0, :], TlistT2_exact[0, :])
+    assert_array_equal(TlistT[0, :], TlistT2[0, :])
+    assert_allclose(waveTT1_exact[0, :], waveTT2_exact[0, :], atol=1.e-11, rtol=1.e-9)
+    assert_allclose(waveTT1[0, :], waveTT2[0, :], atol=1.e-11, rtol=1.e-9)
+
     # Time domain sparse transform
     _TlistS, waveTS = wavelet_SparseT(params.intrinsic, wc)
 
@@ -113,7 +149,7 @@ def test_Chirp_wdm_match4(fdot_mult):
     print(waveTT.shape)
     print(waveTS.shape)
 
-    wave_got_time = transform_wavelet_time(hs_time, wc.Nf, wc.Nt)
+    wave_got_time = transform_wavelet_time(hs_time_c, wc.Nf, wc.Nt)
     fs_fft = np.arange(0, ts.size // 2 + 1) * 1 / (wc.Tobs)
     PPfs, AAfs = amp_phase_f(fs_fft, params.intrinsic)
     AAfs = AAfs / (2 * wc.dt)

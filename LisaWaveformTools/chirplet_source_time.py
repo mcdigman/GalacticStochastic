@@ -24,7 +24,7 @@ class LinearChirpletSourceWaveformTime(StationarySourceWaveformTime):
             msg = 'Intrinsic parameters must be of type LinearChirpletIntrinsicParams.'
             raise TypeError(msg)
 
-        chirplet_time_intrinsic(self._intrinsic_waveform, self.params.intrinsic, self.wavefront_time)
+        chirplet_time_intrinsic(self._intrinsic_waveform, self.params.intrinsic, self.wavefront_time, self._nt_lim_waveform)
         self._consistent_intrinsic = True
 
 
@@ -33,11 +33,11 @@ class LinearChirpletWaveletWaveformTime(BinaryWaveletTaylorTime):
     using the Taylor time method.
     """
 
-    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelTimeRange, *, wavelet_mode: int = 1) -> None:
+    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelTimeRange, *, wavelet_mode: int = 1, response_mode: int = 0) -> None:
         """Construct a binary wavelet object."""
         # get the intrinsic_waveform
         source_waveform = LinearChirpletSourceWaveformTime(
-            params, nt_lim_waveform, lc,
+            params, nt_lim_waveform, lc, response_mode=response_mode,
         )
 
         super().__init__(params, wc, lc, nt_lim_waveform, source_waveform, wavelet_mode=wavelet_mode)
