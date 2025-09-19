@@ -13,7 +13,7 @@ from GalacticStochastic.state_manager import StateManager
 from LisaWaveformTools.linear_frequency_source import LinearFrequencyIntrinsicParams, LinearFrequencyWaveletWaveformTime
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 if TYPE_CHECKING:
@@ -49,7 +49,7 @@ class BinaryInclusionState(StateManager):
         params_gb_in,
         noise_manager: NoiseModelManager,
         fit_state: IterativeFitState,
-        nt_lim_waveform:  PixelTimeRange,
+        nt_lim_waveform:  PixelGenericRange,
         snrs_tot_in=None,
     ) -> None:
         """Class that stores information about which component of the galactic signal binaries belong to."""
@@ -313,7 +313,7 @@ class BinaryInclusionState(StateManager):
     @override
     def print_report(self) -> None:
         """Do any printing desired after convergence has been achieved and the loop ends"""
-        Tobs_consider_yr = (self.noise_manager.nt_lim_snr.nt_max - self.noise_manager.nt_lim_snr.nt_min) * self.wc.DT / gc.SECSYEAR
+        Tobs_consider_yr = (self.noise_manager.nt_lim_snr.nx_max - self.noise_manager.nt_lim_snr.nx_min) * self.wc.DT / gc.SECSYEAR
         n_consider = self.n_bin_use
         n_faint = self.faints_old.sum()
         n_faint2 = self.faints_cur[self.itrn - 1].sum()

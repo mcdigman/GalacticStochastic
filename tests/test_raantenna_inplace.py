@@ -7,6 +7,7 @@ import pytest
 
 from LisaWaveformTools.ra_waveform_freq import rigid_adiabatic_antenna
 from tests.generate_raantenna_test_outputs import generate_test_inputs
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 KNOWN_HDF5_PATH = 'tests/known_raantenna_outputs.hdf5'
 
@@ -49,10 +50,11 @@ def test_raantenna_inplace_parametrized(seed):
     spacecraft_channels, params_extrinsic, ts, FFs, nf_low, NTs, kdotx, lc = generate_test_inputs(seed)
     ref_RR, ref_II, ref_kdotx = _outputs_dict[seed]
     kdotx_test = kdotx.copy()
+    nf_lim = PixelGenericRange(nf_low, nf_low + NTs, ts[1] - ts[0], lc.t0)
     rigid_adiabatic_antenna(
         spacecraft_channels,
         params_extrinsic,
-        ts, FFs, nf_low, NTs, kdotx_test, lc)
+        ts, FFs, nf_lim, kdotx_test, lc)
     np.testing.assert_allclose(spacecraft_channels.RR, ref_RR, rtol=1e-14, atol=1e-14)
     np.testing.assert_allclose(spacecraft_channels.II, ref_II, rtol=1e-14, atol=1e-14)
     np.testing.assert_allclose(kdotx_test, ref_kdotx, rtol=1e-14, atol=1e-14)

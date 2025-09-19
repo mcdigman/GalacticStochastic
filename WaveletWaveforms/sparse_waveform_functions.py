@@ -50,6 +50,12 @@ PixelFreqRange.__doc__ = """
 namedtuple object to contain range of frequency pixels for analysis.
 """
 
+PixelGenericRange = namedtuple('PixelGenericRange', ['nx_min', 'nx_max', 'dx', 'x_min'])
+
+PixelGenericRange.__doc__ = """
+namedtuple object to contain range of pixels for analysis.
+"""
+
 
 def sparse_addition_helper(sparse_waveform: SparseWaveletWaveform, dense_representation: NDArray[np.float64]) -> None:
     """Take a sparse wavelet representation from SparseWaveletWaveform

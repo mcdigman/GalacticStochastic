@@ -7,7 +7,7 @@ import numpy as np
 from numba import njit
 
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, SparseWaveletWaveform
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, SparseWaveletWaveform
 from WaveletWaveforms.taylor_time_coefficients import WaveletTaylorTimeCoeffs, get_taylor_time_pixel_direct
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
@@ -16,7 +16,7 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 def wavemaket(
     wavelet_waveform: SparseWaveletWaveform,
     waveform: StationaryWaveformTime,
-    nt_lim_waveform: PixelTimeRange,
+    nt_lim_waveform: PixelGenericRange,
     wc: WDMWaveletConstants,
     taylor_table: WaveletTaylorTimeCoeffs,
     *,
@@ -37,7 +37,7 @@ def wavemaket(
         Modified in place.
     waveform : StationaryWaveformTime
         The input time-domain intrinsic_waveform data with amplitude and phase arrays for each pixel.
-    nt_lim_waveform : PixelTimeRange
+    nt_lim_waveform : PixelGenericRange
         Limits and properties of the time pixel range to be processed.
     wc : WDMWaveletConstants
         Configuration parameters for the wavelet decomposition, including:
@@ -81,7 +81,7 @@ def wavemaket(
         mm = 0
         nf_min = 0
         nf_max = wc.Nf - 1
-        for j in range(nt_lim_waveform.nt_min, nt_lim_waveform.nt_max):
+        for j in range(nt_lim_waveform.nx_min, nt_lim_waveform.nx_max):
             # keep j_ind separate in case we want to apply a time offset in the future
             j_ind = j
 
@@ -200,7 +200,7 @@ def wavemaket(
 def wavemaket_direct(
     wavelet_waveform: SparseWaveletWaveform,
     waveform: StationaryWaveformTime,
-    nt_lim_waveform: PixelTimeRange,
+    nt_lim_waveform: PixelGenericRange,
     wc: WDMWaveletConstants,
     taylor_table: WaveletTaylorTimeCoeffs,
 ) -> None:
@@ -221,7 +221,7 @@ def wavemaket_direct(
         Modified in place.
     waveform : StationaryWaveformTime
         The input time-domain intrinsic_waveform data with amplitude and phase arrays for each pixel.
-    nt_lim_waveform : PixelTimeRange
+    nt_lim_waveform : PixelGenericRange
         Limits and properties of the time pixel range to be processed.
     wc : WDMWaveletConstants
         Configuration parameters for the wavelet decomposition, including:
@@ -261,7 +261,7 @@ def wavemaket_direct(
         nf_min = 0
         nf_max = wc.Nf - 1
 
-        for j in range(nt_lim_waveform.nt_min, nt_lim_waveform.nt_max):
+        for j in range(nt_lim_waveform.nx_min, nt_lim_waveform.nx_max):
             j_ind = j  # keep j_ind separate in case we want to apply a time offset in the future
 
             c = waveform.AT[itrc, j] * np.cos(waveform.PT[itrc, j])

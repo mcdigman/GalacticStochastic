@@ -12,7 +12,7 @@ from GalacticStochastic.state_manager import StateManager
 from GalacticStochastic.testing_tools import unit_normal_battery
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.noise_model import DiagonalNonstationaryDenseNoiseModel
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
@@ -28,7 +28,7 @@ class NoiseModelManager(StateManager):
         bgd: BGDecomposition,
         S_inst_m: NDArray[np.float64],
         stat_only,
-        nt_lim_snr: PixelTimeRange,
+        nt_lim_snr: PixelGenericRange,
     ) -> None:
         """Create the noise model manager"""
         self.ic = ic
@@ -99,11 +99,11 @@ class NoiseModelManager(StateManager):
         ), dtype=np.bool_)
         galactic_below_high = self.bgd.get_galactic_below_high()
         noise_divide = np.sqrt(
-            self.noise_upper.S[self.nt_lim_snr.nt_min:self.nt_lim_snr.nt_max, res_mask, :2] - self.S_inst_m[res_mask, :2],
+            self.noise_upper.S[self.nt_lim_snr.nx_min:self.nt_lim_snr.nx_max, res_mask, :2] - self.S_inst_m[res_mask, :2],
         )
         points_res = (
             galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy)[
-                self.nt_lim_snr.nt_min:self.nt_lim_snr.nt_max, res_mask, :2,
+                self.nt_lim_snr.nx_min:self.nt_lim_snr.nx_max, res_mask, :2,
             ]
             / noise_divide
         )

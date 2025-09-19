@@ -6,6 +6,7 @@ import tomllib
 
 from LisaWaveformTools.lisa_config import get_lisa_constants
 from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels, ExtrinsicParams, rigid_adiabatic_antenna
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 # If you need a toml config, import get_lisa_constants, Path, tomllib, etc., and update generate_test_inputs accordingly.
 
@@ -63,10 +64,11 @@ def main(seeds, output_path):
             # Generate inputs and run
             spacecraft_channels, params_extrinsic, ts, FFs, nf_low, NTs, kdotx, lc = generate_test_inputs(seed)
             kdotx_mut = kdotx.copy()  # Don't overwrite for future runs
+            nf_lim = PixelGenericRange(nf_low, nf_low + NTs, ts[1] - ts[0], lc.t0)
             rigid_adiabatic_antenna(
                 spacecraft_channels,
                 params_extrinsic,
-                ts, FFs, nf_low, NTs, kdotx_mut, lc,
+                ts, FFs, nf_lim, kdotx_mut, lc,
             )
             # Prepare group
             realization = realizations.create_group(str(seed))

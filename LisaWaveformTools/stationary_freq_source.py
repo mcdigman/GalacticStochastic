@@ -8,13 +8,13 @@ from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_freq import get_freq_tdi_amp_phase, rigid_adiabatic_antenna
 from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, EdgeRiseModel
 from LisaWaveformTools.stationary_source_waveform import SourceParams, StationarySourceWaveform, StationaryWaveformFreq
-from WaveletWaveforms.sparse_waveform_functions import PixelFreqRange
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFreq]):
     """class to store a binary waveform in frequency domain and update for search"""
-    def __init__(self, params: SourceParams, lc: LISAConstants, wc: WDMWaveletConstants, NF_min, NF_max, freeze_limits, n_pad_F=10):
+    def __init__(self, params: SourceParams, lc: LISAConstants, wc: WDMWaveletConstants, NF_min, NF_max, freeze_limits, n_pad_F=10) -> None:
         """Construct a binary wavelet object"""
         self._lc: LISAConstants = lc
         # TODO eliminate wc as argument
@@ -84,7 +84,6 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
         del AET_TFps
 
         self.TTRef = 0.
-        self.delta_tm = 0.
         # moved this line from end
         self.Tend = np.inf
 
@@ -95,7 +94,7 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
 
         self.freeze_limits = freeze_limits
 
-    def _update_bounds(self):
+    def _update_bounds(self) -> None:
         """Update the boundaries to calculate extrinsic parameters at"""
         # TODO something is malfunctioning here, trap the case where itrFCutOld would segfault?
         # TODO should handle nonmonotonic time from searchsorted
@@ -154,20 +153,20 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
             self._spacecraft_channels.dII[:, nf_low_old:self.nf_low] = 0.
 
     @override
-    def _update_extrinsic(self):
+    def _update_extrinsic(self) -> None:
         """
         Update waveform to match the extrinsic parameters of spacecraft response
         if abbreviated, don't get AET_TFs or AET_TFps, and don't track modulus of AET_PPFs
         """
         F_min = self._wc.DF * (self.nf_offset - self.nf_low)
+        nf_lim = PixelGenericRange(self.nf_low, self.nf_low + self.nf_range, self._wc.DF, F_min)
+        rigid_adiabatic_antenna(self._spacecraft_channels, self.params.extrinsic, self.intrinsic_waveform.TF, self.FFs, nf_lim, self.kdotx, self._lc)
 
-        rigid_adiabatic_antenna(self._spacecraft_channels, self.params.extrinsic, self.intrinsic_waveform.TF, self.FFs, self.nf_low, self.nf_range, self.kdotx, self._lc)
-        nf_lim = PixelFreqRange(self.nf_low, self.nf_low + self.nf_range, self._wc.DF)
-        get_freq_tdi_amp_phase(self._tdi_waveform, self.intrinsic_waveform, self._spacecraft_channels, self._lc, nf_lim, F_min, self.kdotx, self._er)
+        get_freq_tdi_amp_phase(self._tdi_waveform, self.intrinsic_waveform, self._spacecraft_channels, self._lc, nf_lim, self.kdotx, self._er)
         self._consistent_extrinsic = True
 
     @override
-    def update_params(self, params: SourceParams):
+    def update_params(self, params: SourceParams) -> None:
         """Recompute the waveform with updated parameters,
             if abbreviated skip getting AET_TFs and AET_TFps
         """

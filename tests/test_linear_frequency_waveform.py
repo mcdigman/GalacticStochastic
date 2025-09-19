@@ -10,7 +10,7 @@ from LisaWaveformTools.linear_frequency_source import LinearFrequencyIntrinsicPa
 from LisaWaveformTools.linear_frequency_source_freq import LinearFrequencySourceWaveformFreq
 from LisaWaveformTools.lisa_config import get_lisa_constants
 from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
 
@@ -24,7 +24,7 @@ def test_intrinsic_waveform_agreement():
     wc = get_wavelet_model(config)
     lc = get_lisa_constants(config)
 
-    nt_lim_waveform = PixelTimeRange(0, wc.Nt, wc.DT)
+    nt_lim_waveform = PixelGenericRange(0, wc.Nt, wc.DT, 0.)
 
 # Setup the intrinsic parameters for the binary source
     intrinsic = LinearFrequencyIntrinsicParams(
@@ -110,7 +110,7 @@ def test_intrinsic_update_consistent1_time():
     wc = get_wavelet_model(config)
     lc = get_lisa_constants(config)
 
-    nt_lim_waveform = PixelTimeRange(0, wc.Nt, wc.DT)
+    nt_lim_waveform = PixelGenericRange(0, wc.Nt, wc.DT, 0.)
 
     # Setup the intrinsic parameters for the binary source
     intrinsic1 = LinearFrequencyIntrinsicParams(

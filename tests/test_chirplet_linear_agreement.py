@@ -13,7 +13,7 @@ from LisaWaveformTools.linear_frequency_source_freq import LinearFrequencySource
 from LisaWaveformTools.lisa_config import get_lisa_constants
 from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams
 from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
 
@@ -27,7 +27,7 @@ def test_cross_waveform_agreement_time():
     wc = get_wavelet_model(config)
     lc = get_lisa_constants(config)
 
-    nt_lim_waveform = PixelTimeRange(0, wc.Nt, wc.DT)
+    nt_lim_waveform = PixelGenericRange(0, wc.Nt, wc.DT, 0.)
 
     fdot_mult = 0.1
     fdot = 3.105 * fdot_mult * wc.DF / wc.Tw  # used an irrational fraction to ensure the fdot lands between samples
@@ -106,7 +106,7 @@ def test_cross_waveform_agreement_time2():
     wc = get_wavelet_model(config)
     lc = get_lisa_constants(config)
 
-    nt_lim_waveform = PixelTimeRange(0, wc.Nt, wc.DT)
+    nt_lim_waveform = PixelGenericRange(0, wc.Nt, wc.DT, 0.)
 
     fdot_mult = 0.1
     fdot = 3.105 * fdot_mult * wc.DF / wc.Tw  # used an irrational fraction to ensure the fdot lands between samples

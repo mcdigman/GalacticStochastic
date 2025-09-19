@@ -20,7 +20,7 @@ from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
 from LisaWaveformTools.spacecraft_objects import EdgeRiseModel
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
 from tests.test_time_tdi_ampphase import get_RR_t_mult, get_waveform_helper
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, sparse_addition_helper
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, sparse_addition_helper
 from WaveletWaveforms.taylor_time_coefficients import (
     get_empty_sparse_taylor_time_waveform,
     get_taylor_table_time,
@@ -51,6 +51,7 @@ def get_aet_waveform_helper(lc, rr_model, p_input, f_input, fp_input, fpp_input,
     )
     T = waveform.T
     er = EdgeRiseModel(-np.inf, np.inf)
+    nt_lim = PixelGenericRange(0, nt_loc, dt_loc, lc.t0)
 
     RR_t_mult, II_t_mult = get_RR_t_mult(rr_model, nt_loc, 1, dt_loc)
     RR = np.outer(RR_scale_mult, RR_t_mult)
@@ -58,7 +59,7 @@ def get_aet_waveform_helper(lc, rr_model, p_input, f_input, fp_input, fpp_input,
     dRR = np.zeros((nc_waveform, nt_loc))
     dII = np.zeros((nc_waveform, nt_loc))
     spacecraft_channels = AntennaResponseChannels(T, RR, II, dRR, dII)
-    get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, er, dt_loc)
+    get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, er, nt_lim)
 
     # tukey window the amplitudes to cut down on edge artifacts
     tukey_waveform_amp(AET_waveform, tukey_alpha, arg_cut)
@@ -209,7 +210,7 @@ def multishape_method_match_helper(p_offset, f0_mult, f0p_mult, f0pp_mult, rr_mo
 
     wavelet_waveform2 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc)
 
-    nt_lim = PixelTimeRange(0, wc.Nt, wc.DT)
+    nt_lim = PixelGenericRange(0, wc.Nt, wc.DT, lc.t0)
 
     # call wavemaket
     wavemaket(wavelet_waveform1, AET_waveform, nt_lim, wc, taylor_time_table, force_nulls=False)
@@ -371,7 +372,7 @@ def test_wavemaket_extreme_size(p_offset, f0_mult, direct):
 
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(nc_waveform, wc)
 
-    nt_lim = PixelTimeRange(0, wc.Nt, wc.DT)
+    nt_lim = PixelGenericRange(0, wc.Nt, wc.DT, 0.)
 
     if direct:
         wavemaket_direct(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table)
@@ -498,8 +499,8 @@ def test_wavemaket_dimension_comparison_midevolve2(p_offset, f0_mult, f0p_mult, 
     wavelet_waveform1 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc1)
     wavelet_waveform2 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc2)
 
-    nt_lim1 = PixelTimeRange(0, wc1.Nt, wc1.DT)
-    nt_lim2 = PixelTimeRange(0, wc2.Nt, wc2.DT)
+    nt_lim1 = PixelGenericRange(0, wc1.Nt, wc1.DT, lc1.t0)
+    nt_lim2 = PixelGenericRange(0, wc2.Nt, wc2.DT, lc2.t0)
     # call wavemaket
     if direct:
         wavemaket_direct(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1)
@@ -623,8 +624,8 @@ def test_wavemaket_dimension_comparison_slowevolve(p_offset, f0_mult, f0p_mult, 
     wavelet_waveform1 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc1)
     wavelet_waveform2 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc2)
 
-    nt_lim1 = PixelTimeRange(0, wc1.Nt, wc1.DT)
-    nt_lim2 = PixelTimeRange(0, wc2.Nt, wc2.DT)
+    nt_lim1 = PixelGenericRange(0, wc1.Nt, wc1.DT, 0.)
+    nt_lim2 = PixelGenericRange(0, wc2.Nt, wc2.DT, 0.)
 
     # call wavemaket
     if direct:
@@ -770,8 +771,8 @@ def test_wavemaket_dimension_comparison_midevolve(p_offset, f0_mult, f0p_mult, f
     wavelet_waveform1 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc1)
     wavelet_waveform2 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc2)
 
-    nt_lim1 = PixelTimeRange(0, wc1.Nt, wc1.DT)
-    nt_lim2 = PixelTimeRange(0, wc2.Nt, wc2.DT)
+    nt_lim1 = PixelGenericRange(0, wc1.Nt, wc1.DT, lc1.t0)
+    nt_lim2 = PixelGenericRange(0, wc2.Nt, wc2.DT, lc2.t0)
 
     # call wavemaket
     if direct:
@@ -889,7 +890,7 @@ def test_wavemaket_1d(f0_mult, f0p_mult, f0pp_mult, rr_model):
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(nc_waveform, wc1)
 
     # call wavemaket
-    nt_lim1 = PixelTimeRange(0, wc1.Nt, wc1.DT)
+    nt_lim1 = PixelGenericRange(0, wc1.Nt, wc1.DT, 0.)
     wavemaket(wavelet_waveform, AET_waveform, nt_lim1, wc1, taylor_time_table1, force_nulls=False)
     print(wavelet_waveform.n_set)
     wavelet_dense, signal_time, signal_freq, mag_got, angle_got, _, _, _, _, itr_low_cut, itr_high_cut = get_wavelet_alternative_representation_helper(wavelet_waveform, wc1, tukey_alpha, f_lowpass, 1.e-3)

@@ -19,7 +19,7 @@ from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels
 from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
 from LisaWaveformTools.spacecraft_objects import EdgeRiseModel
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, sparse_addition_helper
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, sparse_addition_helper
 from WaveletWaveforms.taylor_time_coefficients import (
     get_empty_sparse_taylor_time_waveform,
     get_taylor_table_time,
@@ -246,9 +246,10 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult, rr_model, f0p_mult):
     ddRR = np.zeros((nc_waveform, nt_loc))
     ddII = np.zeros((nc_waveform, nt_loc))
     spacecraft_channels = AntennaResponseChannels(T, RR.copy(), II.copy(), dRR, dII)
+    nt_lim = PixelGenericRange(0, nt_loc, wc.DT, lc.t0)
 
     # Call the function
-    get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, er, wc.DT)
+    get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, er, nt_lim)
 
     # Check that input wavefrom objects have not mutated
     assert np.all(spacecraft_channels.RR == RR)
@@ -562,9 +563,10 @@ def test_time_tdi_inplace_nearzero(f0_mult, rr_model, f0p_mult):
     ddRR = np.zeros((nc_waveform, nt_loc))
     ddII = np.zeros((nc_waveform, nt_loc))
     spacecraft_channels = AntennaResponseChannels(T, RR.copy(), II.copy(), dRR, dII)
+    nt_lim = PixelGenericRange(0, nt_loc, wc.DT, lc.t0)
 
     # Call the function
-    get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, er, wc.DT)
+    get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, er, nt_lim)
 
     # Check that input wavefrom objects have not mutated
     assert np.all(spacecraft_channels.RR == RR)
@@ -754,14 +756,16 @@ def test_time_tdi_inplace_transform(f0_mult, rr_model, f0p_mult):
     dII_fine = np.zeros((nc_waveform, nt_loc * wc.Nf))
     spacecraft_channels = AntennaResponseChannels(T, RR, II, dRR, dII)
     spacecraft_channels_fine = AntennaResponseChannels(T_fine, RR_fine, II_fine, dRR_fine, dII_fine)
+    nt_lim = PixelGenericRange(0, nt_loc, wc.DT, lc.t0)
+    nt_lim_fine = PixelGenericRange(0, nt_loc * wc.Nf, wc.dt, lc.t0)
 
     # Call the function
-    get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, er, wc.DT)
-    get_time_tdi_amp_phase(spacecraft_channels_fine, AET_waveform_fine, waveform_fine, lc, er, wc.dt)
+    get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, er, nt_lim)
+    get_time_tdi_amp_phase(spacecraft_channels_fine, AET_waveform_fine, waveform_fine, lc, er, nt_lim_fine)
 
     # get the sparse wavelet intrinsic_waveform
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(lc.nc_waveform, wc)
-    nt_lim = PixelTimeRange(0, wc.Nt, wc.DT)
+    nt_lim = PixelGenericRange(0, wc.Nt, wc.DT, lc.t0)
     wavemaket(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table, force_nulls=False)
 
     # get the dense wavelet intrinsic_waveform

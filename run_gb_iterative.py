@@ -10,7 +10,7 @@ from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
 from GalacticStochastic.iterative_fit_manager import IterativeFitManager
 from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
 from GalacticStochastic.noise_manager import NoiseModelManager
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 if __name__ == '__main__':
     a = np.array([])
@@ -28,8 +28,8 @@ if __name__ == '__main__':
         stat_only = False
         nt_min = 256 * (7 - itrm)
         nt_max = nt_min + 512 * (itrm + 1)
-        nt_lim_snr = PixelTimeRange(nt_min, nt_max, wc.DT)
-        nt_lim_waveform = PixelTimeRange(0, wc.Nt, wc.DT)
+        nt_lim_snr = PixelGenericRange(nt_min, nt_max, wc.DT, 0.)
+        nt_lim_waveform = PixelGenericRange(0, wc.Nt, wc.DT, 0.)
 
         print(nt_lim_snr.nt_min, nt_lim_snr.nt_max, nt_lim_waveform.nt_min, nt_lim_waveform.nt_max, wc.Nt, wc.Nf, stat_only)
 

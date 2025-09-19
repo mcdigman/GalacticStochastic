@@ -12,7 +12,7 @@ from LisaWaveformTools.chirplet_source_time import LinearChirpletSourceWaveformT
 from LisaWaveformTools.lisa_config import get_lisa_constants
 from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams, StationaryWaveformTime
 from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams, amp_phase_f, amp_phase_t, chirplet_time_intrinsic
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.sparse_wavelet_time import wavelet_SparseT, wavelet_TaylorT
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
@@ -28,8 +28,8 @@ def test_Chirp_wdm_match4(fdot_mult):
     wc = get_wavelet_model(config_in)
     lc = get_lisa_constants(config_in)
 
-    nt_lim_waveform = PixelTimeRange(0, wc.Nt, wc.DT)
-    nt_lim_waveform_long = PixelTimeRange(0, wc.Nt * wc.Nf, wc.dt)
+    nt_lim_waveform = PixelGenericRange(0, wc.Nt, wc.DT, 0.)
+    nt_lim_waveform_long = PixelGenericRange(0, wc.Nt * wc.Nf, wc.dt, 0.)
 
     # Want gamma*tau large so that the SPA is accurate
     # Pick fdot so that both the Taylor expanded time and frequency domain transforms are valid

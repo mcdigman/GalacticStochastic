@@ -9,7 +9,7 @@ import numpy as np
 from numba import njit
 from numpy.typing import NDArray
 
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, SparseWaveletWaveform
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, SparseWaveletWaveform
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 # from numba.experimental import jitclass
@@ -28,7 +28,7 @@ class DenseNoiseModel(ABC):
         """Generate random noise for full matrix"""
 
     @abstractmethod
-    def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_lim_snr: PixelTimeRange) -> NDArray[np.float64]:
+    def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_lim_snr: PixelGenericRange) -> NDArray[np.float64]:
         """Get S/N of intrinsic_waveform in each TDI channel"""
 
     @abstractmethod
@@ -63,7 +63,7 @@ class DenseNoiseModel(ABC):
 @njit()
 def get_sparse_snr_helper(
     wavelet_waveform: SparseWaveletWaveform,
-    nt_lim_snr: PixelTimeRange,
+    nt_lim_snr: PixelGenericRange,
     wc: WDMWaveletConstants,
     inv_chol_S: NDArray[np.float64],
     nc_snr,
@@ -74,7 +74,7 @@ def get_sparse_snr_helper(
     ----------
     wavelet_waveform: SparseWaveletWaveform
         a sparse wavelet domain intrinsic_waveform
-    nt_lim_snr: PixelTimeRange
+    nt_lim_snr: PixelGenericRange
         the range of time pixels to allow
     wc : namedtuple
         constants for WDM wavelet basis also from wdm_config.py
@@ -90,7 +90,7 @@ def get_sparse_snr_helper(
         i_itrs = np.mod(wavelet_waveform.pixel_index[itrc, : wavelet_waveform.n_set[itrc]], wc.Nf).astype(np.int64)
         j_itrs = (wavelet_waveform.pixel_index[itrc, : wavelet_waveform.n_set[itrc]] - i_itrs) // wc.Nf
         for mm in range(wavelet_waveform.n_set[itrc]):
-            if nt_lim_snr.nt_min <= j_itrs[mm] < nt_lim_snr.nt_max:
+            if nt_lim_snr.nx_min <= j_itrs[mm] < nt_lim_snr.nx_max:
                 mult = inv_chol_S[j_itrs[mm], i_itrs[mm], itrc] * wavelet_waveform.wave_value[itrc, mm]
                 snr2s[itrc] += mult * mult
     return np.sqrt(snr2s)
@@ -195,7 +195,7 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
         return noise_res
 
     @override
-    def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_lim_snr: PixelTimeRange) -> NDArray[np.float64]:
+    def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_lim_snr: PixelGenericRange) -> NDArray[np.float64]:
         """Get snr of intrinsic_waveform in each channel"""
         return get_sparse_snr_helper(wavelet_waveform, nt_lim_snr, self.wc, self.inv_chol_S, self.nc_snr)
 
@@ -345,7 +345,7 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
         return noise_res
 
     @override
-    def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_lim_snr: PixelTimeRange) -> NDArray[np.float64]:
+    def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_lim_snr: PixelGenericRange) -> NDArray[np.float64]:
         """Get s/n of intrinsic_waveform in each TDI channel. Parameters usually come from
         LinearFrequencyWaveletWaveformTime.get_unsorted_coeffs() from
         wavelet_detector_waveforms.
@@ -354,7 +354,7 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
         ----------
         wavelet_waveform: SparseWaveletWaveform
             a sparse wavelet domain intrinsic_waveform
-        nt_lim_snr: PixelTimeRange
+        nt_lim_snr: PixelGenericRange
             the range of time pixels to consider for snr calculations
 
         Returns

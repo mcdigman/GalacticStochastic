@@ -6,7 +6,7 @@ from warnings import warn
 
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.stationary_source_waveform import SourceParams, StationarySourceWaveform
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, SparseWaveletWaveform
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, SparseWaveletWaveform
 from WaveletWaveforms.taylor_time_coefficients import (
     WaveletTaylorTimeCoeffs,
     get_empty_sparse_taylor_time_waveform,
@@ -18,7 +18,7 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 class SparseWaveletSourceWaveform(ABC):
     """Abstract base class for sparse wavelet waveforms."""
-    def __init__(self, params: SourceParams, wavelet_waveform: SparseWaveletWaveform, source_waveform: StationarySourceWaveform):
+    def __init__(self, params: SourceParams, wavelet_waveform: SparseWaveletWaveform, source_waveform: StationarySourceWaveform) -> None:
         """Initialize the sparse wavelet intrinsic_waveform."""
         self._consistent: bool = False
         self._params: SourceParams = params
@@ -121,11 +121,11 @@ class SparseWaveletSourceWaveform(ABC):
 class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform):
     """Store a sparse binary wavelet for a time domain taylor intrinsic_waveform."""
 
-    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelTimeRange, source_waveform: StationarySourceWaveform, *, wavelet_mode: int = 1) -> None:
+    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, source_waveform: StationarySourceWaveform, *, wavelet_mode: int = 1) -> None:
         """Construct a sparse binary wavelet for a time domain taylor intrinsic_waveform with interpolation."""
         self._wc: WDMWaveletConstants = wc
         self._lc: LISAConstants = lc
-        self._nt_lim_waveform: PixelTimeRange = nt_lim_waveform
+        self._nt_lim_waveform: PixelGenericRange = nt_lim_waveform
         self._wavelet_mode: int = wavelet_mode
 
         # store the intrinsic_waveform

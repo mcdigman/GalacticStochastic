@@ -6,10 +6,31 @@ from numpy.typing import NDArray
 
 from LisaWaveformTools.algebra_tools import stabilized_gradient_uniform_inplace
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.ra_waveform_time import amp_phase_loop_helper, apply_edge_rise_helper, spacecraft_channel_deriv_helper
-from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, ComplexTransferFunction, DetectorAmplitudePhaseCombinations, DetectorPolarizationResponse, EdgeRiseModel, SpacecraftOrbits, SpacecraftRelativePhases, SpacecraftScalarPosition, SpacecraftSeparationVectors, SpacecraftSeparationWaveProjection, TDIComplexAntennaPattern, TensorBasis
-from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, StationaryWaveformFreq, StationaryWaveformGeneric
-from WaveletWaveforms.sparse_waveform_functions import PixelFreqRange
+from LisaWaveformTools.ra_waveform_time import (
+    amp_phase_loop_helper,
+    apply_edge_rise_helper,
+    spacecraft_channel_deriv_helper,
+)
+from LisaWaveformTools.spacecraft_objects import (
+    AntennaResponseChannels,
+    ComplexTransferFunction,
+    DetectorAmplitudePhaseCombinations,
+    DetectorPolarizationResponse,
+    EdgeRiseModel,
+    SpacecraftOrbits,
+    SpacecraftRelativePhases,
+    SpacecraftScalarPosition,
+    SpacecraftSeparationVectors,
+    SpacecraftSeparationWaveProjection,
+    TDIComplexAntennaPattern,
+    TensorBasis,
+)
+from LisaWaveformTools.stationary_source_waveform import (
+    ExtrinsicParams,
+    StationaryWaveformFreq,
+    StationaryWaveformGeneric,
+)
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 
 @njit()
@@ -228,7 +249,12 @@ def get_aet_combinations(tdi_xyz: TDIComplexAntennaPattern, tdi_aet: TDIComplexA
 
 
 @njit()
-def get_michelson_combinations(polarization_response: DetectorPolarizationResponse, transfer_function: ComplexTransferFunction, A_psi: DetectorAmplitudePhaseCombinations, tdi_xyz: TDIComplexAntennaPattern) -> None:
+def get_michelson_combinations(
+    polarization_response: DetectorPolarizationResponse,
+    transfer_function: ComplexTransferFunction,
+    A_psi: DetectorAmplitudePhaseCombinations,
+    tdi_xyz: TDIComplexAntennaPattern,
+) -> None:
     """Construct the standard Michelson Time-Delay Interferometry (TDI) X, Y, and Z channel response combinations.
 
     This function computes the frequency-domain antenna pattern for each Michelson interferometer channel (X, Y, Z),
@@ -275,36 +301,48 @@ def get_michelson_combinations(polarization_response: DetectorPolarizationRespon
     for i in range(nc_michelson):
         tdi_xyz.FpR[i] = (
             -(
-                    +(d_plus[i, (i + 1) % n_arm] * cos_psi + d_cross[i, (i + 1) % n_arm] * sin_psi) * TR[i, (i + 1) % n_arm]
-                    - (d_plus[i, (i + 2) % n_arm] * cos_psi + d_cross[i, (i + 2) % n_arm] * sin_psi) * TR[i, (i + 2) % n_arm]
-            ) *
-            A_plus / 2
+                +(d_plus[i, (i + 1) % n_arm] * cos_psi + d_cross[i, (i + 1) % n_arm] * sin_psi) * TR[i, (i + 1) % n_arm]
+                - (d_plus[i, (i + 2) % n_arm] * cos_psi + d_cross[i, (i + 2) % n_arm] * sin_psi)
+                * TR[i, (i + 2) % n_arm]
+            )
+            * A_plus
+            / 2
         )
         tdi_xyz.FcR[i] = (
             -(
-                    +(-d_plus[i, (i + 1) % n_arm] * sin_psi + d_cross[i, (i + 1) % n_arm] * cos_psi) * TR[i, (i + 1) % n_arm]
-                    - (-d_plus[i, (i + 2) % n_arm] * sin_psi + d_cross[i, (i + 2) % n_arm] * cos_psi) * TR[i, (i + 2) % n_arm]
-            ) *
-            A_cross / 2
+                +(-d_plus[i, (i + 1) % n_arm] * sin_psi + d_cross[i, (i + 1) % n_arm] * cos_psi)
+                * TR[i, (i + 1) % n_arm]
+                - (-d_plus[i, (i + 2) % n_arm] * sin_psi + d_cross[i, (i + 2) % n_arm] * cos_psi)
+                * TR[i, (i + 2) % n_arm]
+            )
+            * A_cross
+            / 2
         )
         tdi_xyz.FpI[i] = (
             -(
-                    +(d_plus[i, (i + 1) % n_arm] * cos_psi + d_cross[i, (i + 1) % n_arm] * sin_psi) * TI[i, (i + 1) % n_arm]
-                    - (d_plus[i, (i + 2) % n_arm] * cos_psi + d_cross[i, (i + 2) % n_arm] * sin_psi) * TI[i, (i + 2) % n_arm]
-            ) *
-            A_plus / 2
+                +(d_plus[i, (i + 1) % n_arm] * cos_psi + d_cross[i, (i + 1) % n_arm] * sin_psi) * TI[i, (i + 1) % n_arm]
+                - (d_plus[i, (i + 2) % n_arm] * cos_psi + d_cross[i, (i + 2) % n_arm] * sin_psi)
+                * TI[i, (i + 2) % n_arm]
+            )
+            * A_plus
+            / 2
         )
         tdi_xyz.FcI[i] = (
             -(
-                    +(-d_plus[i, (i + 1) % n_arm] * sin_psi + d_cross[i, (i + 1) % n_arm] * cos_psi) * TI[i, (i + 1) % n_arm]
-                    - (-d_plus[i, (i + 2) % n_arm] * sin_psi + d_cross[i, (i + 2) % n_arm] * cos_psi) * TI[i, (i + 2) % n_arm]
-            ) *
-            A_cross / 2
+                +(-d_plus[i, (i + 1) % n_arm] * sin_psi + d_cross[i, (i + 1) % n_arm] * cos_psi)
+                * TI[i, (i + 1) % n_arm]
+                - (-d_plus[i, (i + 2) % n_arm] * sin_psi + d_cross[i, (i + 2) % n_arm] * cos_psi)
+                * TI[i, (i + 2) % n_arm]
+            )
+            * A_cross
+            / 2
         )
 
 
 @njit()
-def get_projected_detector_response(tb: TensorBasis, sc_sep: SpacecraftSeparationVectors, polarization_response: DetectorPolarizationResponse) -> None:
+def get_projected_detector_response(
+    tb: TensorBasis, sc_sep: SpacecraftSeparationVectors, polarization_response: DetectorPolarizationResponse,
+) -> None:
     """Compute the projected detector response of the LISA constellation to a gravitational wave.
 
     This function evaluates the response of the detector arms to an incoming gravitational wave,
@@ -367,7 +405,9 @@ def get_projected_detector_response(tb: TensorBasis, sc_sep: SpacecraftSeparatio
 
 
 @njit()
-def get_separation_wave_projection(tb: TensorBasis, sc_sep: SpacecraftSeparationVectors, sc_wave_proj: SpacecraftSeparationWaveProjection) -> None:
+def get_separation_wave_projection(
+    tb: TensorBasis, sc_sep: SpacecraftSeparationVectors, sc_wave_proj: SpacecraftSeparationWaveProjection,
+) -> None:
     """Project the gravitational-wave propagation vector onto the separation vectors.
 
     This function calculates:
@@ -423,8 +463,9 @@ def get_separation_wave_projection(tb: TensorBasis, sc_sep: SpacecraftSeparation
 
 
 @njit()
-def get_transfer_function(fr: float, sc_wave_proj: SpacecraftSeparationWaveProjection,
-                          transfer_function: ComplexTransferFunction) -> None:
+def get_transfer_function(
+    fr: float, sc_wave_proj: SpacecraftSeparationWaveProjection, transfer_function: ComplexTransferFunction,
+) -> None:
     """Compute the complex transfer function (real and imaginary parts) for the LISA TDI channels.
 
     This function calculates the frequency response of the LISA constellation arms to a passing
@@ -478,7 +519,9 @@ def get_transfer_function(fr: float, sc_wave_proj: SpacecraftSeparationWaveProje
 
 
 @njit()
-def compute_separation_vectors(lc: LISAConstants, tb: TensorBasis, sc_pos: SpacecraftScalarPosition, sc_sep: SpacecraftSeparationVectors) -> float:
+def compute_separation_vectors(
+    lc: LISAConstants, tb: TensorBasis, sc_pos: SpacecraftScalarPosition, sc_sep: SpacecraftSeparationVectors,
+) -> float:
     """Compute the separation vectors between LISA spacecraft and between each spacecraft and the guiding center.
 
     Return the dot product of the gravitational-wave propagation direction with the guiding center position.
@@ -553,7 +596,9 @@ def compute_separation_vectors(lc: LISAConstants, tb: TensorBasis, sc_pos: Space
 
 
 @njit()
-def get_sc_scalar_pos(lc: LISAConstants, t: float, sc_phasing: SpacecraftRelativePhases, sc_pos: SpacecraftScalarPosition) -> None:
+def get_sc_scalar_pos(
+    lc: LISAConstants, t: float, sc_phasing: SpacecraftRelativePhases, sc_pos: SpacecraftScalarPosition,
+) -> None:
     """Compute the Cartesian positions of the LISA spacecraft at a given time.
 
     This function calculates the (x, y, z) positions for each spacecraft in units scaled by the LISA arm length,
@@ -598,11 +643,17 @@ def get_sc_scalar_pos(lc: LISAConstants, t: float, sc_phasing: SpacecraftRelativ
 
 @njit(fastmath=True)
 def rigid_adiabatic_antenna(
-    sc_channels: AntennaResponseChannels, params_extrinsic: ExtrinsicParams, ts, FFs, nf_low, NTs, kdotx, lc: LISAConstants,
+    sc_channels: AntennaResponseChannels,
+    params_extrinsic: ExtrinsicParams,
+    T: NDArray[np.floating],
+    F: NDArray[np.floating],
+    nx_lim: PixelGenericRange,
+    kdotx,
+    lc: LISAConstants,
 ) -> None:
     """Get the intrinsic_waveform for LISA given polarization angle, spacecraft, tensor basis and Fs, channel order AET."""
-    RRs = sc_channels.RR
-    IIs = sc_channels.II
+    RR = sc_channels.RR
+    II = sc_channels.II
 
     tb: TensorBasis = get_tensor_basis(params_extrinsic)
 
@@ -616,8 +667,8 @@ def rigid_adiabatic_antenna(
 
     n_arm = 3  # number of arms (currently must be 3)
 
-    nc_waveform = RRs.shape[0]  # number of channels in the output intrinsic_waveform
-    assert IIs.shape[0] == nc_waveform
+    nc_waveform = RR.shape[0]  # number of channels in the output intrinsic_waveform
+    assert II.shape[0] == nc_waveform
 
     nc_generate = 3  # number of combinations to generate internally (currently must be 3)
     assert nc_generate >= nc_waveform
@@ -635,22 +686,28 @@ def rigid_adiabatic_antenna(
     sc_wave_proj = SpacecraftSeparationWaveProjection(np.zeros((n_arm, n_arm)), np.zeros(n_arm))
 
     # Tuple to hold the XYZ antenna pattern
-    tdi_xyz = TDIComplexAntennaPattern(np.zeros(nc_michelson), np.zeros(nc_michelson), np.zeros(nc_michelson), np.zeros(nc_michelson))
+    tdi_xyz = TDIComplexAntennaPattern(
+        np.zeros(nc_michelson), np.zeros(nc_michelson), np.zeros(nc_michelson), np.zeros(nc_michelson),
+    )
 
     # Tuple to hold the AET antenna pattern
-    tdi_aet = TDIComplexAntennaPattern(np.zeros(nc_generate), np.zeros(nc_generate), np.zeros(nc_generate), np.zeros(nc_generate))
+    tdi_aet = TDIComplexAntennaPattern(
+        np.zeros(nc_generate), np.zeros(nc_generate), np.zeros(nc_generate), np.zeros(nc_generate),
+    )
 
-    sc_sep = SpacecraftSeparationVectors(np.zeros(n_space), np.zeros(n_space), np.zeros(n_space), np.zeros(n_space), np.zeros(n_space), np.zeros(n_space))
+    sc_sep = SpacecraftSeparationVectors(
+        np.zeros(n_space), np.zeros(n_space), np.zeros(n_space), np.zeros(n_space), np.zeros(n_space), np.zeros(n_space),
+    )
 
     sc_phasing = get_oribtal_phase_constants(lc, n_sc)
 
     A_psi = get_detector_amplitude_phase_combinations(params_extrinsic)
 
     # Main Loop
-    for n in prange(nf_low, NTs + nf_low):
+    for n in prange(nx_lim.nx_min, nx_lim.nx_max):
         # get the spacecraft response for the current time step
 
-        get_sc_scalar_pos(lc, ts[n], sc_phasing, sc_pos)
+        get_sc_scalar_pos(lc, T[n], sc_phasing, sc_pos)
 
         kdotx[n] = compute_separation_vectors(lc, tb, sc_pos, sc_sep)
 
@@ -659,7 +716,7 @@ def rigid_adiabatic_antenna(
         get_projected_detector_response(tb, sc_sep, polarization_response)
 
         # normalized frequency
-        fr = 1 / (2 * lc.fstr) * FFs[n]
+        fr = 1 / (2 * lc.fstr) * F[n]
 
         get_transfer_function(fr, sc_wave_proj, transfer_function)
 
@@ -668,12 +725,18 @@ def rigid_adiabatic_antenna(
         get_aet_combinations(tdi_xyz, tdi_aet)
 
         for itrc in range(nc_waveform):
-            RRs[itrc, n] = tdi_aet.FpR[itrc] - tdi_aet.FcI[itrc]
-            IIs[itrc, n] = tdi_aet.FcR[itrc] + tdi_aet.FpI[itrc]
+            RR[itrc, n] = tdi_aet.FpR[itrc] - tdi_aet.FcI[itrc]
+            II[itrc, n] = tdi_aet.FcR[itrc] + tdi_aet.FpI[itrc]
 
 
 @njit()
-def get_wavefront_time(lc: LISAConstants, tb: TensorBasis, ts: NDArray[np.float64], sv: SpacecraftOrbits, wavefront_time: NDArray[np.float64]) -> None:
+def get_wavefront_time(
+    lc: LISAConstants,
+    tb: TensorBasis,
+    ts: NDArray[np.float64],
+    sv: SpacecraftOrbits,
+    wavefront_time: NDArray[np.float64],
+) -> None:
     """Compute, in place, the wavefront time coordinate for each spacecraft in the LISA constellation.
 
     This function calculates the time at which a surface of constant gravitational-wave phase, defined by
@@ -761,31 +824,50 @@ def get_spacecraft_vec(ts: NDArray[np.float64], lc: LISAConstants) -> Spacecraft
     return SpacecraftOrbits(xs, ys, zs, xas, yas, zas)
 
 
-def phase_wrap_freq(AET_Phases, AET_TFs, PF, TF, nf_lim: PixelFreqRange, F_min, kdotx, wrap_thresh=np.pi):
+def phase_wrap_freq(
+    tdi_waveform: StationaryWaveformFreq,
+    waveform: StationaryWaveformFreq,
+    nf_lim: PixelGenericRange,
+    kdotx,
+    wrap_thresh: float = np.pi,
+) -> None:
     """Helper for getting LISA response in frequency domain."""
-    nc_loc = AET_Phases.shape[0]
+    tdi_PF = tdi_waveform.PF
+    tdi_TF = tdi_waveform.TF
+    PF = waveform.PF
+    TF = waveform.TF
+
+    assert tdi_PF.shape == tdi_TF.shape
+    assert PF.shape == TF.shape
+    assert len(tdi_PF.shape) == 2
+    assert len(PF.shape) == 1
+    assert PF.shape[0] == tdi_PF.shape[-1]
+    assert kdotx.shape[0] == PF.shape[0]
+    assert 0 <= nf_lim.nx_min <= nf_lim.nx_max <= PF.shape[0]
+
+    nc_loc = tdi_PF.shape[0]
 
     Phase_accums = np.zeros(nc_loc)
 
     js = np.zeros(nc_loc)
 
-    for n in range(nf_lim.nf_max - 1, nf_lim.nf_min - 1, -1):
+    for n in range(nf_lim.nx_max - 1, nf_lim.nx_min - 1, -1):
         # Barycenter time and frequency
         t = TF[n]
-        f = n * nf_lim.df + F_min  # FF[n]
+        f = n * nf_lim.dx + nf_lim.x_min  # FF[n]
 
         # the doppler-only phase perturbation (should be already unwrapped)
         Phase = -2 * np.pi * f * kdotx[n] - PF[n]  # TODO check pi/4
 
         for itrc in range(nc_loc):
             # only the phase perturbation from the antenna pattern
-            p = - AET_Phases[itrc, n]
+            p = -tdi_PF[itrc, n]
 
             # adjust for the phase perturbation implicit in the time perturbation; more stable than wrapping p directly
-            if n == nf_lim.nf_max - 1:
-                Phase_accums[itrc] = - p
+            if n == nf_lim.nx_max - 1:
+                Phase_accums[itrc] = -p
             else:
-                Phase_accums[itrc] -= np.pi * nf_lim.df * (AET_TFs[itrc, n] - t + AET_TFs[itrc, n + 1] - TF[n + 1])
+                Phase_accums[itrc] -= np.pi * nf_lim.dx * (tdi_TF[itrc, n] - t + tdi_TF[itrc, n + 1] - TF[n + 1])
 
             # wrap if the accumulated phase perturbation exceeds the threshold
             if Phase_accums[itrc] + p + js[itrc] > wrap_thresh:
@@ -793,42 +875,52 @@ def phase_wrap_freq(AET_Phases, AET_TFs, PF, TF, nf_lim: PixelFreqRange, F_min, 
             if -p - js[itrc] - Phase_accums[itrc] > wrap_thresh:
                 js[itrc] += 2 * np.pi
 
-            AET_Phases[itrc, n] = AET_Phases[itrc, n] - Phase - js[itrc]
+            tdi_PF[itrc, n] = tdi_PF[itrc, n] - Phase - js[itrc]
 
 
 # @njit(fastmath=True)
-def get_freq_tdi_amp_phase(AET_waveform: StationaryWaveformFreq, waveform: StationaryWaveformFreq, spacecraft_channels: AntennaResponseChannels, lc: LISAConstants, nf_lim: PixelFreqRange, F_min, kdotx, er: EdgeRiseModel):
+def get_freq_tdi_amp_phase(
+    tdi_waveform: StationaryWaveformFreq,
+    waveform: StationaryWaveformFreq,
+    spacecraft_channels: AntennaResponseChannels,
+    lc: LISAConstants,
+    nf_lim: PixelGenericRange,
+    kdotx,
+    er: EdgeRiseModel,
+) -> None:
     """Helper for getting LISA response in frequency domain"""
     # TODO figure out how to set Tend properly
-    AET_Amps = AET_waveform.AF
-    AET_Phases = AET_waveform.PF
-    AET_TFs = AET_waveform.TF
-    AET_TFps = AET_waveform.TFp
+    tdi_AF = tdi_waveform.AF
+    tdi_PF = tdi_waveform.PF
+    tdi_TF = tdi_waveform.TF
+    tdi_TFp = tdi_waveform.TFp
 
-    PF = waveform.PF
     TF = waveform.TF
     TFp = waveform.TFp
 
-    # for the derivative of RR and II absorb 1/(2*nf_lim.df) into the constant in AET_TFs
-    spacecraft_channel_deriv_helper(spacecraft_channels, -1.0 / (2 * nf_lim.df))
+    # for the derivative of RR and II absorb 1/(2*nf_lim.dx) into the constant in tdi_TF
+    print(nf_lim)
+    spacecraft_channel_deriv_helper(spacecraft_channels, -1.0 / (2 * nf_lim.dx))
 
-    AET_waveform_generic = StationaryWaveformGeneric(AET_waveform.F, AET_Phases, AET_TFs, AET_TFs, AET_Amps)
+    tdi_waveform_generic = StationaryWaveformGeneric(tdi_waveform.F, tdi_PF, tdi_TF, tdi_TF, tdi_AF)
     # Time based method applies phase perturbation to PF, so set PF to zero here
-    waveform_generic = StationaryWaveformGeneric(waveform.F, np.zeros_like(waveform.PF), waveform.TF, waveform.TFp, waveform.AF)
+    waveform_generic = StationaryWaveformGeneric(
+        waveform.F, np.zeros_like(waveform.PF), waveform.TF, waveform.TFp, waveform.AF,
+    )
 
-    amp_phase_loop_helper(waveform.F, waveform.TF, waveform_generic, AET_waveform_generic, spacecraft_channels, lc, nf_lim.nf_min, nf_lim.nf_max)
+    amp_phase_loop_helper(
+        waveform.F, waveform.TF, waveform_generic, tdi_waveform_generic, spacecraft_channels, lc, nf_lim,
+    )
     # sign is flipped relative to time
-    AET_Phases = - AET_Phases
+    tdi_PF[:] = -tdi_PF
 
     # Wrap the phase perturbations consistently across channels
-    phase_wrap_freq(AET_Phases, AET_TFs, PF, TF, nf_lim, F_min, kdotx)
-    # apply edge rise/fall to AET_Amps and AET_TFs
-    apply_edge_rise_helper(waveform.TF, AET_Amps, er, lc, nf_lim.nf_min, nf_lim.nf_max)
+    phase_wrap_freq(tdi_waveform, waveform, nf_lim, kdotx)
+    # apply edge rise/fall to tdi_AF and tdi_TF
+    apply_edge_rise_helper(waveform.TF, tdi_AF, er, lc, nf_lim)
 
-    # compute AET_TFps as perturbation on TFps
+    # compute tdi_TFp as perturbation on TFps
     # compute the gradient dy/dx using a second order accurate central finite difference
     # assuming constant x grid along second axis,
     # forward/backward first order accurate at boundaries, and apply a TFps base
-    stabilized_gradient_uniform_inplace(TF, TFp, AET_TFs, AET_TFps, nf_lim.df, nf_lim.nf_min, nf_lim.nf_max)
-
-    return
+    stabilized_gradient_uniform_inplace(TF, TFp, tdi_TF, tdi_TFp, nf_lim.dx, nf_lim.nx_min, nf_lim.nx_max)

@@ -11,7 +11,7 @@ from LisaWaveformTools import lisa_config
 from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
 from LisaWaveformTools.lisa_config import LISAConstants
 from WaveletWaveforms import wdm_config
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 n_par_gb = 8
@@ -67,7 +67,7 @@ def get_galaxy_filename(galaxy_file, galaxy_dir):
     return galaxy_dir + galaxy_file
 
 
-def get_processed_gb_filename(galaxy_dir, stat_only, snr_thresh, wc: WDMWaveletConstants, nt_lim_snr: PixelTimeRange):
+def get_processed_gb_filename(galaxy_dir, stat_only, snr_thresh, wc: WDMWaveletConstants, nt_lim_snr: PixelGenericRange):
     return (
         galaxy_dir
         + ('gb8_processed_snr=%.2f' % snr_thresh)
@@ -79,9 +79,9 @@ def get_processed_gb_filename(galaxy_dir, stat_only, snr_thresh, wc: WDMWaveletC
         + '_const='
         + str(stat_only)
         + '_nt_min='
-        + str(nt_lim_snr.nt_min)
+        + str(nt_lim_snr.nx_min)
         + '_nt_max='
-        + str(nt_lim_snr.nt_max)
+        + str(nt_lim_snr.nx_max)
         + '.hdf5'
     )
 
@@ -244,7 +244,7 @@ def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
 
 
 def load_processed_gb_file(
-    galaxy_dir, snr_thresh, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_snr: PixelTimeRange, *, stat_only,
+    galaxy_dir, snr_thresh, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_snr: PixelGenericRange, *, stat_only,
 ):
     # TODO loading should produce a galactic background decomposition object
     filename_in = get_processed_gb_filename(galaxy_dir, stat_only, snr_thresh, wc, nt_lim_snr)
@@ -340,7 +340,7 @@ def store_processed_gb_file(
     wc: WDMWaveletConstants,
     lc: LISAConstants,
     ic: IterationConfig,
-    nt_lim_snr: PixelTimeRange,
+    nt_lim_snr: PixelGenericRange,
     bgd: BGDecomposition,
     period_list,
     n_bin_use,

@@ -6,7 +6,7 @@ from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.stationary_source_waveform import SourceParams
 from LisaWaveformTools.stationary_time_source import StationarySourceWaveformTime
 from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams, chirplet_time_intrinsic
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletTaylorTime
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
@@ -33,7 +33,7 @@ class LinearChirpletWaveletWaveformTime(BinaryWaveletTaylorTime):
     using the Taylor time method.
     """
 
-    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelTimeRange, *, wavelet_mode: int = 1, response_mode: int = 0) -> None:
+    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, *, wavelet_mode: int = 1, response_mode: int = 0) -> None:
         """Construct a binary wavelet object."""
         # get the intrinsic_waveform
         source_waveform = LinearChirpletSourceWaveformTime(

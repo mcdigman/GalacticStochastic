@@ -6,13 +6,13 @@ from numba import njit
 from numpy.typing import NDArray
 
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformFreq, StationaryWaveformTime
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 LinearChirpletIntrinsicParams = namedtuple('LinearChirpletIntrinsicParams', ['amp_center_f', 'phi0', 'f_center', 't_center', 'tau', 'gamma'])
 
 
 @njit()
-def chirplet_time_intrinsic(waveform: StationaryWaveformTime, intrinsic_params: LinearChirpletIntrinsicParams, t_in: NDArray[np.float64], nt_lim: PixelTimeRange) -> None:
+def chirplet_time_intrinsic(waveform: StationaryWaveformTime, intrinsic_params: LinearChirpletIntrinsicParams, t_in: NDArray[np.float64], nt_lim: PixelGenericRange) -> None:
     """Get amplitude, phase, frequency, and frequency derivative for the waveform.
     Uses a separate t_in array, which may be different from the time array in the waveform object.
     The separate t_in allows for conversion between different time coordinates, e.g., SSB to guiding center.
@@ -22,10 +22,10 @@ def chirplet_time_intrinsic(waveform: StationaryWaveformTime, intrinsic_params: 
     FT = waveform.FT
     FTd = waveform.FTd
 
-    assert 0 <= nt_lim.nt_min < nt_lim.nt_max <= t_in.size
+    assert 0 <= nt_lim.nx_min < nt_lim.nx_max <= t_in.size
     assert AT.shape == PT.shape == FT.shape == FTd.shape
     assert len(AT.shape) == 1
-    assert AT.shape[-1] <= nt_lim.nt_max
+    assert AT.shape[-1] <= nt_lim.nx_max
 
     # amplitude multiplier to convert from frequency domain amplitude to time domain amplitude
     phase_center_t = - intrinsic_params.phi0
@@ -33,7 +33,7 @@ def chirplet_time_intrinsic(waveform: StationaryWaveformTime, intrinsic_params: 
     amp_center_t = np.sqrt(ftd) * intrinsic_params.amp_center_f
 
     #  compute the intrinsic frequency, phase and amplitude
-    for n in range(nt_lim.nt_min, nt_lim.nt_max):
+    for n in range(nt_lim.nx_min, nt_lim.nx_max):
         t = t_in[n]
         delta_t = t - intrinsic_params.t_center
         x = delta_t / intrinsic_params.tau
@@ -109,7 +109,7 @@ def ChirpWaveletT(params, TFs, wc):
 
     # get the intrinsic intrinsic_waveform
     hold1 = StationaryWaveformTime(TFs.copy(), Phases.copy(), fas.copy(), fdas.copy(), Amps.copy())
-    nt_lim = PixelTimeRange(0, wc.Nt, wc.DT)
+    nt_lim = PixelGenericRange(0, wc.Nt, wc.DT, 0.)
     chirplet_time_intrinsic(hold1, params, TFs, nt_lim)
     assert np.allclose(Phases, hold1.PT, atol=1e-20, rtol=1.e-10)
     assert np.allclose(Amps, hold1.AT, atol=1e-20, rtol=1.e-10)

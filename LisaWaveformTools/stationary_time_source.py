@@ -10,22 +10,22 @@ from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels, Spacecra
 from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
 from LisaWaveformTools.spacecraft_objects import EdgeRiseModel
 from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams, StationarySourceWaveform, StationaryWaveformTime
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 
 class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTime]):
     """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain.
     """
 
-    def __init__(self, params: SourceParams, nt_lim_waveform: PixelTimeRange, lc: LISAConstants, *, response_mode: int = 0) -> None:
+    def __init__(self, params: SourceParams, nt_lim_waveform: PixelGenericRange, lc: LISAConstants, *, response_mode: int = 0) -> None:
         """Initalize the object"""
-        self._nt_lim_waveform: PixelTimeRange = nt_lim_waveform
-        self._nt_range: int = self._nt_lim_waveform.nt_max - self._nt_lim_waveform.nt_min
+        self._nt_lim_waveform: PixelGenericRange = nt_lim_waveform
+        self._nt_range: int = self._nt_lim_waveform.nx_max - self._nt_lim_waveform.nx_min
         self._lc: LISAConstants = lc
         self._nc_waveform: int = self._lc.nc_waveform
         self._consistent_extrinsic: bool = False
 
-        self._TTs: NDArray[np.float64] = self._nt_lim_waveform.dt * np.arange(self._nt_lim_waveform.nt_min, self._nt_lim_waveform.nt_max)
+        self._TTs: NDArray[np.float64] = self._nt_lim_waveform.dx * np.arange(self._nt_lim_waveform.nx_min, self._nt_lim_waveform.nx_max)
         self._spacecraft_orbits: SpacecraftOrbits = get_spacecraft_vec(self._TTs, self._lc)
 
         self._response_mode: int = -1
@@ -88,20 +88,20 @@ class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTi
             raise TypeError(msg)
 
         # TODO fix F_min and nf_range
+        nt_lim = PixelGenericRange(0, self._nt_range, self._nt_lim_waveform.dx, self._lc.t0)
         if self.response_mode in (0, 1):
             rigid_adiabatic_antenna(
                 self._spacecraft_channels,
                 self.params.extrinsic,
                 self._TTs,
                 self.intrinsic_waveform.FT,
-                0,
-                self._nt_range,
+                nt_lim,
                 self._kdotx,
                 self._lc,
             )
             get_time_tdi_amp_phase(
                 self._spacecraft_channels, self._tdi_waveform, self.intrinsic_waveform, self._lc, self._er,
-                self._nt_lim_waveform.dt,
+                nt_lim,
             )
         elif self.response_mode == 2:
             # intrinsic only, no rigid adiabatic response

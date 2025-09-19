@@ -12,7 +12,7 @@ import GalacticStochastic.global_file_index as gfi
 from GalacticStochastic import config_helper
 from GalacticStochastic.galactic_fit_helpers import get_S_cyclo
 from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
-from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 mpl.rcParams['axes.linewidth'] = 1.2
 mpl.rcParams['xtick.major.size'] = 7
@@ -66,10 +66,10 @@ if __name__ == '__main__':
 
     nt_min = 256 * 6
     nt_max = nt_min + 512 * 2
-    nt_lim = PixelTimeRange(nt_min, nt_max, wc.DT)
+    nt_lim = PixelGenericRange(nt_min, nt_max, wc.DT, 0.)
     nt_min_report = 0
     nt_max_report = nt_max - nt_min
-    nt_lim_report = PixelTimeRange(nt_min_report, nt_max_report, wc.DT)
+    nt_lim_report = PixelGenericRange(nt_min_report, nt_max_report, wc.DT, 0.)
 
     snr_thresh = 7.0
     smooth_lengthf = 6

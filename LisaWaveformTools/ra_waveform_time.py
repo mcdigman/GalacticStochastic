@@ -9,6 +9,7 @@ from LisaWaveformTools.algebra_tools import gradient_uniform_inplace, stabilized
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, EdgeRiseModel
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformGeneric, StationaryWaveformTime
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 
 @njit()
@@ -72,7 +73,7 @@ def phase_wrap_helper(
 
 
 @njit()
-def spacecraft_channel_deriv_helper(spacecraft_channels: AntennaResponseChannels, dt: float) -> None:
+def spacecraft_channel_deriv_helper(spacecraft_channels: AntennaResponseChannels, dx: float) -> None:
     """Get the derivatives of the RR and II components of the TDI and store them in dRR and dII.
 
     Parameters
@@ -80,8 +81,8 @@ def spacecraft_channel_deriv_helper(spacecraft_channels: AntennaResponseChannels
     spacecraft_channels: SpacecraftChannels
         Object containing the spacecraft channels with RR, II, dRR, and dII attributes,
         with RR and II already computed.
-    dt: float
-        The time spacing of the uniformally spaced samples need for computing the gradient
+    nt_lim: PixelGenericRange
+        Range of time indices to compute the derivatives over and time spacing of uniform samples
 
     Returns
     -------
@@ -90,8 +91,8 @@ def spacecraft_channel_deriv_helper(spacecraft_channels: AntennaResponseChannels
 
     """
     # get and store the derivatives
-    gradient_uniform_inplace(spacecraft_channels.RR, spacecraft_channels.dRR, dt)
-    gradient_uniform_inplace(spacecraft_channels.II, spacecraft_channels.dII, dt)
+    gradient_uniform_inplace(spacecraft_channels.RR, spacecraft_channels.dRR, dx)
+    gradient_uniform_inplace(spacecraft_channels.II, spacecraft_channels.dII, dx)
 
 
 @njit(fastmath=True)
@@ -122,20 +123,20 @@ def edge_rise_multiplier_helper(t: float, er: EdgeRiseModel, lc: LISAConstants) 
 
 
 @njit(fastmath=True)
-def apply_edge_rise_helper(t, A, er: EdgeRiseModel, lc: LISAConstants, nx_min: int, nx_max: int) -> None:
+def apply_edge_rise_helper(t: NDArray[np.floating], A: NDArray[np.floating], er: EdgeRiseModel, lc: LISAConstants, nx_lim: PixelGenericRange) -> None:
     """Apply edge rise to the amplitude of a waveform in place."""
     if lc.rise_mode == 3:
         pass
     else:
-        assert 0 <= nx_min < nx_max <= t.size
+        assert 0 <= nx_lim.nx_min < nx_lim.nx_max <= t.size
         assert A.shape[1] == t.shape[0]
-        for n in range(nx_min, nx_max):
+        for n in range(nx_lim.nx_min, nx_lim.nx_max):
             x = edge_rise_multiplier_helper(t[n], er, lc)
             A[:, n] *= x
 
 
 @njit(fastmath=True, parallel=True)
-def amp_phase_loop_helper(F: NDArray[np.floating], T: NDArray[np.floating], waveform: StationaryWaveformGeneric, AET_waveform: StationaryWaveformGeneric, spacecraft_channels: AntennaResponseChannels, lc: LISAConstants, nx_min: int, nx_max: int) -> None:
+def amp_phase_loop_helper(F: NDArray[np.floating], T: NDArray[np.floating], waveform: StationaryWaveformGeneric, AET_waveform: StationaryWaveformGeneric, spacecraft_channels: AntennaResponseChannels, lc: LISAConstants, nx_lim: PixelGenericRange) -> None:
     """Compute TDI (Time Delay Interferometry) modifications for the amplitude, phase, and frequency of a intrinsic_waveform.
 
     This function perturbs the intrinsic amplitude, phase, and frequency of a generic intrinsic_waveform
@@ -204,9 +205,9 @@ def amp_phase_loop_helper(F: NDArray[np.floating], T: NDArray[np.floating], wave
     assert AET_P.shape == AET_A.shape == AET_X.shape
     assert F.shape == T.shape == waveform.P.shape == waveform.A.shape == waveform.X.shape
     assert AET_P.shape[-1] == F.shape[0]
-    assert 0 <= nx_min <= nx_max <= F.shape[0]
+    assert 0 <= nx_lim.nx_min <= nx_lim.nx_max <= F.shape[0]
 
-    for n in prange(nx_min, nx_max):
+    for n in prange(nx_lim.nx_min, nx_lim.nx_max):
         fonfs = F[n] / lc.fstr
 
         # including TDI + fractional frequency modifiers
@@ -257,6 +258,7 @@ def get_time_tdi_amp_phase_helper(
     waveform: StationaryWaveformTime,
     lc: LISAConstants,
     er: EdgeRiseModel,
+    nt_lim: PixelGenericRange,
 ) -> None:
     """Compute TDI (Time Delay Interferometry) modifications for the amplitude, phase, and frequency of a intrinsic_waveform.
 
@@ -281,6 +283,8 @@ def get_time_tdi_amp_phase_helper(
         LISA constellation constants containing the strain frequency (fstr)
     er: EdgeRiseModel
         Edge rise model containing parameters needed to apply edge rise to the amplitude
+    nt_lim: PixelGenericRange
+        Range of time indices to compute the TDI modifications over
 
     Notes
     -----
@@ -329,8 +333,8 @@ def get_time_tdi_amp_phase_helper(
 
     AET_waveform_generic = StationaryWaveformGeneric(AET_waveform.T, AET_PT, AET_FT, AET_waveform.FTd, AET_AT)
     waveform_generic = StationaryWaveformGeneric(waveform.T, waveform.PT, waveform.FT, waveform.FTd, waveform.AT)
-    amp_phase_loop_helper(waveform.FT, waveform.T, waveform_generic, AET_waveform_generic, spacecraft_channels, lc, 0, waveform.T.size)
-    apply_edge_rise_helper(waveform.T, AET_waveform.AT, er, lc, 0, waveform.T.size)
+    amp_phase_loop_helper(waveform.FT, waveform.T, waveform_generic, AET_waveform_generic, spacecraft_channels, lc, nt_lim)
+    apply_edge_rise_helper(waveform.T, AET_waveform.AT, er, lc, nt_lim)
     # for n in prange(n_t):
     #    fonfs = waveform.FT[n] / lc.fstr
 
@@ -382,7 +386,7 @@ def get_time_tdi_amp_phase(
     waveform: StationaryWaveformTime,
     lc: LISAConstants,
     er: EdgeRiseModel,
-    dt: float,
+    nt_lim: PixelGenericRange,
     phase_wrap_mode: int = 0,
 ) -> None:
     """Compute TDI modifications for the amplitude, phase, frequency, and frequency derivative of a intrinsic_waveform.
@@ -408,8 +412,8 @@ def get_time_tdi_amp_phase(
         LISA constellation constants containing the strain frequency (fstr)
     er: EdgeRiseModel
         Edge rise model containing parameters needed to apply edge rise to the amplitude
-    dt: float
-        Time steps between samples for derivative calculation
+    nt_lim: PixelGenericRange
+        Range of time indices to compute the TDI modifications over
     phase_wrap_mode: int
         Select which model to use for phase wrapping: current options are 0 (no wrapping)
         and 1 (using phase_wrap_helper).
@@ -437,10 +441,10 @@ def get_time_tdi_amp_phase(
 
     """
     # get and store dRR and dII in the object
-    spacecraft_channel_deriv_helper(spacecraft_channels, dt)
+    spacecraft_channel_deriv_helper(spacecraft_channels, nt_lim.dx)
 
     # get the tdi perturbations to the amplitude and phase
-    get_time_tdi_amp_phase_helper(spacecraft_channels, AET_waveform, waveform, lc, er)
+    get_time_tdi_amp_phase_helper(spacecraft_channels, AET_waveform, waveform, lc, er, nt_lim)
 
     if phase_wrap_mode == 1:
         # wrap the phases using phase_wrap_helper
@@ -456,4 +460,4 @@ def get_time_tdi_amp_phase(
     # improved numerical accuracy. Because of the behavior near RR or II=0,
     # the numerical derivative may have better practical accuracy than
     # inserting an analytic result, at least without some additional numerical stabilizers.
-    stabilized_gradient_uniform_inplace(waveform.FT, waveform.FTd, AET_waveform.FT, AET_waveform.FTd, dt)
+    stabilized_gradient_uniform_inplace(waveform.FT, waveform.FTd, AET_waveform.FT, AET_waveform.FTd, nt_lim.dx)
