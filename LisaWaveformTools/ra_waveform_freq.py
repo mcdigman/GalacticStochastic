@@ -2,7 +2,6 @@
 
 import numpy as np
 from numba import njit, prange
-from numpy.testing import assert_allclose
 from numpy.typing import NDArray
 
 from LisaWaveformTools.algebra_tools import stabilized_gradient_uniform_inplace
@@ -860,23 +859,10 @@ def get_freq_tdi_amp_phase(AET_waveform: StationaryWaveformFreq, waveform: Stati
 
     # TODO check this phasing relative to taylorT3
 
-    # stabilized_gradient_uniform_inplace(waveform.TF, waveform.TFp, tdi_waveform.TF, tdi_waveform.TFp, DF)
-
     # compute AET_TFps as perturbation on TFps
-    # compute the gradient dy/dx using a second order accurate central finite difference assuming constant x grid along second axis, forward/backward first order accurate at boundaries, and apply a TFps base
-    for itrc in range(nc_loc):
-        AET_TFps[itrc, nf_low] = (AET_TFs[itrc, nf_low + 1] - AET_TFs[itrc, nf_low] - TF[nf_low + 1] + TF[nf_low]) / DF + TFp[nf_low]
-        AET_TFps[itrc, nf_low + NF - 1] = (AET_TFs[itrc, nf_low + NF - 1] - AET_TFs[itrc, nf_low + NF - 2] - TF[nf_low + NF - 1] + TF[nf_low + NF - 2]) / DF + TFp[nf_low + NF - 1]
+    # compute the gradient dy/dx using a second order accurate central finite difference
+    # assuming constant x grid along second axis,
+    # forward/backward first order accurate at boundaries, and apply a TFps base
+    stabilized_gradient_uniform_inplace(TF, TFp, AET_TFs, AET_TFps, DF, nf_lim.nf_min, nf_lim.nf_max)
 
-    for n in range(nf_low + 1, nf_low + NF - 1):
-        TF_shift = -TF[n + 1] + TF[n - 1]
-        TFp_shift = TFp[n]
-        for itrc in range(nc_loc):
-            AET_TFps[itrc, n] = (AET_TFs[itrc, n + 1] - AET_TFs[itrc, n - 1] + TF_shift) / (2 * DF) + TFp_shift
-
-    AET_TFps_alt = np.zeros_like(AET_TFps)
-    AET_TFs_alt = np.zeros_like(AET_TFs)
-    stabilized_gradient_uniform_inplace(TF, TFp, AET_TFs_alt, AET_TFps_alt, DF)
-    assert_allclose(AET_TFps, AET_TFps_alt, atol=1.e-20, rtol=1.e-10)
-    assert_allclose(AET_TFs, AET_TFs_alt, atol=1.e-20, rtol=1.e-10)
     return

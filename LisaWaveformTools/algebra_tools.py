@@ -64,7 +64,7 @@ def gradient_uniform_inplace(ys: NDArray[np.float64], result: NDArray[np.float64
 
 @njit()
 def stabilized_gradient_uniform_inplace(
-    x: NDArray[np.float64], dxdt: NDArray[np.float64], y: NDArray[np.float64], dydt: NDArray[np.float64], dt: float,
+    x: NDArray[np.float64], dxdt: NDArray[np.float64], y: NDArray[np.float64], dydt: NDArray[np.float64], dt: float, nx_min: int = 0, nx_max: int = -1,
 ) -> None:
     """Get a second-order central stabilized gradient of y and store it in dydt.
 
@@ -106,15 +106,25 @@ def stabilized_gradient_uniform_inplace(
     assert dydt.shape == y.shape, 'Input dydt must have the same shape as y'
     assert x.shape == dxdt.shape, 'Input x and dxdt must have the same shape'
     nc_channel = y.shape[0]
-    n_t = y.shape[1]
-    assert x.shape[0] == n_t, 'Input x and dxdt must have the same length'
-    assert n_t > 1, 'Insuficient Length to Compute Gradient'
+
+    assert x.shape[0] == y.shape[1], 'Input x and dxdt must have the same length'
+    assert y.shape[1] > 1, 'Insuficient Length to Compute Gradient'
+    assert dt != 0.0, 'Time step dt cannot be zero'
+
+    if nx_max == -1:
+        nx_max = x.shape[0]
+
+    assert 0 <= nx_min < nx_max <= x.shape[0], 'Invalid range for x'
+
+    n_points = nx_max - nx_min
+
+    assert n_points > 1, 'Insufficient Length to Compute Gradient'
 
     for itrc in range(nc_channel):
-        dydt[itrc, 0] = (y[itrc, 1] - y[itrc, 0] - x[1] + x[0]) / dt + dxdt[0]
-        dydt[itrc, n_t - 1] = (y[itrc, n_t - 1] - y[itrc, n_t - 2] - x[n_t - 1] + x[n_t - 2]) / dt + dxdt[n_t - 1]
+        dydt[itrc, nx_min] = (y[itrc, nx_min + 1] - y[itrc, nx_min] - x[nx_min + 1] + x[nx_min]) / dt + dxdt[nx_min]
+        dydt[itrc, nx_max - 1] = (y[itrc, nx_max - 1] - y[itrc, nx_max - 2] - x[nx_max - 1] + x[nx_max - 2]) / dt + dxdt[nx_max - 1]
 
-    for n in prange(1, n_t - 1):
+    for n in prange(nx_min + 1, nx_max - 1):
         x_shift = -x[n + 1] + x[n - 1]
         dxdt_shift = dxdt[n]
         for itrc in range(nc_channel):
