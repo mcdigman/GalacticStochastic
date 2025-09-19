@@ -1,7 +1,7 @@
 """Various objects for the spacecraft and detector response calculations."""
 from collections import namedtuple
 
-AntennaResponseChannels = namedtuple('AntennaResponseChannels', ['T', 'RR', 'II', 'dRR', 'dII'])
+AntennaResponseChannels = namedtuple('AntennaResponseChannels', ['x', 'RR', 'II', 'dRR', 'dII'])
 
 TensorBasis = namedtuple('TensorBasis', ['kv', 'e_plus', 'e_cross'])
 

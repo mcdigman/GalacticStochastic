@@ -8,6 +8,7 @@ from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_freq import get_freq_tdi_amp_phase, rigid_adiabatic_antenna
 from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels
 from LisaWaveformTools.stationary_source_waveform import SourceParams, StationarySourceWaveform, StationaryWaveformFreq
+from WaveletWaveforms.sparse_waveform_functions import PixelFreqRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
@@ -118,20 +119,33 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
         self.nf_high = max(self.nf_low, self.nf_high)
         self.nf_high = min(self.nf_high, self.NF)
         nf_range_old = self.nf_range
+        nf_high_old = nf_range_old + nf_low_old
         self.nf_range = self.nf_high - self.nf_low
 
         # enforce cleanup of values that will not be reset
-        if nf_range_old > self.nf_range:
+        if nf_high_old > self.nf_high:
             # TODO this manipulation of kdotx should only happen if it is a private variable
-            self.kdotx[self.nf_range:nf_range_old] = 0.
-            self._tdi_waveform.AF[:, self.nf_range:nf_range_old] = 0.
-            self._tdi_waveform.PF[:, self.nf_range:nf_range_old] = 0.
-            self._tdi_waveform.TF[:, self.nf_range:nf_range_old] = 0.
-            self._tdi_waveform.TFp[:, self.nf_range:nf_range_old] = 0.
-            self._spacecraft_channels.RR[:, self.nf_range:nf_range_old] = 0.
-            self._spacecraft_channels.II[:, self.nf_range:nf_range_old] = 0.
-            self._spacecraft_channels.dRR[:, self.nf_range:nf_range_old] = 0.
-            self._spacecraft_channels.dII[:, self.nf_range:nf_range_old] = 0.
+            self.kdotx[self.nf_high:nf_high_old] = 0.
+            self._tdi_waveform.AF[:, self.nf_high:nf_high_old] = 0.
+            self._tdi_waveform.PF[:, self.nf_high:nf_high_old] = 0.
+            self._tdi_waveform.TF[:, self.nf_high:nf_high_old] = 0.
+            self._tdi_waveform.TFp[:, self.nf_high:nf_high_old] = 0.
+            self._spacecraft_channels.RR[:, self.nf_high:nf_high_old] = 0.
+            self._spacecraft_channels.II[:, self.nf_high:nf_high_old] = 0.
+            self._spacecraft_channels.dRR[:, self.nf_high:nf_high_old] = 0.
+            self._spacecraft_channels.dII[:, self.nf_high:nf_high_old] = 0.
+
+        if nf_low_old < self.nf_low:
+            # TODO this manipulation of kdotx should only happen if it is a private variable
+            self.kdotx[nf_low_old:self.nf_low] = 0.
+            self._tdi_waveform.AF[:, nf_low_old:self.nf_low] = 0.
+            self._tdi_waveform.PF[:, nf_low_old:self.nf_low] = 0.
+            self._tdi_waveform.TF[:, nf_low_old:self.nf_low] = 0.
+            self._tdi_waveform.TFp[:, nf_low_old:self.nf_low] = 0.
+            self._spacecraft_channels.RR[:, nf_low_old:self.nf_low] = 0.
+            self._spacecraft_channels.II[:, nf_low_old:self.nf_low] = 0.
+            self._spacecraft_channels.dRR[:, nf_low_old:self.nf_low] = 0.
+            self._spacecraft_channels.dII[:, nf_low_old:self.nf_low] = 0.
 
     @override
     def _update_extrinsic(self):
@@ -139,10 +153,11 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
         Update waveform to match the extrinsic parameters of spacecraft response
         if abbreviated, don't get AET_TFs or AET_TFps, and don't track modulus of AET_PPFs
         """
-        F_min = self._wc.DF * self.nf_offset
+        F_min = self._wc.DF * (self.nf_offset - self.nf_low)
 
         rigid_adiabatic_antenna(self._spacecraft_channels, self.params.extrinsic, self.intrinsic_waveform.TF, self.FFs, self.nf_low, self.nf_range, self.kdotx, self._lc)
-        get_freq_tdi_amp_phase(self._tdi_waveform, self.intrinsic_waveform, self._spacecraft_channels, self._lc, self._wc.DF, self.nf_range, self.nf_low, F_min, self.kdotx, Tend=self.Tend)
+        nf_lim = PixelFreqRange(self.nf_low, self.nf_low + self.nf_range, self._wc.DF)
+        get_freq_tdi_amp_phase(self._tdi_waveform, self.intrinsic_waveform, self._spacecraft_channels, self._lc, nf_lim, self._wc.DF, self.nf_range, self.nf_low, F_min, self.kdotx, Tend=self.Tend)
         self._consistent_extrinsic = True
 
     @override

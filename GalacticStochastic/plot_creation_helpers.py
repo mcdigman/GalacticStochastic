@@ -5,6 +5,8 @@ import numpy as np
 
 from GalacticStochastic.iterative_fit_manager import IterativeFitManager
 
+# mypy: disable-error-code="list-item"
+
 
 def plot_noise_spectrum_ambiguity(ifm: IterativeFitManager) -> None:
     """Make a plot of the difference between the upper and lower estimates of the spectrum"""

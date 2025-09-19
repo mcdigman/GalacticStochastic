@@ -2,12 +2,15 @@
 
 import numpy as np
 from numba import njit, prange
+from numpy.testing import assert_allclose
 from numpy.typing import NDArray
 
+from LisaWaveformTools.algebra_tools import stabilized_gradient_uniform_inplace
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_time import spacecraft_channel_deriv_helper
 from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, ComplexTransferFunction, DetectorAmplitudePhaseCombinations, DetectorPolarizationResponse, SpacecraftOrbits, SpacecraftRelativePhases, SpacecraftScalarPosition, SpacecraftSeparationVectors, SpacecraftSeparationWaveProjection, TDIComplexAntennaPattern, TensorBasis
 from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, StationaryWaveformFreq
+from WaveletWaveforms.sparse_waveform_functions import PixelFreqRange
 
 
 @njit()
@@ -645,10 +648,10 @@ def rigid_adiabatic_antenna(
     A_psi = get_detector_amplitude_phase_combinations(params_extrinsic)
 
     # Main Loop
-    for n in prange(NTs):
+    for n in prange(nf_low, NTs + nf_low):
         # get the spacecraft response for the current time step
 
-        get_sc_scalar_pos(lc, ts[n + nf_low], sc_phasing, sc_pos)
+        get_sc_scalar_pos(lc, ts[n], sc_phasing, sc_pos)
 
         kdotx[n] = compute_separation_vectors(lc, tb, sc_pos, sc_sep)
 
@@ -657,7 +660,7 @@ def rigid_adiabatic_antenna(
         get_projected_detector_response(tb, sc_sep, polarization_response)
 
         # normalized frequency
-        fr = 1 / (2 * lc.fstr) * FFs[n + nf_low]
+        fr = 1 / (2 * lc.fstr) * FFs[n]
 
         get_transfer_function(fr, sc_wave_proj, transfer_function)
 
@@ -760,7 +763,7 @@ def get_spacecraft_vec(ts: NDArray[np.float64], lc: LISAConstants) -> Spacecraft
 
 
 @njit(fastmath=True)
-def get_freq_tdi_amp_phase(AET_waveform: StationaryWaveformFreq, waveform: StationaryWaveformFreq, spacecraft_channels: AntennaResponseChannels, lc: LISAConstants, DF: float, NF, nf_low, F_min, kdotx, Tend=np.inf):
+def get_freq_tdi_amp_phase(AET_waveform: StationaryWaveformFreq, waveform: StationaryWaveformFreq, spacecraft_channels: AntennaResponseChannels, lc: LISAConstants, nf_lim: PixelFreqRange, DF: float, NF, nf_low, F_min, kdotx, Tend=np.inf):
     """Helper for getting LISA response in frequency domain"""
     # TODO figure out how to set Tend properly
     # TODO may be good to set 2*pi multiple reproducibly
@@ -784,7 +787,10 @@ def get_freq_tdi_amp_phase(AET_waveform: StationaryWaveformFreq, waveform: Stati
     # Merger kdotx
     polds = np.zeros(nc_loc)
 
-    n = NF - 1
+    n = NF - 1 + nf_low
+    assert nf_lim.nf_max == NF + nf_low
+    assert nf_lim.nf_min == nf_low
+    assert nf_lim.df == DF
 
     for itrc in range(nc_loc):
         RR = spacecraft_channels.RR[itrc, n]
@@ -795,12 +801,13 @@ def get_freq_tdi_amp_phase(AET_waveform: StationaryWaveformFreq, waveform: Stati
 
     js = np.zeros(nc_loc)
 
-    for n in range(NF - 1, -1, -1):
-
+    for n_alt in range(nf_lim.nf_max - 1, nf_lim.nf_min - 1, -1):
+        n = n_alt
         # Barycenter time and frequency
-        t = TF[n + nf_low]
+        t = TF[n_alt]
         f = n * DF + F_min  # FF[n]
-        # kdotx = t-xis[n+nf_low]
+
+        # kdotx = t-xis[n_alt]
 
         x = 1.0
 #        if Tstart<t<Tstart+lc.t_rise:
@@ -813,9 +820,9 @@ def get_freq_tdi_amp_phase(AET_waveform: StationaryWaveformFreq, waveform: Stati
 #            x = 0.0
 
         fonfs = f / lc.fstr  # Derivation says this is needed in the phase. Doesn't seem to be.
-        Amp = 8 * x * AA[n + nf_low] * (fonfs * np.sin(fonfs))
+        Amp = 8 * x * AA[n_alt] * (fonfs * np.sin(fonfs))
         # TODO check and make consistent across versions
-        Phase = -2 * np.pi * f * kdotx[n] - PF[n + nf_low]  # TODO check pi/4
+        Phase = -2 * np.pi * f * kdotx[n] - PF[n_alt]  # TODO check pi/4
 
         for itrc in range(nc_loc):
             RR = spacecraft_channels.RR[itrc, n]
@@ -839,7 +846,7 @@ def get_freq_tdi_amp_phase(AET_waveform: StationaryWaveformFreq, waveform: Stati
             if n == NF - 1:
                 Phase_accums[itrc] = -p - js[itrc]
             else:
-                Phase_accums[itrc] -= np.pi * DF * (AET_TFs[itrc, n] - t + AET_TFs[itrc, n + 1] - TF[n + 1 + nf_low])
+                Phase_accums[itrc] -= np.pi * DF * (AET_TFs[itrc, n] - t + AET_TFs[itrc, n + 1] - TF[n_alt + 1])
 
             if (Phase_accums[itrc] + p + js[itrc]) > np.pi:
                 js[itrc] -= 2 * np.pi
@@ -858,12 +865,18 @@ def get_freq_tdi_amp_phase(AET_waveform: StationaryWaveformFreq, waveform: Stati
     # compute AET_TFps as perturbation on TFps
     # compute the gradient dy/dx using a second order accurate central finite difference assuming constant x grid along second axis, forward/backward first order accurate at boundaries, and apply a TFps base
     for itrc in range(nc_loc):
-        AET_TFps[itrc, 0] = (AET_TFs[itrc, 1] - AET_TFs[itrc, 0] - TF[nf_low + 1] + TF[nf_low]) / DF + TFp[nf_low]
-        AET_TFps[itrc, NF - 1] = (AET_TFs[itrc, NF - 1] - AET_TFs[itrc, NF - 2] - TF[nf_low + NF - 1] + TF[nf_low + NF - 2]) / DF + TFp[nf_low + NF - 1]
+        AET_TFps[itrc, nf_low] = (AET_TFs[itrc, nf_low + 1] - AET_TFs[itrc, nf_low] - TF[nf_low + 1] + TF[nf_low]) / DF + TFp[nf_low]
+        AET_TFps[itrc, nf_low + NF - 1] = (AET_TFs[itrc, nf_low + NF - 1] - AET_TFs[itrc, nf_low + NF - 2] - TF[nf_low + NF - 1] + TF[nf_low + NF - 2]) / DF + TFp[nf_low + NF - 1]
 
-    for n in range(1, NF - 1):
-        TF_shift = -TF[nf_low + n + 1] + TF[nf_low + n - 1]
-        TFp_shift = TFp[nf_low + n]
+    for n in range(nf_low + 1, nf_low + NF - 1):
+        TF_shift = -TF[n + 1] + TF[n - 1]
+        TFp_shift = TFp[n]
         for itrc in range(nc_loc):
             AET_TFps[itrc, n] = (AET_TFs[itrc, n + 1] - AET_TFs[itrc, n - 1] + TF_shift) / (2 * DF) + TFp_shift
+
+    AET_TFps_alt = np.zeros_like(AET_TFps)
+    AET_TFs_alt = np.zeros_like(AET_TFs)
+    stabilized_gradient_uniform_inplace(TF, TFp, AET_TFs_alt, AET_TFps_alt, DF)
+    assert_allclose(AET_TFps, AET_TFps_alt, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(AET_TFs, AET_TFs_alt, atol=1.e-20, rtol=1.e-10)
     return
