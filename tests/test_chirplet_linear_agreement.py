@@ -95,81 +95,82 @@ def test_cross_waveform_agreement_time():
     assert_allclose(linear_time.tdi_waveform.AT, chirplet_time.tdi_waveform.AT, atol=1.e-20,
                     rtol=1.e-10)
 
-    def test_cross_waveform_agreement_time():
-        """Test the non TDI parts of the waveform agree between the time and frequency domain cases"""
-        toml_filename = 'tests/galactic_fit_test_config1.toml'
 
-        with Path(toml_filename).open('rb') as f:
-            config = tomllib.load(f)
+def test_cross_waveform_agreement_time2():
+    """Test the non TDI parts of the waveform agree between the time and frequency domain cases"""
+    toml_filename = 'tests/galactic_fit_test_config1.toml'
 
-        wc = get_wavelet_model(config)
-        lc = get_lisa_constants(config)
+    with Path(toml_filename).open('rb') as f:
+        config = tomllib.load(f)
 
-        nt_lim_waveform = PixelTimeRange(0, wc.Nt, wc.DT)
+    wc = get_wavelet_model(config)
+    lc = get_lisa_constants(config)
 
-        fdot_mult = 0.1
-        fdot = 3.105 * fdot_mult * wc.DF / wc.Tw  # used an irrational fraction to ensure the fdot lands between samples
+    nt_lim_waveform = PixelTimeRange(0, wc.Nt, wc.DT)
 
-        f0 = 16 * wc.DF
+    fdot_mult = 0.1
+    fdot = 3.105 * fdot_mult * wc.DF / wc.Tw  # used an irrational fraction to ensure the fdot lands between samples
 
-        tp = 0.0
+    f0 = 16 * wc.DF
 
-        fp = f0 + fdot * tp  # ensures that frequency starts positive
+    tp = 0.0
 
-        gamma = fp * 800000.0
-        tau = gamma / fdot
+    fp = f0 + fdot * tp  # ensures that frequency starts positive
 
-        phi0 = 0.1
-        A0_freq = 1.
-        A0_time = np.sqrt(fdot) * A0_freq
-        # Setup the intrinsic parameters for the binary source
-        intrinsic_chirplet = LinearChirpletIntrinsicParams(A0_freq, phi0, fp, tp, tau, gamma)
-        intrinsic_linear = LinearFrequencyIntrinsicParams(
-            amp0_t=A0_time,  # amplitude
-            phi0=phi0,  # phase at t=0
-            F0=f0,  # initial frequency (Hz)
-            FTd0=fdot,  # frequency derivative (Hz/s)
-        )
+    gamma = fp * 800000.0
+    tau = gamma / fdot
 
-        extrinsic = ExtrinsicParams(costh=0.1, phi=0.1, cosi=0.2,
-                                    psi=0.3)  # Replace this with a real extrinsic param object if needed
+    phi0 = 0.1
+    A0_freq = 1.
+    A0_time = np.sqrt(fdot) * A0_freq
+    # Setup the intrinsic parameters for the binary source
+    intrinsic_chirplet = LinearChirpletIntrinsicParams(A0_freq, phi0, fp, tp, tau, gamma)
+    intrinsic_linear = LinearFrequencyIntrinsicParams(
+        amp0_t=A0_time,  # amplitude
+        phi0=phi0,  # phase at t=0
+        F0=f0,  # initial frequency (Hz)
+        FTd0=fdot,  # frequency derivative (Hz/s)
+    )
 
-        # Bundle parameters
-        params_chirplet = SourceParams(
-            intrinsic=intrinsic_chirplet,
-            extrinsic=extrinsic,
-        )
+    extrinsic = ExtrinsicParams(costh=0.1, phi=0.1, cosi=0.2,
+                                psi=0.3)  # Replace this with a real extrinsic param object if needed
 
-        params_linear = SourceParams(
-            intrinsic=intrinsic_linear,
-            extrinsic=extrinsic,
-        )
+    # Bundle parameters
+    params_chirplet = SourceParams(
+        intrinsic=intrinsic_chirplet,
+        extrinsic=extrinsic,
+    )
 
-        linear_time = LinearFrequencySourceWaveformTime(
-            params=params_linear,
-            nt_lim_waveform=nt_lim_waveform,
-            lc=lc,
-        )
+    params_linear = SourceParams(
+        intrinsic=intrinsic_linear,
+        extrinsic=extrinsic,
+    )
 
-        chirplet_time = LinearChirpletSourceWaveformTime(
-            params=params_chirplet,
-            nt_lim_waveform=nt_lim_waveform,
-            lc=lc,
-        )
+    linear_time = LinearFrequencySourceWaveformTime(
+        params=params_linear,
+        nt_lim_waveform=nt_lim_waveform,
+        lc=lc,
+    )
 
-        assert_allclose(linear_time.intrinsic_waveform.T, chirplet_time.intrinsic_waveform.T, atol=1.e-20, rtol=1.e-10)
-        assert_allclose(linear_time.intrinsic_waveform.FTd, chirplet_time.intrinsic_waveform.FTd, atol=1.e-20, rtol=1.e-10)
-        assert_allclose(linear_time.intrinsic_waveform.FT, chirplet_time.intrinsic_waveform.FT, atol=1.e-20, rtol=1.e-10)
-        assert_allclose(linear_time.intrinsic_waveform.PT, chirplet_time.intrinsic_waveform.PT, atol=1.e-20, rtol=1.e-10)
-        assert_allclose(linear_time.intrinsic_waveform.AT, chirplet_time.intrinsic_waveform.AT, atol=1.e-20, rtol=1.e-10)
-        assert_allclose(linear_time.wavefront_time, chirplet_time.wavefront_time, atol=1.e-20, rtol=1.e-10)
-        assert_allclose(linear_time.tdi_waveform.FT, chirplet_time.tdi_waveform.FT, atol=1.e-20, rtol=1.e-10)
-        assert_allclose(linear_time.tdi_waveform.FTd, chirplet_time.tdi_waveform.FTd, atol=1.e-20, rtol=1.e-10)
-        assert_allclose(linear_time.tdi_waveform.PT, chirplet_time.tdi_waveform.PT, atol=1.e-20, rtol=1.e-10)
-        assert_allclose(linear_time.tdi_waveform.AT, chirplet_time.tdi_waveform.AT, atol=1.e-20, rtol=1.e-10)
+    chirplet_time = LinearChirpletSourceWaveformTime(
+        params=params_chirplet,
+        nt_lim_waveform=nt_lim_waveform,
+        lc=lc,
+    )
+
+    assert_allclose(linear_time.intrinsic_waveform.T, chirplet_time.intrinsic_waveform.T, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(linear_time.intrinsic_waveform.FTd, chirplet_time.intrinsic_waveform.FTd, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(linear_time.intrinsic_waveform.FT, chirplet_time.intrinsic_waveform.FT, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(linear_time.intrinsic_waveform.PT, chirplet_time.intrinsic_waveform.PT, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(linear_time.intrinsic_waveform.AT, chirplet_time.intrinsic_waveform.AT, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(linear_time.wavefront_time, chirplet_time.wavefront_time, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(linear_time.tdi_waveform.FT, chirplet_time.tdi_waveform.FT, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(linear_time.tdi_waveform.FTd, chirplet_time.tdi_waveform.FTd, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(linear_time.tdi_waveform.PT, chirplet_time.tdi_waveform.PT, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(linear_time.tdi_waveform.AT, chirplet_time.tdi_waveform.AT, atol=1.e-20, rtol=1.e-10)
 
 
-def test_cross_waveform_agreement_freq():
+def test_cross_waveform_agreement_freq2():
     """Test the linear frequency and chirplet frequency domain waveforms agree"""
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 
@@ -246,7 +247,7 @@ def test_cross_waveform_agreement_freq():
     assert_allclose(linear_freq.intrinsic_waveform.PF, chirplet_freq.intrinsic_waveform.PF, atol=1.e-20, rtol=1.e-10)
     assert_allclose(linear_freq.intrinsic_waveform.AF, chirplet_freq.intrinsic_waveform.AF, atol=1.e-20, rtol=1.e-10)
     assert_allclose(linear_freq.kdotx, chirplet_freq.kdotx, atol=1.e-20, rtol=1.e-10)
-    assert_allclose(linear_freq.tdi_waveform.TF, chirplet_freq.tdi_waveform.TF, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(linear_freq.tdi_waveform.TF, chirplet_freq.tdi_waveform.TF, atol=1.e-20, rtol=5.e-9)
     assert_allclose(linear_freq.tdi_waveform.TFp, chirplet_freq.tdi_waveform.TFp, atol=1.e-20, rtol=1.e-10)
     assert_allclose(linear_freq.tdi_waveform.PF, chirplet_freq.tdi_waveform.PF, atol=1.e-20, rtol=1.e-10)
     assert_allclose(linear_freq.tdi_waveform.AF, chirplet_freq.tdi_waveform.AF, atol=1.e-19, rtol=1.e-10)

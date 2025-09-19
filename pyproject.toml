@@ -11,7 +11,8 @@ dependencies = [
     "numpy",
     "scipy",
     "numba",
-    "pytest"
+    "pytest",
+    "h5py"
 ]
 requires-python = ">=3.7"
 
