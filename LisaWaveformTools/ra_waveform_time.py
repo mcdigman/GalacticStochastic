@@ -6,7 +6,7 @@ from numba import njit, prange
 
 from LisaWaveformTools.algebra_tools import gradient_uniform_inplace, stabilized_gradient_uniform_inplace
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels
+from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
 
 
