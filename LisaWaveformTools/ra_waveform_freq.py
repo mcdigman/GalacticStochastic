@@ -6,8 +6,8 @@ from numpy.typing import NDArray
 
 from LisaWaveformTools.algebra_tools import stabilized_gradient_uniform_inplace
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.ra_waveform_time import amp_phase_loop_helper, spacecraft_channel_deriv_helper
-from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, ComplexTransferFunction, DetectorAmplitudePhaseCombinations, DetectorPolarizationResponse, SpacecraftOrbits, SpacecraftRelativePhases, SpacecraftScalarPosition, SpacecraftSeparationVectors, SpacecraftSeparationWaveProjection, TDIComplexAntennaPattern, TensorBasis
+from LisaWaveformTools.ra_waveform_time import amp_phase_loop_helper, apply_edge_rise_helper, spacecraft_channel_deriv_helper
+from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, ComplexTransferFunction, DetectorAmplitudePhaseCombinations, DetectorPolarizationResponse, EdgeRiseModel, SpacecraftOrbits, SpacecraftRelativePhases, SpacecraftScalarPosition, SpacecraftSeparationVectors, SpacecraftSeparationWaveProjection, TDIComplexAntennaPattern, TensorBasis
 from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, StationaryWaveformFreq, StationaryWaveformGeneric
 from WaveletWaveforms.sparse_waveform_functions import PixelFreqRange
 
@@ -797,7 +797,7 @@ def phase_wrap_freq(AET_Phases, AET_TFs, PF, TF, nf_lim: PixelFreqRange, F_min, 
 
 
 # @njit(fastmath=True)
-def get_freq_tdi_amp_phase(AET_waveform: StationaryWaveformFreq, waveform: StationaryWaveformFreq, spacecraft_channels: AntennaResponseChannels, lc: LISAConstants, nf_lim: PixelFreqRange, F_min, kdotx, Tend=np.inf):
+def get_freq_tdi_amp_phase(AET_waveform: StationaryWaveformFreq, waveform: StationaryWaveformFreq, spacecraft_channels: AntennaResponseChannels, lc: LISAConstants, nf_lim: PixelFreqRange, F_min, kdotx, er: EdgeRiseModel):
     """Helper for getting LISA response in frequency domain"""
     # TODO figure out how to set Tend properly
     AET_Amps = AET_waveform.AF
@@ -813,11 +813,17 @@ def get_freq_tdi_amp_phase(AET_waveform: StationaryWaveformFreq, waveform: Stati
     spacecraft_channel_deriv_helper(spacecraft_channels, -1.0 / (2 * nf_lim.df))
 
     AET_waveform_generic = StationaryWaveformGeneric(AET_waveform.F, AET_Phases, AET_TFs, AET_TFs, AET_Amps)
+    # Time based method applies phase perturbation to PF, so set PF to zero here
     waveform_generic = StationaryWaveformGeneric(waveform.F, np.zeros_like(waveform.PF), waveform.TF, waveform.TFp, waveform.AF)
-    Tstart = lc.t0 - lc.t_rise
-    amp_phase_loop_helper(waveform.F, waveform.TF, waveform_generic, AET_waveform_generic, spacecraft_channels, lc, Tstart, Tend, nf_lim.nf_min, nf_lim.nf_max)
+
+    amp_phase_loop_helper(waveform.F, waveform.TF, waveform_generic, AET_waveform_generic, spacecraft_channels, lc, nf_lim.nf_min, nf_lim.nf_max)
+    # sign is flipped relative to time
     AET_Phases = - AET_Phases
+
+    # Wrap the phase perturbations consistently across channels
     phase_wrap_freq(AET_Phases, AET_TFs, PF, TF, nf_lim, F_min, kdotx)
+    # apply edge rise/fall to AET_Amps and AET_TFs
+    apply_edge_rise_helper(waveform.TF, AET_Amps, er, lc, nf_lim.nf_min, nf_lim.nf_max)
 
     # compute AET_TFps as perturbation on TFps
     # compute the gradient dy/dx using a second order accurate central finite difference

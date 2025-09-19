@@ -3,10 +3,11 @@
 
 import numpy as np
 from numba import njit, prange
+from numpy.typing import NDArray
 
 from LisaWaveformTools.algebra_tools import gradient_uniform_inplace, stabilized_gradient_uniform_inplace
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels
+from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, EdgeRiseModel
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformGeneric, StationaryWaveformTime
 
 
@@ -94,9 +95,11 @@ def spacecraft_channel_deriv_helper(spacecraft_channels: AntennaResponseChannels
 
 
 @njit(fastmath=True)
-def edge_rise_multiplier_helper(t, Tstart, Tend, lc: LISAConstants):
+def edge_rise_multiplier_helper(t: float, er: EdgeRiseModel, lc: LISAConstants) -> float:
     """Helper for getting LISA response in frequency domain"""
     x = 1.0
+    Tstart = er.Tstart
+    Tend = er.Tend
     if lc.rise_mode == 0:
         if Tstart < t < Tstart + lc.t_rise:
             x = 0.5 * (1.0 - np.cos(np.pi * (t - Tstart) / lc.t_rise))
@@ -110,25 +113,104 @@ def edge_rise_multiplier_helper(t, Tstart, Tend, lc: LISAConstants):
     elif lc.rise_mode == 2:
         if t > Tend:
             x = 0.0
+    elif lc.rise_mode == 3:
+        pass
     else:
         msg = 'rise_mode must be 0, 1, or 2'
         raise NotImplementedError(msg)
     return x
 
 
+@njit(fastmath=True)
+def apply_edge_rise_helper(t, A, er: EdgeRiseModel, lc: LISAConstants, nx_min: int, nx_max: int) -> None:
+    """Apply edge rise to the amplitude of a waveform in place."""
+    if lc.rise_mode == 3:
+        pass
+    else:
+        assert 0 <= nx_min < nx_max <= t.size
+        assert A.shape[1] == t.shape[0]
+        for n in range(nx_min, nx_max):
+            x = edge_rise_multiplier_helper(t[n], er, lc)
+            A[:, n] *= x
+
+
 @njit(fastmath=True, parallel=True)
-def amp_phase_loop_helper(F, T, waveform, AET_waveform, spacecraft_channels, lc, Tstart, Tend, nx_min, nx_max):
+def amp_phase_loop_helper(F: NDArray[np.floating], T: NDArray[np.floating], waveform: StationaryWaveformGeneric, AET_waveform: StationaryWaveformGeneric, spacecraft_channels: AntennaResponseChannels, lc: LISAConstants, nx_min: int, nx_max: int) -> None:
+    """Compute TDI (Time Delay Interferometry) modifications for the amplitude, phase, and frequency of a intrinsic_waveform.
+
+    This function perturbs the intrinsic amplitude, phase, and frequency of a generic intrinsic_waveform
+    from the stationary wave approximation to compute the TDI intrinsic_waveform in the stationary wave approximation.
+    Uses the real (RR) and imaginary (II) components already computed and stored in sc_channels
+    using the rigid adiabatic approximation.
+    Results are stored in-place in the tdi_waveform parameter. The function handles the general case
+    and a subset of special cases where the real (RR) and imaginary (II) components are zero.
+
+    Parameters
+    ----------
+    F: NDArray[float]
+        Array of frequencies corresponding to the waveform samples
+    T: NDArray[float]
+        Array of times corresponding to the waveform samples
+    spacecraft_channels : SpacecraftChannels
+        Object containing the real (RR) and imaginary (II) components of the spacecraft
+        response, along with their derivatives (dRR, dII)
+    AET_waveform : StationaryWaveformGeneric
+        Target intrinsic_waveform object where the modified TDI amplitude and phase will be stored.
+        Modified in-place with computed values
+    waveform : StationaryWaveformGeneric
+        Input intrinsic_waveform object containing the original phase (PT) and amplitude (AT) data
+    lc : LISAConstants
+        LISA constellation constants containing the strain frequency (fstr)
+
+    Notes
+    -----
+    - The function assumes positive frequencies
+    - When RR and II are both near zero, there can be a step function in the phase
+      corresponding to a Dirac delta function in frequency, which is not currently
+      represented in the frequency or derivative
+    - The phase perturbation is computed using arctan2 and is kept within [0, 2π]
+    - The frequency derivative calculation ignores potential delta functions that
+      can occur from step functions in the phase when RR or II pass through zero
+    - All input arrays must be properly sized:
+      - sc_channels.RR shape: (nc_channel, n_t)
+      - intrinsic_waveform.PT shape: (n_t,)
+      - tdi_waveform.PT shape: (nc_channel, n_t)
+
+    Returns
+    -------
+    None
+        Results are stored in-place in tdi_waveform
+
+    """
+    # Note that if RR and II are both very near zero, there can be a step function
+    # in the phase that would correspond to a dirac delta function in the frequency,
+    # that currently is not represented in the frequency or derivative at all,
+    # because the formula used for the frequency derivative does not include a delta function.
+    # It appears naturally in the phase due to the two argument arctangent.
+    # (the limit of the two argument arctangent as one argument approaches zero
+    # is one possible representation of a step function)
+    # I think this may be the best behavior given the current use of passing to
+    # Wavelet domain taylor expansion methods given typically sparse sampling for wavelets
+    # but I am not sure if including such delta functions would be better in other use cases.
+    # The code implicitly assumes postive frequencies.
+
     nc_channel = spacecraft_channels.RR.shape[0]
     AET_P = AET_waveform.P
     AET_A = AET_waveform.A
     AET_X = AET_waveform.X
 
+    assert len(AET_P.shape) == 2
+    assert len(F.shape) == 1
+    assert AET_P.shape == AET_A.shape == AET_X.shape
+    assert F.shape == T.shape == waveform.P.shape == waveform.A.shape == waveform.X.shape
+    assert AET_P.shape[-1] == F.shape[0]
+    assert 0 <= nx_min <= nx_max <= F.shape[0]
+
     for n in prange(nx_min, nx_max):
         fonfs = F[n] / lc.fstr
 
         # including TDI + fractional frequency modifiers
-        x = edge_rise_multiplier_helper(T[n], Tstart, Tend, lc)
-        Ampx = waveform.A[n] * x * (8 * fonfs * np.sin(fonfs))
+        Ampx = waveform.A[n] * (8 * fonfs * np.sin(fonfs))
         for itrc in range(nc_channel):
             RR = spacecraft_channels.RR[itrc, n]
             II = spacecraft_channels.II[itrc, n]
@@ -174,6 +256,7 @@ def get_time_tdi_amp_phase_helper(
     AET_waveform: StationaryWaveformTime,
     waveform: StationaryWaveformTime,
     lc: LISAConstants,
+    er: EdgeRiseModel,
 ) -> None:
     """Compute TDI (Time Delay Interferometry) modifications for the amplitude, phase, and frequency of a intrinsic_waveform.
 
@@ -196,6 +279,8 @@ def get_time_tdi_amp_phase_helper(
         Input intrinsic_waveform object containing the original phase (PT) and amplitude (AT) data
     lc : LISAConstants
         LISA constellation constants containing the strain frequency (fstr)
+    er: EdgeRiseModel
+        Edge rise model containing parameters needed to apply edge rise to the amplitude
 
     Notes
     -----
@@ -244,10 +329,8 @@ def get_time_tdi_amp_phase_helper(
 
     AET_waveform_generic = StationaryWaveformGeneric(AET_waveform.T, AET_PT, AET_FT, AET_waveform.FTd, AET_AT)
     waveform_generic = StationaryWaveformGeneric(waveform.T, waveform.PT, waveform.FT, waveform.FTd, waveform.AT)
-    Tstart = lc.t0 - lc.t_rise
-    Tend = waveform.T[-1] + lc.t_rise
-    amp_phase_loop_helper(waveform.FT, waveform.T, waveform_generic, AET_waveform_generic, spacecraft_channels, lc, Tstart, Tend, 0, waveform.T.size)
-
+    amp_phase_loop_helper(waveform.FT, waveform.T, waveform_generic, AET_waveform_generic, spacecraft_channels, lc, 0, waveform.T.size)
+    apply_edge_rise_helper(waveform.T, AET_waveform.AT, er, lc, 0, waveform.T.size)
     # for n in prange(n_t):
     #    fonfs = waveform.FT[n] / lc.fstr
 
@@ -298,6 +381,7 @@ def get_time_tdi_amp_phase(
     AET_waveform: StationaryWaveformTime,
     waveform: StationaryWaveformTime,
     lc: LISAConstants,
+    er: EdgeRiseModel,
     dt: float,
     phase_wrap_mode: int = 0,
 ) -> None:
@@ -322,6 +406,8 @@ def get_time_tdi_amp_phase(
         Input intrinsic_waveform object containing the original phase (PT) and amplitude (AT) data
     lc : LISAConstants
         LISA constellation constants containing the strain frequency (fstr)
+    er: EdgeRiseModel
+        Edge rise model containing parameters needed to apply edge rise to the amplitude
     dt: float
         Time steps between samples for derivative calculation
     phase_wrap_mode: int
@@ -354,7 +440,7 @@ def get_time_tdi_amp_phase(
     spacecraft_channel_deriv_helper(spacecraft_channels, dt)
 
     # get the tdi perturbations to the amplitude and phase
-    get_time_tdi_amp_phase_helper(spacecraft_channels, AET_waveform, waveform, lc)
+    get_time_tdi_amp_phase_helper(spacecraft_channels, AET_waveform, waveform, lc, er)
 
     if phase_wrap_mode == 1:
         # wrap the phases using phase_wrap_helper

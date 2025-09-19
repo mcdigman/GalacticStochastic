@@ -17,6 +17,7 @@ from WDMWaveletTransforms.wavelet_transforms import inverse_wavelet_freq, invers
 from LisaWaveformTools.lisa_config import get_lisa_constants
 from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels
 from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
+from LisaWaveformTools.spacecraft_objects import EdgeRiseModel
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
 from tests.test_time_tdi_ampphase import get_RR_t_mult, get_waveform_helper
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, sparse_addition_helper
@@ -49,6 +50,7 @@ def get_aet_waveform_helper(lc, rr_model, p_input, f_input, fp_input, fpp_input,
         p_input, f_input, fp_input, fpp_input, amp_input, nt_loc, dt_loc, nc_waveform, max_f=f_high_cut,
     )
     T = waveform.T
+    er = EdgeRiseModel(-np.inf, np.inf)
 
     RR_t_mult, II_t_mult = get_RR_t_mult(rr_model, nt_loc, 1, dt_loc)
     RR = np.outer(RR_scale_mult, RR_t_mult)
@@ -56,7 +58,7 @@ def get_aet_waveform_helper(lc, rr_model, p_input, f_input, fp_input, fpp_input,
     dRR = np.zeros((nc_waveform, nt_loc))
     dII = np.zeros((nc_waveform, nt_loc))
     spacecraft_channels = AntennaResponseChannels(T, RR, II, dRR, dII)
-    get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, dt_loc)
+    get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, er, dt_loc)
 
     # tukey window the amplitudes to cut down on edge artifacts
     tukey_waveform_amp(AET_waveform, tukey_alpha, arg_cut)

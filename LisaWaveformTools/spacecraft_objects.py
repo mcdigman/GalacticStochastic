@@ -162,3 +162,5 @@ k_sc_sc_sep : numpy.ndarray
 k_sc_gc_sep : numpy.ndarray
     Dot products of the wave vector with the separation vectors between spacecraft and the guiding center, shape (n_arm,)
 """
+
+EdgeRiseModel = namedtuple('EdgeRiseModel', ['Tstart', 'Tend'])

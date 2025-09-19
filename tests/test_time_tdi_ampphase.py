@@ -17,6 +17,7 @@ from LisaWaveformTools.algebra_tools import gradient_uniform_inplace
 from LisaWaveformTools.lisa_config import get_lisa_constants
 from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels
 from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
+from LisaWaveformTools.spacecraft_objects import EdgeRiseModel
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange, sparse_addition_helper
 from WaveletWaveforms.taylor_time_coefficients import (
@@ -157,6 +158,7 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult, rr_model, f0p_mult):
 
     wc = get_wavelet_model(config)
     lc = get_lisa_constants(config)
+    er = EdgeRiseModel(-np.inf, np.inf)
 
     nt_loc = wc.Nt
     nc_waveform = lc.nc_waveform
@@ -246,7 +248,7 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult, rr_model, f0p_mult):
     spacecraft_channels = AntennaResponseChannels(T, RR.copy(), II.copy(), dRR, dII)
 
     # Call the function
-    get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, wc.DT)
+    get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, er, wc.DT)
 
     # Check that input wavefrom objects have not mutated
     assert np.all(spacecraft_channels.RR == RR)
@@ -432,6 +434,7 @@ def test_time_tdi_inplace_nearzero(f0_mult, rr_model, f0p_mult):
 
     wc = get_wavelet_model(config)
     lc = get_lisa_constants(config)
+    er = EdgeRiseModel(-np.inf, np.inf)
 
     nt_loc = wc.Nt
     nc_waveform = lc.nc_waveform
@@ -561,7 +564,7 @@ def test_time_tdi_inplace_nearzero(f0_mult, rr_model, f0p_mult):
     spacecraft_channels = AntennaResponseChannels(T, RR.copy(), II.copy(), dRR, dII)
 
     # Call the function
-    get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, wc.DT)
+    get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, er, wc.DT)
 
     # Check that input wavefrom objects have not mutated
     assert np.all(spacecraft_channels.RR == RR)
@@ -714,6 +717,7 @@ def test_time_tdi_inplace_transform(f0_mult, rr_model, f0p_mult):
     wc = get_wavelet_model(config)
     assert wc == wc_in
     lc = get_lisa_constants(config)
+    er = EdgeRiseModel(-np.inf, np.inf)
 
     nt_loc = wc.Nt
     nc_waveform = lc.nc_waveform
@@ -752,8 +756,8 @@ def test_time_tdi_inplace_transform(f0_mult, rr_model, f0p_mult):
     spacecraft_channels_fine = AntennaResponseChannels(T_fine, RR_fine, II_fine, dRR_fine, dII_fine)
 
     # Call the function
-    get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, wc.DT)
-    get_time_tdi_amp_phase(spacecraft_channels_fine, AET_waveform_fine, waveform_fine, lc, wc.dt)
+    get_time_tdi_amp_phase(spacecraft_channels, AET_waveform, waveform, lc, er, wc.DT)
+    get_time_tdi_amp_phase(spacecraft_channels_fine, AET_waveform_fine, waveform_fine, lc, er, wc.dt)
 
     # get the sparse wavelet intrinsic_waveform
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(lc.nc_waveform, wc)

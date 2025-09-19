@@ -6,7 +6,7 @@ import numpy as np
 
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_freq import get_freq_tdi_amp_phase, rigid_adiabatic_antenna
-from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels
+from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, EdgeRiseModel
 from LisaWaveformTools.stationary_source_waveform import SourceParams, StationarySourceWaveform, StationaryWaveformFreq
 from WaveletWaveforms.sparse_waveform_functions import PixelFreqRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
@@ -22,6 +22,12 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
         self._nc_waveform: int = self._lc.nc_waveform
         self._consistent_extrinsic: bool = False
         self._n_pad_F = n_pad_F
+
+        if lc.rise_mode == 3:
+            self._er = EdgeRiseModel(-np.inf, np.inf)
+        else:
+            msg = 'Only rise_mode 3 (no edge) is implemented.'
+            raise NotImplementedError(msg)
 
         self.NF_min = NF_min
         self.NF_max = NF_max
@@ -157,7 +163,7 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
 
         rigid_adiabatic_antenna(self._spacecraft_channels, self.params.extrinsic, self.intrinsic_waveform.TF, self.FFs, self.nf_low, self.nf_range, self.kdotx, self._lc)
         nf_lim = PixelFreqRange(self.nf_low, self.nf_low + self.nf_range, self._wc.DF)
-        get_freq_tdi_amp_phase(self._tdi_waveform, self.intrinsic_waveform, self._spacecraft_channels, self._lc, nf_lim, F_min, self.kdotx, Tend=self.Tend)
+        get_freq_tdi_amp_phase(self._tdi_waveform, self.intrinsic_waveform, self._spacecraft_channels, self._lc, nf_lim, F_min, self.kdotx, self._er)
         self._consistent_extrinsic = True
 
     @override

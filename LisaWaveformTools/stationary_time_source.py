@@ -8,6 +8,7 @@ from numpy.typing import NDArray
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels, SpacecraftOrbits, get_spacecraft_vec, get_tensor_basis, get_wavefront_time, rigid_adiabatic_antenna
 from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
+from LisaWaveformTools.spacecraft_objects import EdgeRiseModel
 from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams, StationarySourceWaveform, StationaryWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelTimeRange
 
@@ -28,6 +29,11 @@ class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTi
         self._spacecraft_orbits: SpacecraftOrbits = get_spacecraft_vec(self._TTs, self._lc)
 
         self._response_mode: int = -1
+        if lc.rise_mode == 3:
+            self._er = EdgeRiseModel(-np.inf, np.inf)
+        else:
+            msg = 'Only rise_mode 3 (no edge) is implemented.'
+            raise NotImplementedError(msg)
         self.response_mode = response_mode
 
         AmpTs = np.zeros(self._nt_range)
@@ -94,7 +100,7 @@ class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTi
                 self._lc,
             )
             get_time_tdi_amp_phase(
-                self._spacecraft_channels, self._tdi_waveform, self.intrinsic_waveform, self._lc,
+                self._spacecraft_channels, self._tdi_waveform, self.intrinsic_waveform, self._lc, self._er,
                 self._nt_lim_waveform.dt,
             )
         elif self.response_mode == 2:
