@@ -7,7 +7,7 @@ from numba import njit, prange
 from LisaWaveformTools.algebra_tools import gradient_uniform_inplace, stabilized_gradient_uniform_inplace
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels
-from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
+from LisaWaveformTools.stationary_source_waveform import StationaryWaveformGeneric, StationaryWaveformTime
 
 
 @njit()
@@ -93,7 +93,82 @@ def spacecraft_channel_deriv_helper(spacecraft_channels: AntennaResponseChannels
     gradient_uniform_inplace(spacecraft_channels.II, spacecraft_channels.dII, dt)
 
 
+@njit(fastmath=True)
+def edge_rise_multiplier_helper(t, Tstart, Tend, lc: LISAConstants):
+    """Helper for getting LISA response in frequency domain"""
+    x = 1.0
+    if lc.rise_mode == 0:
+        if Tstart < t < Tstart + lc.t_rise:
+            x = 0.5 * (1.0 - np.cos(np.pi * (t - Tstart) / lc.t_rise))
+        if (Tend - lc.t_rise) < t < Tend:
+            x = 0.5 * (1.0 - np.cos(np.pi * (t - Tend) / lc.t_rise))
+    elif lc.rise_mode == 0:
+        if t > Tend:
+            x = 0.0
+        if t < Tstart:
+            x = 0.0
+    elif lc.rise_mode == 2:
+        if t > Tend:
+            x = 0.0
+    else:
+        msg = 'rise_mode must be 0, 1, or 2'
+        raise NotImplementedError(msg)
+    return x
+
+
 @njit(fastmath=True, parallel=True)
+def amp_phase_loop_helper(F, T, waveform, AET_waveform, spacecraft_channels, lc, Tstart, Tend, nx_min, nx_max):
+    nc_channel = spacecraft_channels.RR.shape[0]
+    AET_P = AET_waveform.P
+    AET_A = AET_waveform.A
+    AET_X = AET_waveform.X
+
+    for n in prange(nx_min, nx_max):
+        fonfs = F[n] / lc.fstr
+
+        # including TDI + fractional frequency modifiers
+        x = edge_rise_multiplier_helper(T[n], Tstart, Tend, lc)
+        Ampx = waveform.A[n] * x * (8 * fonfs * np.sin(fonfs))
+        for itrc in range(nc_channel):
+            RR = spacecraft_channels.RR[itrc, n]
+            II = spacecraft_channels.II[itrc, n]
+            dRR = spacecraft_channels.dRR[itrc, n]
+            dII = spacecraft_channels.dII[itrc, n]
+
+            if RR == 0.0 and II == 0.0:
+                # Handle zero denominator phase.
+                p = 0.0
+
+                # Handle zero denominator FT without a delta function.
+                # Note that the second derivative could be more complicated here,
+                # But we ignore that for now and just take a numerical derivative.
+                AET_X[itrc, n] = waveform.X[n]
+            elif II * dRR == RR * dII:
+                # Zero numerator phase is the same as general case.
+                p = np.arctan2(II, RR) % (2 * np.pi)
+
+                # Handle zero numerator FT without a delta function
+                # May improve numerical stability if denominator is also close to zero
+                AET_X[itrc, n] = waveform.X[n]
+            else:
+                # General case of phase.
+                p = np.arctan2(II, RR) % (2 * np.pi)
+
+                # Handle general case, with the analytic derivative of the phase.
+                # dRR and dII are currently computed through a numerical derivative,
+                # But could be constructed analytically.
+                # Ignores delta functions in FT that can happen when RR or II pass through 0.
+                # The results change slightly if the compiler has the fused multiply and add enabled,
+                # e.g. fastmath = {'contract'} for the LLVM compiler
+                AET_X[itrc, n] = waveform.X[n] - (II * dRR - RR * dII) / (RR**2 + II**2) * 1 / (2 * np.pi)
+
+            # Set the amplitude
+            AET_A[itrc, n] = Ampx * np.sqrt(RR**2 + II**2)
+            # Set the phase, including the input base phase and the perturbation from this iteration,
+            AET_P[itrc, n] = waveform.P[n] + p
+
+
+@njit()
 def get_time_tdi_amp_phase_helper(
     spacecraft_channels: AntennaResponseChannels,
     AET_waveform: StationaryWaveformTime,
@@ -167,48 +242,54 @@ def get_time_tdi_amp_phase_helper(
     AET_PT = AET_waveform.PT
     AET_FT = AET_waveform.FT
 
-    for n in prange(n_t):
-        fonfs = waveform.FT[n] / lc.fstr
+    AET_waveform_generic = StationaryWaveformGeneric(AET_waveform.T, AET_PT, AET_FT, AET_waveform.FTd, AET_AT)
+    waveform_generic = StationaryWaveformGeneric(waveform.T, waveform.PT, waveform.FT, waveform.FTd, waveform.AT)
+    Tstart = lc.t0 - lc.t_rise
+    Tend = waveform.T[-1] + lc.t_rise
+    amp_phase_loop_helper(waveform.FT, waveform.T, waveform_generic, AET_waveform_generic, spacecraft_channels, lc, Tstart, Tend, 0, waveform.T.size)
 
-        # including TDI + fractional frequency modifiers
-        Ampx = waveform.AT[n] * (8 * fonfs * np.sin(fonfs))
-        for itrc in range(nc_channel):
-            RR = spacecraft_channels.RR[itrc, n]
-            II = spacecraft_channels.II[itrc, n]
-            dRR = spacecraft_channels.dRR[itrc, n]
-            dII = spacecraft_channels.dII[itrc, n]
+    # for n in prange(n_t):
+    #    fonfs = waveform.FT[n] / lc.fstr
 
-            if RR == 0.0 and II == 0.0:
-                # Handle zero denominator phase.
-                p = 0.0
+    #    # including TDI + fractional frequency modifiers
+    #    Ampx = waveform.AT[n] * (8 * fonfs * np.sin(fonfs))
+    #    for itrc in range(nc_channel):
+    #        RR = spacecraft_channels.RR[itrc, n]
+    #        II = spacecraft_channels.II[itrc, n]
+    #        dRR = spacecraft_channels.dRR[itrc, n]
+    #        dII = spacecraft_channels.dII[itrc, n]
 
-                # Handle zero denominator FT without a delta function.
-                # Note that the second derivative could be more complicated here,
-                # But we ignore that for now and just take a numerical derivative.
-                AET_FT[itrc, n] = waveform.FT[n]
-            elif II * dRR == RR * dII:
-                # Zero numerator phase is the same as general case.
-                p = np.arctan2(II, RR) % (2 * np.pi)
+    #        if RR == 0.0 and II == 0.0:
+    #            # Handle zero denominator phase.
+    #            p = 0.0
 
-                # Handle zero numerator FT without a delta function
-                # May improve numerical stability if denominator is also close to zero
-                AET_FT[itrc, n] = waveform.FT[n]
-            else:
-                # General case of phase.
-                p = np.arctan2(II, RR) % (2 * np.pi)
+    #            # Handle zero denominator FT without a delta function.
+    #            # Note that the second derivative could be more complicated here,
+    #            # But we ignore that for now and just take a numerical derivative.
+    #            AET_FT[itrc, n] = waveform.FT[n]
+    #        elif II * dRR == RR * dII:
+    #            # Zero numerator phase is the same as general case.
+    #            p = np.arctan2(II, RR) % (2 * np.pi)
 
-                # Handle general case, with the analytic derivative of the phase.
-                # dRR and dII are currently computed through a numerical derivative,
-                # But could be constructed analytically.
-                # Ignores delta functions in FT that can happen when RR or II pass through 0.
-                # The results change slightly if the compiler has the fused multiply and add enabled,
-                # e.g. fastmath = {'contract'} for the LLVM compiler
-                AET_FT[itrc, n] = waveform.FT[n] - (II * dRR - RR * dII) / (RR**2 + II**2) / (2 * np.pi)
+    #            # Handle zero numerator FT without a delta function
+    #            # May improve numerical stability if denominator is also close to zero
+    #            AET_FT[itrc, n] = waveform.FT[n]
+    #        else:
+    #            # General case of phase.
+    #            p = np.arctan2(II, RR) % (2 * np.pi)
 
-            # Set the amplitude
-            AET_AT[itrc, n] = Ampx * np.sqrt(RR**2 + II**2)
-            # Set the phase, including the input base phase and the perturbation from this iteration,
-            AET_PT[itrc, n] = waveform.PT[n] + p
+    #            # Handle general case, with the analytic derivative of the phase.
+    #            # dRR and dII are currently computed through a numerical derivative,
+    #            # But could be constructed analytically.
+    #            # Ignores delta functions in FT that can happen when RR or II pass through 0.
+    #            # The results change slightly if the compiler has the fused multiply and add enabled,
+    #            # e.g. fastmath = {'contract'} for the LLVM compiler
+    #            AET_FT[itrc, n] = waveform.FT[n] - (II * dRR - RR * dII) / (RR**2 + II**2) / (2 * np.pi)
+
+    #        # Set the amplitude
+    #        AET_AT[itrc, n] = Ampx * np.sqrt(RR**2 + II**2)
+    #        # Set the phase, including the input base phase and the perturbation from this iteration,
+    #        AET_PT[itrc, n] = waveform.PT[n] + p
 
 
 @njit()

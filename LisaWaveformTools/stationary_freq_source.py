@@ -157,7 +157,7 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
 
         rigid_adiabatic_antenna(self._spacecraft_channels, self.params.extrinsic, self.intrinsic_waveform.TF, self.FFs, self.nf_low, self.nf_range, self.kdotx, self._lc)
         nf_lim = PixelFreqRange(self.nf_low, self.nf_low + self.nf_range, self._wc.DF)
-        get_freq_tdi_amp_phase(self._tdi_waveform, self.intrinsic_waveform, self._spacecraft_channels, self._lc, nf_lim, self._wc.DF, self.nf_range, self.nf_low, F_min, self.kdotx, Tend=self.Tend)
+        get_freq_tdi_amp_phase(self._tdi_waveform, self.intrinsic_waveform, self._spacecraft_channels, self._lc, nf_lim, F_min, self.kdotx, Tend=self.Tend)
         self._consistent_extrinsic = True
 
     @override

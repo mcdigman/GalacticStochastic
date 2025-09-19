@@ -47,6 +47,10 @@ class StationaryWaveformFreq(namedtuple('StationaryWaveformFreq', ['F', 'PF', 'T
     pass
 
 
+class StationaryWaveformGeneric(namedtuple('StationaryWaveformGeneric', ['Y', 'P', 'X', 'Xp', 'A']), StationaryWaveform):
+    pass
+
+
 # Subclasses can be either in time or frequency domain
 StationaryWaveformType = TypeVar('StationaryWaveformType', bound=StationaryWaveform)
 

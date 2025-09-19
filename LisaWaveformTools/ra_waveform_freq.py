@@ -6,9 +6,9 @@ from numpy.typing import NDArray
 
 from LisaWaveformTools.algebra_tools import stabilized_gradient_uniform_inplace
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.ra_waveform_time import spacecraft_channel_deriv_helper
+from LisaWaveformTools.ra_waveform_time import amp_phase_loop_helper, spacecraft_channel_deriv_helper
 from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, ComplexTransferFunction, DetectorAmplitudePhaseCombinations, DetectorPolarizationResponse, SpacecraftOrbits, SpacecraftRelativePhases, SpacecraftScalarPosition, SpacecraftSeparationVectors, SpacecraftSeparationWaveProjection, TDIComplexAntennaPattern, TensorBasis
-from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, StationaryWaveformFreq
+from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, StationaryWaveformFreq, StationaryWaveformGeneric
 from WaveletWaveforms.sparse_waveform_functions import PixelFreqRange
 
 
@@ -761,108 +761,68 @@ def get_spacecraft_vec(ts: NDArray[np.float64], lc: LISAConstants) -> Spacecraft
     return SpacecraftOrbits(xs, ys, zs, xas, yas, zas)
 
 
-@njit(fastmath=True)
-def get_freq_tdi_amp_phase(AET_waveform: StationaryWaveformFreq, waveform: StationaryWaveformFreq, spacecraft_channels: AntennaResponseChannels, lc: LISAConstants, nf_lim: PixelFreqRange, DF: float, NF, nf_low, F_min, kdotx, Tend=np.inf):
+def phase_wrap_freq(AET_Phases, AET_TFs, PF, TF, nf_lim: PixelFreqRange, F_min, kdotx, wrap_thresh=np.pi):
+    """Helper for getting LISA response in frequency domain."""
+    nc_loc = AET_Phases.shape[0]
+
+    Phase_accums = np.zeros(nc_loc)
+
+    js = np.zeros(nc_loc)
+
+    for n in range(nf_lim.nf_max - 1, nf_lim.nf_min - 1, -1):
+        # Barycenter time and frequency
+        t = TF[n]
+        f = n * nf_lim.df + F_min  # FF[n]
+
+        # the doppler-only phase perturbation (should be already unwrapped)
+        Phase = -2 * np.pi * f * kdotx[n] - PF[n]  # TODO check pi/4
+
+        for itrc in range(nc_loc):
+            # only the phase perturbation from the antenna pattern
+            p = - AET_Phases[itrc, n]
+
+            # adjust for the phase perturbation implicit in the time perturbation; more stable than wrapping p directly
+            if n == nf_lim.nf_max - 1:
+                Phase_accums[itrc] = - p
+            else:
+                Phase_accums[itrc] -= np.pi * nf_lim.df * (AET_TFs[itrc, n] - t + AET_TFs[itrc, n + 1] - TF[n + 1])
+
+            # wrap if the accumulated phase perturbation exceeds the threshold
+            if Phase_accums[itrc] + p + js[itrc] > wrap_thresh:
+                js[itrc] -= 2 * np.pi
+            if -p - js[itrc] - Phase_accums[itrc] > wrap_thresh:
+                js[itrc] += 2 * np.pi
+
+            AET_Phases[itrc, n] = AET_Phases[itrc, n] - Phase - js[itrc]
+
+
+# @njit(fastmath=True)
+def get_freq_tdi_amp_phase(AET_waveform: StationaryWaveformFreq, waveform: StationaryWaveformFreq, spacecraft_channels: AntennaResponseChannels, lc: LISAConstants, nf_lim: PixelFreqRange, F_min, kdotx, Tend=np.inf):
     """Helper for getting LISA response in frequency domain"""
     # TODO figure out how to set Tend properly
-    # TODO may be good to set 2*pi multiple reproducibly
     AET_Amps = AET_waveform.AF
     AET_Phases = AET_waveform.PF
     AET_TFs = AET_waveform.TF
     AET_TFps = AET_waveform.TFp
 
-    nc_loc = AET_Amps.shape[0]
-
-    AA = waveform.AF
     PF = waveform.PF
     TF = waveform.TF
     TFp = waveform.TFp
 
-    Phase_accums = np.zeros(nc_loc)
+    # for the derivative of RR and II absorb 1/(2*nf_lim.df) into the constant in AET_TFs
+    spacecraft_channel_deriv_helper(spacecraft_channels, -1.0 / (2 * nf_lim.df))
 
-    # for the derivative of RR and II absorb 1/(2*DF) into the constant in AET_TFs
-    spacecraft_channel_deriv_helper(spacecraft_channels, 1.0)
-
-    # Merger kdotx
-    polds = np.zeros(nc_loc)
-
-    n = NF - 1 + nf_low
-    assert nf_lim.nf_max == NF + nf_low
-    assert nf_lim.nf_min == nf_low
-    assert nf_lim.df == DF
-
-    for itrc in range(nc_loc):
-        RR = spacecraft_channels.RR[itrc, n]
-        II = spacecraft_channels.II[itrc, n]
-        polds[itrc] = np.arctan2(II, RR)
-        if polds[itrc] < 0.0:
-            polds[itrc] += 2 * np.pi
-
-    js = np.zeros(nc_loc)
-
-    for n_alt in range(nf_lim.nf_max - 1, nf_lim.nf_min - 1, -1):
-        n = n_alt
-        # Barycenter time and frequency
-        t = TF[n_alt]
-        f = n * DF + F_min  # FF[n]
-
-        # kdotx = t-xis[n_alt]
-
-        x = 1.0
-#        if Tstart<t<Tstart+lc.t_rise:
-#            x = 0.5*(1.-np.cos(np.pi*(t-Tstart))/lc.t_rise)
-#        if (Tend-lc.t_rise)<t<Tend:
-#            x = 0.5*(1.0-np.cos(np.pi*(t-Tend)/lc.t_rise))
-        if t > Tend:
-            x = 0.0
-#        if t<Tstart:
-#            x = 0.0
-
-        fonfs = f / lc.fstr  # Derivation says this is needed in the phase. Doesn't seem to be.
-        Amp = 8 * x * AA[n_alt] * (fonfs * np.sin(fonfs))
-        # TODO check and make consistent across versions
-        Phase = -2 * np.pi * f * kdotx[n] - PF[n_alt]  # TODO check pi/4
-
-        for itrc in range(nc_loc):
-            RR = spacecraft_channels.RR[itrc, n]
-            II = spacecraft_channels.II[itrc, n]
-            dRR = spacecraft_channels.dRR[itrc, n]
-            dII = spacecraft_channels.dII[itrc, n]
-
-            # TODO find better hack for being exactly 0 to avoid dividing by 0
-            if RR == 0. and II == 0.:
-                AET_TFs[itrc, n] = t
-                p = 0.
-            else:
-
-                AET_TFs[itrc, n] = t + (II * dRR - RR * dII) / (RR**2 + II**2) * 1 / (4 * np.pi * DF)
-                # get phase
-                p = np.arctan2(II, RR)
-                # shift phase to 0 to 2pi range
-                if p < 0.0:
-                    p += 2 * np.pi
-
-            if n == NF - 1:
-                Phase_accums[itrc] = -p - js[itrc]
-            else:
-                Phase_accums[itrc] -= np.pi * DF * (AET_TFs[itrc, n] - t + AET_TFs[itrc, n + 1] - TF[n_alt + 1])
-
-            if (Phase_accums[itrc] + p + js[itrc]) > np.pi:
-                js[itrc] -= 2 * np.pi
-            if (-p - js[itrc] - Phase_accums[itrc]) > np.pi:
-                js[itrc] += 2 * np.pi
-            polds[itrc] = p
-
-            # TODO check h22fac absence
-            AET_Amps[itrc, n] = Amp * np.sqrt(RR**2 + II**2)
-            AET_Phases[itrc, n] = -Phase - p - js[itrc]
-
-    # TODO check this phasing relative to taylorT3
+    AET_waveform_generic = StationaryWaveformGeneric(AET_waveform.F, AET_Phases, AET_TFs, AET_TFs, AET_Amps)
+    waveform_generic = StationaryWaveformGeneric(waveform.F, np.zeros_like(waveform.PF), waveform.TF, waveform.TFp, waveform.AF)
+    Tstart = lc.t0 - lc.t_rise
+    amp_phase_loop_helper(waveform.F, waveform.TF, waveform_generic, AET_waveform_generic, spacecraft_channels, lc, Tstart, Tend, nf_lim.nf_min, nf_lim.nf_max)
+    AET_Phases = - AET_Phases
+    phase_wrap_freq(AET_Phases, AET_TFs, PF, TF, nf_lim, F_min, kdotx)
 
     # compute AET_TFps as perturbation on TFps
     # compute the gradient dy/dx using a second order accurate central finite difference
     # assuming constant x grid along second axis,
     # forward/backward first order accurate at boundaries, and apply a TFps base
-    stabilized_gradient_uniform_inplace(TF, TFp, AET_TFs, AET_TFps, DF, nf_lim.nf_min, nf_lim.nf_max)
+    stabilized_gradient_uniform_inplace(TF, TFp, AET_TFs, AET_TFps, nf_lim.df, nf_lim.nf_min, nf_lim.nf_max)
 
     return

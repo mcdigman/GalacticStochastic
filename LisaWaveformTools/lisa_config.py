@@ -8,7 +8,7 @@ import numpy as np
 import GalacticStochastic.global_const as gc
 
 LISAConstants = namedtuple(
-    'LISAConstants', ['Larm', 'Sps', 'Sacc', 'kappa0', 'lambda0', 'fstr', 't_arm', 'r_orbit', 'ec', 'fm', 'nc_waveform', 'nc_snr', 't0', 't_rise'],
+    'LISAConstants', ['Larm', 'Sps', 'Sacc', 'kappa0', 'lambda0', 'fstr', 't_arm', 'r_orbit', 'ec', 'fm', 'nc_waveform', 'nc_snr', 't0', 't_rise', 'rise_mode'],
 )
 
 
@@ -84,4 +84,7 @@ def get_lisa_constants(config: dict) -> LISAConstants:
 
     assert t_rise == 0.0, 'Some methods may not support nonzero t_rise'
 
-    return LISAConstants(Larm, Sps, Sacc, kappa0, lambda0, fstr, t_arm, r_orbit, ec, fm, nc_waveform, nc_snr, t0, t_rise)
+    # Mode to use for rise time calculation
+    rise_mode = int(config['lisa_constants'].get('rise_mode', 2))
+
+    return LISAConstants(Larm, Sps, Sacc, kappa0, lambda0, fstr, t_arm, r_orbit, ec, fm, nc_waveform, nc_snr, t0, t_rise, rise_mode)
