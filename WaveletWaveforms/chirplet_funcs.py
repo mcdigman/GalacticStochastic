@@ -1,12 +1,19 @@
 """helper functions for Chirp_WDM"""
+from __future__ import annotations
+
 from collections import namedtuple
+from typing import TYPE_CHECKING
 
 import numpy as np
 from numba import njit
-from numpy.typing import NDArray
 
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformFreq, StationaryWaveformTime
-from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+    from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
+    from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 LinearChirpletIntrinsicParams = namedtuple('LinearChirpletIntrinsicParams', ['amp_center_f', 'phi0', 'f_center', 't_center', 'tau', 'gamma'])
 
@@ -70,15 +77,15 @@ def chirplet_freq_intrinsic(waveform: StationaryWaveformFreq, intrinsic_params: 
 
 
 # @njit(fastmath=True)
-def amp_phase_t(ts, params: LinearChirpletIntrinsicParams):
+def amp_phase_t(t:  NDArray[np.floating], params: LinearChirpletIntrinsicParams) -> tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]:
     """Get amplitude and phase for chirp_time"""
-    xs = (ts - params.t_center) / params.tau
-    fs = params.gamma * xs + params.f_center
+    x = (t - params.t_center) / params.tau
+    f = params.gamma * x + params.f_center
     amp_center_t = np.sqrt(params.gamma / params.tau) * params.amp_center_f
-    phase = - params.phi0 + 2. * np.pi * (ts - params.t_center) * fs - np.pi * params.gamma * params.tau * xs**2
-    amp = amp_center_t * np.exp(-xs**2 / 2.0)
-    fds = np.full(xs.shape, params.gamma / params.tau)
-    return phase, amp, fs, fds
+    phase = - params.phi0 + 2. * np.pi * (t - params.t_center) * f - np.pi * params.gamma * params.tau * x ** 2
+    amp = amp_center_t * np.exp(-x**2 / 2.0)
+    fds = np.full(x.shape, params.gamma / params.tau)
+    return phase, amp, f, fds
 
 
 # def chirp_time(params, wc: WDMWaveletConstants):
@@ -94,38 +101,31 @@ def amp_phase_t(ts, params: LinearChirpletIntrinsicParams):
 
 
 # @njit(fastmath=True)
-def amp_phase_f(fs, params: LinearChirpletIntrinsicParams):
+def amp_phase_f(f:  NDArray[np.floating], params: LinearChirpletIntrinsicParams) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
     """Get amplitude and phase for frequency chirp"""
-    xs = (fs - params.f_center) / params.gamma
-    Phase = - np.pi / 4.0 + params.phi0 + 2.0 * np.pi * params.t_center * fs + np.pi * params.tau * params.gamma * xs**2
-    Amp = params.amp_center_f * np.exp(-xs**2 / 2.0)
+    x = (f - params.f_center) / params.gamma
+    Phase = - np.pi / 4.0 + params.phi0 + 2.0 * np.pi * params.t_center * f + np.pi * params.tau * params.gamma * x**2
+    Amp = params.amp_center_f * np.exp(-x**2 / 2.0)
     return Phase, Amp
 
 
-def ChirpWaveletT(params, TFs, wc):
+def ChirpWaveletT(params: LinearChirpletIntrinsicParams, wc: WDMWaveletConstants) -> StationaryWaveformTime:
     """Get the wavelet in time domain"""
     TFs = np.arange(0, wc.Nt) * wc.DT
     Phases, Amps, fas, fdas = amp_phase_t(TFs, params)
 
     # get the intrinsic intrinsic_waveform
-    hold1 = StationaryWaveformTime(TFs.copy(), Phases.copy(), fas.copy(), fdas.copy(), Amps.copy())
-    nt_lim = PixelGenericRange(0, wc.Nt, wc.DT, 0.)
-    chirplet_time_intrinsic(hold1, params, TFs, nt_lim)
-    assert np.allclose(Phases, hold1.PT, atol=1e-20, rtol=1.e-10)
-    assert np.allclose(Amps, hold1.AT, atol=1e-20, rtol=1.e-10)
-    assert np.allclose(fas, hold1.FT, atol=1e-20, rtol=1.e-10)
-    assert np.allclose(hold1.FTd, fdas, atol=1e-20, rtol=1.e-10)
-    return StationaryWaveformTime(TFs.copy(), np.array([Phases.copy()]), np.array([fas.copy()]), np.array([fdas.copy()]), np.array([Amps.copy()]))
+    return StationaryWaveformTime(TFs, np.array([Phases]), np.array([fas]), np.array([fdas]), np.array([Amps]))
 
 
 # TODO toff and foft have unclear names and are redundant with functions above
 # @njit(fastmath=True)
-def toff(f, params: LinearChirpletIntrinsicParams):
+def toff(f:  NDArray[np.floating], params: LinearChirpletIntrinsicParams) ->  NDArray[np.floating]:
     """Get times for sparse freq method"""
     return params.tau * (f - params.f_center) / params.gamma + params.t_center
 
 
 # @njit(fastmath=True)
-def foft(t, params: LinearChirpletIntrinsicParams):
+def foft(t:  NDArray[np.floating], params: LinearChirpletIntrinsicParams) ->  NDArray[np.floating]:
     """Get frequencies for sparse time method"""
     return params.gamma * (t - params.t_center) / params.tau + params.f_center

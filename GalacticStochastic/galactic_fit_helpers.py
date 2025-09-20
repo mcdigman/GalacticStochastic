@@ -37,7 +37,7 @@ def S_gal_model_alt(f, A, alpha, beta, kappa, gamma, fknee) -> NDArray[np.float6
 
 
 def filter_periods_fft(
-    r_mean: NDArray[np.float64], Nt_loc, period_list, wc: WDMWaveletConstants, *, period_tolerance: float = 0.01, angle_small: float = -0.1,
+    r_mean: NDArray[np.float64], Nt_loc: int, period_list, wc: WDMWaveletConstants, *, period_tolerance: float = 0.01, angle_small: float = -0.1,
 ) -> Tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     """Filter to a specific set of periods using an fft.
     period_list is in multiples of _wc.Tobs/gc.SECSYEAR
@@ -56,7 +56,7 @@ def filter_periods_fft(
 
     # iterate over input frequencies
     for itrc in range(nc_loc):
-        res_fft: NDArray[np.complex128] = fft.rfft(r_mean[:, itrc] - 1.0) * 2 / Nt_loc
+        res_fft: NDArray[np.complexfloating] = fft.rfft(r_mean[:, itrc] - 1.0) * 2 / Nt_loc
         abs_fft: NDArray[np.floating] = np.abs(res_fft)
         angle_fft: NDArray[np.floating] = -np.angle(res_fft)
 
@@ -120,15 +120,15 @@ def get_S_cyclo(
     galactic_below: NDArray[np.float64],
     S_inst_m: NDArray[np.float64],
     wc: WDMWaveletConstants,
-    smooth_lengthf,
-    filter_periods,
+    smooth_lengthf: float,
+    filter_periods: int,
     period_list=None,
     *,
-    Nt_loc=-1,
-    faint_cutoff_thresh=0.1,
-    t_stabilizer_mult=1.0e-13,
-    r_cutoff_mult=1.0e-6,
-    log_S_stabilizer=1.0e-50,
+    Nt_loc: int = -1,
+    faint_cutoff_thresh: float = 0.1,
+    t_stabilizer_mult: float = 1.0e-13,
+    r_cutoff_mult: float = 1.0e-6,
+    log_S_stabilizer: float = 1.0e-50,
 ) -> Tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     """Note the smoothing length is the length in *log* frequency,
     and the input is assumed spaced linearly in frequency
@@ -143,7 +143,7 @@ def get_S_cyclo(
 
     S_in_mean = np.mean(S_in, axis=0)
 
-    if not filter_periods:
+    if filter_periods == 0:
         r_smooth: NDArray[np.float64] = np.zeros((wc.Nt, nc_s), dtype=np.float64) + 1.0
         amp_got: NDArray[np.float64] = np.zeros((0, nc_s), dtype=np.float64)
         angle_got: NDArray[np.float64] = np.zeros((0, nc_s), dtype=np.float64)

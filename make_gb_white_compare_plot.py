@@ -84,7 +84,7 @@ if __name__ == '__main__':
 
     S_inst_m = instrument_noise_AET_wdm_m(lc, wc)
 
-    filter_periods = True
+    filter_periods = 1
     S_cyclo_model, _, _, _, _ = get_S_cyclo(
         galactic_cyclo, S_inst_m, wc, 0, filter_periods, period_list=(1, 2, 3, 4, 5),
     )
@@ -100,7 +100,7 @@ if __name__ == '__main__':
     signal_white_resid_stat = result_normality_battery(signal_full_stat)
 
 
-extent = (nt_min_report * wc.DT / gc.SECSYEAR, nt_lim_report.nt_max * wc.DT / gc.SECSYEAR, nf_min * wc.DF, nf_max * wc.DF)
+extent = (nt_min_report * wc.DT / gc.SECSYEAR, nt_lim_report.nx_max * wc.DT / gc.SECSYEAR, nf_min * wc.DF, nf_max * wc.DF)
 
 
 def white_plot_ax(ax_in, title, data):
@@ -127,8 +127,8 @@ if do_2plot:
     fig.subplots_adjust(wspace=0.0, hspace=0.0, left=0.085, top=0.91, right=1.075, bottom=0.18)
 
     aspect = 'auto'
-    im = white_plot_ax(ax[0], r'Constant', (signal_white_resid_stat[nt_lim.nt_min:nt_lim.nt_max, :, 0:2] ** 2).sum(axis=2))
-    im = white_plot_ax(ax[1], r'Cyclostationary', (signal_white_resid_cyclo[nt_lim.nt_min:nt_lim.nt_max, :, 0:2] ** 2).sum(axis=2))
+    im = white_plot_ax(ax[0], r'Constant', (signal_white_resid_stat[nt_lim.nx_min:nt_lim.nx_max, :, 0:2] ** 2).sum(axis=2))
+    im = white_plot_ax(ax[1], r'Cyclostationary', (signal_white_resid_cyclo[nt_lim.nx_min:nt_lim.nx_max, :, 0:2] ** 2).sum(axis=2))
 
     cbar = fig.colorbar(im, ax=ax[0:2], shrink=1.0, pad=0.01, orientation='vertical')
     cbar.set_ticks([0, 2, 4])
@@ -148,9 +148,9 @@ if do_3plot:
     fig.subplots_adjust(wspace=0.0, hspace=0.0, left=0.055, top=0.91, right=1.110, bottom=0.18)
 
     aspect = 'auto'
-    im = white_plot_ax(ax[0], r'Constant', (signal_white_resid_stat[nt_lim.nt_min:nt_lim.nt_max, :, 0:2] ** 2).sum(axis=2))
-    im = white_plot_ax(ax[1], r'Cyclostationary', (signal_white_resid_cyclo[nt_lim.nt_min:nt_lim.nt_max, :, 0:2] ** 2).sum(axis=2))
-    im = white_plot_ax(ax[2], r'Galactic Residual', signal_white_2[nt_lim.nt_min:nt_lim.nt_max])
+    im = white_plot_ax(ax[0], r'Constant', (signal_white_resid_stat[nt_lim.nx_min:nt_lim.nx_max, :, 0:2] ** 2).sum(axis=2))
+    im = white_plot_ax(ax[1], r'Cyclostationary', (signal_white_resid_cyclo[nt_lim.nx_min:nt_lim.nx_max, :, 0:2] ** 2).sum(axis=2))
+    im = white_plot_ax(ax[2], r'Galactic Residual', signal_white_2[nt_lim.nx_min:nt_lim.nx_max])
 
     cbar = fig.colorbar(im, ax=ax[0:3], shrink=1.0, pad=0.01, orientation='vertical')
     cbar.set_ticks([0, 2, 4])

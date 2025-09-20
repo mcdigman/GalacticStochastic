@@ -31,7 +31,7 @@ if __name__ == '__main__':
         nt_lim_snr = PixelGenericRange(nt_min, nt_max, wc.DT, 0.)
         nt_lim_waveform = PixelGenericRange(0, wc.Nt, wc.DT, 0.)
 
-        print(nt_lim_snr.nt_min, nt_lim_snr.nt_max, nt_lim_waveform.nt_min, nt_lim_waveform.nt_max, wc.Nt, wc.Nf, stat_only)
+        print(nt_lim_snr.nx_min, nt_lim_snr.nx_max, nt_lim_waveform.nx_min, nt_lim_waveform.nx_max, wc.Nt, wc.Nf, stat_only)
 
         params_gb, _, _, _, _ = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
 

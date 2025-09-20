@@ -86,7 +86,7 @@ class LinearFrequencySourceWaveformTime(StationarySourceWaveformTime):
     @override
     def _update_intrinsic(self) -> None:
         """Update the intrinsic_waveform with respect to the intrinsic parameters."""
-        self._consistent_intrinsic = False
+        self._consistent_intrinsic: bool = False
         if not isinstance(self.params.intrinsic, LinearFrequencyIntrinsicParams):
             msg = 'Intrinsic parameters must be of type LinearFrequencyIntrinsicParams.'
             raise TypeError(msg)
@@ -100,7 +100,7 @@ class LinearFrequencyWaveletWaveformTime(BinaryWaveletTaylorTime):
     using the Taylor time method.
     """
 
-    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, *, wavelet_mode: int = 1, response_mode=0) -> None:
+    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, *, wavelet_mode: int = 1, response_mode: int = 0) -> None:
         """Construct a binary wavelet object."""
         # get the intrinsic_waveform
         source_waveform = LinearFrequencySourceWaveformTime(params, nt_lim_waveform, lc, response_mode=response_mode)

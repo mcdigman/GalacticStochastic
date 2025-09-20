@@ -19,7 +19,7 @@ class LinearChirpletSourceWaveformTime(StationarySourceWaveformTime):
     @override
     def _update_intrinsic(self) -> None:
         """Update the intrinsic_waveform with respect to the intrinsic parameters."""
-        self._consistent_intrinsic = False
+        self._consistent_intrinsic: bool = False
         if not isinstance(self.params.intrinsic, LinearChirpletIntrinsicParams):
             msg = 'Intrinsic parameters must be of type LinearChirpletIntrinsicParams.'
             raise TypeError(msg)

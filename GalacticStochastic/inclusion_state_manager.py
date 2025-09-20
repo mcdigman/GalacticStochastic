@@ -1,9 +1,10 @@
 """Class to store information about the binaries in the galactic background"""
 
 from time import perf_counter
-from typing import TYPE_CHECKING, Tuple, override
+from typing import Tuple, override
 
 import numpy as np
+from numpy.typing import NDArray
 
 import GalacticStochastic.global_const as gc
 from GalacticStochastic.iteration_config import IterationConfig
@@ -16,11 +17,8 @@ from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, Source
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
-if TYPE_CHECKING:
-    from numpy.typing import NDArray
 
-
-def unpack_params_gb(params_in):
+def unpack_params_gb(params_in: NDArray[np.floating]) -> SourceParams:
     # Ecliptic latitude to cosine of ecliptic colatitude
     costh = np.cos(np.pi / 2 - params_in[1])
     # Ecliptic longitude
@@ -46,7 +44,7 @@ class BinaryInclusionState(StateManager):
         wc: WDMWaveletConstants,
         ic: IterationConfig,
         lc: LISAConstants,
-        params_gb_in,
+        params_gb_in: NDArray[np.floating],
         noise_manager: NoiseModelManager,
         fit_state: IterativeFitState,
         nt_lim_waveform:  PixelGenericRange,
@@ -76,7 +74,7 @@ class BinaryInclusionState(StateManager):
         self.argbinmap = np.argwhere(~faints_in).flatten()
         self.faints_old = faints_in[self.argbinmap]
         assert self.faints_old.sum() == 0.0
-        self.params_gb: NDArray[np.float64] = params_gb_in[self.argbinmap]
+        self.params_gb: NDArray[np.floating] = params_gb_in[self.argbinmap]
         self.n_bin_use = self.argbinmap.size
 
         del params_gb_in
@@ -145,7 +143,7 @@ class BinaryInclusionState(StateManager):
             delta_brights = self.n_brights_cur[self.itrn - 1] - self.n_brights_cur[self.itrn - 2]
         return delta_brights
 
-    def run_binary_coadd(self, itrb) -> None:
+    def run_binary_coadd(self, itrb: int) -> None:
         """Get the intrinsic_waveform for a binary, store its snr, and decide which spectrum to add it to."""
         itrn = self.itrn
         params_loc = unpack_params_gb(self.params_gb[itrb])
@@ -155,7 +153,7 @@ class BinaryInclusionState(StateManager):
         self.brights[itrn, itrb], self.faints_cur[itrn, itrb] = self.decision_helper(itrb)
         self.decide_coadd_helper(itrb)
 
-    def snr_storage_helper(self, itrb) -> None:
+    def snr_storage_helper(self, itrb: int) -> None:
         """Helper to store the snrs of the current binary"""
         itrn = self.itrn
         wavelet_waveform = self.waveform_manager.get_unsorted_coeffs()
@@ -288,7 +286,7 @@ class BinaryInclusionState(StateManager):
                     % (itrb, idxbs.size, (tcb - tib), self.itrn),
                 )
 
-            self.run_binary_coadd(itrb)
+            self.run_binary_coadd(int(itrb))
 
         # copy forward prior calculations of snr calculations that were skipped in this loop iteration
         self.sustain_snr_helper()

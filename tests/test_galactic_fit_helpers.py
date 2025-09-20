@@ -148,8 +148,8 @@ def test_stationary_mean_scramble_invariance() -> None:
     S_inst_m = np.full((wc.Nf, nc_galaxy), 1.0)
 
     # get both S matrices
-    S_got1, _, _, _, _ = get_S_cyclo(bg_here1, S_inst_m, wc, 1.0, False, period_list=())
-    S_got2, _, _, _, _ = get_S_cyclo(bg_here2, S_inst_m, wc, 1.0, False, period_list=())
+    S_got1, _, _, _, _ = get_S_cyclo(bg_here1, S_inst_m, wc, 1.0, 0, period_list=())
+    S_got2, _, _, _, _ = get_S_cyclo(bg_here2, S_inst_m, wc, 1.0, 0, period_list=())
 
     # check for expected invariance
     assert np.allclose(S_got1, S_got2, atol=1.0e-14, rtol=1.0e-13)
@@ -250,7 +250,7 @@ def test_nonstationary_mean_faint_alternate(amp2_mult) -> None:
     the fainter periodicity should be ignored completely
     """
     smooth_lengthf = 1.0
-    filter_periods = True
+    filter_periods = 1
 
     # input periods, amplitudes, phases
     itrk1 = 2
@@ -329,7 +329,7 @@ def test_nonstationary_mean_faint_alternate(amp2_mult) -> None:
 def test_nonstationary_mean_zero_case() -> None:
     """Test a case where rec_use is very small/negative for numerical stability/ensure S cannot be nan"""
     smooth_lengthf = 1.0
-    filter_periods = True
+    filter_periods = 1
 
     f_mult = np.full((wc.Nf, nc_galaxy), 0.0)
     for itrc in range(nc_galaxy):

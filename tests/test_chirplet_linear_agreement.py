@@ -216,17 +216,15 @@ def test_cross_waveform_agreement_freq2():
         intrinsic=intrinsic_linear,
         extrinsic=extrinsic,
     )
+    NF_lim = PixelGenericRange(0, wc.Nf, wc.DF, 0.)
 
-    NF_min = 0
-    NF_max = wc.Nf
     freeze_limits = False
 
     linear_freq = LinearFrequencySourceWaveformFreq(
         params=params_linear,
         lc=lc,
-        wc=wc,
-        NF_min=NF_min,
-        NF_max=NF_max,
+        T_obs=wc.Tobs,
+        nf_lim_absolute=NF_lim,
         freeze_limits=freeze_limits,
         n_pad_F=10,  # optional, default is 10
     )
@@ -234,9 +232,8 @@ def test_cross_waveform_agreement_freq2():
     chirplet_freq = LinearChirpletSourceWaveformFreq(
         params=params_chirplet,
         lc=lc,
-        wc=wc,
-        NF_min=NF_min,
-        NF_max=NF_max,
+        T_obs=wc.Tobs,
+        nf_lim_absolute=NF_lim,
         freeze_limits=freeze_limits,
         n_pad_F=10,  # optional, default is 10
     )

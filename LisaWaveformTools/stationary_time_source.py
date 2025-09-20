@@ -1,36 +1,37 @@
 """A source with linearly increasing frequency and constant amplitude."""
-
+from abc import ABC
 from typing import override
 
 import numpy as np
 from numpy.typing import NDArray
 
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.ra_waveform_freq import AntennaResponseChannels, SpacecraftOrbits, get_spacecraft_vec, get_tensor_basis, get_wavefront_time, rigid_adiabatic_antenna
+from LisaWaveformTools.ra_waveform_freq import get_spacecraft_vec, get_tensor_basis, get_wavefront_time, rigid_adiabatic_antenna
 from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
-from LisaWaveformTools.spacecraft_objects import EdgeRiseModel
+from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, EdgeRiseModel, SpacecraftOrbits
 from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams, StationarySourceWaveform, StationaryWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 
-class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTime]):
+class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTime], ABC):
     """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain.
     """
 
     def __init__(self, params: SourceParams, nt_lim_waveform: PixelGenericRange, lc: LISAConstants, *, response_mode: int = 0) -> None:
         """Initalize the object"""
         self._nt_lim_waveform: PixelGenericRange = nt_lim_waveform
-        self._nt_range: int = self._nt_lim_waveform.nx_max - self._nt_lim_waveform.nx_min
+        self._nt_range: int = int(self._nt_lim_waveform.nx_max - self._nt_lim_waveform.nx_min)
         self._lc: LISAConstants = lc
         self._nc_waveform: int = self._lc.nc_waveform
         self._consistent_extrinsic: bool = False
+        self._consistent_intrinsic: bool = False
 
         self._TTs: NDArray[np.float64] = self._nt_lim_waveform.dx * np.arange(self._nt_lim_waveform.nx_min, self._nt_lim_waveform.nx_max)
         self._spacecraft_orbits: SpacecraftOrbits = get_spacecraft_vec(self._TTs, self._lc)
 
         self._response_mode: int = -1
         if lc.rise_mode == 3:
-            self._er = EdgeRiseModel(-np.inf, np.inf)
+            self._er: EdgeRiseModel = EdgeRiseModel(-np.inf, np.inf)
         else:
             msg = 'Only rise_mode 3 (no edge) is implemented.'
             raise NotImplementedError(msg)
@@ -170,9 +171,6 @@ class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTi
                 spacecraft_orbits_loc.xas[:] = 0.
                 spacecraft_orbits_loc.yas[:] = 0.
                 spacecraft_orbits_loc.zas[:] = 0.
-            else:
-                msg = 'Response mode must be 0 (doppler + antenna), 1 (rotation no doppler), or 2 (intrinsic only).'
-                raise NotImplementedError(msg)
 
             self._spacecraft_orbits = spacecraft_orbits_loc
 

@@ -4,6 +4,7 @@ from typing import Tuple, override
 
 import numpy as np
 
+from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
 from GalacticStochastic.iteration_config import IterationConfig
 from GalacticStochastic.state_manager import StateManager
 
@@ -148,7 +149,7 @@ class IterativeFitState(StateManager):
         self.noise_safe_lower_log[self.itrn] = self.noise_safe_lower
         self.noise_safe_upper_log[self.itrn] = self.noise_safe_lower
 
-    def bright_convergence_decision(self, bis) -> bool:
+    def bright_convergence_decision(self, bis: BinaryInclusionState) -> bool:
         """Make a decision about whether the bright binaries are converged; needs a BinaryInclusionState object"""
         (do_faint_check_in, bright_converged_in, faint_converged_in, _force_converge_in) = self.get_state()
         noise_safe = True
@@ -191,7 +192,7 @@ class IterativeFitState(StateManager):
         self.noise_safe_upper = noise_safe
         return noise_safe
 
-    def faint_convergence_decision(self, bis) -> bool:
+    def faint_convergence_decision(self, bis: BinaryInclusionState) -> bool:
         """Make a decision about whether the faint binaries are converged; needs a BinaryInclusionState object"""
         (do_faint_check_in, bright_converged_in, faint_converged_in, force_converge_in) = self.bright_state_request
 

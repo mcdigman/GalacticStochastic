@@ -19,4 +19,4 @@ class LinearChirpletSourceWaveformFreq(StationarySourceWaveformFreq):
             raise TypeError(msg)
 
         chirplet_freq_intrinsic(self._intrinsic_waveform, self.params.intrinsic, self._intrinsic_waveform.F)
-        self._consistent_intrinsic = True
+        self._consistent_intrinsic: bool = True

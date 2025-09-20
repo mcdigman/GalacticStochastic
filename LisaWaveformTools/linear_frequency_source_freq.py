@@ -68,4 +68,4 @@ class LinearFrequencySourceWaveformFreq(StationarySourceWaveformFreq):
             raise TypeError(msg)
 
         linear_frequency_intrinsic_freq(self._intrinsic_waveform, self.params.intrinsic, self._intrinsic_waveform.F)
-        self._consistent_intrinsic = True
+        self._consistent_intrinsic: bool = True

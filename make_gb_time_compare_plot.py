@@ -41,8 +41,10 @@ if __name__ == '__main__':
     itrl_fit = 0
 
     if not stat_only:
+        filter_periods = 1
         period_list = (1, 2, 3, 4, 5)
     else:
+        filter_periods = 0
         period_list = ()
 
     S_stat_m = np.zeros((nk, wc.Nf, 3))
@@ -62,7 +64,7 @@ if __name__ == '__main__':
         S_stat_smooth_m[itrk, 0, :] = S_stat_m[itrk, 0, :]
 
         (_, r_tots[itrk], S_stat_smooth_m[itrk], _, _) = get_S_cyclo(
-            galactic_below_high, S_inst_m, wc, smooth_targ_length, not stat_only, period_list=period_list, Nt_loc=wc.Nt,
+            galactic_below_high, S_inst_m, wc, smooth_targ_length, filter_periods, period_list=period_list, Nt_loc=wc.Nt,
         )
 
         for itrc in range(2):

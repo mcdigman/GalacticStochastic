@@ -648,7 +648,7 @@ def rigid_adiabatic_antenna(
     T: NDArray[np.floating],
     F: NDArray[np.floating],
     nx_lim: PixelGenericRange,
-    kdotx,
+    kdotx: NDArray[np.floating],
     lc: LISAConstants,
 ) -> None:
     """Get the intrinsic_waveform for LISA given polarization angle, spacecraft, tensor basis and Fs, channel order AET."""
@@ -733,9 +733,9 @@ def rigid_adiabatic_antenna(
 def get_wavefront_time(
     lc: LISAConstants,
     tb: TensorBasis,
-    ts: NDArray[np.float64],
+    ts: NDArray[np.floating],
     sv: SpacecraftOrbits,
-    wavefront_time: NDArray[np.float64],
+    wavefront_time: NDArray[np.floating],
 ) -> None:
     """Compute, in place, the wavefront time coordinate for each spacecraft in the LISA constellation.
 
@@ -751,11 +751,11 @@ def get_wavefront_time(
             LISA configuration constants, including arm length and geometry.
         tb (TensorBasis):
             The tensor basis structure, containing the propagation direction unit vector (kv).
-        ts (NDArray[np.float64]):
+        ts (NDArray[np.floating]):
             Array of reference times at which wavefront times are calculated.
         sv (SpacecraftOrbits):
             Spacecraft position data, with positional components (xas, yas, zas).
-        waveform_time (NDArray[np.float64]):
+        waveform_time (NDArray[np.floating]):
             Output array to be updated in place with the wavefront (retarded) times. Each value represents
             the arrival time of the gravitational-wave phase front at a given spacecraft.
 
@@ -769,7 +769,7 @@ def get_wavefront_time(
 
 
 @njit()
-def get_spacecraft_vec(ts: NDArray[np.float64], lc: LISAConstants) -> SpacecraftOrbits:
+def get_spacecraft_vec(ts: NDArray[np.floating], lc: LISAConstants) -> SpacecraftOrbits:
     """Compute the time-dependent positions of the three LISA spacecraft and the guiding center.
 
     This function evaluates the heliocentric positions of each spacecraft in the LISA constellation across a series of input times.
@@ -780,7 +780,7 @@ def get_spacecraft_vec(ts: NDArray[np.float64], lc: LISAConstants) -> Spacecraft
 
     Parameters
     ----------
-        ts :  NDArray[np.float64]
+        ts :  NDArray[np.floating]
             1D array of time values (in seconds) for which to compute the spacecraft positions; shape (n_t,).
         lc : LISAConstants
             Structure containing LISA orbit configuration parameters (e.g., mean motion, initial phases, eccentricity, arm length).
@@ -804,13 +804,13 @@ def get_spacecraft_vec(ts: NDArray[np.float64], lc: LISAConstants) -> Spacecraft
     xs = np.zeros((n_sc, ts.size))
     ys = np.zeros((n_sc, ts.size))
     zs = np.zeros((n_sc, ts.size))
-    alpha = 2 * np.pi * lc.fm * ts + lc.kappa0
+    alpha = float(2 * np.pi * lc.fm) * ts + float(lc.kappa0)
 
     sa = np.sin(alpha)
     ca = np.cos(alpha)
 
     for i in range(n_sc):
-        beta = i * 2 / 3 * np.pi + lc.lambda0
+        beta = i * 2 / 3 * np.pi + float(lc.lambda0)
         sb = np.sin(beta)
         cb = np.cos(beta)
         xs[i] = lc.r_orbit * ca + lc.r_orbit * lc.ec * (sa * ca * sb - (1.0 + sa * sa) * cb)
@@ -828,7 +828,7 @@ def phase_wrap_freq(
     tdi_waveform: StationaryWaveformFreq,
     waveform: StationaryWaveformFreq,
     nf_lim: PixelGenericRange,
-    kdotx,
+    kdotx: NDArray[np.floating],
     wrap_thresh: float = np.pi,
 ) -> None:
     """Helper for getting LISA response in frequency domain."""
@@ -885,7 +885,7 @@ def get_freq_tdi_amp_phase(
     spacecraft_channels: AntennaResponseChannels,
     lc: LISAConstants,
     nf_lim: PixelGenericRange,
-    kdotx,
+    kdotx: NDArray[np.floating],
     er: EdgeRiseModel,
 ) -> None:
     """Helper for getting LISA response in frequency domain"""

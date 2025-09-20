@@ -1,6 +1,7 @@
 """functions to compute rigid adiabatic response in frequency domain"""
 
-from typing import override
+from abc import ABC
+from typing import TYPE_CHECKING, override
 
 import numpy as np
 
@@ -9,42 +10,39 @@ from LisaWaveformTools.ra_waveform_freq import get_freq_tdi_amp_phase, rigid_adi
 from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, EdgeRiseModel
 from LisaWaveformTools.stationary_source_waveform import SourceParams, StationarySourceWaveform, StationaryWaveformFreq
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
-from WaveletWaveforms.wdm_config import WDMWaveletConstants
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
-class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFreq]):
+class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFreq], ABC):
     """class to store a binary waveform in frequency domain and update for search"""
-    def __init__(self, params: SourceParams, lc: LISAConstants, wc: WDMWaveletConstants, NF_min, NF_max, freeze_limits, n_pad_F=10) -> None:
+    def __init__(self, params: SourceParams, lc: LISAConstants, nf_lim_absolute: PixelGenericRange, freeze_limits: int, T_obs: float, n_pad_F: int = 10) -> None:
         """Construct a binary wavelet object"""
         self._lc: LISAConstants = lc
-        # TODO eliminate wc as argument
-        self._wc: WDMWaveletConstants = wc
         self._nc_waveform: int = self._lc.nc_waveform
         self._consistent_extrinsic: bool = False
-        self._n_pad_F = n_pad_F
+        self._n_pad_F: int = n_pad_F
 
         if lc.rise_mode == 3:
-            self._er = EdgeRiseModel(-np.inf, np.inf)
+            self._er: EdgeRiseModel = EdgeRiseModel(-np.inf, np.inf)
         else:
             msg = 'Only rise_mode 3 (no edge) is implemented.'
             raise NotImplementedError(msg)
 
-        self.NF_min = NF_min
-        self.NF_max = NF_max
-        self.nf_offset = NF_min
-        self.freeze_limits = False
+        self.nf_lim_absolute: PixelGenericRange = nf_lim_absolute
+        self.freeze_limits: int = 0
 
         # TODO FFs can possibly be eliminated
-        self.FFs = wc.DF * np.arange(self.NF_min, self.NF_max)  # center of the pixels
+        self.FFs = self.nf_lim_absolute.dx * np.arange(self.nf_lim_absolute.nx_min, self.nf_lim_absolute.nx_max)  # center of the pixels
         self.NF = self.FFs.size
 
-        if self.NF_min == 0:
-            self.FFs[0] = 1.e-5 * wc.DF
+        if self.nf_lim_absolute.nx_min == 0:
+            self.FFs[0] = 1.e-5 * self.nf_lim_absolute.dx
 
-        self.nf_low = 0
-        self.nf_high = self.NF
-        self.nf_range = self.nf_high - self.nf_low
-        self.itrFCut = self.nf_range
+        F_min = float(self.nf_lim_absolute.dx * self.nf_lim_absolute.nx_min)
+        self.nf_lim: PixelGenericRange = PixelGenericRange(0, self.NF, self.nf_lim_absolute.dx, F_min)
+        self.itrFCut: int = self.nf_lim.nx_max - self.nf_lim.nx_min
 
         AmpFs = np.zeros(self.NF)
         PPFs = np.zeros(self.NF)
@@ -62,14 +60,14 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
         dRRs = np.zeros((self.nc_waveform, self.NF))
         dIIs = np.zeros((self.nc_waveform, self.NF))
 
-        self._spacecraft_channels = AntennaResponseChannels(self.FFs, RRs, IIs, dRRs, dIIs)
+        self._spacecraft_channels: AntennaResponseChannels = AntennaResponseChannels(self.FFs, RRs, IIs, dRRs, dIIs)
 
         del RRs
         del IIs
         del dRRs
         del dIIs
 
-        self.kdotx = np.zeros(self.NF)
+        self.kdotx: NDArray[np.floating] = np.zeros(self.NF)
 
         AET_AmpFs = np.zeros((self.nc_waveform, self.NF))
         AET_PPFs = np.zeros((self.nc_waveform, self.NF))
@@ -77,15 +75,15 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
         AET_TFps = np.zeros((self.nc_waveform, self.NF))
 
         tdi_waveform = StationaryWaveformFreq(self.FFs, AET_AmpFs, AET_PPFs, AET_TFs, AET_TFps)
-
+        self._t_gen: float = self._lc.t0 + T_obs + self._lc.t_rise
         del AET_AmpFs
         del AET_PPFs
         del AET_TFs
         del AET_TFps
 
-        self.TTRef = 0.
+        self.TTRef: float = 0.
         # moved this line from end
-        self.Tend = np.inf
+        self.Tend: float = np.inf
 
         self._tdi_waveform: StationaryWaveformFreq = tdi_waveform
         self._intrinsic_waveform: StationaryWaveformFreq = intrinsic_waveform
@@ -99,58 +97,55 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
         # TODO something is malfunctioning here, trap the case where itrFCutOld would segfault?
         # TODO should handle nonmonotonic time from searchsorted
         # TODO need to handle bounds edge correctly
-        itrFCutOld = min(self.itrFCut + self.nf_low, self.NF)
-        # print('4',self.nf_low,self.nf_high,self.itrFCut,itrFCutOld)
-        nf_low_old = self.nf_low
-        self.nf_low = max(0, np.searchsorted(self.intrinsic_waveform.TF[:itrFCutOld], self._lc.t0 - self._lc.t_rise, side='right') - self._n_pad_F)
+        nf_lim_old = self.nf_lim
+        nf_low = self.nf_lim.nx_min
+        itrFCutOld = min(self.itrFCut + nf_low, self.NF)
+
+        nf_low = max(0, np.searchsorted(self.intrinsic_waveform.TF[:itrFCutOld], self._lc.t0 - self._lc.t_rise, side='right') - self._n_pad_F)
         # TODO need to recalculate subtraction if Nf old breaks
-        # print(itrFCutOld,nf_low_old,self.nf_low,self.nf_high,self.nf_range,self.itrFCut+nf_low_old-self.nf_low)
         # TODO is this the right trap??? Why is the subtraction even needed?
-        if self.itrFCut + self.nf_low < self.NF:
-            self.itrFCut = min(max(0, self.itrFCut + nf_low_old - self.nf_low), self.NF)
+        if self.itrFCut + nf_low < self.NF:
+            self.itrFCut = min(max(0, self.itrFCut + nf_lim_old.nx_min - nf_low), self.NF)
         else:
             self.itrFCut = self.NF  # itrFCut
 
-        self.nf_offset = self.nf_low + self.NF_min
-        self.nf_high = self.NF
+        nf_high = self.NF
         # clip to avoid wasting time computing values that are outside the observation
-        # print('5',self.nf_low,self.nf_high,self.itrFCut,itrFCutOld)
-        if self.intrinsic_waveform.TF[itrFCutOld - 1] > self._lc.t0 + self._wc.Tobs + self._lc.t_rise:
+        if self.intrinsic_waveform.TF[itrFCutOld - 1] > self._t_gen:
             # TODO check this searchsorted correctly handles TFs dropping to 0 at end
-            self.nf_high = min(self.nf_high, np.searchsorted(self.intrinsic_waveform.TF[:itrFCutOld], self._lc.t0 + self._wc.Tobs + self._lc.t_rise, side='right') + self._n_pad_F)
+            nf_high = min(nf_high, int(np.searchsorted(self.intrinsic_waveform.TF[:itrFCutOld], self._t_gen, side='right')) + self._n_pad_F)
 
         # make sure order is correct
-        self.nf_high = min(self.nf_high, self.itrFCut)
-        self.nf_high = max(self.nf_low, self.nf_high)
-        self.nf_high = min(self.nf_high, self.NF)
-        nf_range_old = self.nf_range
-        nf_high_old = nf_range_old + nf_low_old
-        self.nf_range = self.nf_high - self.nf_low
+        nf_high = min(nf_high, self.itrFCut)
+        nf_high = max(nf_low, nf_high)
+        nf_high = min(nf_high, self.NF)
 
         # enforce cleanup of values that will not be reset
-        if nf_high_old > self.nf_high:
+        if nf_lim_old.nx_max > nf_high:
             # TODO this manipulation of kdotx should only happen if it is a private variable
-            self.kdotx[self.nf_high:nf_high_old] = 0.
-            self._tdi_waveform.AF[:, self.nf_high:nf_high_old] = 0.
-            self._tdi_waveform.PF[:, self.nf_high:nf_high_old] = 0.
-            self._tdi_waveform.TF[:, self.nf_high:nf_high_old] = 0.
-            self._tdi_waveform.TFp[:, self.nf_high:nf_high_old] = 0.
-            self._spacecraft_channels.RR[:, self.nf_high:nf_high_old] = 0.
-            self._spacecraft_channels.II[:, self.nf_high:nf_high_old] = 0.
-            self._spacecraft_channels.dRR[:, self.nf_high:nf_high_old] = 0.
-            self._spacecraft_channels.dII[:, self.nf_high:nf_high_old] = 0.
+            self.kdotx[nf_high:nf_lim_old.nx_max] = 0.
+            self._tdi_waveform.AF[:, nf_high:nf_lim_old.nx_max] = 0.
+            self._tdi_waveform.PF[:, nf_high:nf_lim_old.nx_max] = 0.
+            self._tdi_waveform.TF[:, nf_high:nf_lim_old.nx_max] = 0.
+            self._tdi_waveform.TFp[:, nf_high:nf_lim_old.nx_max] = 0.
+            self._spacecraft_channels.RR[:, nf_high:nf_lim_old.nx_max] = 0.
+            self._spacecraft_channels.II[:, nf_high:nf_lim_old.nx_max] = 0.
+            self._spacecraft_channels.dRR[:, nf_high:nf_lim_old.nx_max] = 0.
+            self._spacecraft_channels.dII[:, nf_high:nf_lim_old.nx_max] = 0.
 
-        if nf_low_old < self.nf_low:
+        if nf_lim_old.nx_min < nf_low:
             # TODO this manipulation of kdotx should only happen if it is a private variable
-            self.kdotx[nf_low_old:self.nf_low] = 0.
-            self._tdi_waveform.AF[:, nf_low_old:self.nf_low] = 0.
-            self._tdi_waveform.PF[:, nf_low_old:self.nf_low] = 0.
-            self._tdi_waveform.TF[:, nf_low_old:self.nf_low] = 0.
-            self._tdi_waveform.TFp[:, nf_low_old:self.nf_low] = 0.
-            self._spacecraft_channels.RR[:, nf_low_old:self.nf_low] = 0.
-            self._spacecraft_channels.II[:, nf_low_old:self.nf_low] = 0.
-            self._spacecraft_channels.dRR[:, nf_low_old:self.nf_low] = 0.
-            self._spacecraft_channels.dII[:, nf_low_old:self.nf_low] = 0.
+            self.kdotx[nf_lim_old.nx_min:nf_low] = 0.
+            self._tdi_waveform.AF[:, nf_lim_old.nx_min:nf_low] = 0.
+            self._tdi_waveform.PF[:, nf_lim_old.nx_min:nf_low] = 0.
+            self._tdi_waveform.TF[:, nf_lim_old.nx_min:nf_low] = 0.
+            self._tdi_waveform.TFp[:, nf_lim_old.nx_min:nf_low] = 0.
+            self._spacecraft_channels.RR[:, nf_lim_old.nx_min:nf_low] = 0.
+            self._spacecraft_channels.II[:, nf_lim_old.nx_min:nf_low] = 0.
+            self._spacecraft_channels.dRR[:, nf_lim_old.nx_min:nf_low] = 0.
+            self._spacecraft_channels.dII[:, nf_lim_old.nx_min:nf_low] = 0.
+
+        self.nf_lim = PixelGenericRange(nf_low, nf_high, nf_lim_old.dx, nf_lim_old.x_min)
 
     @override
     def _update_extrinsic(self) -> None:
@@ -158,11 +153,9 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
         Update waveform to match the extrinsic parameters of spacecraft response
         if abbreviated, don't get AET_TFs or AET_TFps, and don't track modulus of AET_PPFs
         """
-        F_min = self._wc.DF * (self.nf_offset - self.nf_low)
-        nf_lim = PixelGenericRange(self.nf_low, self.nf_low + self.nf_range, self._wc.DF, F_min)
-        rigid_adiabatic_antenna(self._spacecraft_channels, self.params.extrinsic, self.intrinsic_waveform.TF, self.FFs, nf_lim, self.kdotx, self._lc)
+        rigid_adiabatic_antenna(self._spacecraft_channels, self.params.extrinsic, self.intrinsic_waveform.TF, self.FFs, self.nf_lim, self.kdotx, self._lc)
 
-        get_freq_tdi_amp_phase(self._tdi_waveform, self.intrinsic_waveform, self._spacecraft_channels, self._lc, nf_lim, self.kdotx, self._er)
+        get_freq_tdi_amp_phase(self._tdi_waveform, self.intrinsic_waveform, self._spacecraft_channels, self._lc, self.nf_lim, self.kdotx, self._er)
         self._consistent_extrinsic = True
 
     @override
@@ -170,12 +163,12 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
         """Recompute the waveform with updated parameters,
             if abbreviated skip getting AET_TFs and AET_TFps
         """
-        self.params = params
+        self.params: SourceParams = params
         self._update_intrinsic()
-        if not self.freeze_limits:
+        if self.freeze_limits == 0:
             self._update_bounds()
         self._update_extrinsic()
-        self._consistent = True
+        self._consistent: bool = True
 
     @property
     @override

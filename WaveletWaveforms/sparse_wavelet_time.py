@@ -14,7 +14,7 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 # @njit(fastmath=True)
-def sparse_time_DX_assign_loop(params: LinearChirpletIntrinsicParams, cM: NDArray[np.complexfloating], sM: NDArray[np.complexfloating], wc: WDMWaveletConstants):
+def sparse_time_DX_assign_loop(params: LinearChirpletIntrinsicParams, cM: NDArray[np.complexfloating], sM: NDArray[np.complexfloating], wc: WDMWaveletConstants) -> tuple[NDArray[np.complexfloating], NDArray[np.int64], PixelGenericRange]:
     """Helper to start loop for sparse_wavelet_time"""
     ts = wc.DT * np.arange(0, wc.Nt)
     fs = foft(ts, params)
@@ -54,7 +54,7 @@ def sparse_time_DX_assign_loop(params: LinearChirpletIntrinsicParams, cM: NDArra
 
 
 # @njit(fastmath=True)
-def sparse_time_DX_unpack_loop(mcs, DX_trans: NDArray[np.complexfloating], nt_lim: PixelGenericRange, wc: WDMWaveletConstants):
+def sparse_time_DX_unpack_loop(mcs: NDArray[np.integer], DX_trans: NDArray[np.complexfloating], nt_lim: PixelGenericRange, wc: WDMWaveletConstants) -> tuple[NDArray[np.int64], NDArray[np.float64], int, int]:
     """Helper to start unpack fft results for sparse_wavelet_time"""
     # indicates this pixel not used
     p = wc.K / wc.L
@@ -103,7 +103,7 @@ def sparse_wavelet_time(params: LinearChirpletIntrinsicParams, cM: NDArray[np.co
     return SparseWaveletWaveform(np.array([waveT]), np.array([Tlist]), np.array([n_set]), N_max)
 
 
-def wavelet_SparseT(params: LinearChirpletIntrinsicParams, wc: WDMWaveletConstants):
+def wavelet_SparseT(params: LinearChirpletIntrinsicParams, wc: WDMWaveletConstants) -> tuple[NDArray[np.int64], NDArray[np.float64]]:
     """Compute the time domain wavelet filter and normalize"""
     DX = np.zeros(wc.L, dtype=np.complex128)
     half_L = np.int64(wc.L / 2)
@@ -147,13 +147,11 @@ def TaylorTime(params: LinearChirpletIntrinsicParams, wc: WDMWaveletConstants, a
     If approximation=0, use direct method without interpolating taylor coefficients.
     If approximation is positive, use approximation - 1 as the value for force_nulls in wavemaket.
     """
-    TFs = np.arange(0, wc.Nt) * wc.DT
-
     # Note: with the simple analytic model we don't have to evaluate the
     # frequencies and frequency derivatives numerically. Only doing so
     # here to illustrate the general method that can be used with any
     # intrinsic_waveform model
-    waveform = ChirpWaveletT(params, TFs, wc)
+    waveform = ChirpWaveletT(params, wc)
     nc_waveform = 1
 
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(nc_waveform, wc)

@@ -55,22 +55,19 @@ def test_intrinsic_waveform_agreement():
         extrinsic=extrinsic,
     )
 
-    NF_min = 0
-    NF_max = wc.Nf
+    NF_lim = PixelGenericRange(0, wc.Nf, wc.DF, 0.)
 
     freeze_limits = True
 
     lf_waveform_freq = LinearChirpletSourceWaveformFreq(
         params=params,
         lc=lc,
-        wc=wc,
-        NF_min=NF_min,
-        NF_max=NF_max,
+        nf_lim_absolute=NF_lim,
+        T_obs=wc.Tobs,
         freeze_limits=freeze_limits,
         n_pad_F=10,  # optional, default is 10
     )
 
-    print('LinearFrequencySourceWaveformFreq initialized:')
     print(lf_waveform_freq)
 
     lf_waveform_time = LinearChirpletSourceWaveformTime(
@@ -305,15 +302,13 @@ def test_intrinsic_update_consistent1_freq(freeze_limits):
         extrinsic=extrinsic2,
     )
 
-    NF_min = 0
-    NF_max = wc.Nf
+    NF_lim = PixelGenericRange(0, wc.Nf, wc.DF, 0.)
 
     lf_waveform_freq11 = LinearChirpletSourceWaveformFreq(
         params=params1,
         lc=lc,
-        wc=wc,
-        NF_min=NF_min,
-        NF_max=NF_max,
+        nf_lim_absolute=NF_lim,
+        T_obs=wc.Tobs,
         freeze_limits=freeze_limits,
         n_pad_F=10,  # optional, default is 10
     )
@@ -321,9 +316,8 @@ def test_intrinsic_update_consistent1_freq(freeze_limits):
     lf_waveform_freq22 = LinearChirpletSourceWaveformFreq(
         params=params2,
         lc=lc,
-        wc=wc,
-        NF_min=NF_min,
-        NF_max=NF_max,
+        nf_lim_absolute=NF_lim,
+        T_obs=wc.Tobs,
         freeze_limits=freeze_limits,
         n_pad_F=10,  # optional, default is 10
     )
@@ -345,18 +339,16 @@ def test_intrinsic_update_consistent1_freq(freeze_limits):
     lf_waveform_freq12 = LinearChirpletSourceWaveformFreq(
         params=params1,
         lc=lc,
-        wc=wc,
-        NF_min=NF_min,
-        NF_max=NF_max,
+        nf_lim_absolute=NF_lim,
+        T_obs=wc.Tobs,
         freeze_limits=freeze_limits,
         n_pad_F=10,  # optional, default is 10
     )
     lf_waveform_freq21 = LinearChirpletSourceWaveformFreq(
         params=params2,
         lc=lc,
-        wc=wc,
-        NF_min=NF_min,
-        NF_max=NF_max,
+        nf_lim_absolute=NF_lim,
+        T_obs=wc.Tobs,
         freeze_limits=freeze_limits,
         n_pad_F=10,  # optional, default is 10
     )
@@ -366,8 +358,8 @@ def test_intrinsic_update_consistent1_freq(freeze_limits):
         assert_equal(wave1.intrinsic_waveform.F, wave2.intrinsic_waveform.F)
         assert_equal(wave1.tdi_waveform.F, wave2.tdi_waveform.F)
         assert_equal(wave1.NF, wave2.NF)
-        assert_equal(wave1.NF_min, wave2.NF_min)
-        assert_equal(wave1.NF_max, wave2.NF_max)
+        assert_equal(wave1.nf_lim_absolute.nx_min, wave2.nf_lim_absolute.nx_min)
+        assert_equal(wave1.nf_lim_absolute.nx_max, wave2.nf_lim_absolute.nx_max)
         assert_array_equal(wave1.FFs, wave2.FFs)
 
         assert_array_equal(wave1.intrinsic_waveform.AF, wave2.intrinsic_waveform.AF)
@@ -381,19 +373,17 @@ def test_intrinsic_update_consistent1_freq(freeze_limits):
         high_loc2 = wave2.tdi_waveform.TFp.shape[1]
 
         if not freeze_limits:
-            assert_equal(wave1.nf_high, wave2.nf_high)
-            assert_equal(wave1.nf_low, wave2.nf_low)
-            assert_equal(wave1.nf_offset, wave2.nf_offset)
-            assert_equal(wave1.nf_range, wave2.nf_range)
+            assert_equal(wave1.nf_lim.nx_min, wave2.nf_lim.nx_min)
+            assert_equal(wave1.nf_lim.nx_max, wave2.nf_lim.nx_max)
             assert_equal(wave1.itrFCut, wave2.itrFCut)
         else:
-            nf_low_loc = max(wave1.nf_low, wave2.nf_low)
-            nf_high_loc = min(wave1.nf_high, wave2.nf_high)
+            nf_low_loc = max(wave1.nf_lim.nx_min, wave2.nf_lim.nx_min)
+            nf_high_loc = min(wave1.nf_lim.nx_max, wave2.nf_lim.nx_max)
             nf_high_loc = min(nf_high_loc, nf_low_loc)
-            low_loc1 = nf_low_loc - wave1.nf_low
-            low_loc2 = nf_low_loc - wave2.nf_low
-            high_loc1 = nf_high_loc - wave1.nf_low
-            high_loc2 = nf_high_loc - wave2.nf_low
+            low_loc1 = nf_low_loc - wave1.nf_lim.nx_min
+            low_loc2 = nf_low_loc - wave2.nf_lim.nx_min
+            high_loc1 = nf_high_loc - wave1.nf_lim.nx_min
+            high_loc2 = nf_high_loc - wave2.nf_lim.nx_min
 
         assert_equal(wave1.kdotx[low_loc1:high_loc1], wave2.kdotx[low_loc2:high_loc2])
         assert_array_equal(wave1.tdi_waveform.AF[:, low_loc1:high_loc1], wave2.tdi_waveform.AF[:, low_loc2:high_loc2])

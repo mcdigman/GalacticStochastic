@@ -68,7 +68,7 @@ def get_empty_sparse_taylor_time_waveform(nc_waveform: int, wc: WDMWaveletConsta
     return SparseWaveletWaveform(wave_value, pixel_index, n_set, N_max)
 
 
-def wavelet(wc: WDMWaveletConstants, m: int, nrm: np.floating) -> NDArray[np.float64]:
+def wavelet(wc: WDMWaveletConstants, m: int, nrm: np.floating) -> NDArray[np.floating]:
     """
     Construct and normalize a wavelet basis function for the specified frequency bin.
 
@@ -119,7 +119,7 @@ def wavelet(wc: WDMWaveletConstants, m: int, nrm: np.floating) -> NDArray[np.flo
 
 
 @njit(parallel=True)
-def get_taylor_table_time_helper(wavelet_norm: NDArray[np.float64], wc: WDMWaveletConstants) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
+def get_taylor_table_time_helper(wavelet_norm: NDArray[np.floating], wc: WDMWaveletConstants) -> Tuple[NDArray[np.floating], NDArray[np.floating]]:
     """
     Compute cosine and sine Taylor expansion coefficient tables for a grid of frequency derivative values.
 
@@ -180,7 +180,7 @@ def get_taylor_table_time_helper(wavelet_norm: NDArray[np.float64], wc: WDMWavel
     return evcs, evss
 
 
-def get_wavelet_norm(wc: WDMWaveletConstants) -> NDArray[np.float64]:
+def get_wavelet_norm(wc: WDMWaveletConstants) -> NDArray[np.floating]:
     """
     Compute a normalized reference wavelet needed for the time-domain Taylor coefficient table.
 
@@ -402,7 +402,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str = 'skip', 
 
 
 @njit()
-def get_taylor_time_pixel_direct(fa: float, fda: float, k_in: int, wavelet_norm: NDArray[np.float64], wc: WDMWaveletConstants) -> Tuple[float, float]:
+def get_taylor_time_pixel_direct(fa: float, fda: float, k_in: int, wavelet_norm: NDArray[np.floating], wc: WDMWaveletConstants) -> Tuple[float, float]:
     """
     Compute Taylor expansion coefficients for a single time pixel in the wavelet domain.
 
@@ -422,7 +422,7 @@ def get_taylor_time_pixel_direct(fa: float, fda: float, k_in: int, wavelet_norm:
         The frequency derivative at which to compute the Taylor expansion coefficients.
     k_in: int
         The frequency index of the wavelet pixel for which to compute the coefficients.
-    wavelet_norm: NDArray[np.float64]
+    wavelet_norm: NDArray[np.floating]
         A single precomputed and normalized wavelet for reference.
     wc : WDMWaveletConstants
         Wavelet decomposition configuration containing resolution, frequency grid,
