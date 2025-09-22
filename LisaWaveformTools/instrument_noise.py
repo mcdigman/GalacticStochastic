@@ -90,9 +90,9 @@ def instrument_noise_AET_wdm_m(lc: LISAConstants, wc: WDMWaveletConstants) -> ND
 
     Parameters
     ----------
-    lc : namedtuple
+    lc : LISAConstants
         constants for LISA constellation specified in lisa_config.py
-    wc : namedtuple
+    wc : WDMWaveletConstants
         constants for WDM wavelet basis also from wdm_config.py
 
     Returns

@@ -1,29 +1,26 @@
 """read wavelet transform constants in from config file and compute derived parameters"""
 
-from collections import namedtuple
+from typing import NamedTuple
 
 import numpy as np
 
-IterationConfig = namedtuple(
-    'IterationConfig',
-    [
-        'max_iterations',
-        'snr_thresh',
-        'snr_min',
-        'snr_cut_bright',
-        'smooth_lengthf',
-        'period_list',
-        'n_cyclo_switch',
-        'n_min_faint_adapt',
-        'faint_converge_change_thresh',
-        'smooth_lengthf_fix',
-        'fmin_binary',
-        'fmax_binary',
-        'nc_galaxy',
-        'snr_min_preprocess',
-        'snr_min_reprocess',
-    ],
-)
+
+class IterationConfig(NamedTuple):
+    max_iterations: int
+    snr_thresh: float
+    snr_min: tuple[float, ...]
+    snr_cut_bright: tuple[float, ...]
+    smooth_lengthf: tuple[float, ...]
+    period_list: tuple[np.floating, ...]
+    n_cyclo_switch: int
+    n_min_faint_adapt: int
+    faint_converge_change_thresh: int
+    smooth_lengthf_fix: float
+    fmin_binary: float
+    fmax_binary: float
+    nc_galaxy: int
+    snr_min_preprocess: float
+    snr_min_reprocess: float
 
 
 def get_iteration_config(config: dict) -> IterationConfig:
