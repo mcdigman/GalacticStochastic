@@ -1,15 +1,29 @@
 """read wavelet transform constants in from config file and compute derived parameters"""
 
-from collections import namedtuple
+from typing import NamedTuple
 from warnings import warn
 
 import numpy as np
 
 import GalacticStochastic.global_const as gc
 
-LISAConstants = namedtuple(
-    'LISAConstants', ['Larm', 'Sps', 'Sacc', 'kappa0', 'lambda0', 'fstr', 't_arm', 'r_orbit', 'ec', 'fm', 'nc_waveform', 'nc_snr', 't0', 't_rise', 'rise_mode'],
-)
+
+class LISAConstants(NamedTuple):
+    Larm: float
+    Sps: float
+    Sacc: float
+    kappa0: float
+    lambda0: float
+    fstr: float
+    t_arm: float
+    r_orbit: float
+    ec: float
+    fm: float
+    nc_waveform: int
+    nc_snr: int
+    t0: float
+    t_rise: float
+    rise_mode: int
 
 
 def get_lisa_constants(config: dict) -> LISAConstants:

@@ -98,10 +98,10 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
         # TODO should handle nonmonotonic time from searchsorted
         # TODO need to handle bounds edge correctly
         nf_lim_old = self.nf_lim
-        nf_low = self.nf_lim.nx_min
-        itrFCutOld = min(self.itrFCut + nf_low, self.NF)
+        itrFCutOld = min(self.itrFCut + nf_lim_old.nx_min, self.NF)
 
-        nf_low = max(0, np.searchsorted(self.intrinsic_waveform.TF[:itrFCutOld], self._lc.t0 - self._lc.t_rise, side='right') - self._n_pad_F)
+        nf_low = int(np.searchsorted(self.intrinsic_waveform.TF[:itrFCutOld], self._lc.t0 - self._lc.t_rise, side='right') - self._n_pad_F)
+        nf_low = max(0, nf_low)
         # TODO need to recalculate subtraction if Nf old breaks
         # TODO is this the right trap??? Why is the subtraction even needed?
         if self.itrFCut + nf_low < self.NF:
