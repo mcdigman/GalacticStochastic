@@ -44,11 +44,11 @@ def test_unit_noise_generation_stat(scale_mult) -> None:
 
     for itrc in range(nc_noise):
         noise_realization_freq = inverse_wavelet_freq(noise_realization[:, :, itrc], wc.Nf, wc.Nt)
-        unit_normal_battery(np.asarray(np.real(noise_realization_freq), dtype=np.floating), mult=freq_mult, do_assert=True)
-        unit_normal_battery(np.asarray(np.imag(noise_realization_freq), dtype=np.floating), mult=freq_mult, do_assert=True)
-        noise_realization_time = np.asarray(fft.irfft(noise_realization_freq), dtype=np.floating)
+        unit_normal_battery(np.asarray(np.real(noise_realization_freq), dtype=np.float64), mult=freq_mult, do_assert=True)
+        unit_normal_battery(np.asarray(np.imag(noise_realization_freq), dtype=np.float64), mult=freq_mult, do_assert=True)
+        noise_realization_time = np.asarray(fft.irfft(noise_realization_freq), dtype=np.float64)
         unit_normal_battery(noise_realization_time, mult=np.sqrt(scale_mult), do_assert=True)
-        noise_realization_time = np.asarray(inverse_wavelet_time(noise_realization[:, :, itrc], wc.Nf, wc.Nt), dtype=np.floating)
+        noise_realization_time = np.asarray(inverse_wavelet_time(noise_realization[:, :, itrc], wc.Nf, wc.Nt), dtype=np.float64)
         unit_normal_battery(noise_realization_time, mult=np.sqrt(scale_mult), do_assert=True)
 
 

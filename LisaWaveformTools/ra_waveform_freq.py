@@ -824,6 +824,7 @@ def get_spacecraft_vec(ts: NDArray[np.floating], lc: LISAConstants) -> Spacecraf
     return SpacecraftOrbits(xs, ys, zs, xas, yas, zas)
 
 
+@njit(fastmath=True)
 def phase_wrap_freq(
     tdi_waveform: StationaryWaveformFreq,
     waveform: StationaryWaveformFreq,
@@ -878,7 +879,7 @@ def phase_wrap_freq(
             tdi_PF[itrc, n] = tdi_PF[itrc, n] - Phase - js[itrc]
 
 
-# @njit(fastmath=True)
+@njit(fastmath=True)
 def get_freq_tdi_amp_phase(
     tdi_waveform: StationaryWaveformFreq,
     waveform: StationaryWaveformFreq,

@@ -102,11 +102,11 @@ def get_wavelet_alternative_representation_helper(wavelet_waveform, wc, tukey_al
 
     envelope = np.abs(analytic)
 
-    p_envelope = np.asarray(np.unwrap(np.angle(analytic), axis=0), dtype=np.floating)
+    p_envelope = np.asarray(np.unwrap(np.angle(analytic), axis=0), dtype=np.float64)
     f_envelope = np.gradient(p_envelope, wc.dt, axis=0) / (2 * np.pi)
     fd_envelope = np.gradient(f_envelope, wc.dt, axis=0)
 
-    envelope = np.asarray(filtfilt(b, a, envelope, axis=0), dtype=np.floating)
+    envelope = np.asarray(filtfilt(b, a, envelope, axis=0), dtype=np.float64)
 
     for itrc in range(nc_waveform):
         tukey(envelope[:, itrc], tukey_alpha, nt_max_cut)
@@ -116,7 +116,7 @@ def get_wavelet_alternative_representation_helper(wavelet_waveform, wc, tukey_al
     for itrc in range(nc_waveform):
         tukey(f_envelope[:, itrc], tukey_alpha, nt_max_cut)
 
-    f_envelope = np.asarray(filtfilt(b, a, f_envelope, axis=0), dtype=np.floating)
+    f_envelope = np.asarray(filtfilt(b, a, f_envelope, axis=0), dtype=np.float64)
 
     for itrc in range(nc_waveform):
         tukey(f_envelope[:, itrc], tukey_alpha, nt_max_cut)
@@ -126,7 +126,7 @@ def get_wavelet_alternative_representation_helper(wavelet_waveform, wc, tukey_al
     for itrc in range(nc_waveform):
         tukey(fd_envelope[:, itrc], tukey_alpha, nt_max_cut)
 
-    fd_envelope = np.asarray(filtfilt(b, a, fd_envelope, axis=0), dtype=np.floating)
+    fd_envelope = np.asarray(filtfilt(b, a, fd_envelope, axis=0), dtype=np.float64)
 
     for itrc in range(nc_waveform):
         tukey(fd_envelope[:, itrc], tukey_alpha, nt_max_cut)
@@ -134,7 +134,7 @@ def get_wavelet_alternative_representation_helper(wavelet_waveform, wc, tukey_al
     for itrc in range(nc_waveform):
         tukey(p_envelope[:, itrc], tukey_alpha, nt_max_cut)
 
-    p_envelope = np.asarray(filtfilt(b, a, f_envelope, axis=0), dtype=np.floating)
+    p_envelope = np.asarray(filtfilt(b, a, f_envelope, axis=0), dtype=np.float64)
 
     p_envelope[nt_max_cut:] = 0.
 
@@ -147,7 +147,7 @@ def get_wavelet_alternative_representation_helper(wavelet_waveform, wc, tukey_al
     min_mag = min_mag_mult * np.max(mag_got)
 
     # fft phases
-    angle_got = np.asarray(np.angle(signal_freq), dtype=np.floating)
+    angle_got = np.asarray(np.angle(signal_freq), dtype=np.float64)
 
     # find the frequency range where both signals have non-trivial amplitude
     itr_low_cut = int(np.argmax(mag_got[:, 0] >= min_mag))
@@ -383,19 +383,19 @@ def test_wavemaket_extreme_size(p_offset, f0_mult, direct):
 
     # mimic filtering for plotting
 
-    envelope_design = np.asarray(filtfilt(b, a, envelope_design, axis=0), dtype=np.floating)
+    envelope_design = np.asarray(filtfilt(b, a, envelope_design, axis=0), dtype=np.float64)
 
     tukey(envelope_design, tukey_alpha, envelope_design.shape[0])
 
     tukey(f_design, tukey_alpha, f_design.shape[0])
 
-    f_design = np.asarray(filtfilt(b, a, f_design, axis=0), dtype=np.floating)
+    f_design = np.asarray(filtfilt(b, a, f_design, axis=0), dtype=np.float64)
 
     tukey(f_design, tukey_alpha, f_design.shape[0])
 
     tukey(fd_design, tukey_alpha, fd_design.shape[0])
 
-    fd_design = np.asarray(filtfilt(b, a, fd_design, axis=0), dtype=np.floating)
+    fd_design = np.asarray(filtfilt(b, a, fd_design, axis=0), dtype=np.float64)
 
     tukey(fd_design, tukey_alpha, fd_design.shape[0])
 

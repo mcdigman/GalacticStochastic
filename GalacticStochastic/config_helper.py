@@ -4,16 +4,16 @@ from pathlib import Path
 
 import tomllib
 
-from GalacticStochastic.iteration_config import get_iteration_config
-from LisaWaveformTools.lisa_config import get_lisa_constants
-from WaveletWaveforms.wdm_config import get_wavelet_model
+from GalacticStochastic.iteration_config import IterationConfig, get_iteration_config
+from LisaWaveformTools.lisa_config import LISAConstants, get_lisa_constants
+from WaveletWaveforms.wdm_config import WDMWaveletConstants, get_wavelet_model
 
 
-def get_config_objects(toml_filename):
+def get_config_objects(toml_filename: str) -> tuple[dict, WDMWaveletConstants, LISAConstants, IterationConfig]:
     """Load the configuration from the input toml filename
     and create some of the config objects the iterative fit will need
     """
-    with Path.open(toml_filename, 'rb') as f:
+    with Path(toml_filename).open('rb') as f:
         config = tomllib.load(f)
 
     wc = get_wavelet_model(config)
