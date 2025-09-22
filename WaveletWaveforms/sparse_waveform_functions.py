@@ -39,18 +39,6 @@ N_max: integer
     which is determined by the shape of the interpolation table
 """
 
-PixelTimeRange = namedtuple('PixelTimeRange', ['nt_min', 'nt_max', 'dt'])
-
-PixelTimeRange.__doc__ = """
-namedtuple object to contain range of time pixels for analysis.
-"""
-
-PixelFreqRange = namedtuple('PixelFreqRange', ['nf_min', 'nf_max', 'df'])
-
-PixelFreqRange.__doc__ = """
-namedtuple object to contain range of frequency pixels for analysis.
-"""
-
 
 class PixelGenericRange(NamedTuple):
     """
