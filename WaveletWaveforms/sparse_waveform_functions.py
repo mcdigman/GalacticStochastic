@@ -1,5 +1,4 @@
 """Functions that relate the dense and sparse representations of waveforms."""
-from collections import namedtuple
 from typing import NamedTuple
 
 import numpy as np
@@ -8,36 +7,40 @@ from numpy.typing import NDArray
 
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
-SparseWaveletWaveform = namedtuple('SparseWaveletWaveform', ['wave_value', 'pixel_index', 'n_set', 'N_max'])
 
-SparseWaveletWaveform.__doc__ = """
-namedtuple object that contains a sparse representation of a wavelet intrinsic_waveform,
-as computed using the taylor approximation in e.g. wavemaket
-because the actual array size needed isn't known in advance,
-it internally stores arrays that are the maximum size possible in
-the approximation, and records the number of pixels that are actually set in
-n_set. In pixel_index, it additionally uses indicator values of -1 to indicate pixels
-which are not set. The pixel indices don't need to be listed in any particular order,
-Although for some applications it could be convenient for them to be sorted.
-wave_value : numpy.ndarray
-    stores the actual intrinsic_waveform as the values of the wavelet pixels
-    at the pixel indices specified by lists_pixels.
-    All values with index >= n_set should be set to 0.
-    Shape is the same as lists_pixels: shape: (_nc_waveform, N_max)
-pixel_index : numpy.ndarray
-    stores the indices of x,y coordinates of all pixels that are
-    currently set. All values with index >= n_set should be set to -1
-    shape: (_nc_waveform, N_max) number of TDI channels x maximum number
-    of pixels possible in sparse representation.
-n_set : numpy.ndarray of integers
-    number of wavelet coefficients that are *currently* set
-    all values must be <= N_max.
-    shape: number of TDI channels
-N_max: integer
-    the maximum number of wavelet pixels that could possibly
-    be set in the sparse representation,
-    which is determined by the shape of the interpolation table
-"""
+class SparseWaveletWaveform(NamedTuple):
+    """
+    NamedTuple object that contains a sparse representation of a wavelet intrinsic_waveform,
+    as computed using the taylor approximation in e.g. wavemaket
+    because the actual array size needed isn't known in advance,
+    it internally stores arrays that are the maximum size possible in
+    the approximation, and records the number of pixels that are actually set in
+    n_set. In pixel_index, it additionally uses indicator values of -1 to indicate pixels
+    which are not set. The pixel indices don't need to be listed in any particular order,
+    Although for some applications it could be convenient for them to be sorted.
+    wave_value : numpy.ndarray
+        stores the actual intrinsic_waveform as the values of the wavelet pixels
+        at the pixel indices specified by lists_pixels.
+        All values with index >= n_set should be set to 0.
+        Shape is the same as lists_pixels: shape: (_nc_waveform, N_max)
+    pixel_index : numpy.ndarray
+        stores the indices of x,y coordinates of all pixels that are
+        currently set. All values with index >= n_set should be set to -1
+        shape: (_nc_waveform, N_max) number of TDI channels x maximum number
+        of pixels possible in sparse representation.
+    n_set : numpy.ndarray of integers
+        number of wavelet coefficients that are *currently* set
+        all values must be <= N_max.
+        shape: number of TDI channels
+    N_max: integer
+        the maximum number of wavelet pixels that could possibly
+        be set in the sparse representation,
+        which is determined by the shape of the interpolation table
+    """
+    wave_value: NDArray[np.float64]
+    pixel_index: NDArray[np.int64]
+    n_set: NDArray[np.int64]
+    N_max: int
 
 
 class PixelGenericRange(NamedTuple):

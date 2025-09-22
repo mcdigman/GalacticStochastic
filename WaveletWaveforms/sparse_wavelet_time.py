@@ -54,15 +54,15 @@ def sparse_time_DX_assign_loop(params: LinearChirpletIntrinsicParams, cM: NDArra
 
 
 # @njit(fastmath=True)
-def sparse_time_DX_unpack_loop(mcs: NDArray[np.integer], DX_trans: NDArray[np.complexfloating], nt_lim: PixelGenericRange, wc: WDMWaveletConstants) -> tuple[NDArray[np.int64], NDArray[np.float64], np.int64, np.int64]:
+def sparse_time_DX_unpack_loop(mcs: NDArray[np.integer], DX_trans: NDArray[np.complexfloating], nt_lim: PixelGenericRange, wc: WDMWaveletConstants) -> tuple[NDArray[np.int64], NDArray[np.float64], int, int]:
     """Helper to start unpack fft results for sparse_wavelet_time"""
     # indicates this pixel not used
     p = wc.K / wc.L
-    kx = np.int64(2 * wc.Nf / p)
+    kx = int(2 * wc.Nf / p)
     N_max = kx * wc.Nt
     waveT = np.zeros(N_max)
     Tlist = np.full(N_max, -1, dtype=np.int64)
-    mm = np.int64(0)
+    mm = 0
 
     for n in range(nt_lim.nx_min, nt_lim.nx_max):
         n_itr = n - nt_lim.nx_min
