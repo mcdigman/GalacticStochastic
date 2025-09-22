@@ -5,19 +5,23 @@ get_S_cyclo uses an FFT-based filtering to extract a fit to a smoothed backgroun
 without using any particular spectral model. fit_gb_spectrum_evolve
 uses a fit to a standard shape for the galactic background spectrum.
 """
+from __future__ import annotations
 
-from typing import Tuple
+from typing import TYPE_CHECKING
 from warnings import warn
 
 import numpy as np
 import scipy.ndimage
 import WDMWaveletTransforms.fft_funcs as fft
-from numpy.typing import NDArray
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.optimize import dual_annealing
 
 import GalacticStochastic.global_const as gc
-from WaveletWaveforms.wdm_config import WDMWaveletConstants
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+    from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 def S_gal_model(f, log10A, log10f2, log10f1, log10fknee, alpha) -> NDArray[np.float64]:
@@ -37,8 +41,8 @@ def S_gal_model_alt(f, A, alpha, beta, kappa, gamma, fknee) -> NDArray[np.float6
 
 
 def filter_periods_fft(
-    r_mean: NDArray[np.float64], Nt_loc: int, period_list, wc: WDMWaveletConstants, *, period_tolerance: float = 0.01, angle_small: float = -0.1,
-) -> Tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+    r_mean: NDArray[np.float64], Nt_loc: int, period_list: tuple[int, ...] | tuple[np.floating, ...], wc: WDMWaveletConstants, *, period_tolerance: float = 0.01, angle_small: float = -0.1,
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     """Filter to a specific set of periods using an fft.
     period_list is in multiples of _wc.Tobs/gc.SECSYEAR
     """
@@ -71,6 +75,7 @@ def filter_periods_fft(
 
         # iterate over the periods we want to restrict to
         for itrk, k in enumerate(period_list):
+            assert isinstance(k, (int, float))
             idx = int(wc.Tobs / gc.SECSYEAR * k)
             if np.abs(idx - wc.Tobs / gc.SECSYEAR * k) > period_tolerance:
                 warn(
@@ -122,14 +127,14 @@ def get_S_cyclo(
     wc: WDMWaveletConstants,
     smooth_lengthf: float,
     filter_periods: int,
-    period_list=None,
+    period_list: tuple[int, ...] | tuple[np.floating, ...] | None = None,
     *,
     Nt_loc: int = -1,
     faint_cutoff_thresh: float = 0.1,
     t_stabilizer_mult: float = 1.0e-13,
     r_cutoff_mult: float = 1.0e-6,
     log_S_stabilizer: float = 1.0e-50,
-) -> Tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     """Note the smoothing length is the length in *log* frequency,
     and the input is assumed spaced linearly in frequency
     """
@@ -237,7 +242,7 @@ def get_S_cyclo(
 
 def fit_gb_spectrum_evolve(
     S_goals: NDArray[np.float64], fs: NDArray[np.float64], fs_report: NDArray[np.float64], nt_ranges, offset, wc: WDMWaveletConstants,
-) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     a1 = -0.25
     b1 = -2.70
     ak = -0.27

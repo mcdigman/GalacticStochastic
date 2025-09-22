@@ -1,21 +1,25 @@
 """Class to store information about the binaries in the galactic background"""
+from __future__ import annotations
 
 from time import perf_counter
-from typing import Tuple, override
+from typing import TYPE_CHECKING, override
 
 import numpy as np
-from numpy.typing import NDArray
 
 import GalacticStochastic.global_const as gc
-from GalacticStochastic.iteration_config import IterationConfig
-from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
-from GalacticStochastic.noise_manager import NoiseModelManager
 from GalacticStochastic.state_manager import StateManager
 from LisaWaveformTools.linear_frequency_source import LinearFrequencyIntrinsicParams, LinearFrequencyWaveletWaveformTime
-from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams
-from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
-from WaveletWaveforms.wdm_config import WDMWaveletConstants
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+    from GalacticStochastic.iteration_config import IterationConfig
+    from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
+    from GalacticStochastic.noise_manager import NoiseModelManager
+    from LisaWaveformTools.lisa_config import LISAConstants
+    from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
+    from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 def unpack_params_gb(params_in: NDArray[np.floating]) -> SourceParams:
@@ -48,7 +52,7 @@ class BinaryInclusionState(StateManager):
         noise_manager: NoiseModelManager,
         fit_state: IterativeFitState,
         nt_lim_waveform:  PixelGenericRange,
-        snrs_tot_in=None,
+        snrs_tot_in: NDArray[np.floating] | None = None,
     ) -> None:
         """Class that stores information about which component of the galactic signal binaries belong to."""
         self.wc = wc
@@ -109,7 +113,7 @@ class BinaryInclusionState(StateManager):
             self.snrs_tot_upper[itrn, self.decided[itrn]] = self.snrs_tot_upper[itrn - 1, self.decided[itrn]]
             self.snrs_upper[itrn, self.decided[itrn]] = self.snrs_upper[itrn - 1, self.decided[itrn]]
 
-    def oscillation_check_helper(self) -> Tuple[bool, bool, bool]:
+    def oscillation_check_helper(self) -> tuple[bool, bool, bool]:
         """Helper used by fit_state to decide if the bright binaries are oscillating without converging"""
         osc1 = False
         osc2 = False
@@ -184,7 +188,7 @@ class BinaryInclusionState(StateManager):
         if ~np.isfinite(self.snrs_tot_upper[itrn, itrb]) or ~np.isfinite(self.snrs_tot_lower[itrn, itrb]):
             raise ValueError('Non-finite value detected in snr at ' + str(itrn) + ', ' + str(itrb))
 
-    def decision_helper(self, itrb: int) -> Tuple[bool, bool]:
+    def decision_helper(self, itrb: int) -> tuple[bool, bool]:
         """Helper to decide whether a binary is bright or faint by the current noise spectrum"""
         itrn = self.itrn
         if self.fit_state.get_preprocess_mode() == 1:

@@ -27,7 +27,7 @@ class NoiseModelManager(StateManager):
         fit_state: IterativeFitState,
         bgd: BGDecomposition,
         S_inst_m: NDArray[np.float64],
-        stat_only,
+        stat_only: int,
         nt_lim_snr: PixelGenericRange,
     ) -> None:
         """Create the noise model manager"""

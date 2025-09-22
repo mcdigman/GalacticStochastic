@@ -164,7 +164,7 @@ class BGDecomposition:
         """Clear the faint part of the galactic spectrum"""
         self.galactic_below[:] = 0.0
 
-    def get_S_below_high(self, S_mean, smooth_lengthf: float, filter_periods: int, period_list) -> NDArray[np.float64]:
+    def get_S_below_high(self, S_mean: NDArray[np.float64], smooth_lengthf: float, filter_periods: int, period_list: tuple[int, ...] | tuple[np.floating, ...]) -> NDArray[np.float64]:
         """Get the upper estimate of the galactic power spectrum"""
         galactic_loc = self.get_galactic_below_high(bypass_check=True)
         S, _, _, _, _ = get_S_cyclo(
@@ -172,7 +172,7 @@ class BGDecomposition:
         )
         return S
 
-    def get_S_below_low(self, S_mean, smooth_lengthf: float, filter_periods: int, period_list) -> NDArray[np.float64]:
+    def get_S_below_low(self, S_mean: NDArray[np.float64], smooth_lengthf: float, filter_periods: int, period_list: tuple[int, ...] | tuple[np.floating, ...]) -> NDArray[np.float64]:
         """Get the lower estimate of the galactic power spectrum"""
         galactic_loc = self.get_galactic_below_low(bypass_check=True)
         S, _, _, _, _ = get_S_cyclo(
