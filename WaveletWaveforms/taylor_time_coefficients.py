@@ -219,7 +219,8 @@ def get_wavelet_norm(wc: WDMWaveletConstants) -> NDArray[np.floating]:
         phi[np.int64(wc.K / 2) + i] = np.real(DX[i])
 
     nrm = np.linalg.norm(phi)
-    kwave = wc.Nf / 16
+    # TODO check if this is the right way of getting the relevant K
+    kwave = int(wc.Nf // 16)
     return wavelet(wc, kwave, nrm)
 
 

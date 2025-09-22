@@ -54,7 +54,7 @@ def sparse_time_DX_assign_loop(params: LinearChirpletIntrinsicParams, cM: NDArra
 
 
 # @njit(fastmath=True)
-def sparse_time_DX_unpack_loop(mcs: NDArray[np.integer], DX_trans: NDArray[np.complexfloating], nt_lim: PixelGenericRange, wc: WDMWaveletConstants) -> tuple[NDArray[np.int64], NDArray[np.float64], int, int]:
+def sparse_time_DX_unpack_loop(mcs: NDArray[np.integer], DX_trans: NDArray[np.complexfloating], nt_lim: PixelGenericRange, wc: WDMWaveletConstants) -> tuple[NDArray[np.int64], NDArray[np.float64], np.int64, np.int64]:
     """Helper to start unpack fft results for sparse_wavelet_time"""
     # indicates this pixel not used
     p = wc.K / wc.L
@@ -62,7 +62,7 @@ def sparse_time_DX_unpack_loop(mcs: NDArray[np.integer], DX_trans: NDArray[np.co
     N_max = kx * wc.Nt
     waveT = np.zeros(N_max)
     Tlist = np.full(N_max, -1, dtype=np.int64)
-    mm = 0
+    mm = np.int64(0)
 
     for n in range(nt_lim.nx_min, nt_lim.nx_max):
         n_itr = n - nt_lim.nx_min
@@ -117,11 +117,11 @@ def wavelet_SparseT(params: LinearChirpletIntrinsicParams, wc: WDMWaveletConstan
     # postive frequencies
     DX[1:1 + oms.size] = np.sqrt(wc.dt) * phitilde_vec(oms * wc.dt, wc.Nf, wc.nx)
 
-    DX = wc.L * fft.ifft(DX, wc.L)
+    DX_real = wc.L * np.real(fft.ifft(DX, wc.L))
 
     phis = np.zeros(wc.L)
-    phis[0:half_L] = np.real(DX[half_L:])
-    phis[half_L:] = np.real(DX[0:half_L])
+    phis[0:half_L] = DX_real[half_L:]
+    phis[half_L:] = DX_real[0:half_L]
 
     p = wc.K / wc.L
     nrm = np.sqrt(2. / p) * np.linalg.norm(phis)

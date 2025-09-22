@@ -1,38 +1,36 @@
 """read wavelet transform constants in from config file and compute derived parameters"""
 
-from collections import namedtuple
+# from collections import namedtuple
+from typing import NamedTuple
 
 import numpy as np
 
-WDMWaveletConstants = namedtuple(
-    'WDMWaveletConstants',
-    [
-        'Nf',
-        'Nt',
-        'dt',
-        'mult',
-        'Nsf',
-        'Nfd',
-        'dfdot',
-        'Nfd_negative',
-        'Nst',
-        'Tobs',
-        'DF',
-        'DT',
-        'nx',
-        'dfd',
-        'df_bw',
-        'BW',
-        'Tw',
-        'K',
-        'A',
-        'B',
-        'dom',
-        'DOM',
-        'insDOM',
-        'L',
-    ],
-)
+
+class WDMWaveletConstants(NamedTuple):
+    Nf: int
+    Nt: int
+    dt: float
+    mult: int
+    Nsf: int
+    Nfd: int
+    dfdot: float
+    Nfd_negative: int
+    Nst: int
+    Tobs: float
+    DF: float
+    DT: float
+    nx: float
+    dfd: float
+    df_bw: float
+    BW: float
+    Tw: float
+    K: int
+    A: float
+    B: float
+    dom: float
+    DOM: float
+    insDOM: float
+    L: int
 
 
 def get_wavelet_model(config: dict) -> WDMWaveletConstants:
@@ -95,7 +93,7 @@ def get_wavelet_model(config: dict) -> WDMWaveletConstants:
     DF = 1.0 / (2 * dt * Nf)
 
     # dimensionless filter legnth
-    K = mult * 2 * Nf
+    K = int(mult * 2 * Nf)
 
     # filter duration (time; same units as dt)
     Tw = dt * K

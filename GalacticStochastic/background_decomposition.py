@@ -27,37 +27,41 @@ class BGDecomposition:
             galactic_below: NDArray[np.float64] | None = None,
             galactic_undecided: NDArray[np.float64] | None = None,
             galactic_above: NDArray[np.float64] | None = None,
-            do_total_track: bool = True,
+            track_mode: int = 1,
     ) -> None:
 
-        self.wc = wc
-        self.nc_galaxy = nc_galaxy
-        self.shape1 = (wc.Nt * wc.Nf, self.nc_galaxy)
-        self.shape2 = (wc.Nt, wc.Nf, self.nc_galaxy)
+        self.wc: WDMWaveletConstants = wc
+        self.nc_galaxy: int = nc_galaxy
+        self.shape1: tuple[int, int] = (wc.Nt * wc.Nf, self.nc_galaxy)
+        self.shape2: tuple[int, int, int] = (wc.Nt, wc.Nf, self.nc_galaxy)
 
         if galactic_floor is None:
-            self.galactic_floor = np.zeros(self.shape1)
+            self.galactic_floor: NDArray[np.float64] = np.zeros(self.shape1, dtype=np.float64)
         else:
+            assert galactic_floor.shape == self.shape1
             self.galactic_floor = galactic_floor
 
         if galactic_below is None:
-            self.galactic_below = np.zeros(self.shape1)
+            self.galactic_below: NDArray[np.float64] = np.zeros(self.shape1)
         else:
+            assert galactic_below.shape == self.shape1
             self.galactic_below = galactic_below
 
         if galactic_undecided is None:
-            self.galactic_undecided = np.zeros(self.shape1)
+            self.galactic_undecided: NDArray[np.float64] = np.zeros(self.shape1, dtype=np.float64)
         else:
+            assert galactic_undecided.shape == self.shape1
             self.galactic_undecided = galactic_undecided
 
         if galactic_above is None:
-            self.galactic_above = np.zeros(self.shape1)
+            self.galactic_above: NDArray[np.float64] = np.zeros(self.shape1, dtype=np.float64)
         else:
+            assert galactic_above.shape == self.shape1
             self.galactic_above = galactic_above
 
         self.galactic_total_cache:  NDArray[np.float64] | None = None
 
-        self.do_total_track = do_total_track
+        self.track_mode: int = track_mode
 
         self.power_galactic_undecided: list[NDArray[np.float64]] = []
         self.power_galactic_above: list[NDArray[np.float64]] = []
@@ -110,7 +114,7 @@ class BGDecomposition:
         check that the total not changed much.
         Otherwise, cache the current total so future runs can check if it has changed
         """
-        if self.do_total_track:
+        if self.track_mode:
             if self.galactic_total_cache is None:
                 assert np.all(self.galactic_below == 0.0)
                 self.galactic_total_cache = self.get_galactic_total(bypass_check=True)

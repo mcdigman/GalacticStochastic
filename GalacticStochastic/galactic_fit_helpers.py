@@ -5,6 +5,7 @@ get_S_cyclo uses an FFT-based filtering to extract a fit to a smoothed backgroun
 without using any particular spectral model. fit_gb_spectrum_evolve
 uses a fit to a standard shape for the galactic background spectrum.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -24,7 +25,14 @@ if TYPE_CHECKING:
     from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
-def S_gal_model(f, log10A, log10f2, log10f1, log10fknee, alpha) -> NDArray[np.float64]:
+def S_gal_model(
+    f: NDArray[np.float64] | float,
+    log10A: NDArray[np.floating] | float,
+    log10f2: NDArray[np.floating] | float,
+    log10f1: NDArray[np.floating] | float,
+    log10fknee: NDArray[np.floating] | float,
+    alpha: NDArray[np.floating] | float,
+) -> NDArray[np.float64] | float:
     """Model from arXiv:2103.14598 for galactic binary confusion noise amplitude"""
     return (
         10**log10A
@@ -35,19 +43,38 @@ def S_gal_model(f, log10A, log10f2, log10f1, log10fknee, alpha) -> NDArray[np.fl
     )
 
 
-def S_gal_model_alt(f, A, alpha, beta, kappa, gamma, fknee) -> NDArray[np.float64]:
+def S_gal_model_alt(
+    f: NDArray[np.float64] | float,
+    A: NDArray[np.float64] | float,
+    alpha: NDArray[np.float64] | float,
+    beta: NDArray[np.float64] | float,
+    kappa: NDArray[np.float64] | float,
+    gamma: NDArray[np.float64] | float,
+    fknee: NDArray[np.float64] | float,
+) -> NDArray[np.float64] | float:
     """Model from arXiv:1703.09858 for galactic binary confusion noise amplitude"""
     return A * f ** (7 / 3) * np.exp(-(f**alpha) + beta * f * np.sin(kappa * f)) * (1 + np.tanh(gamma * (fknee - f)))
 
 
 def filter_periods_fft(
-    r_mean: NDArray[np.float64], Nt_loc: int, period_list: tuple[int, ...] | tuple[np.floating, ...], wc: WDMWaveletConstants, *, period_tolerance: float = 0.01, angle_small: float = -0.1,
+    r_mean: NDArray[np.float64],
+    Nt_loc: int,
+    period_list: tuple[int, ...] | tuple[np.floating, ...],
+    wc: WDMWaveletConstants,
+    *,
+    period_tolerance: float = 0.01,
+    angle_small: float = -0.1,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     """Filter to a specific set of periods using an fft.
     period_list is in multiples of _wc.Tobs/gc.SECSYEAR
     """
     # get the same number of frequencies as the input r
     nc_loc = r_mean.shape[1]
+
+    assert isinstance(wc.DT, float)
+    assert isinstance(wc.Nt, int)
+    assert isinstance(wc.Tobs, (int, float))
+    assert isinstance(gc.SECSYEAR, (int, float))
 
     # time and angular frequency grids
     ts = np.arange(0, Nt_loc) * wc.DT
@@ -71,7 +98,7 @@ def filter_periods_fft(
         if angle_fft[-1] < angle_small:
             abs_fft[-1] = -abs_fft[-1]
 
-        rec = 1.0 + abs_fft[0] / 2 + np.zeros(Nt_loc)
+        rec = 1.0 + abs_fft[0] / 2.0 + np.zeros(Nt_loc, dtype=np.float64)
 
         # iterate over the periods we want to restrict to
         for itrk, k in enumerate(period_list):
@@ -139,6 +166,7 @@ def get_S_cyclo(
     and the input is assumed spaced linearly in frequency
     """
     if Nt_loc == -1:
+        assert isinstance(wc.Nt, int)
         Nt_loc = wc.Nt
 
     nc_s = S_inst_m.shape[1]
@@ -153,7 +181,7 @@ def get_S_cyclo(
         amp_got: NDArray[np.float64] = np.zeros((0, nc_s), dtype=np.float64)
         angle_got: NDArray[np.float64] = np.zeros((0, nc_s), dtype=np.float64)
     else:
-        r_mean = np.zeros((wc.Nt, nc_s))
+        r_mean = np.zeros((wc.Nt, nc_s), dtype=np.float64)
         # whitened mean galaxy power
         Sw_in_mean = np.zeros_like(S_in_mean)
         Sw_in_mean[S_inst_m > 0.0] = np.abs(S_in_mean[S_inst_m > 0.0] / S_inst_m[S_inst_m > 0.0])
@@ -175,14 +203,16 @@ def get_S_cyclo(
         del Sw_in_mean
 
         # input ratio can't be negative except due to numerical noise (will enforce nonzero later)
-        r_mean = np.abs(r_mean)
+        r_mean_abs = np.abs(r_mean)
+
+        del r_mean
 
         if period_list is None:
             # if no period list is given, do every possible period
             min_step = 1 / int(wc.Tobs / gc.SECSYEAR)
             period_list = tuple(np.arange(0, int(gc.SECSYEAR // wc.DT) // 2 + min_step, min_step))
 
-        r_smooth, amp_got, angle_got = filter_periods_fft(r_mean, Nt_loc, period_list, wc)
+        r_smooth, amp_got, angle_got = filter_periods_fft(r_mean_abs, Nt_loc, period_list, wc)
 
         # the multiplier must be strictly positive
         # but due to noise/numerical inaccuracy in the fft it could be slightly negative
@@ -201,10 +231,12 @@ def get_S_cyclo(
 
     del S_in
 
-    S_demod_mean = np.abs(S_demod_mean)
+    S_demod_mean_abs = np.abs(S_demod_mean)
+
+    del S_demod_mean
 
     S_demod_smooth = np.zeros((wc.Nf, nc_s))
-    S_demod_smooth[0, :] = S_demod_mean[0, :]
+    S_demod_smooth[0, :] = S_demod_mean_abs[0, :]
 
     log_f = np.log10(np.arange(1, wc.Nf) * wc.DF)
 
@@ -219,7 +251,7 @@ def get_S_cyclo(
     for itrc in range(nc_s):
         # add and later remove a small numerical stabilizer for cases where the S is zero
         # better behaved to interpolate in log(S) as well
-        log_S_demod_mean = np.log10(S_demod_mean[1:, itrc] + log_S_stabilizer)
+        log_S_demod_mean = np.log10(S_demod_mean_abs[1:, itrc] + log_S_stabilizer)
         log_S_interp = InterpolatedUnivariateSpline(log_f, log_S_demod_mean, ext=2)(log_f_interp)
         log_S_interp_smooth = scipy.ndimage.gaussian_filter(log_S_interp, smooth_sigma)
         log_S_smooth = InterpolatedUnivariateSpline(log_f_interp, log_S_interp_smooth, ext=2)(log_f)
@@ -227,21 +259,28 @@ def get_S_cyclo(
         S_demod_smooth[1:, itrc] = 10**log_S_smooth - log_S_stabilizer
 
     # enforce positive just in case subtraction misbehaved
-    S_demod_smooth = np.abs(S_demod_smooth)
+    S_demod_smooth_abs = np.abs(S_demod_smooth)
+
+    del S_demod_smooth
 
     S_res = np.zeros((wc.Nt, wc.Nf, nc_s)) + S_inst_m
     for itrc in range(nc_s):
-        S_res[:, :, itrc] += np.outer(r_smooth[:, itrc], S_demod_smooth[:, itrc])
+        S_res[:, :, itrc] += np.outer(r_smooth[:, itrc], S_demod_smooth_abs[:, itrc])
 
     S_res = np.abs(S_res)
 
     assert np.all(np.isfinite(S_res))
 
-    return S_res, r_smooth, S_demod_smooth, amp_got, angle_got
+    return S_res, r_smooth, S_demod_smooth_abs, amp_got, angle_got
 
 
 def fit_gb_spectrum_evolve(
-    S_goals: NDArray[np.float64], fs: NDArray[np.float64], fs_report: NDArray[np.float64], nt_ranges, offset, wc: WDMWaveletConstants,
+    S_goals: NDArray[np.float64],
+    fs: NDArray[np.float64],
+    fs_report: NDArray[np.float64],
+    nt_ranges: NDArray[np.integer],
+    offset: NDArray[np.float64],
+    wc: WDMWaveletConstants,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     a1 = -0.25
     b1 = -2.70
@@ -249,7 +288,6 @@ def fit_gb_spectrum_evolve(
     bk = -2.47
     log10A = np.log10(7.0e-39)
     log10f2 = np.log10(0.00051)
-    alpha = 1.6
 
     TobsYEAR_locs = nt_ranges * wc.DT / gc.SECSYEAR
     n_spect = S_goals.shape[0]
