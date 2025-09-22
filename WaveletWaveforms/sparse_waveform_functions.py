@@ -1,5 +1,6 @@
 """Functions that relate the dense and sparse representations of waveforms."""
 from collections import namedtuple
+from typing import NamedTuple
 
 import numpy as np
 from numba import njit
@@ -50,11 +51,15 @@ PixelFreqRange.__doc__ = """
 namedtuple object to contain range of frequency pixels for analysis.
 """
 
-PixelGenericRange = namedtuple('PixelGenericRange', ['nx_min', 'nx_max', 'dx', 'x_min'])
 
-PixelGenericRange.__doc__ = """
-namedtuple object to contain range of pixels for analysis.
-"""
+class PixelGenericRange(NamedTuple):
+    """
+    NamedTuple object to contain range of pixels for analysis.
+    """
+    nx_min: int
+    nx_max: int
+    dx: float
+    x_min: float
 
 
 def sparse_addition_helper(sparse_waveform: SparseWaveletWaveform, dense_representation: NDArray[np.float64]) -> None:

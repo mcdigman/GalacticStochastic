@@ -26,7 +26,7 @@ class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTi
         self._consistent_extrinsic: bool = False
         self._consistent_intrinsic: bool = False
 
-        self._TTs: NDArray[np.float64] = self._nt_lim_waveform.dx * np.arange(self._nt_lim_waveform.nx_min, self._nt_lim_waveform.nx_max)
+        self._TTs: NDArray[np.float64] = np.float64(self._nt_lim_waveform.dx) * np.arange(self._nt_lim_waveform.nx_min, self._nt_lim_waveform.nx_max)
         self._spacecraft_orbits: SpacecraftOrbits = get_spacecraft_vec(self._TTs, self._lc)
 
         self._response_mode: int = -1

@@ -19,8 +19,8 @@ def sparse_time_DX_assign_loop(params: LinearChirpletIntrinsicParams, cM: NDArra
     ts = wc.DT * np.arange(0, wc.Nt)
     fs = foft(ts, params)
     mcs = (fs / wc.DF).astype(np.int64)
-    nt_min = np.argmax(mcs > -1)
-    nt_max = wc.Nt - np.argmax(mcs[::-1] < wc.Nf)
+    nt_min = int(np.argmax(mcs > -1))
+    nt_max = int(wc.Nt - np.argmax(mcs[::-1] < wc.Nf))
     nt_lim = PixelGenericRange(nt_min, nt_max, wc.DT, 0.)
 
     DX = np.zeros((nt_lim.nx_max - nt_lim.nx_min, wc.L), dtype=np.complex128)
