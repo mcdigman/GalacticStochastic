@@ -103,13 +103,13 @@ def wavemaket(
                 # assert Nfsam1_loc == int(_wc.Nsf + 2 / 3 * np.abs(ny) * _wc.dfdot * _wc.Nsf)
                 Nfsam2_loc = taylor_table.Nfsam[n_ind + 1]
                 # assert Nfsam2_loc == int(_wc.Nsf + 2 / 3 * np.abs(ny + 1) * _wc.dfdot * _wc.Nsf)
-                HBW = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df_bw / 2
+                half_bandwidth = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df_bw / 2
 
                 # lowest frequency layer
-                kmin = max(nf_min, int(np.ceil((fa - HBW) / wc.DF)))
+                kmin = max(nf_min, int(np.ceil((fa - half_bandwidth) / wc.DF)))
 
                 # highest frequency layer
-                kmax = min(nf_max, int(np.floor((fa + HBW) / wc.DF)))
+                kmax = min(nf_max, int(np.floor((fa + half_bandwidth) / wc.DF)))
 
                 for k in range(kmin, kmax + 1):
                     zmid = (wc.DF / wc.df_bw) * k
@@ -167,12 +167,12 @@ def wavemaket(
                 if Nfsam1_loc % 2 == 1:
                     Nfsam1_loc += 1
 
-                HBW = (Nfsam1_loc - 1) * wc.df_bw / 2
+                half_bandwidth = (Nfsam1_loc - 1) * wc.df_bw / 2
                 # lowest frequency layer
-                kmin = max(0, int(np.ceil((fa - HBW) / wc.DF)))
+                kmin = max(0, int(np.ceil((fa - half_bandwidth) / wc.DF)))
 
                 # highest frequency layer
-                kmax = min(wc.Nf - 1, int(np.floor((fa + HBW) / wc.DF)))
+                kmax = min(wc.Nf - 1, int(np.floor((fa + half_bandwidth) / wc.DF)))
 
                 for k in range(kmin, kmax + 1):
                     wavelet_waveform.pixel_index[itrc, mm] = j_ind * wc.Nf + k
@@ -275,15 +275,15 @@ def wavemaket_direct(
             Nfsam1_loc = int(wc.Nsf + 2 / 3 * np.abs(ny) * wc.dfdot * wc.Nsf)
             Nfsam2_loc = int(wc.Nsf + 2 / 3 * np.abs(ny + 1) * wc.dfdot * wc.Nsf)
             # not sure the - 1 is strictly necessary
-            HBW = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df_bw / 2
+            half_bandwidth = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df_bw / 2
 
             # lowest frequency layer
-            kmin = int(np.ceil((fa - HBW) / wc.DF))
+            kmin = int(np.ceil((fa - half_bandwidth) / wc.DF))
             kmin = max(nf_min, kmin)
             kmin = min(nf_max, kmin)
 
             # highest frequency layer
-            kmax = min(nf_max, int(np.floor((fa + HBW) / wc.DF)))
+            kmax = min(nf_max, int(np.floor((fa + half_bandwidth) / wc.DF)))
             kmax = max(nf_min, kmax)
             kmax = max(kmin, kmax)
 

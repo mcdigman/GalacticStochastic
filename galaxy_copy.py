@@ -17,13 +17,13 @@ params_vgb = params_gb[n_dgb + n_igb:n_dgb + n_igb + n_vgb][:n_vgb_sel]
 
 filename_out = 'Galaxies/Galaxy4/galaxy_binaries.hdf5'
 hf_out = h5py.File(filename_out, 'w')
-hf_out.create_group('sky')
-hf_out['sky'].create_group('dgb')
-hf_out['sky'].create_group('igb')
-hf_out['sky'].create_group('vgb')
-hf_out['sky']['dgb'].create_group('cat')
-hf_out['sky']['vgb'].create_group('cat')
-hf_out['sky']['igb'].create_group('cat')
+hf_sky = hf_out.create_group('sky')
+hf_dgb = hf_sky.create_group('dgb')
+hf_igb = hf_sky.create_group('igb')
+hf_vgb = hf_sky.create_group('vgb')
+hf_dgb_cat = hf_dgb.create_group('cat')
+hf_igb_cat = hf_igb.create_group('cat')
+hf_vgb_cat = hf_vgb.create_group('cat')
 
 n_par_gb = 8
 labels_gb = [
@@ -38,12 +38,12 @@ labels_gb = [
 ]
 
 params_dgb[:, 0] *= 10
-params_vgb[:, 0] *= 10
 params_igb[:, 0] *= 10
+params_vgb[:, 0] *= 10
 
 for itrl in range(n_par_gb):
-    hf_out['sky']['dgb']['cat'].create_dataset(labels_gb[itrl], data=params_dgb[:, itrl], compression='gzip')
-    hf_out['sky']['vgb']['cat'].create_dataset(labels_gb[itrl], data=params_vgb[:, itrl], compression='gzip')
-    hf_out['sky']['igb']['cat'].create_dataset(labels_gb[itrl], data=params_igb[:, itrl], compression='gzip')
+    hf_dgb_cat.create_dataset(labels_gb[itrl], data=params_dgb[:, itrl], compression='gzip')
+    hf_igb_cat.create_dataset(labels_gb[itrl], data=params_igb[:, itrl], compression='gzip')
+    hf_vgb_cat.create_dataset(labels_gb[itrl], data=params_vgb[:, itrl], compression='gzip')
 
 hf_out.close()

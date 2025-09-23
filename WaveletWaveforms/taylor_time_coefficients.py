@@ -5,7 +5,7 @@ C 2025 Matthew C. Digman
 """
 
 from time import time
-from typing import NamedTuple, Tuple
+from typing import NamedTuple
 
 import h5py
 import numpy as np
@@ -115,15 +115,18 @@ def wavelet(wc: WDMWaveletConstants, m: int, nrm: np.floating) -> NDArray[np.flo
             + phitilde_vec(wc.dt * (om - m * wc.DOM), wc.Nf, wc.nx)
         )
     )
-    DE = spf.fft(DE, wc.K, overwrite_x=True)
 
-    wave[halfN:] = np.real(DE[0:halfN])
-    wave[0:halfN] = np.real(DE[halfN:])
+    DE_fft = spf.fft(DE, wc.K, overwrite_x=True)
+
+    del DE
+
+    wave[halfN:] = np.real(DE_fft[0:halfN])
+    wave[0:halfN] = np.real(DE_fft[halfN:])
     return 1.0 / nrm * wave
 
 
 @njit(parallel=True)
-def get_taylor_table_time_helper(wavelet_norm: NDArray[np.floating], wc: WDMWaveletConstants) -> Tuple[NDArray[np.floating], NDArray[np.floating]]:
+def get_taylor_table_time_helper(wavelet_norm: NDArray[np.floating], wc: WDMWaveletConstants) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
     """
     Compute cosine and sine Taylor expansion coefficient tables for a grid of frequency derivative values.
 
@@ -216,11 +219,13 @@ def get_wavelet_norm(wc: WDMWaveletConstants) -> NDArray[np.floating]:
         -wc.dom * wc.dt * np.arange(np.int64(wc.K / 2) - 1, 0, -1), wc.Nf, wc.nx,
     )
 
-    DX = spf.fft(DX, wc.K, overwrite_x=True)
+    DX_fft = spf.fft(DX, wc.K, overwrite_x=True)
+
+    del DX
 
     for i in range(np.int64(wc.K / 2)):
-        phi[i] = np.real(DX[np.int64(wc.K / 2) + i])
-        phi[np.int64(wc.K / 2) + i] = np.real(DX[i])
+        phi[i] = np.real(DX_fft[np.int64(wc.K / 2) + i])
+        phi[np.int64(wc.K / 2) + i] = np.real(DX_fft[i])
 
     nrm = np.linalg.norm(phi)
     # TODO check if this is the right way of getting the relevant K
@@ -387,7 +392,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str = 'skip', 
 
             wc_group = hf.create_group('_wc')
             for key in wc._fields:
-                wc_group.create_dataset(key, data=getattr(wc, key))
+                wc_group.attrs[key] = getattr(wc, key)
 
             hf.create_dataset('wavelet_norm', data=wavelet_norm, compression='gzip')
             hf.create_dataset('fd', data=fd, compression='gzip')
@@ -407,7 +412,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str = 'skip', 
 
 
 @njit()
-def get_taylor_time_pixel_direct(fa: float, fda: float, k_in: int, wavelet_norm: NDArray[np.floating], wc: WDMWaveletConstants) -> Tuple[float, float]:
+def get_taylor_time_pixel_direct(fa: float, fda: float, k_in: int, wavelet_norm: NDArray[np.floating], wc: WDMWaveletConstants) -> tuple[float, float]:
     """
     Compute Taylor expansion coefficients for a single time pixel in the wavelet domain.
 

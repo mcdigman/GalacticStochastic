@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Generic, NamedTuple, TypeVar, Union
+from typing import TYPE_CHECKING, Generic, NamedTuple, TypeVar
 
 if TYPE_CHECKING:
     import numpy as np
@@ -70,7 +70,7 @@ class StationaryWaveformGeneric(NamedTuple):
 
 
 # Subclasses can be either in time or frequency domain
-StationaryWaveformType = TypeVar('StationaryWaveformType', bound=Union[StationaryWaveformTime, StationaryWaveformFreq, StationaryWaveformGeneric])
+StationaryWaveformType = TypeVar('StationaryWaveformType', bound=StationaryWaveformTime | StationaryWaveformFreq | StationaryWaveformGeneric)
 
 
 class StationarySourceWaveform(Generic[StationaryWaveformType], ABC):

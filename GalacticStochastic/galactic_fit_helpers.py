@@ -81,9 +81,9 @@ def filter_periods_fft(
     wts = 2 * np.pi / gc.SECSYEAR * ts
 
     # places to store results
-    r = np.zeros((wc.Nt, nc_loc), dtype=np.floating)
-    amp_got = np.zeros((len(period_list), nc_loc), dtype=np.floating)
-    angle_got = np.zeros((len(period_list), nc_loc), dtype=np.floating)
+    r = np.zeros((wc.Nt, nc_loc), dtype=np.float64)
+    amp_got = np.zeros((len(period_list), nc_loc), dtype=np.float64)
+    angle_got = np.zeros((len(period_list), nc_loc), dtype=np.float64)
 
     # iterate over input frequencies
     for itrc in range(nc_loc):
@@ -98,7 +98,7 @@ def filter_periods_fft(
         if angle_fft[-1] < angle_small:
             abs_fft[-1] = -abs_fft[-1]
 
-        rec = 1.0 + abs_fft[0] / 2.0 + np.zeros(Nt_loc, dtype=np.floating)
+        rec = 1.0 + abs_fft[0] / 2.0 + np.zeros(Nt_loc, dtype=np.float64)
 
         # iterate over the periods we want to restrict to
         for itrk, k in enumerate(period_list):
@@ -181,7 +181,7 @@ def get_S_cyclo(
         amp_got: NDArray[np.floating] = np.zeros((0, nc_s), dtype=np.float64)
         angle_got: NDArray[np.floating] = np.zeros((0, nc_s), dtype=np.float64)
     else:
-        r_mean = np.zeros((wc.Nt, nc_s), dtype=np.floating)
+        r_mean = np.zeros((wc.Nt, nc_s), dtype=np.float64)
         # whitened mean galaxy power
         Sw_in_mean = np.zeros_like(S_in_mean)
         Sw_in_mean[S_inst_m > 0.0] = np.abs(S_in_mean[S_inst_m > 0.0] / S_inst_m[S_inst_m > 0.0])

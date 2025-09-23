@@ -1,13 +1,11 @@
 """Utilities for testing code performance."""
 
-from typing import Tuple
-
 import numpy as np
 import scipy.stats
 from numpy.typing import NDArray
 
 
-def unit_normal_battery(signal: NDArray[np.floating], *, mult: float = 1.0, sig_thresh: float = 5.0, A2_cut: float = 2.28, do_assert: bool = True, verbose: bool = False) -> Tuple[bool, float, float, float]:
+def unit_normal_battery(signal: NDArray[np.floating], *, mult: float = 1.0, sig_thresh: float = 5.0, A2_cut: float = 2.28, do_assert: bool = True, verbose: bool = False) -> tuple[bool, float, float, float]:
     """Check if signal is consistent with unit normal white noise.
 
     Uses several tests, including an Anderston-Darling test

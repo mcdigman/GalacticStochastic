@@ -1,7 +1,6 @@
 """index for loading the current versions of files"""
 
 from pathlib import Path
-from typing import Tuple
 
 import h5py
 import numpy as np
@@ -96,7 +95,7 @@ def get_noise_common(config, snr_thresh, wc: WDMWaveletConstants):
     return noise_realization_common
 
 
-def _source_mask_read_helper(hf_sky, key: str, fmin: float, fmax: float, *, use_loc: bool) -> Tuple[int, NDArray[np.floating]]:
+def _source_mask_read_helper(hf_sky, key: str, fmin: float, fmax: float, *, use_loc: bool) -> tuple[int, NDArray[np.floating]]:
     hf_loc = hf_sky[key]
 
     if not isinstance(hf_loc, h5py.Group):
@@ -160,10 +159,10 @@ def get_full_galactic_params(
     print('verify', n_vgb)
     print('totals  ', n_tot)
     params_gb = np.zeros((n_tot, n_par_gb))
-    for itrl in range(n_par_gb):
-        params_gb[:n_dgb, itrl] = params_dgb
-        params_gb[n_dgb:n_dgb + n_igb, itrl] = params_igb
-        params_gb[n_dgb + n_igb:, itrl] = params_vgb
+
+    params_gb[:n_dgb, :] = params_dgb
+    params_gb[n_dgb:n_dgb + n_igb, :] = params_igb
+    params_gb[n_dgb + n_igb:, :] = params_vgb
 
     hf_in.close()
     return params_gb, n_dgb, n_igb, n_vgb, n_tot
@@ -193,7 +192,7 @@ def load_preliminary_galactic_file(config: dict, ic: IterationConfig, wc: WDMWav
         msg = 'Unrecognized hdf5 file format'
         raise TypeError(msg)
 
-    hf_noise = hf_galaxy['noise_model']
+    hf_noise = hf_in['noise_model']
 
     if not isinstance(hf_noise, h5py.Group):
         msg = 'Unrecognized hdf5 file format'
@@ -294,15 +293,15 @@ def store_preliminary_gb_file(
 
     # the wavelet constants
     for key in wc._fields:
-        config_wc.create_dataset(key, data=getattr(wc, key))
+        config_wc.attrs[key] = getattr(wc, key)
 
     # lisa related constants
     for key in lc._fields:
-        config_lc.create_dataset(key, data=getattr(lc, key))
+        config_lc.attrs[key] = getattr(lc, key)
 
     # iterative fit related constants
     for key in ic._fields:
-        config_ic.create_dataset(key, data=getattr(ic, key))
+        config_ic.attrs[key] = getattr(ic, key)
 
     # archive the entire raw text of the configuration file to the hdf5 file as well
     with Path(config_filename).open('rb') as file:
@@ -349,7 +348,7 @@ def store_processed_gb_file(
     hf_S.create_dataset('galactic_undecided', data=bgd.get_galactic_coadd_undecided(), compression='gzip')
     hf_S.create_dataset('period_list', data=period_list)
 
-    hf_S.create_dataset('n_bin_use', data=n_bin_use)
+    hf_S.attrs['n_bin_use'] = n_bin_use
     hf_S.create_dataset('S_stat_m', data=S_inst_m)
     hf_S.create_dataset('snrs_tot_upper', data=snrs_tot_upper[n_full_converged], compression='gzip')
     hf_S.create_dataset('argbinmap', data=argbinmap, compression='gzip')
@@ -367,14 +366,14 @@ def store_processed_gb_file(
 
     hf_wc = hf_out.create_group('_wc')
     for key in wc._fields:
-        hf_wc.create_dataset(key, data=getattr(wc, key))
+        hf_wc.attrs[key] = getattr(wc, key)
 
     hf_lc = hf_out.create_group('_lc')
     for key in lc._fields:
-        hf_lc.create_dataset(key, data=getattr(lc, key))
+        hf_lc.attrs[key] = getattr(lc, key)
 
     hf_ic = hf_out.create_group('ic')
     for key in ic._fields:
-        hf_ic.create_dataset(key, data=getattr(ic, key))
+        hf_ic.attrs[key] = getattr(ic, key)
 
     hf_out.close()
