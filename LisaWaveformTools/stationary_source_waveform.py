@@ -39,6 +39,14 @@ class StationaryWaveform:
     """Abstract base class for waveforms in the stationary wave approximation."""
 
 
+# class StationaryWaveformTime(NamedTuple, StationaryWaveform):
+#    T: NDArray[np.floating]
+#    PT: NDArray[np.floating]
+#    FT: NDArray[np.floating]
+#    FTd: NDArray[np.floating]
+#    AT: NDArray[np.floating]
+
+
 class StationaryWaveformTime(namedtuple('StationaryWaveformTime', ['T', 'PT', 'FT', 'FTd', 'AT']), StationaryWaveform):
     pass
 

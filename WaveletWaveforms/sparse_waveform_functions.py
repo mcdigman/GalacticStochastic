@@ -56,7 +56,7 @@ class PixelGenericRange(NamedTuple):
 def sparse_addition_helper(sparse_waveform: SparseWaveletWaveform, dense_representation: NDArray[np.float64]) -> None:
     """Take a sparse wavelet representation from SparseWaveletWaveform
     and add it to a dense wavelet representation
-    sparse_waveform: namedtuple SparseTaylorTimeWaveform
+    sparse_waveform: NamedTuple SparseTaylorTimeWaveform
         the sparse representation of intrinsic_waveform, with
         at least as many channels as dense_representation
     dense_representation: nd.ndarray

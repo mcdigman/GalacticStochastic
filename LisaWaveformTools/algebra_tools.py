@@ -6,7 +6,7 @@ from numpy.typing import NDArray
 
 
 @njit()
-def gradient_uniform_inplace(ys: NDArray[np.float64], result: NDArray[np.float64], dx: float) -> None:
+def gradient_uniform_inplace(ys: NDArray[np.floating], result: NDArray[np.floating], dx: float) -> None:
     """Compute the numerical gradient of a 2D array using finite differences.
 
     This function computes dy/dx using second-order accurate central finite differences
@@ -64,7 +64,7 @@ def gradient_uniform_inplace(ys: NDArray[np.float64], result: NDArray[np.float64
 
 @njit()
 def stabilized_gradient_uniform_inplace(
-    x: NDArray[np.float64], dxdt: NDArray[np.float64], y: NDArray[np.float64], dydt: NDArray[np.float64], dt: float, nx_min: int = 0, nx_max: int = -1,
+    x: NDArray[np.floating], dxdt: NDArray[np.floating], y: NDArray[np.floating], dydt: NDArray[np.floating], dt: float, nx_min: int = 0, nx_max: int = -1,
 ) -> None:
     """Get a second-order central stabilized gradient of y and store it in dydt.
 
