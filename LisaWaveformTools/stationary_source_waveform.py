@@ -31,7 +31,10 @@ class ExtrinsicParams(NamedTuple):
     psi: float
 
 
-SourceParams = namedtuple('SourceParams', ['intrinsic', 'extrinsic'])
+class SourceParams(NamedTuple):
+    intrinsic: NamedTuple
+    extrinsic: ExtrinsicParams
+
 
 SourceParams.__doc__ = """
 Store both the intrinsic and extrinsic parameters for a source.

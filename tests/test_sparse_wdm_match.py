@@ -86,13 +86,13 @@ def test_Chirp_wdm_match4(fdot_mult):
 
     print('computing time domain waveforms')
     hs_time_in = lf_waveform_time_long.intrinsic_waveform.AT * np.cos(lf_waveform_time_long.intrinsic_waveform.PT)
-    # hs_time_c, waveform_long_c = chirp_time(params.intrinsic, wc)
-    PT1, AT1, FT1, FTd1 = amp_phase_t(lf_waveform_time_long.wavefront_time, params.intrinsic)
+    # hs_time_c, waveform_long_c = chirp_time(intrinsic, wc)
+    PT1, AT1, FT1, FTd1 = amp_phase_t(lf_waveform_time_long.wavefront_time, intrinsic)
     hs_time1 = AT1 * np.cos(PT1)
-    PT2, AT2, FT2, FTd2 = amp_phase_t(lf_waveform_time_long.intrinsic_waveform.T, params.intrinsic)
+    PT2, AT2, FT2, FTd2 = amp_phase_t(lf_waveform_time_long.intrinsic_waveform.T, intrinsic)
     hs_time2 = AT2 * np.cos(PT2)
     waveform_long_c = StationaryWaveformTime(np.arange(0, wc.Nt * wc.Nf) * wc.dt, PT2.copy(), FT2.copy(), FTd2.copy(), AT2.copy())
-    chirplet_time_intrinsic(waveform_long_c, params.intrinsic, waveform_long_c.T, nt_lim_waveform_long)
+    chirplet_time_intrinsic(waveform_long_c, intrinsic, waveform_long_c.T, nt_lim_waveform_long)
     hs_time_c = waveform_long_c.AT * np.cos(waveform_long_c.PT)
     assert_allclose(waveform_long_c.FTd, FTd2, atol=1.e-20, rtol=1.e-10)
     assert_allclose(waveform_long_c.FT, FT2, atol=1.e-20, rtol=1.e-10)
@@ -121,8 +121,8 @@ def test_Chirp_wdm_match4(fdot_mult):
     waveTT2_exact = waveletTT_exact.wavelet_waveform.wave_value
     TlistT2_exact = waveletTT_exact.wavelet_waveform.pixel_index
     waveTT2 = waveletTT.wavelet_waveform.wave_value
-    waveletTT0, waveTT = wavelet_TaylorT(params.intrinsic, wc, approximation=1)
-    waveletTT0_exact, waveTT_exact = wavelet_TaylorT(params.intrinsic, wc, approximation=0)
+    waveletTT0, waveTT = wavelet_TaylorT(intrinsic, wc, approximation=1)
+    waveletTT0_exact, waveTT_exact = wavelet_TaylorT(intrinsic, wc, approximation=0)
     TlistT = waveletTT0.pixel_index
     TlistT_exact = waveletTT0_exact.pixel_index
     waveTT1 = waveletTT0.wave_value
@@ -139,7 +139,7 @@ def test_Chirp_wdm_match4(fdot_mult):
     assert_allclose(waveTT1[0, :], waveTT2[0, :], atol=1.e-11, rtol=1.e-9)
 
     # Time domain sparse transform
-    _TlistS, waveTS = wavelet_SparseT(params.intrinsic, wc)
+    _TlistS, waveTS = wavelet_SparseT(intrinsic, wc)
 
     maskTS = (waveTS != 0.)
     maskTT = (waveTT != 0.)
@@ -151,7 +151,7 @@ def test_Chirp_wdm_match4(fdot_mult):
 
     wave_got_time = transform_wavelet_time(hs_time_c, wc.Nf, wc.Nt)
     fs_fft = np.arange(0, ts.size // 2 + 1) * 1 / (wc.Tobs)
-    PPfs, AAfs = amp_phase_f(fs_fft, params.intrinsic)
+    PPfs, AAfs = amp_phase_f(fs_fft, intrinsic)
     AAfs = AAfs / (2 * wc.dt)
     hs_freq = np.exp(-1.0j * PPfs) * AAfs.astype(np.complex128)
     wave_got_freq = transform_wavelet_freq(hs_freq, wc.Nf, wc.Nt)
