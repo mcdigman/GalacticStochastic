@@ -22,8 +22,8 @@ SECSYEAR = 24 * 365 * 3600  # Number of seconds in a calendar year
 
 class WaveletTaylorTimeCoeffs(NamedTuple):
     Nfsam: NDArray[np.integer]
-    evcs: NDArray[np.floating]
-    evss: NDArray[np.floating]
+    evc: NDArray[np.floating]
+    evs: NDArray[np.floating]
     wavelet_norm: NDArray[np.floating]
 
 
