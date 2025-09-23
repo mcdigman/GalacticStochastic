@@ -33,12 +33,14 @@ def phase_wrap_helper(
         Results are stored in place in the PT attribute of tdi_waveform.
 
     """
-    AET_PT = AET_waveform.PT
+    AET_PT: NDArray[np.floating] = AET_waveform.PT
+    PT: NDArray[np.floating] = waveform.PT
 
     # validate the shapes of the inputs
     assert len(AET_PT.shape) == 2
-    assert len(waveform.PT.shape) == 1
-    assert waveform.PT.shape[0] == AET_PT.shape[1]
+    assert len(PT.shape) == 1
+    assert PT.shape[0] == AET_PT.shape[1]
+    assert PT.shape[0] > 0
 
     # the number of channels we need to handle phases for
     nc_loc = AET_PT.shape[0]
@@ -46,11 +48,11 @@ def phase_wrap_helper(
 
     for itrc in range(nc_loc):
         # Get the starting perturbation to the phase
-        p_old = (AET_PT[itrc, 0] - waveform.PT[0]) % (2 * np.pi)
+        p_old = (AET_PT[itrc, 0] - PT[0]) % (2 * np.pi)
         j = 0.0
         for n in range(n_t):
             # Isolate just the perturbation to the intrinsic phase
-            p = (AET_PT[itrc, n] - waveform.PT[n]) % (2 * np.pi)
+            p = (AET_PT[itrc, n] - PT[n]) % (2 * np.pi)
 
             # If the phase has increased or decreased more than 6 (<~2 pi)
             # try absorbing that change into the reported phase permanently,
@@ -130,6 +132,8 @@ def apply_edge_rise_helper(t: NDArray[np.floating], A: NDArray[np.floating], er:
         pass
     else:
         assert 0 <= nx_lim.nx_min < nx_lim.nx_max <= t.size
+        assert len(A.shape) == 2
+        assert len(t.shape) == 1
         assert A.shape[1] == t.shape[0]
         for n in range(nx_lim.nx_min, nx_lim.nx_max):
             x = edge_rise_multiplier_helper(t[n], er, lc)

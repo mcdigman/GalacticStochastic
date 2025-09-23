@@ -9,7 +9,7 @@ from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_freq import get_spacecraft_vec, get_tensor_basis, get_wavefront_time, rigid_adiabatic_antenna
 from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
 from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, EdgeRiseModel, SpacecraftOrbits
-from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams, StationarySourceWaveform, StationaryWaveformTime
+from LisaWaveformTools.stationary_source_waveform import SourceParams, StationarySourceWaveform, StationaryWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 
@@ -84,10 +84,6 @@ class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTi
     @override
     def _update_extrinsic(self) -> None:
         """Update the intrinsic_waveform with respect to the extrinsic parameters."""
-        if not isinstance(self.params.extrinsic, ExtrinsicParams):
-            msg = 'Extrinsic parameters must be of type ExtrinsicParams.'
-            raise TypeError(msg)
-
         # TODO fix F_min and nf_range
         nt_lim = PixelGenericRange(0, self._nt_range, self._nt_lim_waveform.dx, self._lc.t0)
         if self.response_mode in (0, 1):

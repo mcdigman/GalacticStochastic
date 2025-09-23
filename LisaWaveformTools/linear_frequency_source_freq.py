@@ -13,7 +13,7 @@ from LisaWaveformTools.stationary_source_waveform import StationaryWaveformFreq
 
 # TODO check factor of 2pi
 @njit()
-def linear_frequency_intrinsic_freq(waveform: StationaryWaveformFreq, intrinsic_params: LinearFrequencyIntrinsicParams, f_in: NDArray[np.float64]) -> None:
+def linear_frequency_intrinsic_freq(waveform: StationaryWaveformFreq, intrinsic_params: LinearFrequencyIntrinsicParams, f_in: NDArray[np.floating]) -> None:
     """
     Get time domain intrinsic_waveform for a linearly increasing frequency source with constant amplitude.
 

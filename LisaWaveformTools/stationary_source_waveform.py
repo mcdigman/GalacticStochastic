@@ -2,8 +2,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections import namedtuple
-from typing import TYPE_CHECKING, Generic, NamedTuple, TypeVar
+from typing import TYPE_CHECKING, Generic, NamedTuple, TypeVar, Union
 
 if TYPE_CHECKING:
     import numpy as np
@@ -32,40 +31,34 @@ class ExtrinsicParams(NamedTuple):
 
 
 class SourceParams(NamedTuple):
+    """
+    Store both the intrinsic and extrinsic parameters for a source.
+
+    Parameters
+    ----------
+    intrinsic: NamedTuple
+        The intrinsic parameters for the particular source class, e.g. LinearFrequencyIntrinsicParams
+    extrinsic: ExtrinsicParams
+        The extrinsic parameters for the source
+    """
     intrinsic: NamedTuple
     extrinsic: ExtrinsicParams
 
 
-SourceParams.__doc__ = """
-Store both the intrinsic and extrinsic parameters for a source.
-
-Parameters
-----------
-intrinsic: namedtuple
-    The intrinsic parameters for the particular source class, e.g. LinearFrequencyIntrinsicParams
-extrinsic: ExtrinsicParams
-    The extrinsic parameters for the source
-"""
+class StationaryWaveformTime(NamedTuple):
+    T: NDArray[np.floating]
+    PT: NDArray[np.floating]
+    FT: NDArray[np.floating]
+    FTd: NDArray[np.floating]
+    AT: NDArray[np.floating]
 
 
-class StationaryWaveform:
-    """Abstract base class for waveforms in the stationary wave approximation."""
-
-
-# class StationaryWaveformTime(NamedTuple, StationaryWaveform):
-#    T: NDArray[np.floating]
-#    PT: NDArray[np.floating]
-#    FT: NDArray[np.floating]
-#    FTd: NDArray[np.floating]
-#    AT: NDArray[np.floating]
-
-
-class StationaryWaveformTime(namedtuple('StationaryWaveformTime', ['T', 'PT', 'FT', 'FTd', 'AT']), StationaryWaveform):
-    pass
-
-
-class StationaryWaveformFreq(namedtuple('StationaryWaveformFreq', ['F', 'PF', 'TF', 'TFp', 'AF']), StationaryWaveform):
-    pass
+class StationaryWaveformFreq(NamedTuple):
+    F: NDArray[np.floating]
+    PF: NDArray[np.floating]
+    TF: NDArray[np.floating]
+    TFp: NDArray[np.floating]
+    AF: NDArray[np.floating]
 
 
 class StationaryWaveformGeneric(NamedTuple):
@@ -74,12 +67,10 @@ class StationaryWaveformGeneric(NamedTuple):
     X: NDArray[np.floating]
     Xp: NDArray[np.floating]
     A: NDArray[np.floating]
-# class StationaryWaveformGeneric(namedtuple('StationaryWaveformGeneric', ['Y', 'P', 'X', 'Xp', 'A']), StationaryWaveform):
-#    pass
 
 
 # Subclasses can be either in time or frequency domain
-StationaryWaveformType = TypeVar('StationaryWaveformType', bound=StationaryWaveform)
+StationaryWaveformType = TypeVar('StationaryWaveformType', bound=Union[StationaryWaveformTime, StationaryWaveformFreq, StationaryWaveformGeneric])
 
 
 class StationarySourceWaveform(Generic[StationaryWaveformType], ABC):
@@ -146,7 +137,7 @@ class StationarySourceWaveform(Generic[StationaryWaveformType], ABC):
 
         Parameters
         ----------
-        params : namedtuple
+        params : SourceParams
             Updated parameters (intrinsic and extrinsic) for the source.
         """
         self.params = params

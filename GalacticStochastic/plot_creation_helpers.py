@@ -5,8 +5,6 @@ import numpy as np
 
 from GalacticStochastic.iterative_fit_manager import IterativeFitManager
 
-# mypy: disable-error-code="list-item"
-
 
 def plot_noise_spectrum_ambiguity(ifm: IterativeFitManager) -> None:
     """Make a plot of the difference between the upper and lower estimates of the spectrum"""
@@ -19,7 +17,7 @@ def plot_noise_spectrum_ambiguity(ifm: IterativeFitManager) -> None:
     ax.loglog(np.arange(1, wc.Nf) * wc.DF, np.mean(ifm.noise_manager.noise_lower.S[:, 1:, 0:2], axis=0).mean(axis=1).T)
     ax.loglog(np.arange(1, wc.Nf) * wc.DF, S_stat_m[1:, 0], 'k--', zorder=-100)
     ax.tick_params(axis='both', direction='in', which='both', top=True, right=True)
-    plt.legend(['upper estimate', 'lower estimate', 'base'])
+    plt.legend(labels=['upper estimate', 'lower estimate', 'base'])
     plt.ylim([2.0e-44, 4.0e-43])
     plt.xlim([3.0e-4, 6.0e-3])
     plt.xlabel('f (Hz)')
@@ -58,7 +56,7 @@ def plot_noise_spectrum_evolve(ifm: IterativeFitManager) -> None:
     ax.loglog(np.arange(1, wc.Nf) * wc.DF, np.mean(ifm.noise_manager.noise_upper.S[:, 1:, 0:2], axis=0).mean(axis=1).T)
     ax.loglog(np.arange(1, wc.Nf) * wc.DF, S_stat_m[1:, 0], 'k--', zorder=-100)
     ax.tick_params(axis='both', direction='in', which='both', top=True, right=True)
-    plt.legend(['initial', '1', '2', '3', '4', 'base'])
+    plt.legend(labels=['initial', '1', '2', '3', '4', 'base'])
     plt.ylim([2.0e-44, 4.0e-43])
     plt.xlim([3.0e-4, 6.0e-3])
     plt.xlabel('f (Hz)')

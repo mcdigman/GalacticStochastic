@@ -80,34 +80,34 @@ def get_wavelet_model(config: dict) -> WDMWaveletConstants:
     # derived constants
 
     # total number of points
-    N = Nt * Nf
+    N = int(Nt * Nf)
 
     # total observation duration (same units as dt)
-    Tobs = dt * N
+    Tobs = float(dt * N)
 
     # width of wavelet pixel in time (units of time, same as dt)
-    DT = dt * Nf
+    DT = float(dt * Nf)
 
     # width of wavelet pixel in frequency (cycles/time)
-    DF = 1.0 / (2 * dt * Nf)
+    DF = float(1.0 / (2 * dt * Nf))
 
     # dimensionless filter legnth
     K = int(mult * 2 * Nf)
 
     # filter duration (time; same units as dt)
-    Tw = dt * K
+    Tw = float(dt * K)
 
     # angular frequency spacing (radians per time)
-    dom = 2.0 * np.pi / Tw
+    dom = float(2.0 * np.pi / Tw)
 
     # Nyquist angular frequency (Radians per time)
-    OM = np.pi / dt
+    OM = float(np.pi / dt)
 
     # 2 pi times DF (radians/time)
-    DOM = OM / Nf
+    DOM = float(OM / Nf)
 
     # inverse square root of DOM (sqrt(time/radian))
-    insDOM = 1.0 / np.sqrt(DOM)
+    insDOM = float(1.0 / np.sqrt(DOM))
 
     # wavelet parameter A
     B = OM / (2 * Nf)

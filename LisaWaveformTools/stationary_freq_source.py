@@ -34,8 +34,8 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
         self.freeze_limits: int = 0
 
         # TODO FFs can possibly be eliminated
-        self.FFs = self.nf_lim_absolute.dx * np.arange(self.nf_lim_absolute.nx_min, self.nf_lim_absolute.nx_max)  # center of the pixels
-        self.NF = self.FFs.size
+        self.FFs: NDArray[np.floating] = self.nf_lim_absolute.dx * np.arange(self.nf_lim_absolute.nx_min, self.nf_lim_absolute.nx_max)  # center of the pixels
+        self.NF: int = self.FFs.size
 
         if self.nf_lim_absolute.nx_min == 0:
             self.FFs[0] = 1.e-5 * self.nf_lim_absolute.dx

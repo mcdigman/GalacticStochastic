@@ -25,7 +25,7 @@ class LinearChirpletIntrinsicParams(NamedTuple):
 
 
 @njit()
-def chirplet_time_intrinsic(waveform: StationaryWaveformTime, intrinsic_params: LinearChirpletIntrinsicParams, t_in: NDArray[np.float64], nt_lim: PixelGenericRange) -> None:
+def chirplet_time_intrinsic(waveform: StationaryWaveformTime, intrinsic_params: LinearChirpletIntrinsicParams, t_in: NDArray[np.floating], nt_lim: PixelGenericRange) -> None:
     """Get amplitude, phase, frequency, and frequency derivative for the waveform.
     Uses a separate t_in array, which may be different from the time array in the waveform object.
     The separate t_in allows for conversion between different time coordinates, e.g., SSB to guiding center.
@@ -60,7 +60,7 @@ def chirplet_time_intrinsic(waveform: StationaryWaveformTime, intrinsic_params: 
 
 
 @njit()
-def chirplet_freq_intrinsic(waveform: StationaryWaveformFreq, intrinsic_params: LinearChirpletIntrinsicParams, f_in: NDArray[np.float64]) -> None:
+def chirplet_freq_intrinsic(waveform: StationaryWaveformFreq, intrinsic_params: LinearChirpletIntrinsicParams, f_in: NDArray[np.floating]) -> None:
     AF = waveform.AF
     PF = waveform.PF
     TF = waveform.TF
