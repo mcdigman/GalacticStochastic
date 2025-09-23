@@ -1,7 +1,6 @@
 """test the Chirp_WDM functions"""
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
@@ -16,9 +15,6 @@ from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams, amp_p
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.sparse_wavelet_time import wavelet_SparseT, wavelet_TaylorT
 from WaveletWaveforms.wdm_config import get_wavelet_model
-
-if TYPE_CHECKING:
-    from numpy.typing import NDArray
 
 
 @pytest.mark.parametrize('fdot_mult', [0.8])
@@ -157,7 +153,7 @@ def test_Chirp_wdm_match4(fdot_mult):
     fs_fft = np.arange(0, ts.size // 2 + 1) * 1 / (wc.Tobs)
     PPfs, AAfs = amp_phase_f(fs_fft, params.intrinsic)
     AAfs = AAfs / (2 * wc.dt)
-    hs_freq: NDArray[np.complexfloating] = np.exp(-1.0j * PPfs) * AAfs.astype(np.complexfloating)
+    hs_freq = np.exp(-1.0j * PPfs) * AAfs.astype(np.complex128)
     wave_got_freq = transform_wavelet_freq(hs_freq, wc.Nf, wc.Nt)
 
     # freq_TT = inverse_wavelet_freq(waveTT[:, :], wc.Nf, wc.Nt)

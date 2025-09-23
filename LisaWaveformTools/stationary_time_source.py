@@ -157,20 +157,20 @@ class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTi
                 pass
             elif mode == 1:
                 # move guiding center of constellation to solar system barycenter
-                spacecraft_orbits_loc.xs[:] -= spacecraft_orbits_loc.xas
-                spacecraft_orbits_loc.ys[:] -= spacecraft_orbits_loc.yas
-                spacecraft_orbits_loc.zs[:] -= spacecraft_orbits_loc.zas
-                spacecraft_orbits_loc.xas[:] = 0.
-                spacecraft_orbits_loc.yas[:] = 0.
-                spacecraft_orbits_loc.zas[:] = 0.
+                spacecraft_orbits_loc.x[:] -= spacecraft_orbits_loc.xa
+                spacecraft_orbits_loc.y[:] -= spacecraft_orbits_loc.ya
+                spacecraft_orbits_loc.z[:] -= spacecraft_orbits_loc.za
+                spacecraft_orbits_loc.xa[:] = 0.
+                spacecraft_orbits_loc.ya[:] = 0.
+                spacecraft_orbits_loc.za[:] = 0.
             elif mode == 2:
                 # no spacecraft motion
-                spacecraft_orbits_loc.xs[:] = 0.
-                spacecraft_orbits_loc.ys[:] = 0.
-                spacecraft_orbits_loc.zs[:] = 0.
-                spacecraft_orbits_loc.xas[:] = 0.
-                spacecraft_orbits_loc.yas[:] = 0.
-                spacecraft_orbits_loc.zas[:] = 0.
+                spacecraft_orbits_loc.x[:] = 0.
+                spacecraft_orbits_loc.y[:] = 0.
+                spacecraft_orbits_loc.z[:] = 0.
+                spacecraft_orbits_loc.xa[:] = 0.
+                spacecraft_orbits_loc.ya[:] = 0.
+                spacecraft_orbits_loc.za[:] = 0.
 
             self._spacecraft_orbits = spacecraft_orbits_loc
 

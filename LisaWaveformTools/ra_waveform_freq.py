@@ -764,7 +764,7 @@ def get_wavefront_time(
         None. The function updates `waveform_time` in place.
 
     """
-    kdotx = lc.t_arm * (sv.xas * tb.kv[0] + sv.yas * tb.kv[1] + sv.zas * tb.kv[2])
+    kdotx = lc.t_arm * (sv.xa * tb.kv[0] + sv.ya * tb.kv[1] + sv.za * tb.kv[2])
     wavefront_time[:] = ts - kdotx
 
 

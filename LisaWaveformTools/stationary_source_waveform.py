@@ -3,23 +3,33 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections import namedtuple
-from typing import Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, NamedTuple, TypeVar
 
-ExtrinsicParams = namedtuple('ExtrinsicParams', ['costh', 'phi', 'cosi', 'psi'])
-ExtrinsicParams.__doc__ = """
-Store the extrinsic parameters common to most detector intrinsic_waveform models.
+if TYPE_CHECKING:
+    import numpy as np
+    from numpy.typing import NDArray
 
-Parameters
-----------
-costh : float
-    Cosine of the source's ecliptic colatitude
-phi : float
-    Source's ecliptic longitude in radians
-cosi : float
-    Cosine of the source's inclination angle
-psi : float
-    Source polarization angle in radians
-"""
+
+class ExtrinsicParams(NamedTuple):
+    """
+    Store the extrinsic parameters common to most detector intrinsic_waveform models.
+
+    Parameters
+    ----------
+    costh : float
+        Cosine of the source's ecliptic colatitude
+    phi : float
+        Source's ecliptic longitude in radians
+    cosi : float
+        Cosine of the source's inclination angle
+    psi : float
+        Source polarization angle in radians
+    """
+    costh: float
+    phi: float
+    cosi: float
+    psi: float
+
 
 SourceParams = namedtuple('SourceParams', ['intrinsic', 'extrinsic'])
 
@@ -55,8 +65,14 @@ class StationaryWaveformFreq(namedtuple('StationaryWaveformFreq', ['F', 'PF', 'T
     pass
 
 
-class StationaryWaveformGeneric(namedtuple('StationaryWaveformGeneric', ['Y', 'P', 'X', 'Xp', 'A']), StationaryWaveform):
-    pass
+class StationaryWaveformGeneric(NamedTuple):
+    Y: NDArray[np.floating]
+    P: NDArray[np.floating]
+    X: NDArray[np.floating]
+    Xp: NDArray[np.floating]
+    A: NDArray[np.floating]
+# class StationaryWaveformGeneric(namedtuple('StationaryWaveformGeneric', ['Y', 'P', 'X', 'Xp', 'A']), StationaryWaveform):
+#    pass
 
 
 # Subclasses can be either in time or frequency domain

@@ -32,25 +32,25 @@ class SpacecraftOrbits(NamedTuple):
     Store the spacecraft positions and guiding center coordinates.
     Parameters
     ----------
-    xs : numpy.ndarray
+    x : numpy.ndarray
         2D array of spacecraft x coordinates, shape (3, n_t)
-    ys : numpy.ndarray
+    y : numpy.ndarray
         2D array of spacecraft y coordinates, shape (3, n_t)
-    zs : numpy.ndarray
+    z : numpy.ndarray
         2D array of spacecraft z coordinates, shape (3, n_t)
-    xas : numpy.ndarray
+    xa : numpy.ndarray
         1D array of guiding center x coordinates, shape (n_t,)
-    yas : numpy.ndarray
+    ya : numpy.ndarray
         1D array of guiding center y coordinates, shape (n_t,)
-    zas : numpy.ndarray
+    za : numpy.ndarray
         1D array of guiding center z coordinates, shape (n_t,)
     """
-    xs: NDArray[np.floating]
-    ys: NDArray[np.floating]
-    zs: NDArray[np.floating]
-    xas: NDArray[np.floating]
-    yas: NDArray[np.floating]
-    zas: NDArray[np.floating]
+    x: NDArray[np.floating]
+    y: NDArray[np.floating]
+    z: NDArray[np.floating]
+    xa: NDArray[np.floating]
+    ya: NDArray[np.floating]
+    za: NDArray[np.floating]
 
 
 class TDIComplexAntennaPattern(NamedTuple):
@@ -191,12 +191,12 @@ class SpacecraftRelativePhases(NamedTuple):
         1D array of sine of the spacecraft orbital phase offsets, shape (n_sc,)
     cos_beta : numpy.ndarray
         1D array of cosine of the spacecraft orbital phase offsets, shape (n_sc,)
-    betas : numpy.ndarray
+    beta : numpy.ndarray
         1D array of spacecraft orbital phases offset, shape (n_sc,)
     """
     sin_beta: NDArray[np.floating]
     cos_beta: NDArray[np.floating]
-    betas: NDArray[np.floating]
+    beta: NDArray[np.floating]
 
 
 class SpacecraftSeparationWaveProjection(NamedTuple):

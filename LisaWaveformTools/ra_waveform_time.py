@@ -101,11 +101,12 @@ def edge_rise_multiplier_helper(t: float, er: EdgeRiseModel, lc: LISAConstants) 
     x = 1.0
     Tstart = er.Tstart
     Tend = er.Tend
+    t_rise = lc.t_rise
     if lc.rise_mode == 0:
-        if Tstart < t < Tstart + lc.t_rise:
-            x = 0.5 * (1.0 - np.cos(np.pi * (t - Tstart) / lc.t_rise))
-        if (Tend - lc.t_rise) < t < Tend:
-            x = 0.5 * (1.0 - np.cos(np.pi * (t - Tend) / lc.t_rise))
+        if Tstart < t < Tstart + t_rise:
+            x = 0.5 * (1.0 - np.cos(np.pi * (t - Tstart) / t_rise))
+        if (Tend - t_rise) < t < Tend:
+            x = 0.5 * (1.0 - np.cos(np.pi * (t - Tend) / t_rise))
     elif lc.rise_mode == 0:
         if t > Tend:
             x = 0.0
@@ -200,23 +201,38 @@ def amp_phase_loop_helper(F: NDArray[np.floating], T: NDArray[np.floating], wave
     AET_A = AET_waveform.A
     AET_X = AET_waveform.X
 
+    wave_P = waveform.P
+    wave_A = waveform.A
+    wave_X = waveform.X
+
+    RR_loc = spacecraft_channels.RR
+    II_loc = spacecraft_channels.II
+    dRR_loc = spacecraft_channels.dRR
+    dII_loc = spacecraft_channels.dII
+
     assert len(AET_P.shape) == 2
     assert len(F.shape) == 1
+    assert len(RR_loc.shape) == 2
+    assert RR_loc.shape == II_loc.shape == dRR_loc.shape == dII_loc.shape
     assert AET_P.shape == AET_A.shape == AET_X.shape
-    assert F.shape == T.shape == waveform.P.shape == waveform.A.shape == waveform.X.shape
+    assert AET_P.shape[0] == nc_channel
+    assert RR_loc.shape[0] == nc_channel
+    assert wave_X.shape == wave_P.shape == wave_A.shape
+    assert F.shape == T.shape == wave_P.shape
+    assert RR_loc.shape[-1] == F.shape[0]
     assert AET_P.shape[-1] == F.shape[0]
     assert 0 <= nx_lim.nx_min <= nx_lim.nx_max <= F.shape[0]
 
     for n in prange(nx_lim.nx_min, nx_lim.nx_max):
-        fonfs = F[n] / lc.fstr
+        f_on_f = F[n] / lc.fstr
 
         # including TDI + fractional frequency modifiers
-        Ampx = waveform.A[n] * (8 * fonfs * np.sin(fonfs))
+        Ampx = wave_A[n] * (8 * f_on_f * np.sin(f_on_f))
         for itrc in range(nc_channel):
-            RR = spacecraft_channels.RR[itrc, n]
-            II = spacecraft_channels.II[itrc, n]
-            dRR = spacecraft_channels.dRR[itrc, n]
-            dII = spacecraft_channels.dII[itrc, n]
+            RR = RR_loc[itrc, n]
+            II = II_loc[itrc, n]
+            dRR = dRR_loc[itrc, n]
+            dII = dII_loc[itrc, n]
 
             if RR == 0.0 and II == 0.0:
                 # Handle zero denominator phase.
@@ -225,14 +241,14 @@ def amp_phase_loop_helper(F: NDArray[np.floating], T: NDArray[np.floating], wave
                 # Handle zero denominator FT without a delta function.
                 # Note that the second derivative could be more complicated here,
                 # But we ignore that for now and just take a numerical derivative.
-                AET_X[itrc, n] = waveform.X[n]
+                AET_X[itrc, n] = wave_X[n]
             elif II * dRR == RR * dII:
                 # Zero numerator phase is the same as general case.
                 p = np.arctan2(II, RR) % (2 * np.pi)
 
                 # Handle zero numerator FT without a delta function
                 # May improve numerical stability if denominator is also close to zero
-                AET_X[itrc, n] = waveform.X[n]
+                AET_X[itrc, n] = wave_X[n]
             else:
                 # General case of phase.
                 p = np.arctan2(II, RR) % (2 * np.pi)
@@ -243,12 +259,12 @@ def amp_phase_loop_helper(F: NDArray[np.floating], T: NDArray[np.floating], wave
                 # Ignores delta functions in FT that can happen when RR or II pass through 0.
                 # The results change slightly if the compiler has the fused multiply and add enabled,
                 # e.g. fastmath = {'contract'} for the LLVM compiler
-                AET_X[itrc, n] = waveform.X[n] - (II * dRR - RR * dII) / (RR**2 + II**2) * 1 / (2 * np.pi)
+                AET_X[itrc, n] = wave_X[n] - (II * dRR - RR * dII) / (RR**2 + II**2) * 1 / (2 * np.pi)
 
             # Set the amplitude
             AET_A[itrc, n] = Ampx * np.sqrt(RR**2 + II**2)
             # Set the phase, including the input base phase and the perturbation from this iteration,
-            AET_P[itrc, n] = waveform.P[n] + p
+            AET_P[itrc, n] = wave_P[n] + p
 
 
 @njit()
