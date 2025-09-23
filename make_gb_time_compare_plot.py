@@ -8,6 +8,7 @@ import GalacticStochastic.global_file_index as gfi
 from GalacticStochastic import config_helper
 from GalacticStochastic.galactic_fit_helpers import fit_gb_spectrum_evolve, get_S_cyclo
 from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 mpl.rcParams['axes.linewidth'] = 1.2
 mpl.rcParams['xtick.major.size'] = 7
@@ -24,7 +25,7 @@ if __name__ == '__main__':
     snr_thresh = 7.0
     smooth_targ_length = 0.25
 
-    config, wc, lc = config_helper.get_config_objects('default_parameters.toml')
+    config, wc, lc, ic = config_helper.get_config_objects('default_parameters.toml')
     galaxy_dir = config['files']['galaxy_dir']
 
     fs = np.arange(0, wc.Nf) * wc.DF
@@ -42,7 +43,7 @@ if __name__ == '__main__':
 
     if not stat_only:
         filter_periods = 1
-        period_list = (1, 2, 3, 4, 5)
+        period_list: tuple[int, ...] = (1, 2, 3, 4, 5)
     else:
         filter_periods = 0
         period_list = ()
@@ -56,8 +57,9 @@ if __name__ == '__main__':
     r_tots = np.zeros((nk, wc.Nt, S_inst_m.shape[-1]))
 
     for itrk in range(nk):
+        nt_lim = PixelGenericRange(nt_mins[itrk], nt_maxs[itrk], wc.DT, 0)
         _, galactic_below_high = gfi.load_processed_gb_file(
-            galaxy_dir, snr_thresh, wc, lc, nt_mins[itrk], nt_maxs[itrk], stat_only,
+            config, snr_thresh, wc, nt_lim, stat_only=stat_only,
         )
         S_stat_m[itrk] = np.mean(galactic_below_high, axis=0)
 
@@ -95,5 +97,5 @@ if __name__ == '__main__':
     plt.xlim([3.0e-4, 6.0e-3])
     plt.xlabel('f [Hz]')
     plt.ylabel(r'$S^{AE}(f)$ [Hz$^{-1}$]')
-    plt.legend(['1 year', '2 years', '4 years', '8 years'])
+    plt.legend(labels=['1 year', '2 years', '4 years', '8 years'])
     plt.show()

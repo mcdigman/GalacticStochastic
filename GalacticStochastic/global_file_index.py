@@ -6,11 +6,11 @@ import h5py
 import numpy as np
 
 from GalacticStochastic.background_decomposition import BGDecomposition
+from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
 from GalacticStochastic.iteration_config import IterationConfig
-from LisaWaveformTools import lisa_config
+from GalacticStochastic.noise_manager import NoiseModelManager
 from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
 from LisaWaveformTools.lisa_config import LISAConstants
-from WaveletWaveforms import wdm_config
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
@@ -27,7 +27,8 @@ labels_gb = [
 ]
 
 
-def get_common_noise_filename(galaxy_dir, snr_thresh, wc: WDMWaveletConstants):
+def get_common_noise_filename(config: dict, snr_thresh, wc: WDMWaveletConstants) -> str:
+    galaxy_dir = config['files']['galaxy_dir']
     return (
         galaxy_dir
         + ('preprocessed_background=%.2f' % snr_thresh)
@@ -39,7 +40,8 @@ def get_common_noise_filename(galaxy_dir, snr_thresh, wc: WDMWaveletConstants):
     )
 
 
-def get_init_filename(galaxy_dir, snr_thresh, Nf, Nt, dt):
+def get_preliminary_filename(config: dict, snr_thresh: float, Nf: int, Nt: int, dt: float) -> str:
+    galaxy_dir = config['files']['galaxy_dir']
     return (
         galaxy_dir
         + ('preprocessed_background=%.2f' % snr_thresh)
@@ -51,23 +53,12 @@ def get_init_filename(galaxy_dir, snr_thresh, Nf, Nt, dt):
     )
 
 
-def get_preliminary_filename(galaxy_dir, snr_thresh, Nf, Nt, dt):
-    return (
-        galaxy_dir
-        + ('preprocessed_background=%.2f' % snr_thresh)
-        + '_Nf='
-        + str(Nf)
-        + '_Nt='
-        + str(Nt)
-        + '_dt=%.2f.hdf5' % dt
-    )
+def get_galaxy_filename(config: dict) -> str:
+    return config['files']['galaxy_dir'] + config['files']['galaxy_file']
 
 
-def get_galaxy_filename(galaxy_file, galaxy_dir):
-    return galaxy_dir + galaxy_file
-
-
-def get_processed_gb_filename(galaxy_dir, stat_only, snr_thresh, wc: WDMWaveletConstants, nt_lim_snr: PixelGenericRange):
+def get_processed_gb_filename(config: dict, stat_only, snr_thresh, wc: WDMWaveletConstants, nt_lim_snr: PixelGenericRange) -> str:
+    galaxy_dir = config['files']['galaxy_dir']
     return (
         galaxy_dir
         + ('gb8_processed_snr=%.2f' % snr_thresh)
@@ -86,50 +77,48 @@ def get_processed_gb_filename(galaxy_dir, stat_only, snr_thresh, wc: WDMWaveletC
     )
 
 
-def get_noise_common(galaxy_dir, snr_thresh, wc: WDMWaveletConstants):
+def get_noise_common(config, snr_thresh, wc: WDMWaveletConstants):
+    galaxy_dir = config['files']['galaxy_dir']
     filename_gb_common = get_common_noise_filename(galaxy_dir, snr_thresh, wc)
     hf_in = h5py.File(filename_gb_common, 'r')
     noise_realization_common = np.asarray(hf_in['S']['noise_realization'])
-
-    # wc2 = wdm_config.WDMWaveletConstants(**{key: hf_in['_wc'][key][()] for key in _wc._fields})
-    # lc2 = lisa_config.LISAConstants(**{key: hf_in['_lc'][key][()] for key in _lc._fields})
-
-    # assert _wc == wc2
-    # assert _lc == lc2
 
     hf_in.close()
     return noise_realization_common
 
 
 def get_full_galactic_params(
-    galaxy_file, galaxy_dir, *, fmin=0.00001, fmax=0.1, use_dgb=True, use_igb=True, use_vgb=True,
+    config: dict, *, fmin: float = 0.00001, fmax: float = 0.1, use_dgb: bool = True, use_igb: bool = True, use_vgb: bool = True,
 ):
     """Get the galaxy dataset binaries"""
-    full_galactic_params_filename = get_galaxy_filename(galaxy_file, galaxy_dir)
+    full_galactic_params_filename = get_galaxy_filename(config)
     filename = full_galactic_params_filename
 
     hf_in = h5py.File(filename, 'r')
     # dgb is detached galactic binaries, igb is interacting galactic binaries, vgb is verification
+    freqs_dgb = np.asarray(hf_in['sky']['dgb']['cat']['Frequency'])
     if use_dgb:
-        freqs_dgb = np.asarray(hf_in['sky']['dgb']['cat']['Frequency'])
         mask_dgb = (freqs_dgb > fmin) & (freqs_dgb < fmax)
-        n_dgb = np.sum(mask_dgb)
     else:
-        n_dgb = 0
+        mask_dgb = np.zeros(freqs_dgb.shape, dtype=bool)
 
+    n_dgb: int = int(np.sum(1 * mask_dgb))
+
+    freqs_igb = np.asarray(hf_in['sky']['igb']['cat']['Frequency'])
     if use_igb:
-        freqs_igb = np.asarray(hf_in['sky']['igb']['cat']['Frequency'])
         mask_igb = (freqs_igb > fmin) & (freqs_igb < fmax)
-        n_igb = np.sum(mask_igb)
     else:
-        n_igb = 0
+        mask_igb = np.zeros(freqs_igb.shape, dtype=bool)
 
+    n_igb: int = int(np.sum(1 * mask_igb))
+
+    freqs_vgb = np.asarray(hf_in['sky']['vgb']['cat']['Frequency'])
     if use_vgb:
-        freqs_vgb = np.asarray(hf_in['sky']['vgb']['cat']['Frequency'])
         mask_vgb = (freqs_vgb > fmin) & (freqs_vgb < fmax)
-        n_vgb = np.sum(mask_vgb)
     else:
-        n_vgb = 0
+        mask_vgb = np.zeros(freqs_vgb.shape, dtype=bool)
+
+    n_vgb: int = int(np.sum(1 * mask_vgb))
 
     n_tot = n_dgb + n_igb + n_vgb
     print('detached', n_dgb)
@@ -149,25 +138,15 @@ def get_full_galactic_params(
     return params_gb, n_dgb, n_igb, n_vgb, n_tot
 
 
-def load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, wc: WDMWaveletConstants, lc: LISAConstants):
-    preliminary_gb_filename = get_preliminary_filename(galaxy_dir, snr_thresh, wc.Nf, wc.Nt, wc.dt)
+def load_preliminary_galactic_file(config: dict, ic: IterationConfig, wc: WDMWaveletConstants, lc: LISAConstants):
+    snr_thresh = ic.snr_thresh
+    preliminary_gb_filename = get_preliminary_filename(config, snr_thresh, wc.Nf, wc.Nt, wc.dt)
 
     hf_in = h5py.File(preliminary_gb_filename, 'r')
 
-    # check the stored file matches necessary current parameters
-
-    # load the wavelet constants
-    # wc_in = wdm_config.WDMWaveletConstants(**{key: hf_in['configuration']['_wc'][key][()] for key in _wc._fields})
-    # assert wc_in == _wc
-
-    # load the lisa constants
-    # lc_in = lisa_config.LISAConstants(**{key: hf_in['configuration']['_lc'][key][()] for key in _lc._fields})
-    lc_in = lc
-    assert lc_in == lc
-
     # check the galaxy filename matches
     gb_file_source = hf_in['galaxy']['binaries']['galaxy_file'][()].decode()
-    full_galactic_params_filename = get_galaxy_filename(galaxy_file, galaxy_dir)
+    full_galactic_params_filename = get_galaxy_filename(config)
     assert gb_file_source == full_galactic_params_filename
 
     galactic_below_in = np.asarray(hf_in['galaxy']['signal']['galactic_below'])
@@ -185,77 +164,12 @@ def load_preliminary_galactic_file(galaxy_file, galaxy_dir, snr_thresh, wc: WDMW
     return galactic_below_in, snrs_tot_upper_in, S_inst_m, wc, lc
 
 
-def load_preliminary_galactic_file_old(galaxy_file, galaxy_dir, snr_thresh, Nf, Nt, dt):
-    preliminary_gb_filename = get_preliminary_filename(galaxy_dir, snr_thresh, Nf, Nt, dt)
-
-    hf_in = h5py.File(preliminary_gb_filename, 'r')
-
-    wc = wdm_config.WDMWaveletConstants(**{key: hf_in['_wc'][key][()] for key in hf_in['_wc']})
-    lc = lisa_config.LISAConstants(**{key: hf_in['_lc'][key][()] for key in hf_in['_lc']})
-
-    gb_file_source = hf_in['S']['source_gb_file'][()].decode()
-    full_galactic_params_filename = get_galaxy_filename(galaxy_file, galaxy_dir)
-    assert gb_file_source == full_galactic_params_filename
-    # preserving ability to read some files some legacy key names
-    try:
-        galactic_below_in = np.asarray(hf_in['S']['galactic_below'])
-    except KeyError:
-        galactic_below_in = np.asarray(hf_in['S']['galactic_bg_const'])
-
-    try:
-        snrs_tot_upper_in = np.asarray(hf_in['S']['snrs_tot_upper'])
-    except KeyError:
-        snrs_tot_upper_in = np.asarray(hf_in['S']['snrs_tot'])
-
-    hf_in.close()
-    return galactic_below_in, snrs_tot_upper_in, wc, lc
-
-
-def load_init_galactic_file(galaxy_dir, snr_thresh, Nf, Nt, dt):
-    filename_gb_init = get_init_filename(galaxy_dir, snr_thresh, Nf, Nt, dt)
-    hf_in = h5py.File(filename_gb_init, 'r')
-
-    # check given parameters match expectations
-
-    wc = wdm_config.WDMWaveletConstants(**{key: hf_in['_wc'][key][()] for key in hf_in['_wc']})
-    lc = lisa_config.LISAConstants(**{key: hf_in['_lc'][key][()] for key in hf_in['_lc']})
-    snr_min = hf_in['preliminary_ic']['snr_min'][()]
-
-    # TODO add check for _wc and _lc match expectations
-    try:
-        galactic_below_in = np.asarray(hf_in['S']['galactic_below'])
-    except KeyError:
-        galactic_below_in = np.asarray(hf_in['S']['galactic_bg_const'])
-
-    try:
-        snr_tots_in = np.asarray(hf_in['S']['snrs_tot_upper'])
-    except KeyError:
-        snr_tots_in = np.asarray(hf_in['S']['snrs_tot'])
-
-    S_inst_m = np.asarray(hf_in['S']['S_stat_m'])
-
-    # check input S makes sense, first value not checked as it may not be consistent
-    S_inst_m_alt = instrument_noise_AET_wdm_m(lc, wc)
-    assert np.allclose(S_inst_m[1:], S_inst_m_alt[1:], atol=1.0e-80, rtol=1.0e-13)
-
-    hf_in.close()
-
-    return galactic_below_in, snr_tots_in, S_inst_m, wc, lc, snr_min
-
-
 def load_processed_gb_file(
-    galaxy_dir, snr_thresh, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_snr: PixelGenericRange, *, stat_only,
+    config: dict, snr_thresh, wc: WDMWaveletConstants, nt_lim_snr: PixelGenericRange, *, stat_only,
 ):
     # TODO loading should produce a galactic background decomposition object
-    filename_in = get_processed_gb_filename(galaxy_dir, stat_only, snr_thresh, wc, nt_lim_snr)
+    filename_in = get_processed_gb_filename(config, stat_only, snr_thresh, wc, nt_lim_snr)
     hf_in = h5py.File(filename_in, 'r')
-
-    # check parameters in file match current parameters
-    # wc2 = wdm_config.WDMWaveletConstants(**{key: hf_in['_wc'][key][()] for key in _wc._fields})
-    # lc2 = lisa_config.LISAConstants(**{key: hf_in['_lc'][key][()] for key in _lc._fields})
-    lc2 = lc
-    # assert wc2 == _wc
-    assert lc2 == lc
 
     galactic_below = np.asarray(hf_in['S']['galactic_below'])
     try:
@@ -271,9 +185,8 @@ def load_processed_gb_file(
 
 
 def store_preliminary_gb_file(
-    config_filename,
-    galaxy_dir,
-    galaxy_file,
+    config_filename: str,
+    config: dict,
     wc: WDMWaveletConstants,
     lc: LISAConstants,
     ic: IterationConfig,
@@ -281,7 +194,7 @@ def store_preliminary_gb_file(
     S_inst_m,
     snrs_tot_upper,
 ) -> None:
-    filename_out = get_preliminary_filename(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
+    filename_out = get_preliminary_filename(config, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
     hf_out = h5py.File(filename_out, 'w')
 
     # store results related to the input galaxy
@@ -294,7 +207,7 @@ def store_preliminary_gb_file(
     hf_out['galaxy']['signal'].create_dataset('galactic_below', data=galactic_below, compression='gzip')
 
     # the filename of the file with the galaxy in it
-    hf_out['galaxy']['binaries'].create_dataset('galaxy_file', data=get_galaxy_filename(galaxy_file, galaxy_dir))
+    hf_out['galaxy']['binaries'].create_dataset('galaxy_file', data=get_galaxy_filename(config))
 
     # the initial computed snr
     hf_out['galaxy']['binaries'].create_dataset('snrs_tot_upper', data=snrs_tot_upper[0], compression='gzip')
@@ -326,7 +239,7 @@ def store_preliminary_gb_file(
         hf_out['configuration']['ic'].create_dataset(key, data=getattr(ic, key))
 
     # archive the entire raw text of the configuration file to the hdf5 file as well
-    with Path.open(config_filename) as file:
+    with Path(config_filename).open('rb') as file:
         file_content = file.read()
 
     hf_out['configuration']['config_text'].create_dataset(config_filename, data=file_content)
@@ -335,28 +248,33 @@ def store_preliminary_gb_file(
 
 
 def store_processed_gb_file(
-    galaxy_dir,
-    galaxy_file,
+    config: dict,
     wc: WDMWaveletConstants,
     lc: LISAConstants,
     ic: IterationConfig,
-    nt_lim_snr: PixelGenericRange,
+    noise_manager: NoiseModelManager,
     bgd: BGDecomposition,
-    period_list,
-    n_bin_use,
-    S_inst_m,
-    S_final,
-    stat_only,
-    snrs_tot_upper,
     n_full_converged,
-    argbinmap,
-    faints_old,
-    faints_cur,
-    brights,
+    bis: BinaryInclusionState,
 ) -> None:
-    filename_gb_init = get_preliminary_filename(galaxy_dir, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
-    filename_gb_common = get_common_noise_filename(galaxy_dir, ic.snr_thresh, wc)
-    filename_out = get_processed_gb_filename(galaxy_dir, stat_only, ic.snr_thresh, wc, nt_lim_snr)
+
+    nt_lim_snr = noise_manager.nt_lim_snr
+    S_inst_m = noise_manager.S_inst_m
+    S_final = noise_manager.S_final
+    stat_only = noise_manager.stat_only
+
+    filename_gb_init = get_preliminary_filename(config, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
+    filename_gb_common = get_common_noise_filename(config, ic.snr_thresh, wc)
+    filename_out = get_processed_gb_filename(config, stat_only, ic.snr_thresh, wc, nt_lim_snr)
+
+    period_list = ic.period_list
+
+    n_bin_use = bis.n_bin_use
+    snrs_tot_upper = bis.snrs_tot_upper
+    argbinmap = bis.argbinmap
+    faints_old = bis.faints_old
+    faints_cur = bis.faints_cur
+    brights = bis.brights
 
     hf_out = h5py.File(filename_out, 'w')
     hf_out.create_group('S')
@@ -376,7 +294,7 @@ def store_processed_gb_file(
     hf_out['S'].create_dataset('brights', data=brights[n_full_converged], compression='gzip')
     hf_out['S'].create_dataset('S_final', data=S_final, compression='gzip')
 
-    hf_out['S'].create_dataset('source_gb_file', data=get_galaxy_filename(galaxy_file, galaxy_dir))
+    hf_out['S'].create_dataset('source_gb_file', data=get_galaxy_filename(config))
     hf_out['S'].create_dataset('preliminary_gb_file', data=filename_gb_init)  # TODO these are redundant as constructed
     hf_out['S'].create_dataset('init_gb_file', data=filename_gb_init)
     hf_out['S'].create_dataset('common_gb_noise_file', data=filename_gb_common)

@@ -61,7 +61,7 @@ def result_normality_battery(signal_in):
 
 
 if __name__ == '__main__':
-    config, wc, lc = config_helper.get_config_objects('default_parameters.toml')
+    config, wc, lc, ic = config_helper.get_config_objects('default_parameters.toml')
     galaxy_dir = config['files']['galaxy_dir']
 
     nt_min = 256 * 6
@@ -74,10 +74,10 @@ if __name__ == '__main__':
     snr_thresh = 7.0
     smooth_lengthf = 6
 
-    noise_realization = gfi.get_noise_common(galaxy_dir, snr_thresh, wc)
+    noise_realization = gfi.get_noise_common(config, snr_thresh, wc)
 
-    _, galactic_cyclo = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_lim, stat_only=False)
-    _, galactic_stat = gfi.load_processed_gb_file(galaxy_dir, snr_thresh, wc, lc, nt_lim, stat_only=True)
+    _, galactic_cyclo = gfi.load_processed_gb_file(config, snr_thresh, wc, nt_lim, stat_only=False)
+    _, galactic_stat = gfi.load_processed_gb_file(config, snr_thresh, wc, nt_lim, stat_only=True)
 
     signal_full_cyclo = galactic_cyclo + noise_realization
     signal_full_stat = galactic_stat + noise_realization

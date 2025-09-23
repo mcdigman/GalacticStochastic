@@ -26,13 +26,13 @@ if TYPE_CHECKING:
 
 
 def S_gal_model(
-    f: NDArray[np.float64] | float,
+    f: NDArray[np.floating] | float,
     log10A: NDArray[np.floating] | float,
     log10f2: NDArray[np.floating] | float,
     log10f1: NDArray[np.floating] | float,
     log10fknee: NDArray[np.floating] | float,
     alpha: NDArray[np.floating] | float,
-) -> NDArray[np.float64] | float:
+) -> NDArray[np.floating] | float:
     """Model from arXiv:2103.14598 for galactic binary confusion noise amplitude"""
     return (
         10**log10A
@@ -44,27 +44,27 @@ def S_gal_model(
 
 
 def S_gal_model_alt(
-    f: NDArray[np.float64] | float,
-    A: NDArray[np.float64] | float,
-    alpha: NDArray[np.float64] | float,
-    beta: NDArray[np.float64] | float,
-    kappa: NDArray[np.float64] | float,
-    gamma: NDArray[np.float64] | float,
-    fknee: NDArray[np.float64] | float,
-) -> NDArray[np.float64] | float:
+    f: NDArray[np.floating] | float,
+    A: NDArray[np.floating] | float,
+    alpha: NDArray[np.floating] | float,
+    beta: NDArray[np.floating] | float,
+    kappa: NDArray[np.floating] | float,
+    gamma: NDArray[np.floating] | float,
+    fknee: NDArray[np.floating] | float,
+) -> NDArray[np.floating] | float:
     """Model from arXiv:1703.09858 for galactic binary confusion noise amplitude"""
     return A * f ** (7 / 3) * np.exp(-(f**alpha) + beta * f * np.sin(kappa * f)) * (1 + np.tanh(gamma * (fknee - f)))
 
 
 def filter_periods_fft(
-    r_mean: NDArray[np.float64],
+    r_mean: NDArray[np.floating],
     Nt_loc: int,
     period_list: tuple[int, ...] | tuple[np.floating, ...],
     wc: WDMWaveletConstants,
     *,
     period_tolerance: float = 0.01,
     angle_small: float = -0.1,
-) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+) -> tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]:
     """Filter to a specific set of periods using an fft.
     period_list is in multiples of _wc.Tobs/gc.SECSYEAR
     """
@@ -81,9 +81,9 @@ def filter_periods_fft(
     wts = 2 * np.pi / gc.SECSYEAR * ts
 
     # places to store results
-    r = np.zeros((wc.Nt, nc_loc), dtype=np.float64)
-    amp_got = np.zeros((len(period_list), nc_loc), dtype=np.float64)
-    angle_got = np.zeros((len(period_list), nc_loc), dtype=np.float64)
+    r = np.zeros((wc.Nt, nc_loc), dtype=np.floating)
+    amp_got = np.zeros((len(period_list), nc_loc), dtype=np.floating)
+    angle_got = np.zeros((len(period_list), nc_loc), dtype=np.floating)
 
     # iterate over input frequencies
     for itrc in range(nc_loc):
@@ -98,7 +98,7 @@ def filter_periods_fft(
         if angle_fft[-1] < angle_small:
             abs_fft[-1] = -abs_fft[-1]
 
-        rec = 1.0 + abs_fft[0] / 2.0 + np.zeros(Nt_loc, dtype=np.float64)
+        rec = 1.0 + abs_fft[0] / 2.0 + np.zeros(Nt_loc, dtype=np.floating)
 
         # iterate over the periods we want to restrict to
         for itrk, k in enumerate(period_list):
@@ -149,8 +149,8 @@ def filter_periods_fft(
 
 
 def get_S_cyclo(
-    galactic_below: NDArray[np.float64],
-    S_inst_m: NDArray[np.float64],
+    galactic_below: NDArray[np.floating],
+    S_inst_m: NDArray[np.floating],
     wc: WDMWaveletConstants,
     smooth_lengthf: float,
     filter_periods: int,
@@ -161,7 +161,7 @@ def get_S_cyclo(
     t_stabilizer_mult: float = 1.0e-13,
     r_cutoff_mult: float = 1.0e-6,
     log_S_stabilizer: float = 1.0e-50,
-) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+) -> tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]:
     """Note the smoothing length is the length in *log* frequency,
     and the input is assumed spaced linearly in frequency
     """
@@ -177,11 +177,11 @@ def get_S_cyclo(
     S_in_mean = np.mean(S_in, axis=0)
 
     if filter_periods == 0:
-        r_smooth: NDArray[np.float64] = np.zeros((wc.Nt, nc_s), dtype=np.float64) + 1.0
-        amp_got: NDArray[np.float64] = np.zeros((0, nc_s), dtype=np.float64)
-        angle_got: NDArray[np.float64] = np.zeros((0, nc_s), dtype=np.float64)
+        r_smooth: NDArray[np.floating] = np.zeros((wc.Nt, nc_s), dtype=np.float64) + 1.0
+        amp_got: NDArray[np.floating] = np.zeros((0, nc_s), dtype=np.float64)
+        angle_got: NDArray[np.floating] = np.zeros((0, nc_s), dtype=np.float64)
     else:
-        r_mean = np.zeros((wc.Nt, nc_s), dtype=np.float64)
+        r_mean = np.zeros((wc.Nt, nc_s), dtype=np.floating)
         # whitened mean galaxy power
         Sw_in_mean = np.zeros_like(S_in_mean)
         Sw_in_mean[S_inst_m > 0.0] = np.abs(S_in_mean[S_inst_m > 0.0] / S_inst_m[S_inst_m > 0.0])
@@ -275,13 +275,13 @@ def get_S_cyclo(
 
 
 def fit_gb_spectrum_evolve(
-    S_goals: NDArray[np.float64],
-    fs: NDArray[np.float64],
-    fs_report: NDArray[np.float64],
+    S_goals: NDArray[np.floating],
+    fs: NDArray[np.floating],
+    fs_report: NDArray[np.floating],
     nt_ranges: NDArray[np.integer],
-    offset: NDArray[np.float64],
+    offset: NDArray[np.floating],
     wc: WDMWaveletConstants,
-) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
     a1 = -0.25
     b1 = -2.70
     ak = -0.27
@@ -294,7 +294,7 @@ def fit_gb_spectrum_evolve(
 
     log_S_goals = np.log10(S_goals[:, :, 0:2])
 
-    def S_func_temp(*tpl: NDArray[np.float64]) -> float:
+    def S_func_temp(*tpl: NDArray[np.floating]) -> float:
         resid = 0.0
         a1 = tpl[0]
         ak = tpl[1]

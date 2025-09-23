@@ -37,7 +37,7 @@ class SparseWaveletWaveform(NamedTuple):
         be set in the sparse representation,
         which is determined by the shape of the interpolation table
     """
-    wave_value: NDArray[np.float64]
+    wave_value: NDArray[np.floating]
     pixel_index: NDArray[np.int64]
     n_set: NDArray[np.int64]
     N_max: int
@@ -53,7 +53,7 @@ class PixelGenericRange(NamedTuple):
     x_min: float
 
 
-def sparse_addition_helper(sparse_waveform: SparseWaveletWaveform, dense_representation: NDArray[np.float64]) -> None:
+def sparse_addition_helper(sparse_waveform: SparseWaveletWaveform, dense_representation: NDArray[np.floating]) -> None:
     """Take a sparse wavelet representation from SparseWaveletWaveform
     and add it to a dense wavelet representation
     sparse_waveform: NamedTuple SparseTaylorTimeWaveform
@@ -77,7 +77,7 @@ def sparse_addition_helper(sparse_waveform: SparseWaveletWaveform, dense_represe
 
 
 @njit()
-def wavelet_sparse_to_dense(wavelet_waveform: SparseWaveletWaveform, wc: WDMWaveletConstants) -> NDArray[np.float64]:
+def wavelet_sparse_to_dense(wavelet_waveform: SparseWaveletWaveform, wc: WDMWaveletConstants) -> NDArray[np.floating]:
     """Unpack a sparse wavelet representation to a dense wavelet representation."""
     # initialize the array
     n_set = wavelet_waveform.n_set

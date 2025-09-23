@@ -21,7 +21,7 @@ if __name__ == '__main__':
     galaxy_dir = config['files']['galaxy_dir']
 
     galactic_below_in, snrs_tot_in, S_inst_m, wc, lc = gfi.load_preliminary_galactic_file(
-        galaxy_file, galaxy_dir, ic.snr_thresh, wc, lc,
+        config, ic, wc, lc,
     )
 
     for itrm in range(1):
@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
         print(nt_lim_snr.nx_min, nt_lim_snr.nx_max, nt_lim_waveform.nx_min, nt_lim_waveform.nx_max, wc.Nt, wc.Nf, stat_only)
 
-        params_gb, _, _, _, _ = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
+        params_gb, _, _, _, _ = gfi.get_full_galactic_params(config)
 
         fit_state = IterativeFitState(ic)
 
@@ -53,24 +53,14 @@ if __name__ == '__main__':
         do_hf_out = True
         if do_hf_out:
             gfi.store_processed_gb_file(
-                galaxy_dir,
-                galaxy_file,
+                config,
                 wc,
                 lc,
                 ifm.ic,
-                ifm.noise_manager.nt_lim_snr,
+                ifm.noise_manager,
                 bgd,
-                ic.period_list,
-                ifm.bis.n_bin_use,
-                ifm.noise_manager.S_inst_m,
-                ifm.noise_manager.S_final,
-                ifm.noise_manager.stat_only,
-                ifm.bis.snrs_tot_upper,
                 ifm.n_full_converged,
-                ifm.bis.argbinmap,
-                ifm.bis.faints_old,
-                ifm.bis.faints_cur,
-                ifm.bis.brights,
+                ifm.bis,
             )
 
     do_plot_noise_spectrum_ambiguity = True

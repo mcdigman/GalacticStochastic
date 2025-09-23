@@ -1,6 +1,6 @@
 """State machine that handles the state of the iterator, deciding whether it has converged or not"""
 
-from typing import Tuple, override
+from typing import TYPE_CHECKING, Tuple, override
 
 import numpy as np
 
@@ -8,14 +8,17 @@ from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
 from GalacticStochastic.iteration_config import IterationConfig
 from GalacticStochastic.state_manager import StateManager
 
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
 
 class IterativeFitState(StateManager):
     """State machine that handles the state of the iterator"""
 
     def __init__(self, ic: IterationConfig, preprocess_mode: int = 0) -> None:
         """Create the state machine object"""
-        self.ic = ic
-        self.preprocess_mode = preprocess_mode
+        self.ic: IterationConfig = ic
+        self.preprocess_mode: int = preprocess_mode
 
         if self.preprocess_mode == 0:
             # do not do preprocess mode
@@ -31,32 +34,32 @@ class IterativeFitState(StateManager):
             raise ValueError(msg)
 
         # for storing past states
-        self.bright_converged = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self.faint_converged = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self.do_faint_check = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self.force_converge = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.bright_converged: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.faint_converged: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.do_faint_check: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.force_converge: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
 
-        self.bright_converged_bright = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self.faint_converged_bright = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self.do_faint_check_bright = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self.force_converge_bright = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.bright_converged_bright: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.faint_converged_bright: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.do_faint_check_bright: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.force_converge_bright: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
 
-        self.bright_converged_faint = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self.faint_converged_faint = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self.do_faint_check_faint = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self.force_converge_faint = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.bright_converged_faint: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.faint_converged_faint: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.do_faint_check_faint: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.force_converge_faint: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
 
-        self.noise_safe_lower_log = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self.noise_safe_upper_log = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.noise_safe_lower_log: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self.noise_safe_upper_log: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
 
-        self._bright_state_request = (False, False, False, False)
-        self._faint_state_request = (False, False, False, False)
-        self.current_state = (False, False, False, False)
+        self._bright_state_request: tuple[bool, bool, bool, bool] = (False, False, False, False)
+        self._faint_state_request: tuple[bool, bool, bool, bool] = (False, False, False, False)
+        self.current_state: tuple[bool, bool, bool, bool] = (False, False, False, False)
 
-        self.noise_safe_lower = False
-        self.noise_safe_upper = False
+        self.noise_safe_lower: bool = False
+        self.noise_safe_upper: bool = False
 
-        self.itrn = 0
+        self.itrn: int = 0
 
     @property
     def bright_state_request(self) -> Tuple[bool, bool, bool, bool]:

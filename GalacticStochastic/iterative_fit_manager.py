@@ -21,14 +21,14 @@ class IterativeFitManager(StateManager):
         bis: BinaryInclusionState,
     ) -> None:
         """Create the iterative fit object"""
-        self.ic = ic
-        self.fit_state = fit_state
-        self.noise_manager = noise_manager
-        self.bis = bis
+        self.ic: IterationConfig = ic
+        self.fit_state: IterativeFitState = fit_state
+        self.noise_manager: NoiseModelManager = noise_manager
+        self.bis: BinaryInclusionState = bis
 
-        self.itrn = 0  # current iteration counter
+        self.itrn: int = 0  # current iteration counter
 
-        self.n_full_converged = self.fit_state.get_n_itr_cut() - 1
+        self.n_full_converged: int = self.fit_state.get_n_itr_cut() - 1
 
     def do_loop(self) -> None:
         """Do the entire iterative fitting loop"""

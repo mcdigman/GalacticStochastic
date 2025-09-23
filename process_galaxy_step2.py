@@ -31,7 +31,7 @@ if __name__ == '__main__':
     nt_lim_snr = PixelGenericRange(nt_min, nt_max, wc.DT, 0.)
     nt_lim_waveform = PixelGenericRange(nt_min, nt_max, wc.DT, 0.)
 
-    params_gb, _, _, _, _ = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
+    params_gb, _, _, _, _ = gfi.get_full_galactic_params(config)
 
     fit_state = IterativeFitState(ic, preprocess_mode=2)
 
@@ -50,13 +50,12 @@ if __name__ == '__main__':
     do_hf_out = True
     if do_hf_out:
         gfi.store_preliminary_gb_file(
-            galaxy_dir,
-            galaxy_file,
+            config_file,
+            config,
             wc,
             lc,
             ic,
             bgd.get_galactic_below_low(),
-            bis.n_bin_use,
             noise_manager.S_inst_m,
             bis.snrs_tot_lower,
         )

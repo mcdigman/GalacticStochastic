@@ -54,7 +54,7 @@ def sparse_time_DX_assign_loop(params: LinearChirpletIntrinsicParams, cM: NDArra
 
 
 # @njit(fastmath=True)
-def sparse_time_DX_unpack_loop(mcs: NDArray[np.integer], DX_trans: NDArray[np.complexfloating], nt_lim: PixelGenericRange, wc: WDMWaveletConstants) -> tuple[NDArray[np.int64], NDArray[np.float64], int, int]:
+def sparse_time_DX_unpack_loop(mcs: NDArray[np.integer], DX_trans: NDArray[np.complexfloating], nt_lim: PixelGenericRange, wc: WDMWaveletConstants) -> tuple[NDArray[np.int64], NDArray[np.floating], int, int]:
     """Helper to start unpack fft results for sparse_wavelet_time"""
     # indicates this pixel not used
     p = wc.K / wc.L
@@ -103,7 +103,7 @@ def sparse_wavelet_time(params: LinearChirpletIntrinsicParams, cM: NDArray[np.co
     return SparseWaveletWaveform(np.array([waveT]), np.array([Tlist]), np.array([n_set]), N_max)
 
 
-def wavelet_SparseT(params: LinearChirpletIntrinsicParams, wc: WDMWaveletConstants) -> tuple[NDArray[np.int64], NDArray[np.float64]]:
+def wavelet_SparseT(params: LinearChirpletIntrinsicParams, wc: WDMWaveletConstants) -> tuple[NDArray[np.int64], NDArray[np.floating]]:
     """Compute the time domain wavelet filter and normalize"""
     DX = np.zeros(wc.L, dtype=np.complex128)
     half_L = np.int64(wc.L / 2)
@@ -171,7 +171,7 @@ def TaylorTime(params: LinearChirpletIntrinsicParams, wc: WDMWaveletConstants, a
     return wavelet_waveform
 
 
-def wavelet_TaylorT(params: LinearChirpletIntrinsicParams, wc: WDMWaveletConstants, approximation: int = 1) -> tuple[SparseWaveletWaveform, NDArray[np.float64]]:
+def wavelet_TaylorT(params: LinearChirpletIntrinsicParams, wc: WDMWaveletConstants, approximation: int = 1) -> tuple[SparseWaveletWaveform, NDArray[np.floating]]:
     """Get wavelet transform using taylor time method"""
     # frequency spacing
 
