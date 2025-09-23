@@ -137,7 +137,7 @@ class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform[StationaryWaveformTime
 
         # interpolation for wavelet taylor expansion
         self._taylor_time_table: WaveletTaylorTimeCoeffs = get_taylor_table_time(
-            self._wc, cache_mode='skip', output_mode='skip',
+            self._wc, cache_mode='check', output_mode='skip',
         )
 
         super().__init__(params, wavelet_waveform_loc, source_waveform)
