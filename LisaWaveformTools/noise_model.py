@@ -84,7 +84,7 @@ def get_sparse_snr_helper(
         a sparse wavelet domain intrinsic_waveform
     nt_lim_snr: PixelGenericRange
         the range of time pixels to allow
-    wc : namedtuple
+    wc : WDMWaveletConstants
         constants for WDM wavelet basis also from wdm_config.py
     inv_chol_S :
 
@@ -126,7 +126,7 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
         S : numpy.ndarray
             array of dense noise curves for each TDI channel
             shape: (Nt x Nf x nc_noise)=(freq layers x number of TDI channels)
-        wc : namedtuple
+        wc : WDMWaveletConstants
             constants for WDM wavelet basis also from wdm_config.py
         prune : int
             if prune=1, cut the 1st and last values,
@@ -249,7 +249,7 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
             array of stationary noise curves for each TDI channel,
             such as instrument noise output from instrument_noise_AET_wdm_m
             shape: (Nf x nc_noise) freq layers x number of TDI channels
-        wc : namedtuple
+        wc : WDMWaveletConstants
             constants for WDM wavelet basis also from wdm_config.py
         prune : int
             if prune=1, cut the 1st and last values,

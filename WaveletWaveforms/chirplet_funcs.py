@@ -1,8 +1,7 @@
 """helper functions for Chirp_WDM"""
 from __future__ import annotations
 
-from collections import namedtuple
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 from numba import njit
@@ -15,7 +14,14 @@ if TYPE_CHECKING:
     from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
     from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
-LinearChirpletIntrinsicParams = namedtuple('LinearChirpletIntrinsicParams', ['amp_center_f', 'phi0', 'f_center', 't_center', 'tau', 'gamma'])
+
+class LinearChirpletIntrinsicParams(NamedTuple):
+    amp_center_f: float
+    phi0: float
+    f_center: float
+    t_center: float
+    tau: float
+    gamma: float
 
 
 @njit()

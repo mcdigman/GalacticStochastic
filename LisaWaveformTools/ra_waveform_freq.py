@@ -45,14 +45,14 @@ def get_tensor_basis(params_extrinsic: ExtrinsicParams) -> TensorBasis:
     Parameters
     ----------
     params_extrinsic : ExtrinsicParams
-        A namedtuple containing the extrinsic parameters:
+        An ExtrinsicParams object containing the extrinsic parameters:
         - costh: Cosine of the source's ecliptic colatitude
         - phi: Source's ecliptic longitude in radians
 
     Returns
     -------
     TensorBasis
-        A namedtuple containing:
+        An ExtrinsicParams object containing:
         - kv: ndarray of shape (3,)
             Unit vector pointing from the source toward LISA
         - e_plus: ndarray of shape (3, 3)

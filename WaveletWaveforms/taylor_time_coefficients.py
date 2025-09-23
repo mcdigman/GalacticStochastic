@@ -4,9 +4,8 @@ Get Taylor time-domain coefficients for wavelet transforms.
 C 2025 Matthew C. Digman
 """
 
-from collections import namedtuple
 from time import time
-from typing import Tuple
+from typing import NamedTuple, Tuple
 
 import h5py
 import numpy as np
@@ -20,7 +19,12 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 SECSYEAR = 24 * 365 * 3600  # Number of seconds in a calendar year
 
-WaveletTaylorTimeCoeffs = namedtuple('WaveletTaylorTimeCoeffs', ['Nfsam', 'evcs', 'evss', 'wavelet_norm'])
+
+class WaveletTaylorTimeCoeffs(NamedTuple):
+    Nfsam: NDArray[np.integer]
+    evcs: NDArray[np.floating]
+    evss: NDArray[np.floating]
+    wavelet_norm: NDArray[np.floating]
 
 
 def get_empty_sparse_taylor_time_waveform(nc_waveform: int, wc: WDMWaveletConstants) -> SparseWaveletWaveform:

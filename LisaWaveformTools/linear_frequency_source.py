@@ -1,7 +1,6 @@
 """A source with linearly increasing frequency and constant amplitude."""
 
-from collections import namedtuple
-from typing import override
+from typing import NamedTuple, override
 
 import numpy as np
 from numba import njit
@@ -14,27 +13,31 @@ from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletTaylorTime
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
-LinearFrequencyIntrinsicParams = namedtuple('LinearFrequencyIntrinsicParams', ['amp0_t', 'phi0', 'F0', 'FTd0'])
 
-LinearFrequencyIntrinsicParams.__doc__ = """
-Store the intrinsic parameters for a source with linearly increasing frequency.
+class LinearFrequencyIntrinsicParams(NamedTuple):
+    """
+    Store the intrinsic parameters for a source with linearly increasing frequency.
 
-Galactic binaries are the prototypical example of such a source.
-The amplitude is assumed constant in the time domain.
-The time domain intrinsic_waveform is given
-h(t) = amp_t*cos(-phi0 + 2*pi*F0*t + pi*FTd0*t^2)
+    Galactic binaries are the prototypical example of such a source.
+    The amplitude is assumed constant in the time domain.
+    The time domain intrinsic_waveform is given
+    h(t) = amp_t*cos(-phi0 + 2*pi*F0*t + pi*FTd0*t^2)
 
-Parameters
-----------
-amp0_t: float
-    The constant time domain intrinsic_waveform amplitude
-phi0: float
-    The time domain phase at t=0
-F0: float
-    The frequency at t=0
-FTd0: float
-    The frequency derivative with respect to time dF/dt at t=0
-"""
+    Parameters
+    ----------
+    amp0_t: float
+        The constant time domain intrinsic_waveform amplitude
+    phi0: float
+        The time domain phase at t=0
+    F0: float
+        The frequency at t=0
+    FTd0: float
+        The frequency derivative with respect to time dF/dt at t=0
+    """
+    amp0_t: float
+    phi0: float
+    F0: float
+    FTd0: float
 
 
 # TODO check factor of 2pi
