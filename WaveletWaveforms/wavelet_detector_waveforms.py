@@ -7,6 +7,7 @@ from warnings import warn
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.stationary_source_waveform import SourceParams, StationarySourceWaveform, StationaryWaveformTime, StationaryWaveformType
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, SparseWaveletWaveform
+from WaveletWaveforms.sparse_wavelet_time import SparseCoefficientTable, get_empty_sparse_sparse_wavelet_time_waveform, get_sparse_table_helper, make_sparse_wavelet_time
 from WaveletWaveforms.taylor_time_coefficients import (
     WaveletTaylorTimeCoeffs,
     get_empty_sparse_taylor_time_waveform,
@@ -18,6 +19,7 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 class SparseWaveletSourceWaveform(ABC, Generic[StationaryWaveformType]):
     """Abstract base class for sparse wavelet waveforms."""
+
     def __init__(self, params: SourceParams, wavelet_waveform: SparseWaveletWaveform, source_waveform: StationarySourceWaveform[StationaryWaveformType]) -> None:
         """Initialize the sparse wavelet intrinsic_waveform."""
         self._consistent: bool = False
@@ -119,7 +121,7 @@ class SparseWaveletSourceWaveform(ABC, Generic[StationaryWaveformType]):
 
 
 class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform[StationaryWaveformTime]):
-    """Store a sparse binary wavelet for a time domain taylor intrinsic_waveform."""
+    """Store a sparse binary wavelet for a time domain taylor waveform."""
 
     def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, source_waveform: StationarySourceWaveform[StationaryWaveformTime], *, wavelet_mode: int = 1) -> None:
         """Construct a sparse binary wavelet for a time domain taylor intrinsic_waveform with interpolation."""
@@ -137,7 +139,9 @@ class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform[StationaryWaveformTime
 
         # interpolation for wavelet taylor expansion
         self._taylor_time_table: WaveletTaylorTimeCoeffs = get_taylor_table_time(
-            self._wc, cache_mode='check', output_mode='skip',
+            self._wc,
+            cache_mode='check',
+            output_mode='skip',
         )
 
         super().__init__(params, wavelet_waveform_loc, source_waveform)
@@ -166,3 +170,35 @@ class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform[StationaryWaveformTime
         else:
             msg = 'Unrecognized wavelet mode: {}. Valid modes are 0, 1, 2 or 3.'.format(self._wavelet_mode)
             raise NotImplementedError(msg)
+
+
+class BinaryWaveletSparseTime(SparseWaveletSourceWaveform[StationaryWaveformTime]):
+    """Store a sparse binary wavelet for a time domain sparse waveform."""
+
+    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, source_waveform: StationarySourceWaveform[StationaryWaveformTime]) -> None:
+        """Construct a sparse binary wavelet for a time domain taylor intrinsic_waveform with interpolation."""
+        self._wc: WDMWaveletConstants = wc
+        self._lc: LISAConstants = lc
+        self._nt_lim_waveform: PixelGenericRange = nt_lim_waveform
+
+        # store the intrinsic_waveform
+        self._source_waveform: StationarySourceWaveform[StationaryWaveformTime] = source_waveform
+
+        # get a blank wavelet intrinsic_waveform with the correct size for the sparse taylor time method
+        # when consistent is set to True, it will be the correct intrinsic_waveform
+        wavelet_waveform_loc: SparseWaveletWaveform = get_empty_sparse_sparse_wavelet_time_waveform(int(self._lc.nc_waveform), wc)
+
+        # interpolation for wavelet taylor expansion
+        self._sparse_table: SparseCoefficientTable = get_sparse_table_helper(self._wc)
+
+        super().__init__(params, wavelet_waveform_loc, source_waveform)
+
+    @override
+    def _update_wavelet_waveform(self) -> None:
+        """Update the wavelet intrinsic_waveform to match the current parameters."""
+        make_sparse_wavelet_time(
+            self._source_waveform,
+            self._wavelet_waveform,
+            self._sparse_table,
+            self._wc,
+        )

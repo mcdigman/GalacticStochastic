@@ -7,7 +7,8 @@ from LisaWaveformTools.stationary_source_waveform import SourceParams
 from LisaWaveformTools.stationary_time_source import StationarySourceWaveformTime
 from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams, chirplet_time_intrinsic
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
-from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletTaylorTime
+from WaveletWaveforms.sparse_wavelet_time import get_sparse_source_t_grid
+from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletSparseTime, BinaryWaveletTaylorTime
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
@@ -28,7 +29,7 @@ class LinearChirpletSourceWaveformTime(StationarySourceWaveformTime):
         self._consistent_intrinsic = True
 
 
-class LinearChirpletWaveletWaveformTime(BinaryWaveletTaylorTime):
+class LinearChirpletWaveletTaylorTime(BinaryWaveletTaylorTime):
     """Store a sparse wavelet intrinsic_waveform for a source with linearly increasing frequency and constant amplitude,
     using the Taylor time method.
     """
@@ -41,3 +42,18 @@ class LinearChirpletWaveletWaveformTime(BinaryWaveletTaylorTime):
         )
 
         super().__init__(params, wc, lc, nt_lim_waveform, source_waveform, wavelet_mode=wavelet_mode)
+
+
+class LinearChirpletWaveletSparseTime(BinaryWaveletSparseTime):
+    """Store a sparse wavelet intrinsic_waveform for a source with linearly increasing frequency and constant amplitude,
+    using the Taylor time method.
+    """
+
+    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, *, response_mode: int = 0) -> None:
+        """Construct a binary wavelet object."""
+        self._nt_lim_grid: PixelGenericRange = get_sparse_source_t_grid(wc)
+        source_waveform = LinearChirpletSourceWaveformTime(
+            params, self._nt_lim_grid, lc, response_mode=response_mode,
+        )
+
+        super().__init__(params, wc, lc, nt_lim_waveform, source_waveform)

@@ -8,12 +8,11 @@ import tomllib
 from numpy.testing import assert_allclose
 from WDMWaveletTransforms.wavelet_transforms import transform_wavelet_freq, transform_wavelet_time
 
-from LisaWaveformTools.chirplet_source_time import LinearChirpletSourceWaveformTime, LinearChirpletWaveletWaveformTime
+from LisaWaveformTools.chirplet_source_time import LinearChirpletSourceWaveformTime, LinearChirpletWaveletSparseTime, LinearChirpletWaveletTaylorTime
 from LisaWaveformTools.lisa_config import get_lisa_constants
 from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams, StationaryWaveformTime
 from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams, amp_phase_f, amp_phase_t, chirplet_time_intrinsic
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, wavelet_sparse_to_dense
-from WaveletWaveforms.sparse_wavelet_time import wavelet_SparseT
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
 
@@ -68,13 +67,13 @@ def test_ts_match_TT_TS(fdot_mult):
     print('computing time domain waveforms')
 
     # Time domain Taylor expansion transform
-    waveletTT = LinearChirpletWaveletWaveformTime(params, wc, lc, nt_lim_waveform, wavelet_mode=1, response_mode=2)
+    waveletTT = LinearChirpletWaveletTaylorTime(params, wc, lc, nt_lim_waveform, wavelet_mode=1, response_mode=2)
 
     waveTT = wavelet_sparse_to_dense(waveletTT.wavelet_waveform, wc)[:, :, 0]
 
     # Time domain sparse transform
-    waveletTS = wavelet_SparseT(params, wc, lc)
-    waveTS = wavelet_sparse_to_dense(waveletTS, wc)[:, :, 0]
+    waveletTS = LinearChirpletWaveletSparseTime(params, wc, lc, nt_lim_waveform, response_mode=2)
+    waveTS = wavelet_sparse_to_dense(waveletTS.wavelet_waveform, wc)[:, :, 0]
 
     maskTS = waveTS != 0.
     maskTT = waveTT != 0.
@@ -151,13 +150,13 @@ def test_ts_match_TTexact_TS(fdot_mult):
     print('computing time domain waveforms')
 
     # Time domain Taylor expansion transform
-    waveletTT = LinearChirpletWaveletWaveformTime(params, wc, lc, nt_lim_waveform, wavelet_mode=0, response_mode=2)
+    waveletTT = LinearChirpletWaveletTaylorTime(params, wc, lc, nt_lim_waveform, wavelet_mode=0, response_mode=2)
 
     waveTT = wavelet_sparse_to_dense(waveletTT.wavelet_waveform, wc)[:, :, 0]
 
     # Time domain sparse transform
-    waveletTS = wavelet_SparseT(params, wc, lc)
-    waveTS = wavelet_sparse_to_dense(waveletTS, wc)[:, :, 0]
+    waveletTS = LinearChirpletWaveletSparseTime(params, wc, lc, nt_lim_waveform, response_mode=2)
+    waveTS = wavelet_sparse_to_dense(waveletTS.wavelet_waveform, wc)[:, :, 0]
 
     maskTS = waveTS != 0.
     maskTT = waveTT != 0.
@@ -232,8 +231,8 @@ def test_Chirp_wdm_match_TT_TTexact(fdot_mult):
     )
 
     # Time domain Taylor expansion transform
-    waveletTT = LinearChirpletWaveletWaveformTime(params, wc, lc, nt_lim_waveform, wavelet_mode=1, response_mode=2)
-    waveletTT_exact = LinearChirpletWaveletWaveformTime(params, wc, lc, nt_lim_waveform, wavelet_mode=0, response_mode=2)
+    waveletTT = LinearChirpletWaveletTaylorTime(params, wc, lc, nt_lim_waveform, wavelet_mode=1, response_mode=2)
+    waveletTT_exact = LinearChirpletWaveletTaylorTime(params, wc, lc, nt_lim_waveform, wavelet_mode=0, response_mode=2)
 
     waveTT = wavelet_sparse_to_dense(waveletTT.wavelet_waveform, wc)[:, :, 0]
     waveTT_exact = wavelet_sparse_to_dense(waveletTT_exact.wavelet_waveform, wc)[:, :, 0]
@@ -383,7 +382,7 @@ def test_Chirp_wdm_match_TT_long(fdot_mult):
     print('finished time domain waveforms')
 
     # Time domain Taylor expansion transform
-    waveletTT = LinearChirpletWaveletWaveformTime(params, wc, lc, nt_lim_waveform, wavelet_mode=1, response_mode=2)
+    waveletTT = LinearChirpletWaveletTaylorTime(params, wc, lc, nt_lim_waveform, wavelet_mode=1, response_mode=2)
 
     waveTT = wavelet_sparse_to_dense(waveletTT.wavelet_waveform, wc)[:, :, 0]
 
@@ -431,6 +430,7 @@ def test_Chirp_wdm_match_TS_long(fdot_mult):
     wc = get_wavelet_model(config_in)
     lc = get_lisa_constants(config_in)
 
+    nt_lim_waveform = PixelGenericRange(0, wc.Nt, wc.DT, 0.)
     nt_lim_waveform_long = PixelGenericRange(0, wc.Nt * wc.Nf, wc.dt, 0.)
 
     # Want gamma*tau large so that the SPA is accurate
@@ -485,8 +485,8 @@ def test_Chirp_wdm_match_TS_long(fdot_mult):
     print('finished time domain waveforms')
 
     # Time domain sparse transform
-    waveletTS = wavelet_SparseT(params, wc, lc)
-    waveTS = wavelet_sparse_to_dense(waveletTS, wc)[:, :, 0]
+    waveletTS = LinearChirpletWaveletSparseTime(params, wc, lc, nt_lim_waveform, response_mode=2)
+    waveTS = wavelet_sparse_to_dense(waveletTS.wavelet_waveform, wc)[:, :, 0]
 
     wave_got_time = transform_wavelet_time(hs_time_c, wc.Nf, wc.Nt)
     fs_fft = np.arange(0, ts.size // 2 + 1) * 1 / (wc.Tobs)

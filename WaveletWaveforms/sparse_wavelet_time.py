@@ -1,4 +1,4 @@
-"""helper functions for Chirp_WDM"""
+"""Functions for getting the wavelet representation using the sparse method"""
 
 from typing import NamedTuple
 
@@ -7,10 +7,7 @@ import WDMWaveletTransforms.fft_funcs as fft
 from numba import njit
 from numpy.typing import NDArray
 
-from LisaWaveformTools.chirplet_source_time import LinearChirpletSourceWaveformTime
-from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.stationary_source_waveform import SourceParams, StationaryWaveformTime
-from LisaWaveformTools.stationary_time_source import StationarySourceWaveformTime
+from LisaWaveformTools.stationary_source_waveform import StationarySourceWaveform, StationaryWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, SparseWaveletWaveform
 from WaveletWaveforms.taylor_time_coefficients import wavelet
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
@@ -21,7 +18,7 @@ class SparseCoefficientTable(NamedTuple):
     sM: NDArray[np.complexfloating]
 
 
-def _get_sparse_t_grid(wc: WDMWaveletConstants) -> PixelGenericRange:
+def get_sparse_source_t_grid(wc: WDMWaveletConstants) -> PixelGenericRange:
     assert wc.K % wc.L == 0, 'K currently needs to be an integer multiple of L'
     sparse_thin = int(wc.K // wc.L)
     assert wc.Nf % sparse_thin == 0, 'Nf currently needs to be an integer multiple of sparse thinning factor'
@@ -52,7 +49,7 @@ def _update_bounds_helper(m_pixel: NDArray[np.integer], wc: WDMWaveletConstants)
     return PixelGenericRange(int(np.max(nt_mins)), int(np.min(nt_maxs)), wc.DT, 0.)
 
 
-# @njit()
+@njit()
 def _sparse_time_DX_assign_loop(m_pixel: NDArray[np.integer], nt_lim: PixelGenericRange, waveform: StationaryWaveformTime, sparse_table: SparseCoefficientTable, wc: WDMWaveletConstants) -> NDArray[np.complexfloating]:
     """Helper to start loop for sparse_wavelet_time"""
     nc_waveform = m_pixel.shape[0]
@@ -90,7 +87,7 @@ def _sparse_time_DX_assign_loop(m_pixel: NDArray[np.integer], nt_lim: PixelGener
     return DX
 
 
-# @njit()
+@njit()
 def _sparse_time_DX_unpack_loop(wavelet_waveform: SparseWaveletWaveform, m_pixel: NDArray[np.integer], nt_lim: PixelGenericRange, DX_trans: NDArray[np.complexfloating], wc: WDMWaveletConstants) -> None:
     """Helper to start unpack fft results for sparse_wavelet_time"""
     assert len(m_pixel.shape) == 2
@@ -145,7 +142,7 @@ def _sparse_time_DX_unpack_loop(wavelet_waveform: SparseWaveletWaveform, m_pixel
             wave_value[itrc, itrm] = 0.0
 
 
-def get_empty_sparse_wavelet_waveform(nc: int, wc: WDMWaveletConstants) -> SparseWaveletWaveform:
+def get_empty_sparse_sparse_wavelet_time_waveform(nc: int, wc: WDMWaveletConstants) -> SparseWaveletWaveform:
     assert wc.L % 2 == 0
     assert wc.K > 0
     assert wc.L > 0
@@ -162,7 +159,7 @@ def get_empty_sparse_wavelet_waveform(nc: int, wc: WDMWaveletConstants) -> Spars
     return SparseWaveletWaveform(wave_value, pixel_index, n_set, N_max)
 
 
-def sparse_wavelet_time(wave: StationarySourceWaveformTime, wavelet_waveform: SparseWaveletWaveform, sparse_table: SparseCoefficientTable, wc: WDMWaveletConstants) -> None:
+def make_sparse_wavelet_time(wave: StationarySourceWaveform[StationaryWaveformTime], wavelet_waveform: SparseWaveletWaveform, sparse_table: SparseCoefficientTable, wc: WDMWaveletConstants) -> None:
     """Calculate time domain sparse wavelet method"""
     # have sped this up by computing cos(Phase[k]), sin(Phase[k])
     # and passing in pre-computed arrays for cos(2.*np.pi*(double)(j*mq)/(double)(L))
@@ -177,7 +174,7 @@ def sparse_wavelet_time(wave: StationarySourceWaveformTime, wavelet_waveform: Sp
     _sparse_time_DX_unpack_loop(wavelet_waveform, m_pixel, nt_lim_restrict, DX_trans, wc)
 
 
-def _sparse_table_helper(wc: WDMWaveletConstants) -> SparseCoefficientTable:
+def get_sparse_table_helper(wc: WDMWaveletConstants) -> SparseCoefficientTable:
     # TODO does this function already exist somewhere else?
     assert wc.L % 2 == 0
     assert wc.K > 0
@@ -204,49 +201,3 @@ def _sparse_table_helper(wc: WDMWaveletConstants) -> SparseCoefficientTable:
     c_m = cos_h - 1j * sin_h
     s_m = sin_h + 1j * cos_h
     return SparseCoefficientTable(c_m, s_m)
-
-
-def wavelet_SparseT(params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants) -> SparseWaveletWaveform:
-    """Compute the time domain wavelet filter and normalize"""
-    sparse_table = _sparse_table_helper(wc)
-    nt_lim_grid = _get_sparse_t_grid(wc)
-    nc_waveform = lc.nc_waveform
-    wavelet_waveform = get_empty_sparse_wavelet_waveform(nc_waveform, wc)
-
-    wave = LinearChirpletSourceWaveformTime(params, nt_lim_grid, lc, response_mode=2)
-    sparse_wavelet_time(wave, wavelet_waveform, sparse_table, wc)
-
-    return wavelet_waveform
-
-
-# class BinaryWaveletSparseTime(SparseWaveletSourceWaveform[StationaryWaveformTime]):
-#    """Store a sparse binary wavelet for a time domain taylor intrinsic_waveform."""
-#
-#    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, source_waveform: StationarySourceWaveform[StationaryWaveformTime]) -> None:
-#        """Construct a sparse binary wavelet for a time domain taylor intrinsic_waveform with interpolation."""
-#        self._wc: WDMWaveletConstants = wc
-#        self._lc: LISAConstants = lc
-#        self._nt_lim_waveform: PixelGenericRange = nt_lim_waveform
-#
-#        # store the intrinsic_waveform
-#        self._source_waveform: StationarySourceWaveform[StationaryWaveformTime] = source_waveform
-#
-#        # get a blank wavelet intrinsic_waveform with the correct size for the sparse taylor time method
-#        # when consistent is set to True, it will be the correct intrinsic_waveform
-#        wavelet_waveform_loc: SparseWaveletWaveform = get_empty_sparse_sparse_time_waveform(int(self._lc.nc_waveform), wc)
-#
-#        # interpolation for wavelet taylor expansion
-#        self._sparse_table: SparseCoefficientTable = _sparse_table_helper(self._wc)
-#
-#        super().__init__(params, wavelet_waveform_loc, source_waveform)
-#
-#    @override
-#    def _update_wavelet_waveform(self) -> None:
-#        """Update the wavelet intrinsic_waveform to match the current parameters."""
-#        self._wavelet_waveform = sparse_wavelet_time(
-#            self._wavelet_waveform,
-#            self.source_waveform.tdi_waveform,
-#            self._nt_lim_waveform,
-#            self._wc,
-#            self._taylor_time_table,
-#        )
