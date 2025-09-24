@@ -73,7 +73,7 @@ def test_ts_match_TT_TS(fdot_mult):
     waveTT = wavelet_sparse_to_dense(waveletTT.wavelet_waveform, wc)[:, :, 0]
 
     # Time domain sparse transform
-    waveletTS = wavelet_SparseT(intrinsic, wc)
+    waveletTS = wavelet_SparseT(params, wc, lc)
     waveTS = wavelet_sparse_to_dense(waveletTS, wc)[:, :, 0]
 
     maskTS = waveTS != 0.
@@ -156,7 +156,7 @@ def test_ts_match_TTexact_TS(fdot_mult):
     waveTT = wavelet_sparse_to_dense(waveletTT.wavelet_waveform, wc)[:, :, 0]
 
     # Time domain sparse transform
-    waveletTS = wavelet_SparseT(intrinsic, wc)
+    waveletTS = wavelet_SparseT(params, wc, lc)
     waveTS = wavelet_sparse_to_dense(waveletTS, wc)[:, :, 0]
 
     maskTS = waveTS != 0.
@@ -485,7 +485,7 @@ def test_Chirp_wdm_match_TS_long(fdot_mult):
     print('finished time domain waveforms')
 
     # Time domain sparse transform
-    waveletTS = wavelet_SparseT(intrinsic, wc)
+    waveletTS = wavelet_SparseT(params, wc, lc)
     waveTS = wavelet_sparse_to_dense(waveletTS, wc)[:, :, 0]
 
     wave_got_time = transform_wavelet_time(hs_time_c, wc.Nf, wc.Nt)
