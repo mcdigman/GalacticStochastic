@@ -72,7 +72,7 @@ def get_empty_sparse_taylor_time_waveform(nc_waveform: int, wc: WDMWaveletConsta
     return SparseWaveletWaveform(wave_value, pixel_index, n_set, N_max)
 
 
-def wavelet(wc: WDMWaveletConstants, m: int, nrm: np.floating) -> NDArray[np.floating]:
+def wavelet(wc: WDMWaveletConstants, m: int, nrm: float, *, n_in: int = -1) -> NDArray[np.floating]:
     """
     Construct and normalize a wavelet basis function for the specified frequency bin.
 
@@ -101,12 +101,19 @@ def wavelet(wc: WDMWaveletConstants, m: int, nrm: np.floating) -> NDArray[np.flo
     time domain using the FFT, then normalized. This function is used to generate
     reference wavelets for coefficient tables and intrinsic_waveform synthesis.
     """
-    wave = np.zeros(wc.K)
-    halfN = int(wc.K / 2)
+    if n_in == -1:
+        n_use = wc.K
+    else:
+        n_use = n_in
 
-    DE = np.zeros(wc.K, dtype=np.complex128)
+    assert n_use % 2 == 0
 
-    om = wc.dom * np.hstack([np.arange(0, halfN + 1), -np.arange(halfN - 1, 0, -1)])
+    wave = np.zeros(n_use)
+    half_n_us = int(n_use // 2)
+
+    DE = np.zeros(n_use, dtype=np.complex128)
+
+    om = wc.dom * np.hstack([np.arange(0, half_n_us + 1), -np.arange(half_n_us - 1, 0, -1)])
     DE[:] = (
         np.sqrt(wc.dt)
         / np.sqrt(2.0)
@@ -116,12 +123,12 @@ def wavelet(wc: WDMWaveletConstants, m: int, nrm: np.floating) -> NDArray[np.flo
         )
     )
 
-    DE_fft = spf.fft(DE, wc.K, overwrite_x=True)
+    DE_fft = spf.fft(DE, n_use, overwrite_x=True)
 
     del DE
 
-    wave[halfN:] = np.real(DE_fft[0:halfN])
-    wave[0:halfN] = np.real(DE_fft[halfN:])
+    wave[half_n_us:] = np.real(DE_fft[0:half_n_us])
+    wave[0:half_n_us] = np.real(DE_fft[half_n_us:])
     return 1.0 / nrm * wave
 
 
@@ -208,27 +215,10 @@ def get_wavelet_norm(wc: WDMWaveletConstants) -> NDArray[np.floating]:
         The normalized reference wavelet, as a 1D array, matching
         the configuration in `_wc`.
     """
-    phi = np.zeros(wc.K)
-    DX = np.zeros(wc.K, dtype=np.complex128)
-    DX[0] = wc.insDOM
+    wave = wavelet(wc, 0, 1.0, n_in=wc.K)
 
-    DX[1:np.int64(wc.K / 2) + 1] = np.sqrt(wc.dt) * phitilde_vec(
-        wc.dom * wc.dt * np.arange(1, np.int64(wc.K / 2) + 1), wc.Nf, wc.nx,
-    )
-    DX[np.int64(wc.K / 2) + 1:] = np.sqrt(wc.dt) * phitilde_vec(
-        -wc.dom * wc.dt * np.arange(np.int64(wc.K / 2) - 1, 0, -1), wc.Nf, wc.nx,
-    )
-
-    DX_fft = spf.fft(DX, wc.K, overwrite_x=True)
-
-    del DX
-
-    for i in range(np.int64(wc.K / 2)):
-        phi[i] = np.real(DX_fft[np.int64(wc.K / 2) + i])
-        phi[np.int64(wc.K / 2) + i] = np.real(DX_fft[i])
-
-    nrm = np.linalg.norm(phi)
-    # TODO check if this is the right way of getting the relevant K
+    nrm = (1.0 / np.sqrt(2.0)) * float(np.linalg.norm(wave))
+    # TODO check if this is the right way of getting the relevant m
     kwave = int(wc.Nf // 16)
     return wavelet(wc, kwave, nrm)
 

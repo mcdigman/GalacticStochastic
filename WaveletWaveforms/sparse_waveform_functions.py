@@ -39,7 +39,7 @@ class SparseWaveletWaveform(NamedTuple):
     """
     wave_value: NDArray[np.floating]
     pixel_index: NDArray[np.int64]
-    n_set: NDArray[np.int64]
+    n_set: NDArray[np.integer]
     N_max: int
 
 
