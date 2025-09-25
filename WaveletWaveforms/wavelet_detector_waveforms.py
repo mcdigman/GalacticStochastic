@@ -7,7 +7,7 @@ from warnings import warn
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.stationary_source_waveform import SourceParams, StationarySourceWaveform, StationaryWaveformTime, StationaryWaveformType
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, SparseWaveletWaveform
-from WaveletWaveforms.sparse_wavelet_time import SparseCoefficientTable, get_empty_sparse_sparse_wavelet_time_waveform, get_sparse_table_helper, make_sparse_wavelet_time
+from WaveletWaveforms.sparse_wavelet_time import SparseTimeCoefficientTable, get_empty_sparse_sparse_wavelet_time_waveform, get_sparse_table_helper, make_sparse_wavelet_time
 from WaveletWaveforms.taylor_time_coefficients import (
     WaveletTaylorTimeCoeffs,
     get_empty_sparse_taylor_time_waveform,
@@ -189,7 +189,7 @@ class BinaryWaveletSparseTime(SparseWaveletSourceWaveform[StationaryWaveformTime
         wavelet_waveform_loc: SparseWaveletWaveform = get_empty_sparse_sparse_wavelet_time_waveform(int(self._lc.nc_waveform), wc)
 
         # interpolation for wavelet taylor expansion
-        self._sparse_table: SparseCoefficientTable = get_sparse_table_helper(self._wc)
+        self._sparse_table: SparseTimeCoefficientTable = get_sparse_table_helper(self._wc)
 
         super().__init__(params, wavelet_waveform_loc, source_waveform)
 

@@ -93,6 +93,7 @@ def get_wavelet_model(config: dict) -> WDMWaveletConstants:
 
     # dimensionless filter legnth
     K = int(mult * 2 * Nf)
+    assert K > 0
 
     # filter duration (time; same units as dt)
     Tw = float(dt * K)

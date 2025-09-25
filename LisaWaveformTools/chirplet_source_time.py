@@ -51,7 +51,7 @@ class LinearChirpletWaveletSparseTime(BinaryWaveletSparseTime):
 
     def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, *, response_mode: int = 0) -> None:
         """Construct a binary wavelet object."""
-        self._nt_lim_grid: PixelGenericRange = get_sparse_source_t_grid(wc)
+        self._nt_lim_grid: PixelGenericRange = get_sparse_source_t_grid(wc, lc.t0)
         source_waveform = LinearChirpletSourceWaveformTime(
             params, self._nt_lim_grid, lc, response_mode=response_mode,
         )
