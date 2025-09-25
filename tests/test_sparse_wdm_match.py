@@ -8,10 +8,10 @@ import tomllib
 from numpy.testing import assert_allclose
 from WDMWaveletTransforms.wavelet_transforms import transform_wavelet_freq, transform_wavelet_time
 
-from LisaWaveformTools.chirplet_source_time import LinearChirpletSourceWaveformTime, LinearChirpletWaveletSparseTime, LinearChirpletWaveletTaylorTime
+from LisaWaveformTools.chirplet_source_time import LinearChirpletWaveletSparseTime, LinearChirpletWaveletTaylorTime
 from LisaWaveformTools.lisa_config import get_lisa_constants
-from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams, StationaryWaveformTime
-from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams, amp_phase_f, amp_phase_t, chirplet_time_intrinsic
+from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams, StationaryWaveformFreq, StationaryWaveformTime
+from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams, chirplet_freq_intrinsic, chirplet_time_intrinsic
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, wavelet_sparse_to_dense
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
@@ -241,82 +241,6 @@ def test_Chirp_wdm_match_TT_TTexact(fdot_mult):
 
 
 @pytest.mark.parametrize('fdot_mult', [0.8])
-def test_Chirp_wdm_match_long_long(fdot_mult):
-    """Test for match between different methods of getting wavelet transform"""
-    toml_filename_in = 'tests/sparse_wdm_test_config1.toml'
-
-    with Path(toml_filename_in).open('rb') as f:
-        config_in = tomllib.load(f)
-
-    wc = get_wavelet_model(config_in)
-    lc = get_lisa_constants(config_in)
-
-    nt_lim_waveform_long = PixelGenericRange(0, wc.Nt * wc.Nf, wc.dt, 0.)
-
-    # Want gamma*tau large so that the SPA is accurate
-    # Pick fdot so that both the Taylor expanded time and frequency domain transforms are valid
-    # => fdot < 8 DF/T_w and fdot > DF^2/8 = DF/(16 DT)
-    # Also need to ensure that the sparse time domain transform is valid
-    # => fdot > DF/T_w
-    # fdot = gamma/tau
-
-    fdot = 3.105 * fdot_mult * wc.DF / wc.Tw  # used an irrational fraction to ensure the fdot lands between samples
-    print(fdot, 8 * wc.DF / wc.Tw, wc.DF**2 / 8)
-    assert fdot < 8 * wc.DF / wc.Tw
-    # assert fdot > _wc.DF**2/8
-    assert fdot > wc.DF / wc.Tw
-    assert -wc.dfd * wc.Nfd_negative < fdot
-    assert fdot < wc.dfd * (wc.Nfd - wc.Nfd_negative)
-    tp = wc.Tobs / 2.
-    f0 = 16 * wc.DF
-    fp = f0 + fdot * tp  # ensures that frequency starts positive
-
-    print('%f %f' % (fp / wc.DF, tp / wc.DT))
-    gamma = fp / 8.
-    tau = gamma / fdot
-    Phi0 = 0.
-    A0 = 10000.
-
-    intrinsic = LinearChirpletIntrinsicParams(A0, Phi0, fp, tp, tau, gamma)
-
-    extrinsic = ExtrinsicParams(costh=0.1, phi=0.1, cosi=0.2,
-                                psi=0.3)  # Replace this with a real extrinsic param object if needed
-
-    # Bundle parameters
-    params = SourceParams(
-        intrinsic=intrinsic,
-        extrinsic=extrinsic,
-    )
-
-    lf_waveform_time_long = LinearChirpletSourceWaveformTime(
-        params=params,
-        nt_lim_waveform=nt_lim_waveform_long,
-        lc=lc,
-    )
-
-    print('computing time domain waveforms')
-    hs_time_in = lf_waveform_time_long.intrinsic_waveform.AT * np.cos(lf_waveform_time_long.intrinsic_waveform.PT)
-    PT1, AT1, FT1, FTd1 = amp_phase_t(lf_waveform_time_long.wavefront_time, intrinsic)
-    hs_time1 = AT1 * np.cos(PT1)
-    PT2, AT2, FT2, FTd2 = amp_phase_t(lf_waveform_time_long.intrinsic_waveform.T, intrinsic)
-    hs_time2 = AT2 * np.cos(PT2)
-    waveform_long_c = StationaryWaveformTime(np.arange(0, wc.Nt * wc.Nf) * wc.dt, PT2.copy(), FT2.copy(), FTd2.copy(), AT2.copy())
-    chirplet_time_intrinsic(waveform_long_c, intrinsic, waveform_long_c.T, nt_lim_waveform_long)
-    hs_time_c = waveform_long_c.AT * np.cos(waveform_long_c.PT)
-    assert_allclose(waveform_long_c.FTd, FTd2, atol=1.e-20, rtol=1.e-10)
-    assert_allclose(waveform_long_c.FT, FT2, atol=1.e-20, rtol=1.e-10)
-    assert_allclose(waveform_long_c.AT, AT2, atol=1.e-20, rtol=1.e-10)
-    assert_allclose(waveform_long_c.PT, PT2, atol=1.e-20, rtol=1.e-10)
-
-    assert_allclose(FTd1, lf_waveform_time_long.intrinsic_waveform.FTd, atol=1.e-20, rtol=1.e-10)
-    assert_allclose(FT1, lf_waveform_time_long.intrinsic_waveform.FT, atol=1.e-20, rtol=1.e-10)
-    assert_allclose(PT1, lf_waveform_time_long.intrinsic_waveform.PT, atol=1.e-20, rtol=1.e-10)
-    assert_allclose(AT1, lf_waveform_time_long.intrinsic_waveform.AT, atol=1.e-20, rtol=1.e-10)
-    assert_allclose(hs_time1, hs_time_in, atol=1.e-14, rtol=2.e-7)
-    assert_allclose(hs_time2, hs_time_c, atol=1.e-14, rtol=2.e-7)
-
-
-@pytest.mark.parametrize('fdot_mult', [0.8])
 def test_Chirp_wdm_match_TT_long(fdot_mult):
     """Test for match between different methods of getting wavelet transform"""
     toml_filename_in = 'tests/sparse_wdm_test_config1.toml'
@@ -365,16 +289,12 @@ def test_Chirp_wdm_match_TT_long(fdot_mult):
         extrinsic=extrinsic,
     )
 
-    lf_waveform_time_long = LinearChirpletSourceWaveformTime(
-        params=params,
-        nt_lim_waveform=nt_lim_waveform_long,
-        lc=lc,
-    )
-
     print('computing time domain waveforms')
-    PT2, AT2, FT2, FTd2 = amp_phase_t(lf_waveform_time_long.intrinsic_waveform.T, intrinsic)
-    waveform_long_c = StationaryWaveformTime(np.arange(0, wc.Nt * wc.Nf) * wc.dt, PT2.copy(), FT2.copy(), FTd2.copy(), AT2.copy())
+    n_long = wc.Nt * wc.Nf
+    T_long = np.arange(0, n_long) * wc.dt
+    waveform_long_c = StationaryWaveformTime(T_long, np.zeros(n_long), np.zeros(n_long), np.zeros(n_long), np.zeros(n_long))
     chirplet_time_intrinsic(waveform_long_c, intrinsic, waveform_long_c.T, nt_lim_waveform_long)
+
     hs_time_c = waveform_long_c.AT * np.cos(waveform_long_c.PT)
 
     ts = waveform_long_c.T
@@ -388,7 +308,12 @@ def test_Chirp_wdm_match_TT_long(fdot_mult):
 
     wave_got_time = transform_wavelet_time(hs_time_c, wc.Nf, wc.Nt)
     fs_fft = np.arange(0, ts.size // 2 + 1) * 1 / (wc.Tobs)
-    PPfs, AAfs = amp_phase_f(fs_fft, intrinsic)
+    n_fft = fs_fft.size
+    waveform_long_f = StationaryWaveformFreq(fs_fft, np.zeros(n_fft), np.zeros(n_fft), np.zeros(n_fft),
+                                             np.zeros(n_fft))
+    chirplet_freq_intrinsic(waveform_long_f, intrinsic, waveform_long_f.F)
+    PPfs = waveform_long_f.PF
+    AAfs = waveform_long_f.AF
     AAfs = AAfs / (2 * wc.dt)
     hs_freq = np.exp(-1.0j * PPfs) * AAfs.astype(np.complex128)
     wave_got_freq = transform_wavelet_freq(hs_freq, wc.Nf, wc.Nt)
@@ -468,15 +393,10 @@ def test_Chirp_wdm_match_TS_long(fdot_mult):
         extrinsic=extrinsic,
     )
 
-    lf_waveform_time_long = LinearChirpletSourceWaveformTime(
-        params=params,
-        nt_lim_waveform=nt_lim_waveform_long,
-        lc=lc,
-    )
-
     print('computing time domain waveforms')
-    PT2, AT2, FT2, FTd2 = amp_phase_t(lf_waveform_time_long.intrinsic_waveform.T, intrinsic)
-    waveform_long_c = StationaryWaveformTime(np.arange(0, wc.Nt * wc.Nf) * wc.dt, PT2.copy(), FT2.copy(), FTd2.copy(), AT2.copy())
+    n_long = wc.Nt * wc.Nf
+    T_long = np.arange(0, n_long) * wc.dt
+    waveform_long_c = StationaryWaveformTime(T_long, np.zeros(n_long), np.zeros(n_long), np.zeros(n_long), np.zeros(n_long))
     chirplet_time_intrinsic(waveform_long_c, intrinsic, waveform_long_c.T, nt_lim_waveform_long)
     hs_time_c = waveform_long_c.AT * np.cos(waveform_long_c.PT)
 
@@ -488,9 +408,16 @@ def test_Chirp_wdm_match_TS_long(fdot_mult):
     waveletTS = LinearChirpletWaveletSparseTime(params, wc, lc, nt_lim_waveform, response_mode=2)
     waveTS = wavelet_sparse_to_dense(waveletTS.wavelet_waveform, wc)[:, :, 0]
 
-    wave_got_time = transform_wavelet_time(hs_time_c, wc.Nf, wc.Nt)
     fs_fft = np.arange(0, ts.size // 2 + 1) * 1 / (wc.Tobs)
-    PPfs, AAfs = amp_phase_f(fs_fft, intrinsic)
+    n_fft = fs_fft.size
+    waveform_long_f = StationaryWaveformFreq(fs_fft, np.zeros(n_fft), np.zeros(n_fft), np.zeros(n_fft),
+                                             np.zeros(n_fft))
+    chirplet_freq_intrinsic(waveform_long_f, intrinsic, waveform_long_f.F)
+    PPfs = waveform_long_f.PF
+    AAfs = waveform_long_f.AF
+
+    wave_got_time = transform_wavelet_time(hs_time_c, wc.Nf, wc.Nt)
+
     AAfs = AAfs / (2 * wc.dt)
     hs_freq = np.exp(-1.0j * PPfs) * AAfs.astype(np.complex128)
     wave_got_freq = transform_wavelet_freq(hs_freq, wc.Nf, wc.Nt)

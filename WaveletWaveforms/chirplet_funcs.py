@@ -6,13 +6,11 @@ from typing import TYPE_CHECKING, NamedTuple
 import numpy as np
 from numba import njit
 
-from LisaWaveformTools.stationary_source_waveform import StationaryWaveformFreq, StationaryWaveformTime
-
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
+    from LisaWaveformTools.stationary_source_waveform import StationaryWaveformFreq, StationaryWaveformTime
     from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
-    from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 class LinearChirpletIntrinsicParams(NamedTuple):
@@ -80,46 +78,3 @@ def chirplet_freq_intrinsic(waveform: StationaryWaveformFreq, intrinsic_params: 
         TF[n] = tfp * delta_f + intrinsic_params.t_center
         TFp[n] = tfp
         AF[n] = intrinsic_params.amp_center_f * np.exp(-x ** 2 / 2.0)
-
-
-@njit()
-def amp_phase_t(t:  NDArray[np.floating], params: LinearChirpletIntrinsicParams) -> tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]:
-    """Get amplitude and phase for chirp_time"""
-    x = (t - params.t_center) / params.tau
-    f = params.gamma * x + params.f_center
-    amp_center_t = np.sqrt(params.gamma / params.tau) * params.amp_center_f
-    phase = - params.phi0 + 2. * np.pi * (t - params.t_center) * f - np.pi * params.gamma * params.tau * x ** 2
-    amp = amp_center_t * np.exp(-x**2 / 2.0)
-    fds = np.full(x.shape, params.gamma / params.tau)
-    return phase, amp, f, fds
-
-
-@njit()
-def amp_phase_f(f:  NDArray[np.floating], params: LinearChirpletIntrinsicParams) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
-    """Get amplitude and phase for frequency chirp"""
-    x = (f - params.f_center) / params.gamma
-    Phase = - np.pi / 4.0 + params.phi0 + 2.0 * np.pi * params.t_center * f + np.pi * params.tau * params.gamma * x**2
-    Amp = params.amp_center_f * np.exp(-x**2 / 2.0)
-    return Phase, Amp
-
-
-def ChirpWaveletT(params: LinearChirpletIntrinsicParams, wc: WDMWaveletConstants) -> StationaryWaveformTime:
-    """Get the wavelet in time domain"""
-    TFs = np.arange(0, wc.Nt) * wc.DT
-    Phases, Amps, fas, fdas = amp_phase_t(TFs, params)
-
-    # get the intrinsic intrinsic_waveform
-    return StationaryWaveformTime(TFs, np.array([Phases]), np.array([fas]), np.array([fdas]), np.array([Amps]))
-
-
-# TODO toff and foft have unclear names and are redundant with functions above
-@njit(fastmath=True)
-def toff(f:  NDArray[np.floating], params: LinearChirpletIntrinsicParams) ->  NDArray[np.floating]:
-    """Get times for sparse freq method"""
-    return params.tau * (f - params.f_center) / params.gamma + params.t_center
-
-
-@njit(fastmath=True)
-def foft(t:  NDArray[np.floating], params: LinearChirpletIntrinsicParams) ->  NDArray[np.floating]:
-    """Get frequencies for sparse time method"""
-    return params.gamma * (t - params.t_center) / params.tau + params.f_center
