@@ -6,10 +6,9 @@ import h5py
 import numpy as np
 from numpy.typing import NDArray
 
-from GalacticStochastic.background_decomposition import BGDecomposition
-from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
+from GalacticStochastic.background_decomposition import load_bgd_from_hdf5
 from GalacticStochastic.iteration_config import IterationConfig
-from GalacticStochastic.noise_manager import NoiseModelManager
+from GalacticStochastic.iterative_fit_manager import IterativeFitManager
 from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
 from LisaWaveformTools.lisa_config import LISAConstants
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
@@ -78,24 +77,26 @@ def get_processed_gb_filename(config: dict, stat_only, snr_thresh, wc: WDMWavele
     )
 
 
-def get_noise_common(config, snr_thresh, wc: WDMWaveletConstants):
-    galaxy_dir = config['files']['galaxy_dir']
-    filename_gb_common = get_common_noise_filename(galaxy_dir, snr_thresh, wc)
-    hf_in = h5py.File(filename_gb_common, 'r')
+def get_noise_common(config: dict, snr_thresh, wc: WDMWaveletConstants, lc):
+    try:
+        filename_gb_common = get_common_noise_filename(config, snr_thresh, wc)
+        hf_in = h5py.File(filename_gb_common, 'r')
 
-    hf_S = hf_in['S']
+        hf_S = hf_in['S']
 
-    if not isinstance(hf_S, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
+        if not isinstance(hf_S, h5py.Group):
+            msg = 'Unrecognized hdf5 file format'
+            raise TypeError(msg)
 
-    noise_realization_common = np.asarray(hf_S['noise_realization'])
+        noise_realization_common = np.asarray(hf_S['noise_realization'])
 
-    hf_in.close()
-    return noise_realization_common
+        hf_in.close()
+        return noise_realization_common
+    except KeyError:
+        return np.random.normal(0., 1., (wc.Nt, wc.Nf, lc.nc_waveform))
 
 
-def _source_mask_read_helper(hf_sky, key: str, fmin: float, fmax: float, *, use_loc: bool) -> tuple[int, NDArray[np.floating]]:
+def _source_mask_read_helper(hf_sky: h5py.Group, key: str, fmin: float, fmax: float) -> tuple[int, NDArray[np.floating]]:
     hf_loc = hf_sky[key]
 
     if not isinstance(hf_loc, h5py.Group):
@@ -114,28 +115,27 @@ def _source_mask_read_helper(hf_sky, key: str, fmin: float, fmax: float, *, use_
         msg = 'Unrecognized hdf5 file format'
         raise TypeError(msg)
 
-    if use_loc:
-        mask = np.zeros(freqs.shape, dtype=np.bool_)
-        mask[:] = (freqs > fmin) & (freqs < fmax)
-        n_loc = int(np.sum(1 * mask))
-        params = np.zeros((n_loc, n_par_gb), dtype=np.float64)
-        for itrl in range(n_par_gb):
-            hf_param = hf_cat[labels_gb[itrl]]
-            if not isinstance(hf_param, h5py.Dataset):
-                msg = 'Unrecognized hdf5 file format'
-                raise TypeError(msg)
-            params[:, itrl] = hf_param[mask]
-    else:
-        n_loc = 0
-        params = np.zeros((n_loc, n_par_gb), dtype=np.float64)
+    mask = np.zeros(freqs.shape, dtype=np.bool_)
+    mask[:] = (freqs > fmin) & (freqs < fmax)
+    n_loc = int(np.sum(1 * mask))
+    params = np.zeros((n_loc, n_par_gb), dtype=np.float64)
+    for itrl in range(n_par_gb):
+        hf_param = hf_cat[labels_gb[itrl]]
+        if not isinstance(hf_param, h5py.Dataset):
+            msg = 'Unrecognized hdf5 file format'
+            raise TypeError(msg)
+        params[:, itrl] = hf_param[mask]
 
     return n_loc, params
 
 
 def get_full_galactic_params(
-    config: dict, *, fmin: float = 0.00001, fmax: float = 0.1, use_dgb: bool = True, use_igb: bool = True, use_vgb: bool = True,
-):
+    config: dict):
     """Get the galaxy dataset binaries"""
+    # dgb is detached galactic binaries, igb is interacting galactic binaries, vgb is verification
+    categories = config['iterative_fit_constants'].get('component_list', ['dgb', 'igb', 'vgb'])
+    fmin: float = float(config['iterative_fit_constants'].get('fmin_binary', 1.e-8))
+    fmax: float = float(config['iterative_fit_constants'].get('fmax_binary', 1.e0))
     assert fmin <= fmax
     full_galactic_params_filename = get_galaxy_filename(config)
     filename = full_galactic_params_filename
@@ -148,24 +148,26 @@ def get_full_galactic_params(
         msg = 'Unrecognized hdf5 file format'
         raise TypeError(msg)
 
-    # dgb is detached galactic binaries, igb is interacting galactic binaries, vgb is verification
-    n_dgb, params_dgb = _source_mask_read_helper(hf_sky, 'dgb', fmin, fmax, use_loc=use_dgb)
-    n_igb, params_igb = _source_mask_read_helper(hf_sky, 'igb', fmin, fmax, use_loc=use_igb)
-    n_vgb, params_vgb = _source_mask_read_helper(hf_sky, 'vgb', fmin, fmax, use_loc=use_vgb)
+    ns_got = np.zeros(len(categories), dtype=np.int64)
+    params_got = []
+    for itr, label in enumerate(categories):
+        ns_got[itr], params_loc = _source_mask_read_helper(hf_sky, label, fmin, fmax)
+        params_got.append(params_loc)
+        print(label, ns_got[itr])
 
-    n_tot = n_dgb + n_igb + n_vgb
-    print('detached', n_dgb)
-    print('interact', n_igb)
-    print('verify', n_vgb)
-    print('totals  ', n_tot)
+    n_tot = int(ns_got.sum())
+
+    print('total', n_tot)
+
     params_gb = np.zeros((n_tot, n_par_gb))
 
-    params_gb[:n_dgb, :] = params_dgb
-    params_gb[n_dgb:n_dgb + n_igb, :] = params_igb
-    params_gb[n_dgb + n_igb:, :] = params_vgb
+    n_old = 0
+    for itr in range(len(categories)):
+        n_cur = n_old + int(ns_got[itr])
+        params_gb[n_old: n_cur, :] = params_got[itr]
 
     hf_in.close()
-    return params_gb, n_dgb, n_igb, n_vgb, n_tot
+    return params_gb, ns_got
 
 
 def load_preliminary_galactic_file(config: dict, ic: IterationConfig, wc: WDMWaveletConstants, lc: LISAConstants):
@@ -219,7 +221,7 @@ def load_preliminary_galactic_file(config: dict, ic: IterationConfig, wc: WDMWav
 
     hf_in.close()
 
-    return galactic_below_in, snrs_tot_upper_in, S_inst_m, wc, lc
+    return galactic_below_in, snrs_tot_upper_in, S_inst_m
 
 
 def load_processed_gb_file(
@@ -235,18 +237,19 @@ def load_processed_gb_file(
         msg = 'Unrecognized hdf5 file format'
         raise TypeError(msg)
 
-    galactic_below = np.asarray(hf_S['galactic_below'])
+    hf_signal = hf_in['signal']
 
-    try:
-        galactic_undecided = np.asarray(hf_S['galactic_undecided'])
-    except ImportError:
-        galactic_undecided = np.asarray(hf_S['galactic_bg'])
+    if not isinstance(hf_signal, h5py.Group):
+        msg = 'Unrecognized hdf5 file format'
+        raise TypeError(msg)
+
+    bgd = load_bgd_from_hdf5(wc, hf_signal)
 
     argbinmap = np.asarray(hf_S['argbinmap'])
 
     hf_in.close()
 
-    return argbinmap, (galactic_below + galactic_undecided).reshape((wc.Nt, wc.Nf, galactic_below.shape[-1]))
+    return argbinmap, bgd.get_galactic_below_high().reshape((wc.Nt, wc.Nf, bgd.nc_galaxy))
 
 
 def store_preliminary_gb_file(
@@ -317,12 +320,12 @@ def store_processed_gb_file(
     wc: WDMWaveletConstants,
     lc: LISAConstants,
     ic: IterationConfig,
-    noise_manager: NoiseModelManager,
-    bgd: BGDecomposition,
-    n_full_converged,
-    bis: BinaryInclusionState,
+    ifm: IterativeFitManager,
 ) -> None:
-
+    noise_manager = ifm.noise_manager
+    bgd = noise_manager.bgd
+    n_full_converged = ifm.n_full_converged
+    bis = ifm.bis
     nt_lim_snr = noise_manager.nt_lim_snr
     S_inst_m = noise_manager.S_inst_m
     S_final = noise_manager.S_final
@@ -343,11 +346,12 @@ def store_processed_gb_file(
 
     hf_out = h5py.File(filename_out, 'w')
     hf_S = hf_out.create_group('S')
-    hf_S.create_dataset('galactic_below', data=bgd.get_galactic_below_low(), compression='gzip')
-    hf_S.create_dataset('galactic_above', data=bgd.get_galactic_coadd_resolvable(), compression='gzip')
-    hf_S.create_dataset('galactic_undecided', data=bgd.get_galactic_coadd_undecided(), compression='gzip')
-    hf_S.create_dataset('period_list', data=period_list)
+    hf_signal = hf_out.create_group('signal')
+    hf_signal.create_dataset('galactic_below', data=bgd.get_galactic_below_low(), compression='gzip')
+    hf_signal.create_dataset('galactic_above', data=bgd.get_galactic_coadd_resolvable(), compression='gzip')
+    hf_signal.create_dataset('galactic_undecided', data=bgd.get_galactic_coadd_undecided(), compression='gzip')
 
+    hf_S.create_dataset('period_list', data=period_list)
     hf_S.attrs['n_bin_use'] = n_bin_use
     hf_S.create_dataset('S_stat_m', data=S_inst_m)
     hf_S.create_dataset('snrs_tot_upper', data=snrs_tot_upper[n_full_converged], compression='gzip')

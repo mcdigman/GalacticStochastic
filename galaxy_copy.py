@@ -5,7 +5,12 @@ import GalacticStochastic.global_file_index as gfi
 galaxy_file = 'LDC2_sangria_training_v2.h5'
 ldc_dir = 'LDC/'
 config = {'files': {'galaxy_file': galaxy_file, 'galaxy_dir': ldc_dir}}
-params_gb, n_dgb, n_igb, n_vgb, n_tot = gfi.get_full_galactic_params(config)
+params_gb, ns_got = gfi.get_full_galactic_params(config)
+
+n_tot = int(ns_got.sum())
+n_dgb = ns_got[0]
+n_igb = ns_got[1]
+n_vgb = ns_got[2]
 
 n_dgb_sel = min(1000000, n_dgb)
 n_igb_sel = min(100000, n_igb)

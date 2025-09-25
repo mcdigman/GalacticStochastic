@@ -31,11 +31,11 @@ if __name__ == '__main__':
     nt_lim_snr = PixelGenericRange(nt_min, nt_max, wc.DT, 0.)
     nt_lim_waveform = PixelGenericRange(nt_min, nt_max, wc.DT, 0.)
 
-    params_gb, _, _, _, _ = gfi.get_full_galactic_params(config)
+    params_gb, _ = gfi.get_full_galactic_params(config)
 
     fit_state = IterativeFitState(ic, preprocess_mode=2)
 
-    bgd = BGDecomposition(wc, ic.nc_galaxy)
+    bgd = BGDecomposition(wc, ic.nc_galaxy, storage_mode=ic.background_storage_mode)
 
     noise_manager = NoiseModelManager(ic, wc, lc, fit_state, bgd, S_inst_m, stat_only, nt_lim_snr)
 

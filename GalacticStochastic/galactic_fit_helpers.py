@@ -294,7 +294,7 @@ def fit_gb_spectrum_evolve(
 
     log_S_goals = np.log10(S_goals[:, :, 0:2])
 
-    def S_func_temp(*tpl: NDArray[np.floating]) -> float:
+    def S_func_temp(tpl: NDArray[np.floating]) -> float:
         resid = 0.0
         a1 = tpl[0]
         ak = tpl[1]

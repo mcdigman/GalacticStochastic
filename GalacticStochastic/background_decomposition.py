@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import h5py
 import numpy as np
 
 from GalacticStochastic.galactic_fit_helpers import get_S_cyclo
@@ -28,9 +29,15 @@ class BGDecomposition:
             galactic_undecided: NDArray[np.floating] | None = None,
             galactic_above: NDArray[np.floating] | None = None,
             track_mode: int = 1,
+            storage_mode: int = 0,
     ) -> None:
 
+        if storage_mode != 0:
+            msg = 'Unrecognized option for storage mode'
+            raise ValueError(msg)
+
         self.wc: WDMWaveletConstants = wc
+        self.storage_mode: int = storage_mode
         self.nc_galaxy: int = nc_galaxy
         self.shape1: tuple[int, int] = (wc.Nt * wc.Nf, self.nc_galaxy)
         self.shape2: tuple[int, int, int] = (wc.Nt, wc.Nf, self.nc_galaxy)
@@ -68,6 +75,17 @@ class BGDecomposition:
         self.power_galactic_below_low: list[NDArray[np.floating]] = []
         self.power_galactic_below_high: list[NDArray[np.floating]] = []
         self.power_galactic_total: list[NDArray[np.floating]] = []
+
+    def store_hdf5(self, hf_in: h5py.Group) -> h5py.Group:
+        """Store the background to an hdf5 file"""
+        hf_background = hf_in.create_group('background')
+        hf_background.attrs['creator_name'] = self.__class__.__name__
+        hf_background.attrs['storage_mode'] = self.storage_mode
+        hf_background.attrs['track_mode'] = self.track_mode
+        hf_background.attrs['nc_galaxy'] = self.nc_galaxy
+        hf_background.attrs['shape1'] = self.shape1
+        hf_background.attrs['shape2'] = self.shape2
+        return hf_background
 
     def get_galactic_total(self, *, bypass_check: bool = False) -> NDArray[np.floating]:
         """Get the sum of the entire galactic signal, including detectable binaries"""
@@ -199,3 +217,57 @@ class BGDecomposition:
     def add_bright(self, wavelet_waveform: SparseWaveletWaveform) -> None:
         """Add a binary to the bright component of the galactic background"""
         sparse_addition_helper(wavelet_waveform, self.galactic_above)
+
+
+def _check_correct_component_shape(nc: int, wc: WDMWaveletConstants, galactic_component: NDArray[np.floating], *, shape_mode=0) -> NDArray[np.floating]:
+    assert galactic_component.size == wc.Nt * wc.Nf * nc, 'Incorrectly sized galaxy component'
+
+    shape1 = (wc.Nt * wc.Nf, nc)
+    shape2 = (wc.Nt, wc.Nf, nc)
+    shape3 = (wc.Nt * wc.Nf * nc,)
+    shapes_allowed = (shape1, shape2, shape3)
+
+    if shape_mode >= len(shapes_allowed):
+        msg = f'Invalid shape mode {shape_mode}'
+        raise ValueError(msg)
+
+    shape_got = galactic_component.shape
+    assert shape_got in shapes_allowed, 'Unrecognized shape for galactic background component'
+
+    if shape_got != shapes_allowed[shape_mode]:
+        galactic_component = galactic_component.reshape(shapes_allowed[shape_mode])
+
+    return galactic_component
+
+
+def load_bgd_from_hdf5(wc: WDMWaveletConstants, hf_signal: h5py.Group) -> BGDecomposition:
+    nc_galaxy_attr = hf_signal.attrs['nc_galaxy']
+    if isinstance(nc_galaxy_attr, (int, np.integer, str)):
+        nc = int(nc_galaxy_attr)
+    else:
+        msg = f'Unexpected type for nc_galaxy: {type(nc_galaxy_attr)}'
+        raise TypeError(msg)
+    galactic_below = np.asarray(hf_signal['galactic_below'])
+    assert len(galactic_below.shape) > 1
+    galactic_below = _check_correct_component_shape(nc, wc, galactic_below)
+
+    try:
+        galactic_undecided = np.asarray(hf_signal['galactic_undecided'])
+        galactic_undecided = _check_correct_component_shape(nc, wc, galactic_undecided)
+    except KeyError:
+        print('No galactic undecided component to read from file.')
+        galactic_undecided = np.zeros_like(galactic_below)
+    try:
+        galactic_above = np.asarray(hf_signal['galactic_above'])
+        galactic_above = _check_correct_component_shape(nc, wc, galactic_above)
+    except KeyError:
+        print('No galactic above component to read from file.')
+        galactic_above = np.zeros_like(galactic_undecided)
+    try:
+        galactic_floor = np.asarray(hf_signal['galactic_floor'])
+        galactic_floor = _check_correct_component_shape(nc, wc, galactic_floor)
+    except KeyError:
+        print('No galactic floor component to read from file.')
+        galactic_floor = np.zeros_like(galactic_undecided)
+
+    return BGDecomposition(wc, nc, galactic_floor=galactic_floor, galactic_below=galactic_below, galactic_undecided=galactic_undecided, galactic_above=galactic_above, track_mode=0)

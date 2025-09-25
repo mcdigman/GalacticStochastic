@@ -21,6 +21,11 @@ class IterationConfig(NamedTuple):
     nc_galaxy: int
     snr_min_preprocess: float
     snr_min_reprocess: float
+    noise_model_storage_mode: int
+    background_storage_mode: int
+    fit_state_storage_mode: int
+    inclusion_state_storage_mode: int
+    manager_storage_mode: int
 
 
 def get_iteration_config(config: dict) -> IterationConfig:
@@ -123,6 +128,13 @@ def get_iteration_config(config: dict) -> IterationConfig:
     snr_min_reprocess = float(config['iterative_fit_constants']['snr_min_reprocess'])
     assert snr_min_reprocess >= snr_min_preprocess
 
+    # select mode for the storage of the various objects
+    noise_model_storage_mode = int(config['iterative_fit_constants'].get('noise_model_storage_mode', 0))
+    background_storage_mode = int(config['iterative_fit_constants'].get('background_storage_mode', 0))
+    fit_state_storage_mode = int(config['iterative_fit_constants'].get('fit_state_storage_mode', 0))
+    inclusion_state_storage_mode = int(config['iterative_fit_constants'].get('inclusion_state_storage_mode', 0))
+    manager_storage_mode = int(config['iterative_fit_constants'].get('manager_storage_mode', 0))
+
     # make arrays into tuples to ensure the configuration is immutable
     return IterationConfig(
         max_iterations,
@@ -140,4 +152,9 @@ def get_iteration_config(config: dict) -> IterationConfig:
         nc_galaxy,
         snr_min_preprocess,
         snr_min_reprocess,
+        noise_model_storage_mode,
+        background_storage_mode,
+        fit_state_storage_mode,
+        inclusion_state_storage_mode,
+        manager_storage_mode,
     )

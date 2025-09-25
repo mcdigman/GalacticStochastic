@@ -2,7 +2,7 @@
 # values related to file io
 
 
-galaxy_dir = 'Galaxies/Galaxy4/'
+galaxy_dir = 'Galaxies/Galaxy1/'
 galaxy_file = 'galaxy_binaries.hdf5'
 
 [noise_realization]
@@ -97,6 +97,8 @@ fmax_binary = 1.0e0
 
 # number of channels to evaluate galactic background
 nc_galaxy = 3
+
+component_list = ['dgb', 'igb', 'vgb']
 
 
 [wavelet_constants]

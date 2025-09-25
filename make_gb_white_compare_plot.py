@@ -12,6 +12,7 @@ import GalacticStochastic.global_file_index as gfi
 from GalacticStochastic import config_helper
 from GalacticStochastic.galactic_fit_helpers import get_S_cyclo
 from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
+from run_gb_iterative import fetch_or_run_iterative_loop
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 mpl.rcParams['axes.linewidth'] = 1.2
@@ -74,10 +75,18 @@ if __name__ == '__main__':
     snr_thresh = 7.0
     smooth_lengthf = 6
 
-    noise_realization = gfi.get_noise_common(config, snr_thresh, wc)
+    noise_realization = gfi.get_noise_common(config, snr_thresh, wc, lc)
 
-    _, galactic_cyclo = gfi.load_processed_gb_file(config, snr_thresh, wc, nt_lim, stat_only=False)
-    _, galactic_stat = gfi.load_processed_gb_file(config, snr_thresh, wc, nt_lim, stat_only=True)
+    ifm_cyclo = fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, stat_only=False)
+    ifm_stat = fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, stat_only=True)
+
+    bgd_cyclo = ifm_cyclo.noise_manager.bgd
+    bgd_stat = ifm_stat.noise_manager.bgd
+    # _, bgd_cyclo = gfi.load_processed_gb_file(config, snr_thresh, wc, nt_lim, stat_only=False)
+    # _, bgd_stat = gfi.load_processed_gb_file(config, snr_thresh, wc, nt_lim, stat_only=True)
+
+    galactic_cyclo = bgd_cyclo.get_galactic_below_high().reshape((wc.Nt, wc.Nf, bgd_cyclo.nc_galaxy))
+    galactic_stat = bgd_stat.get_galactic_below_high().reshape((wc.Nt, wc.Nf, bgd_stat.nc_galaxy))
 
     signal_full_cyclo = galactic_cyclo + noise_realization
     signal_full_stat = galactic_stat + noise_realization

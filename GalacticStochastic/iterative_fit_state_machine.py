@@ -2,6 +2,7 @@
 
 from typing import TYPE_CHECKING, override
 
+import h5py
 import numpy as np
 
 from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
@@ -19,6 +20,10 @@ class IterativeFitState(StateManager):
         """Create the state machine object"""
         self.ic: IterationConfig = ic
         self.preprocess_mode: int = preprocess_mode
+
+        if self.ic.fit_state_storage_mode != 0:
+            msg = 'Unrecognized option for fit state storage mode'
+            raise ValueError(msg)
 
         if self.preprocess_mode == 0:
             # do not do preprocess mode
@@ -60,6 +65,34 @@ class IterativeFitState(StateManager):
         self.noise_safe_upper: bool = False
 
         self.itrn: int = 0
+
+    def store_hdf5(self, hf_in: h5py.Group) -> h5py.Group:
+        hf_state = hf_in.create_group('fit_state')
+        hf_state.attrs['storage_mode'] = self.ic.fit_state_storage_mode
+        hf_state.create_dataset('bright_converged', data=self.bright_converged)
+        hf_state.create_dataset('faint_converged', data=self.faint_converged)
+        hf_state.create_dataset('do_faint_check', data=self.do_faint_check)
+        hf_state.create_dataset('force_converge', data=self.force_converge)
+        hf_state.create_dataset('bright_converged_bright', data=self.bright_converged_bright)
+        hf_state.create_dataset('faint_converged_bright', data=self.faint_converged_bright)
+        hf_state.create_dataset('do_faint_check_bright', data=self.do_faint_check_bright)
+        hf_state.create_dataset('force_converge_bright', data=self.force_converge_bright)
+        hf_state.create_dataset('bright_converged_faint', data=self.bright_converged_faint)
+        hf_state.create_dataset('faint_converged_faint', data=self.faint_converged_faint)
+        hf_state.create_dataset('do_faint_check_faint', data=self.do_faint_check_faint)
+        hf_state.create_dataset('force_converge_faint', data=self.force_converge_faint)
+        hf_state.create_dataset('noise_safe_lower_log', data=self.noise_safe_lower_log)
+        hf_state.create_dataset('noise_safe_upper_log', data=self.noise_safe_upper_log)
+        hf_state.create_dataset('bright_state_request', data=self.bright_state_request)
+        hf_state.create_dataset('faint_state_request', data=self.faint_state_request)
+        hf_state.create_dataset('current_state', data=self.current_state)
+        hf_state.attrs['noise_safe_lower'] = self.noise_safe_lower
+        hf_state.attrs['noise_safe_upper'] = self.noise_safe_upper
+        hf_state.attrs['itrn'] = self.itrn
+        hf_state.attrs['n_itr_cut'] = self.n_itr_cut
+        hf_state.attrs['preprocess_mode'] = self.preprocess_mode
+        hf_state.attrs['creator_name'] = self.__class__.__name__
+        return hf_state
 
     @property
     def bright_state_request(self) -> tuple[bool, bool, bool, bool]:
