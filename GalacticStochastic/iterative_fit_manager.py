@@ -3,6 +3,8 @@
 from time import perf_counter
 from typing import override
 
+import h5py
+
 from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
 from GalacticStochastic.iteration_config import IterationConfig
 from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
@@ -54,6 +56,24 @@ class IterativeFitManager(StateManager):
         self.advance_state()
         self.log_state()
         self.state_check()
+
+    @override
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'iterative_manager') -> h5py.Group:
+        hf_manager = hf_in.create_group(group_name)
+        hf_manager.attrs['itrn'] = self.itrn
+        hf_manager.attrs['n_full_converged'] = self.n_full_converged
+        hf_manager.attrs['creator_name'] = self.__class__.__name__
+        hf_manager.attrs['inclusion_state_name'] = self.bis.__class__.__name__
+        hf_manager.attrs['fit_state_name'] = self.fit_state.__class__.__name__
+        hf_manager.attrs['noise_manager_name'] = self.noise_manager.__class__.__name__
+        hf_manager.attrs['ic_name'] = self.ic.__class__.__name__
+
+        # save the objects this class uses
+        _ = self.bis.store_hdf5(hf_manager, noise_recurse=0)
+        _ = self.noise_manager.store_hdf5(hf_manager)
+        _ = self.fit_state.store_hdf5(hf_manager)
+
+        return hf_manager
 
     @override
     def advance_state(self) -> None:

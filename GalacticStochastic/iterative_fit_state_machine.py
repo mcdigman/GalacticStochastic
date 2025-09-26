@@ -66,8 +66,9 @@ class IterativeFitState(StateManager):
 
         self.itrn: int = 0
 
-    def store_hdf5(self, hf_in: h5py.Group) -> h5py.Group:
-        hf_state = hf_in.create_group('fit_state')
+    @override
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'fit_state') -> h5py.Group:
+        hf_state = hf_in.create_group(group_name)
         hf_state.attrs['storage_mode'] = self.ic.fit_state_storage_mode
         _ = hf_state.create_dataset('bright_converged', data=self.bright_converged)
         _ = hf_state.create_dataset('faint_converged', data=self.faint_converged)
@@ -92,6 +93,13 @@ class IterativeFitState(StateManager):
         hf_state.attrs['n_itr_cut'] = self.n_itr_cut
         hf_state.attrs['preprocess_mode'] = self.preprocess_mode
         hf_state.attrs['creator_name'] = self.__class__.__name__
+        hf_state.attrs['ic_name'] = self.ic.__class__.__name__
+
+        # iterative fit related constants
+        hf_ic = hf_state.create_group('ic')
+        for key in self.ic._fields:
+            hf_ic.attrs[key] = getattr(self.ic, key)
+
         return hf_state
 
     @property

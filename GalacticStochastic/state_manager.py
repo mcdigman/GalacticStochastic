@@ -2,6 +2,8 @@
 
 from abc import ABC, abstractmethod
 
+import h5py
+
 
 class StateManager(ABC):
     """Objects to be handled by the IterativeFitManager should implement this interface."""
@@ -30,3 +32,7 @@ class StateManager(ABC):
     def print_report(self) -> None:
         """Do any printing desired after convergence has been achieved and the loop ends."""
         return
+
+    @abstractmethod
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'state_manager') -> h5py.Group:
+        """Store attributes, configuration, and results to an hdf5 file."""

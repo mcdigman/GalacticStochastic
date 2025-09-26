@@ -77,19 +77,23 @@ class NoiseModelManager(StateManager):
         del S_upper
         del S_lower
 
-    def store_hdf5(self, hf_in: h5py.Group) -> h5py.Group:
+    @override
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'noise_model') -> h5py.Group:
         storage_mode = self.ic.noise_model_storage_mode
-        hf_noise = hf_in.create_group('noise_model')
+        hf_noise = hf_in.create_group(group_name)
         hf_noise.attrs['creator_name'] = self.__class__.__name__
         hf_noise.attrs['storage_mode'] = storage_mode
         hf_noise.attrs['itrn'] = self.itrn
         hf_noise.attrs['itr_save'] = self.itr_save
-        hf_noise.attrs['nt_lim_snr'] = self.nt_lim_snr
         hf_noise.attrs['stat_only'] = self.stat_only
         hf_noise.attrs['noise_upper_name'] = self.noise_upper.__class__.__name__
         hf_noise.attrs['noise_lower_name'] = self.noise_lower.__class__.__name__
         hf_noise.attrs['bgd_name'] = self.bgd.__class__.__name__
         hf_noise.attrs['fit_state_name'] = self.fit_state.__class__.__name__
+        hf_noise.attrs['nt_lim_snr_name'] = self.nt_lim_snr.__class__.__name__
+        hf_noise.attrs['wc_name'] = self.wc.__class__.__name__
+        hf_noise.attrs['lc_name'] = self.lc.__class__.__name__
+        hf_noise.attrs['ic_name'] = self.ic.__class__.__name__
 
         _ = hf_noise.create_dataset('S_inst_m', data=self.S_inst_m, compression='gzip')
         _ = hf_noise.create_dataset('idx_S_save', data=self.idx_S_save, compression='gzip')
@@ -112,6 +116,27 @@ class NoiseModelManager(StateManager):
         # storing the fit state will probably be done more than once, but it shouldn't be very large
         # and it is possibly more self-descriptive that way
         _ = self.fit_state.store_hdf5(hf_noise)
+
+        # store all the configuration objects to the file
+
+        hf_nt = hf_noise.create_group('nt_lim_snr')
+        for key in self.nt_lim_snr._fields:
+            hf_nt.attrs[key] = getattr(self.nt_lim_snr, key)
+
+        # the wavelet constants
+        hf_wc = hf_noise.create_group('wc')
+        for key in self.wc._fields:
+            hf_wc.attrs[key] = getattr(self.wc, key)
+
+        # lisa related constants
+        hf_lc = hf_noise.create_group('lc')
+        for key in self.lc._fields:
+            hf_lc.attrs[key] = getattr(self.lc, key)
+
+        # iterative fit related constants
+        hf_ic = hf_noise.create_group('ic')
+        for key in self.ic._fields:
+            hf_ic.attrs[key] = getattr(self.ic, key)
 
         return hf_noise
 

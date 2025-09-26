@@ -76,9 +76,9 @@ class BGDecomposition:
         self.power_galactic_below_high: list[NDArray[np.floating]] = []
         self.power_galactic_total: list[NDArray[np.floating]] = []
 
-    def store_hdf5(self, hf_in: h5py.Group) -> h5py.Group:
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'background') -> h5py.Group:
         """Store the background to an hdf5 file"""
-        hf_background = hf_in.create_group('background')
+        hf_background = hf_in.create_group(group_name)
         hf_background.attrs['creator_name'] = self.__class__.__name__
         hf_background.attrs['storage_mode'] = self.storage_mode
         hf_background.attrs['track_mode'] = self.track_mode

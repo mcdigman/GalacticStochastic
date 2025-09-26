@@ -12,6 +12,7 @@ from LisaWaveformTools.linear_frequency_source import LinearFrequencyIntrinsicPa
 from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams
 
 if TYPE_CHECKING:
+    import h5py
     from numpy.typing import NDArray
 
     from GalacticStochastic.iteration_config import IterationConfig
@@ -101,6 +102,83 @@ class BinaryInclusionState(StateManager):
 
         self.n_faints_cur: NDArray[np.integer] = np.zeros(self.fit_state.get_n_itr_cut() + 1, dtype=np.int64)
         self.n_brights_cur: NDArray[np.integer] = np.zeros(self.fit_state.get_n_itr_cut() + 1, dtype=np.int64)
+
+    @override
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'inclusion_state', noise_recurse: int = 1) -> h5py.Group:
+        storage_mode = self.ic.inclusion_state_storage_mode
+        hf_include = hf_in.create_group(group_name)
+        hf_include.attrs['storage_mode'] = storage_mode
+        hf_include.attrs['itrn'] = self.itrn
+        hf_include.attrs['n_bin_use'] = self.n_bin_use
+        hf_include.attrs['n_tot'] = self.n_tot
+        hf_include.attrs['nt_lim_waveform'] = self.nt_lim_waveform
+        hf_include.attrs['fmin_binary'] = self.fmin_binary
+        hf_include.attrs['fmax_binary'] = self.fmax_binary
+        hf_include.attrs['noise_manager_name'] = self.noise_manager.__class__.__name__
+        hf_include.attrs['fit_state_name'] = self.fit_state.__class__.__name__
+        hf_include.attrs['waveform_manager_name'] = self.waveform_manager.__class__.__name__
+        hf_include.attrs['wc_name'] = self.wc.__class__.__name__
+        hf_include.attrs['lc_name'] = self.lc.__class__.__name__
+        hf_include.attrs['ic_name'] = self.ic.__class__.__name__
+
+        _ = hf_include.create_dataset('argbinmap', data=self.argbinmap, compression='gzip')
+        _ = hf_include.create_dataset('faints_old', data=self.faints_old, compression='gzip')
+        _ = hf_include.create_dataset('n_faints_cur', data=self.n_faints_cur, compression='gzip')
+        _ = hf_include.create_dataset('n_brights_cur', data=self.n_brights_cur, compression='gzip')
+
+        _ = hf_include.create_dataset('faints_cur', data=self.faints_cur[:self.itrn].copy(), compression='gzip')
+        _ = hf_include.create_dataset('decided', data=self.decided[:self.itrn].copy(), compression='gzip')
+        _ = hf_include.create_dataset('brights', data=self.brights[:self.itrn].copy(), compression='gzip')
+
+        if storage_mode in (0, 2):
+            # store full snrs
+            _ = hf_include.create_dataset('snrs_upper', data=self.snrs_upper[:self.itrn].copy(), compression='gzip')
+            _ = hf_include.create_dataset('snrs_lower', data=self.snrs_lower[:self.itrn].copy(), compression='gzip')
+            _ = hf_include.create_dataset('snrs_tot_upper', data=self.snrs_tot_upper[self.itrn].copy(), compression='gzip')
+            _ = hf_include.create_dataset('snrs_tot_lower', data=self.snrs_tot_lower[self.itrn].copy(), compression='gzip')
+
+        if storage_mode in (1, 3):
+            # store last snrs
+            _ = hf_include.create_dataset('snrs_upper', data=np.array([self.snrs_upper[self.itrn - 1]]), compression='gzip')
+            _ = hf_include.create_dataset('snrs_lower', data=np.array([self.snrs_lower[self.itrn - 1]]), compression='gzip')
+            _ = hf_include.create_dataset('snrs_tot_upper', data=np.array([self.snrs_tot_upper[self.itrn - 1]]), compression='gzip')
+            _ = hf_include.create_dataset('snrs_tot_lower', data=np.array([self.snrs_tot_lower[self.itrn - 1]]), compression='gzip')
+
+        if storage_mode in (2, 4):
+            # store full params
+            _ = hf_include.create_dataset('params_gb', data=self.params_gb, compression='gzip')
+
+        if storage_mode == 5:
+            # minimal storage
+            _ = hf_include.create_dataset('snrs_tot_upper', data=np.array([self.snrs_tot_upper[self.itrn - 1]]), compression='gzip')
+
+        # option to skip storing the noise manager in case it is redundant
+        if noise_recurse == 0:
+            pass
+        elif noise_recurse == 1:
+            self.noise_manager.store_hdf5(hf_include)
+        else:
+            msg = 'Unrecognized option for noise_recurse'
+            raise NotImplementedError(msg)
+
+        _ = self.fit_state.store_hdf5(hf_include)
+
+        # the wavelet constants
+        hf_wc = hf_include.create_group('wc')
+        for key in self.wc._fields:
+            hf_wc.attrs[key] = getattr(self.wc, key)
+
+        # lisa related constants
+        hf_lc = hf_include.create_group('lc')
+        for key in self.lc._fields:
+            hf_lc.attrs[key] = getattr(self.lc, key)
+
+        # iterative fit related constants
+        hf_ic = hf_include.create_group('ic')
+        for key in self.ic._fields:
+            hf_ic.attrs[key] = getattr(self.ic, key)
+
+        return hf_include
 
     def sustain_snr_helper(self) -> None:
         """Helper to carry forward any other snr values we know from a previous iteration"""
