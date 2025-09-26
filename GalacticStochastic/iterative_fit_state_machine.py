@@ -27,7 +27,7 @@ class IterativeFitState(StateManager):
 
         if self.preprocess_mode == 0:
             # do not do preprocess mode
-            self.n_itr_cut = ic.max_iterations
+            self.n_itr_cut: int = ic.max_iterations
         elif self.preprocess_mode == 1:
             # do standard preprocessing
             self.n_itr_cut = 1
@@ -69,23 +69,23 @@ class IterativeFitState(StateManager):
     def store_hdf5(self, hf_in: h5py.Group) -> h5py.Group:
         hf_state = hf_in.create_group('fit_state')
         hf_state.attrs['storage_mode'] = self.ic.fit_state_storage_mode
-        hf_state.create_dataset('bright_converged', data=self.bright_converged)
-        hf_state.create_dataset('faint_converged', data=self.faint_converged)
-        hf_state.create_dataset('do_faint_check', data=self.do_faint_check)
-        hf_state.create_dataset('force_converge', data=self.force_converge)
-        hf_state.create_dataset('bright_converged_bright', data=self.bright_converged_bright)
-        hf_state.create_dataset('faint_converged_bright', data=self.faint_converged_bright)
-        hf_state.create_dataset('do_faint_check_bright', data=self.do_faint_check_bright)
-        hf_state.create_dataset('force_converge_bright', data=self.force_converge_bright)
-        hf_state.create_dataset('bright_converged_faint', data=self.bright_converged_faint)
-        hf_state.create_dataset('faint_converged_faint', data=self.faint_converged_faint)
-        hf_state.create_dataset('do_faint_check_faint', data=self.do_faint_check_faint)
-        hf_state.create_dataset('force_converge_faint', data=self.force_converge_faint)
-        hf_state.create_dataset('noise_safe_lower_log', data=self.noise_safe_lower_log)
-        hf_state.create_dataset('noise_safe_upper_log', data=self.noise_safe_upper_log)
-        hf_state.create_dataset('bright_state_request', data=self.bright_state_request)
-        hf_state.create_dataset('faint_state_request', data=self.faint_state_request)
-        hf_state.create_dataset('current_state', data=self.current_state)
+        _ = hf_state.create_dataset('bright_converged', data=self.bright_converged)
+        _ = hf_state.create_dataset('faint_converged', data=self.faint_converged)
+        _ = hf_state.create_dataset('do_faint_check', data=self.do_faint_check)
+        _ = hf_state.create_dataset('force_converge', data=self.force_converge)
+        _ = hf_state.create_dataset('bright_converged_bright', data=self.bright_converged_bright)
+        _ = hf_state.create_dataset('faint_converged_bright', data=self.faint_converged_bright)
+        _ = hf_state.create_dataset('do_faint_check_bright', data=self.do_faint_check_bright)
+        _ = hf_state.create_dataset('force_converge_bright', data=self.force_converge_bright)
+        _ = hf_state.create_dataset('bright_converged_faint', data=self.bright_converged_faint)
+        _ = hf_state.create_dataset('faint_converged_faint', data=self.faint_converged_faint)
+        _ = hf_state.create_dataset('do_faint_check_faint', data=self.do_faint_check_faint)
+        _ = hf_state.create_dataset('force_converge_faint', data=self.force_converge_faint)
+        _ = hf_state.create_dataset('noise_safe_lower_log', data=self.noise_safe_lower_log)
+        _ = hf_state.create_dataset('noise_safe_upper_log', data=self.noise_safe_upper_log)
+        _ = hf_state.create_dataset('bright_state_request', data=self.bright_state_request)
+        _ = hf_state.create_dataset('faint_state_request', data=self.faint_state_request)
+        _ = hf_state.create_dataset('current_state', data=self.current_state)
         hf_state.attrs['noise_safe_lower'] = self.noise_safe_lower
         hf_state.attrs['noise_safe_upper'] = self.noise_safe_upper
         hf_state.attrs['itrn'] = self.itrn

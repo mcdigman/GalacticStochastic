@@ -384,11 +384,11 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str = 'skip', 
             for key in wc._fields:
                 wc_group.attrs[key] = getattr(wc, key)
 
-            hf.create_dataset('wavelet_norm', data=wavelet_norm, compression='gzip')
-            hf.create_dataset('fd', data=fd, compression='gzip')
-            hf.create_dataset('Nfsam', data=Nfsam, compression='gzip')
-            hf.create_dataset('evcs', data=evcs, compression='gzip')
-            hf.create_dataset('evss', data=evss, compression='gzip')
+            _ = hf.create_dataset('wavelet_norm', data=wavelet_norm, compression='gzip')
+            _ = hf.create_dataset('fd', data=fd, compression='gzip')
+            _ = hf.create_dataset('Nfsam', data=Nfsam, compression='gzip')
+            _ = hf.create_dataset('evcs', data=evcs, compression='gzip')
+            _ = hf.create_dataset('evss', data=evss, compression='gzip')
             hf.close()
             t3 = time()
             print('output time', t3 - tf, 's')

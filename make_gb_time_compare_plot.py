@@ -82,20 +82,20 @@ if __name__ == '__main__':
     fig = plt.figure(figsize=(5.4, 3.5))
     ax = fig.subplots(1)
     fig.subplots_adjust(wspace=0.0, hspace=0.0, left=0.13, top=0.99, right=0.99, bottom=0.12)
-    ax.loglog(
+    _ = ax.loglog(
         fs[1:],
         wc.dt * (S_stat_smooth_m[:, 1:, :2].mean(axis=2) - S_stat_offset[1:] + S_inst_m[1:, 0]).T,
         alpha=0.5,
         label='_nolegend_',
     )
     ax.set_prop_cycle(None)
-    ax.loglog(fs[1:], wc.dt * (S_fit_evolve_m[:] + S_inst_m[1:, 0]).T, linewidth=3)
+    _ = ax.loglog(fs[1:], wc.dt * (S_fit_evolve_m[:] + S_inst_m[1:, 0]).T, linewidth=3)
     ax.set_prop_cycle(None)
-    ax.loglog(fs[1:], wc.dt * (S_inst_m[1:, 0]), 'k--')
+    _ = ax.loglog(fs[1:], wc.dt * (S_inst_m[1:, 0]), 'k--')
     ax.tick_params(axis='both', direction='in', which='both', top=True, right=True)
-    plt.ylim([wc.dt * 2.0e-44, wc.dt * 2.0e-43])
-    plt.xlim([3.0e-4, 6.0e-3])
-    plt.xlabel('f [Hz]')
-    plt.ylabel(r'$S^{AE}(f)$ [Hz$^{-1}$]')
-    plt.legend(labels=['1 year', '2 years', '4 years', '8 years'])
+    _ = plt.ylim([wc.dt * 2.0e-44, wc.dt * 2.0e-43])
+    _ = plt.xlim([3.0e-4, 6.0e-3])
+    _ = plt.xlabel('f [Hz]')
+    _ = plt.ylabel(r'$S^{AE}(f)$ [Hz$^{-1}$]')
+    _ = plt.legend(labels=['1 year', '2 years', '4 years', '8 years'])
     plt.show()

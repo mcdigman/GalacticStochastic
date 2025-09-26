@@ -1027,4 +1027,4 @@ def test_wavemaket_1d(f0_mult, f0p_mult, f0pp_mult, rr_model):
 
 
 if __name__ == '__main__':
-    pytest.cmdline.main(['tests/test_wavemaket.py'])
+    _ = pytest.cmdline.main(['tests/test_wavemaket.py'])

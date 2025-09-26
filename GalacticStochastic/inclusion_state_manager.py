@@ -23,18 +23,20 @@ if TYPE_CHECKING:
 
 
 def unpack_params_gb(params_in: NDArray[np.floating]) -> SourceParams:
+    assert len(params_in.shape) == 1
+    assert params_in.size == 8
     # Ecliptic latitude to cosine of ecliptic colatitude
-    costh = np.cos(np.pi / 2 - params_in[1])
+    costh = float(np.cos(np.pi / 2 - params_in[1]))
     # Ecliptic longitude
-    phi = params_in[2]
+    phi = float(params_in[2])
     # Cosine of inclination angle
-    cosi = np.cos(params_in[5])
+    cosi = float(np.cos(params_in[5]))
     # Polarization angle
-    psi = params_in[7]
-    amp0_t = params_in[0]
-    F0 = params_in[3]
-    FTd0 = params_in[4]
-    phi0 = params_in[6] + np.pi
+    psi = float(params_in[7])
+    amp0_t = float(params_in[0])
+    F0 = float(params_in[3])
+    FTd0 = float(params_in[4])
+    phi0 = float(params_in[6] + np.pi)
     params_extrinsic = ExtrinsicParams(costh, phi, cosi, psi)
     params_intrinsic = LinearFrequencyIntrinsicParams(amp0_t, phi0, F0, FTd0)
     return SourceParams(intrinsic=params_intrinsic, extrinsic=params_extrinsic)
@@ -55,16 +57,16 @@ class BinaryInclusionState(StateManager):
         snrs_tot_in: NDArray[np.floating] | None = None,
     ) -> None:
         """Class that stores information about which component of the galactic signal binaries belong to."""
-        self.wc = wc
-        self.ic = ic
-        self.lc = lc
-        self.nt_lim_waveform = nt_lim_waveform
-        self.noise_manager = noise_manager
-        self.fit_state = fit_state
+        self.wc: WDMWaveletConstants = wc
+        self.ic: IterationConfig = ic
+        self.lc: LISAConstants = lc
+        self.nt_lim_waveform: PixelGenericRange = nt_lim_waveform
+        self.noise_manager: NoiseModelManager = noise_manager
+        self.fit_state: IterativeFitState = fit_state
 
-        self.n_tot = params_gb_in.shape[0]
-        self.fmin_binary = max(0.0, ic.fmin_binary)
-        self.fmax_binary = min((wc.Nf - 1) * wc.DF, ic.fmax_binary)
+        self.n_tot: int = params_gb_in.shape[0]
+        self.fmin_binary: float = max(0.0, ic.fmin_binary)
+        self.fmax_binary: float = min((wc.Nf - 1) * wc.DF, ic.fmax_binary)
 
         if snrs_tot_in is not None:
             faints_in = (
@@ -75,30 +77,30 @@ class BinaryInclusionState(StateManager):
         else:
             faints_in = (params_gb_in[:, 3] >= self.fmax_binary) | (params_gb_in[:, 3] < self.fmin_binary)
 
-        self.argbinmap = np.argwhere(~faints_in).flatten()
-        self.faints_old = faints_in[self.argbinmap]
+        self.argbinmap: NDArray[np.integer] = np.argwhere(~faints_in).flatten()
+        self.faints_old: NDArray[np.bool_] = faints_in[self.argbinmap]
         assert self.faints_old.sum() == 0.0
         self.params_gb: NDArray[np.floating] = params_gb_in[self.argbinmap]
-        self.n_bin_use = self.argbinmap.size
+        self.n_bin_use: int = self.argbinmap.size
 
         del params_gb_in
         del faints_in
 
-        self.snrs_upper = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use, lc.nc_snr))
-        self.snrs_lower = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use, lc.nc_snr))
-        self.snrs_tot_lower = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use))
-        self.snrs_tot_upper = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use))
-        self.brights = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use), dtype=np.bool_)
-        self.decided = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use), dtype=np.bool_)
-        self.faints_cur = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use), dtype=np.bool_)
+        self.snrs_upper: NDArray[np.floating] = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use, lc.nc_snr))
+        self.snrs_lower: NDArray[np.floating] = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use, lc.nc_snr))
+        self.snrs_tot_lower: NDArray[np.floating] = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use))
+        self.snrs_tot_upper: NDArray[np.floating] = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use))
+        self.brights: NDArray[np.bool_] = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use), dtype=np.bool_)
+        self.decided: NDArray[np.bool_] = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use), dtype=np.bool_)
+        self.faints_cur: NDArray[np.bool_] = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use), dtype=np.bool_)
 
         params0 = unpack_params_gb(self.params_gb[0])
         self.waveform_manager = LinearFrequencyWaveletWaveformTime(params0, wc, self.lc, self.nt_lim_waveform)
 
-        self.itrn = 0
+        self.itrn: int = 0
 
-        self.n_faints_cur = np.zeros(self.fit_state.get_n_itr_cut() + 1, dtype=np.int64)
-        self.n_brights_cur = np.zeros(self.fit_state.get_n_itr_cut() + 1, dtype=np.int64)
+        self.n_faints_cur: NDArray[np.integer] = np.zeros(self.fit_state.get_n_itr_cut() + 1, dtype=np.int64)
+        self.n_brights_cur: NDArray[np.integer] = np.zeros(self.fit_state.get_n_itr_cut() + 1, dtype=np.int64)
 
     def sustain_snr_helper(self) -> None:
         """Helper to carry forward any other snr values we know from a previous iteration"""
@@ -134,17 +136,17 @@ class BinaryInclusionState(StateManager):
     def delta_faint_check_helper(self) -> int:
         """Get the difference in the number of faint binaries between the last two iterations"""
         if self.itrn - 1 == 0:
-            delta_faints = self.n_faints_cur[self.itrn - 1]
+            delta_faints = int(self.n_faints_cur[self.itrn - 1])
         else:
-            delta_faints = self.n_faints_cur[self.itrn - 1] - self.n_faints_cur[self.itrn - 2]
+            delta_faints = int(self.n_faints_cur[self.itrn - 1] - self.n_faints_cur[self.itrn - 2])
         return delta_faints
 
     def delta_bright_check_helper(self) -> int:
         """Get the difference in the number of bright binaries between the last two iterations"""
         if self.itrn - 1 == 0:
-            delta_brights = self.n_brights_cur[self.itrn - 1]
+            delta_brights = int(self.n_brights_cur[self.itrn - 1])
         else:
-            delta_brights = self.n_brights_cur[self.itrn - 1] - self.n_brights_cur[self.itrn - 2]
+            delta_brights = int(self.n_brights_cur[self.itrn - 1] - self.n_brights_cur[self.itrn - 2])
         return delta_brights
 
     def run_binary_coadd(self, itrb: int) -> None:
@@ -199,12 +201,12 @@ class BinaryInclusionState(StateManager):
             snr_cut_faint_loc = self.ic.snr_min[itrn]
 
         if not self.fit_state.get_faint_converged():
-            faint_candidate = self.snrs_tot_lower[itrn, itrb] < snr_cut_faint_loc
+            faint_candidate = bool(self.snrs_tot_lower[itrn, itrb] < snr_cut_faint_loc)
         else:
             faint_candidate = False
 
         if not self.fit_state.get_bright_converged():
-            bright_candidate = self.snrs_tot_upper[itrn, itrb] >= self.ic.snr_cut_bright[itrn]
+            bright_candidate = bool(self.snrs_tot_upper[itrn, itrb] >= self.ic.snr_cut_bright[itrn])
         else:
             bright_candidate = False
 
@@ -278,7 +280,7 @@ class BinaryInclusionState(StateManager):
 
         self.decided[self.itrn] = self.brights[self.itrn] | self.faints_cur[self.itrn] | self.faints_old
 
-        idxbs = np.argwhere(~self.decided[self.itrn]).flatten()
+        idxbs: NDArray[np.integer] = np.argwhere(~self.decided[self.itrn]).flatten()
 
         tib = perf_counter()
 
@@ -295,8 +297,8 @@ class BinaryInclusionState(StateManager):
         # copy forward prior calculations of snr calculations that were skipped in this loop iteration
         self.sustain_snr_helper()
 
-        self.n_brights_cur[self.itrn] = self.brights[self.itrn].sum()
-        self.n_faints_cur[self.itrn] = self.faints_cur[self.itrn].sum()
+        self.n_brights_cur[self.itrn] = int(self.brights[self.itrn].sum())
+        self.n_faints_cur[self.itrn] = int(self.faints_cur[self.itrn].sum())
 
         self.itrn += 1
 
@@ -317,10 +319,10 @@ class BinaryInclusionState(StateManager):
         """Do any printing desired after convergence has been achieved and the loop ends"""
         Tobs_consider_yr = (self.noise_manager.nt_lim_snr.nx_max - self.noise_manager.nt_lim_snr.nx_min) * self.wc.DT / gc.SECSYEAR
         n_consider = self.n_bin_use
-        n_faint = self.faints_old.sum()
-        n_faint2 = self.faints_cur[self.itrn - 1].sum()
-        n_bright = self.brights[self.itrn - 1].sum()
-        n_ambiguous = (~(self.faints_old | self.brights[self.itrn - 1] | self.faints_cur[self.itrn - 1])).sum()
+        n_faint = int(self.faints_old.sum())
+        n_faint2 = int(self.faints_cur[self.itrn - 1].sum())
+        n_bright = int(self.brights[self.itrn - 1].sum())
+        n_ambiguous = int((~(self.faints_old | self.brights[self.itrn - 1] | self.faints_cur[self.itrn - 1])).sum())
         print(
             'Out of %10d total binaries, %10d were deemed undetectable by a previous run, %10d were considered here.'
             % (self.n_tot, self.n_tot - n_consider, n_consider),

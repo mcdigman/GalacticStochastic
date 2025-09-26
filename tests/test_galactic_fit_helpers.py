@@ -120,7 +120,7 @@ def test_filter_periods_fft1(itrk) -> None:
 
     if np.abs(np.int64(wc.Tobs / gc.SECSYEAR * itrk) - wc.Tobs / gc.SECSYEAR * itrk) > 0.01:
         with pytest.warns(UserWarning, match='fft filtering expects periods to be integer fraction of total time:'):
-            filter_periods_fft(xs, wc.Nt, period_list, wc)
+            _ = filter_periods_fft(xs, wc.Nt, period_list, wc)
         return
 
     r_fft1, amp_got, _ = filter_periods_fft(xs, wc.Nt, period_list, wc)

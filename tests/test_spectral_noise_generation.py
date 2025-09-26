@@ -36,7 +36,7 @@ def test_unit_noise_generation_stat(scale_mult) -> None:
     noise_realization = noise_model_stat.generate_dense_noise()
 
     for itrc in range(nc_noise):
-        unit_normal_battery(noise_realization[:, 1:, itrc].flatten(), mult=np.sqrt(scale_mult), do_assert=True)
+        _ = unit_normal_battery(noise_realization[:, 1:, itrc].flatten(), mult=np.sqrt(scale_mult), do_assert=True)
 
     freq_mult = np.sqrt(scale_mult) * np.sqrt(ND // 2)
 
@@ -44,12 +44,12 @@ def test_unit_noise_generation_stat(scale_mult) -> None:
 
     for itrc in range(nc_noise):
         noise_realization_freq = inverse_wavelet_freq(noise_realization[:, :, itrc], wc.Nf, wc.Nt)
-        unit_normal_battery(np.asarray(np.real(noise_realization_freq), dtype=np.float64), mult=freq_mult, do_assert=True)
-        unit_normal_battery(np.asarray(np.imag(noise_realization_freq), dtype=np.float64), mult=freq_mult, do_assert=True)
+        _ = unit_normal_battery(np.asarray(np.real(noise_realization_freq), dtype=np.float64), mult=freq_mult, do_assert=True)
+        _ = unit_normal_battery(np.asarray(np.imag(noise_realization_freq), dtype=np.float64), mult=freq_mult, do_assert=True)
         noise_realization_time = np.asarray(fft.irfft(noise_realization_freq), dtype=np.float64)
-        unit_normal_battery(noise_realization_time, mult=np.sqrt(scale_mult), do_assert=True)
+        _ = unit_normal_battery(noise_realization_time, mult=np.sqrt(scale_mult), do_assert=True)
         noise_realization_time = np.asarray(inverse_wavelet_time(noise_realization[:, :, itrc], wc.Nf, wc.Nt), dtype=np.float64)
-        unit_normal_battery(noise_realization_time, mult=np.sqrt(scale_mult), do_assert=True)
+        _ = unit_normal_battery(noise_realization_time, mult=np.sqrt(scale_mult), do_assert=True)
 
 
 @pytest.mark.parametrize('var_select', ['const1', 'const2', 'cos1'])
@@ -98,7 +98,7 @@ def test_unit_noise_generation_cyclo_time(var_select) -> None:
 
     for itrc in range(nc_noise):
         for itrt in range(wc.Nt):
-            unit_normal_battery(
+            _ = unit_normal_battery(
                 noise_realization_var[itrt, :, itrc].flatten(), mult=np.sqrt(r_cyclo[itrt, itrc]), do_assert=True,
             )
 
@@ -107,11 +107,11 @@ def test_unit_noise_generation_cyclo_time(var_select) -> None:
         noise_realization_time = (
             1.0 / np.sqrt(r_full[:, itrc]) * inverse_wavelet_time(noise_realization_var[:, :, itrc], wc.Nf, wc.Nt)
         )
-        unit_normal_battery(noise_realization_time, do_assert=True)
+        _ = unit_normal_battery(noise_realization_time, do_assert=True)
         # check frequency components were preserved
         noise_realization_freq = np.fft.rfft(noise_realization_time)
-        unit_normal_battery(np.real(noise_realization_freq), mult=np.sqrt(ND // 2), do_assert=True)
-        unit_normal_battery(np.imag(noise_realization_freq), mult=np.sqrt(ND // 2), do_assert=True)
+        _ = unit_normal_battery(np.real(noise_realization_freq), mult=np.sqrt(ND // 2), do_assert=True)
+        _ = unit_normal_battery(np.imag(noise_realization_freq), mult=np.sqrt(ND // 2), do_assert=True)
 
 
 def test_noise_normalization_match() -> None:
@@ -146,12 +146,12 @@ def test_noise_normalization_match() -> None:
         # we are not currently estimating the spectrum correctly in the wavelet domain
         # also dont't hit the frequencies with big dips
         arglim = np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs)
-        unit_normal_battery(
+        _ = unit_normal_battery(
             np.real(noise_realization_freq[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
             mult=1.0,
             do_assert=True,
         )
-        unit_normal_battery(
+        _ = unit_normal_battery(
             np.imag(noise_realization_freq[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
             mult=1.0,
             do_assert=True,
@@ -167,12 +167,12 @@ def test_noise_normalization_match() -> None:
         # we are not currently estimating the spectrum correctly in the wavelet domain
         # also dont't hit the frequencies with big dips
         arglim = np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs)
-        unit_normal_battery(
+        _ = unit_normal_battery(
             np.real(noise_realization_freq_var[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
             mult=1.0,
             do_assert=True,
         )
-        unit_normal_battery(
+        _ = unit_normal_battery(
             np.imag(noise_realization_freq_var[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
             mult=1.0,
             do_assert=True,

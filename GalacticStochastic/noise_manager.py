@@ -40,7 +40,7 @@ class NoiseModelManager(StateManager):
         self.lc: LISAConstants = lc
         self.wc: WDMWaveletConstants = wc
         self.bgd: BGDecomposition = bgd
-        self.fit_state = fit_state
+        self.fit_state: IterativeFitState = fit_state
         self.S_inst_m: NDArray[np.floating] = S_inst_m
         self.stat_only: int = stat_only
         self.nt_lim_snr: PixelGenericRange = nt_lim_snr
@@ -54,11 +54,11 @@ class NoiseModelManager(StateManager):
                 self.fit_state.get_n_itr_cut() - 1,
             ],
         )
-        self.itr_save = 0
+        self.itr_save: int = 0
 
-        self.S_record_upper = np.zeros((self.idx_S_save.size, wc.Nt, wc.Nf, self.bgd.nc_galaxy))
-        self.S_record_lower = np.zeros((self.idx_S_save.size, wc.Nt, wc.Nf, self.bgd.nc_galaxy))
-        self.S_final = np.zeros((wc.Nt, wc.Nf, self.bgd.nc_galaxy))
+        self.S_record_upper: NDArray[np.floating] = np.zeros((self.idx_S_save.size, wc.Nt, wc.Nf, self.bgd.nc_galaxy))
+        self.S_record_lower: NDArray[np.floating] = np.zeros((self.idx_S_save.size, wc.Nt, wc.Nf, self.bgd.nc_galaxy))
+        self.S_final: NDArray[np.floating] = np.zeros((wc.Nt, wc.Nf, self.bgd.nc_galaxy))
 
         S_upper: NDArray[np.floating] = np.zeros((wc.Nt, wc.Nf, self.bgd.nc_galaxy))
         S_upper[:] = self.S_inst_m
@@ -91,27 +91,27 @@ class NoiseModelManager(StateManager):
         hf_noise.attrs['bgd_name'] = self.bgd.__class__.__name__
         hf_noise.attrs['fit_state_name'] = self.fit_state.__class__.__name__
 
-        hf_noise.create_dataset('S_inst_m', data=self.S_inst_m, compression='gzip')
-        hf_noise.create_dataset('idx_S_save', data=self.idx_S_save, compression='gzip')
+        _ = hf_noise.create_dataset('S_inst_m', data=self.S_inst_m, compression='gzip')
+        _ = hf_noise.create_dataset('idx_S_save', data=self.idx_S_save, compression='gzip')
 
         # at least store the history of the mean spectrum
-        hf_noise.create_dataset('S_record_upper_mean', data=np.mean(self.S_record_upper, axis=1), compression='gzip')
-        hf_noise.create_dataset('S_record_lower_mean', data=np.mean(self.S_record_lower, axis=1), compression='gzip')
+        _ = hf_noise.create_dataset('S_record_upper_mean', data=np.mean(self.S_record_upper, axis=1), compression='gzip')
+        _ = hf_noise.create_dataset('S_record_lower_mean', data=np.mean(self.S_record_lower, axis=1), compression='gzip')
 
         if storage_mode in (1, 2):
             # can safely be rederived as long as bgd is stored
-            hf_noise.create_dataset('S_record_final', data=self.S_record_lower, compression='gzip')
+            _ = hf_noise.create_dataset('S_record_final', data=self.S_record_lower, compression='gzip')
 
         if storage_mode == 2:
             # full versions of these potentially take a lot of memory, and aren't always needed so don't necessarily want to write them to disk
-            hf_noise.create_dataset('S_record_upper', data=self.S_record_upper, compression='gzip')
-            hf_noise.create_dataset('S_record_lower', data=self.S_record_lower, compression='gzip')
+            _ = hf_noise.create_dataset('S_record_upper', data=self.S_record_upper, compression='gzip')
+            _ = hf_noise.create_dataset('S_record_lower', data=self.S_record_lower, compression='gzip')
 
-        self.bgd.store_hdf5(hf_noise)
+        _ = self.bgd.store_hdf5(hf_noise)
 
         # storing the fit state will probably be done more than once, but it shouldn't be very large
         # and it is possibly more self-descriptive that way
-        self.fit_state.store_hdf5(hf_noise)
+        _ = self.fit_state.store_hdf5(hf_noise)
 
         return hf_noise
 

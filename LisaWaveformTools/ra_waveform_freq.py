@@ -550,19 +550,19 @@ def compute_separation_vectors(
         - The guiding center is computed as the average position of all three spacecraft.
 
     """
-    kv = tb.kv
-    x = sc_pos.x
-    y = sc_pos.y
-    z = sc_pos.z
+    kv: NDArray[np.floating] = tb.kv
+    x: NDArray[np.floating] = sc_pos.x
+    y: NDArray[np.floating] = sc_pos.y
+    z: NDArray[np.floating] = sc_pos.z
 
-    n_sc = x.shape[0]
+    n_sc: int = x.shape[0]
     # manually average over n_sc to get coordinates of the guiding center
-    xa = (x[0] + x[1] + x[2]) / n_sc
-    ya = (y[0] + y[1] + y[2]) / n_sc
-    za = (z[0] + z[1] + z[2]) / n_sc
+    xa: float = (x[0] + x[1] + x[2]) / n_sc
+    ya: float = (y[0] + y[1] + y[2]) / n_sc
+    za: float = (z[0] + z[1] + z[2]) / n_sc
 
     # manual dot product with n_sc
-    kdotx = lc.t_arm * (xa * kv[0] + ya * kv[1] + za * kv[2])
+    kdotx: float = lc.t_arm * (xa * kv[0] + ya * kv[1] + za * kv[2])
 
     r12 = sc_sep.r12
     r13 = sc_sep.r13
@@ -623,18 +623,18 @@ def get_sc_scalar_pos(
         - This analytic orbit model assumes a perfectly equilateral triangle with fixed arm length, neglecting small trailing and breathing motions.
 
     """
-    sin_beta = sc_phasing.sin_beta
-    cos_beta = sc_phasing.cos_beta
+    sin_beta: NDArray[np.floating] = sc_phasing.sin_beta
+    cos_beta: NDArray[np.floating] = sc_phasing.cos_beta
 
-    alpha = 2 * np.pi * lc.fm * t + lc.kappa0
-    sa = np.sin(alpha)
-    ca = np.cos(alpha)
+    alpha: float = 2 * np.pi * lc.fm * t + lc.kappa0
+    sa: float = np.sin(alpha)
+    ca: float = np.cos(alpha)
 
-    x = sc_pos.x
-    y = sc_pos.y
-    z = sc_pos.z
+    x: NDArray[np.floating] = sc_pos.x
+    y: NDArray[np.floating] = sc_pos.y
+    z: NDArray[np.floating] = sc_pos.z
 
-    n_sc = x.shape[0]
+    n_sc: int = x.shape[0]
     for itrc in range(n_sc):
         x[itrc] = lc.r_orbit * ca + sa * ca * sin_beta[itrc] - (1.0 + sa * sa) * cos_beta[itrc]
         y[itrc] = lc.r_orbit * sa + sa * ca * cos_beta[itrc] - (1.0 + ca * ca) * sin_beta[itrc]
@@ -764,7 +764,7 @@ def get_wavefront_time(
         None. The function updates `waveform_time` in place.
 
     """
-    kdotx = lc.t_arm * (sv.xa * tb.kv[0] + sv.ya * tb.kv[1] + sv.za * tb.kv[2])
+    kdotx: NDArray[np.floating] = lc.t_arm * (sv.xa * tb.kv[0] + sv.ya * tb.kv[1] + sv.za * tb.kv[2])
     wavefront_time[:] = ts - kdotx
 
 

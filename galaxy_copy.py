@@ -47,8 +47,8 @@ params_igb[:, 0] *= 10
 params_vgb[:, 0] *= 10
 
 for itrl in range(n_par_gb):
-    hf_dgb_cat.create_dataset(labels_gb[itrl], data=params_dgb[:, itrl], compression='gzip')
-    hf_igb_cat.create_dataset(labels_gb[itrl], data=params_igb[:, itrl], compression='gzip')
-    hf_vgb_cat.create_dataset(labels_gb[itrl], data=params_vgb[:, itrl], compression='gzip')
+    _ = hf_dgb_cat.create_dataset(labels_gb[itrl], data=params_dgb[:, itrl], compression='gzip')
+    _ = hf_igb_cat.create_dataset(labels_gb[itrl], data=params_igb[:, itrl], compression='gzip')
+    _ = hf_vgb_cat.create_dataset(labels_gb[itrl], data=params_vgb[:, itrl], compression='gzip')
 
 hf_out.close()

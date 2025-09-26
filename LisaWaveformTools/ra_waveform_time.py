@@ -43,16 +43,16 @@ def phase_wrap_helper(
     assert PT.shape[0] > 0
 
     # the number of channels we need to handle phases for
-    nc_loc = AET_PT.shape[0]
-    n_t = AET_PT.shape[1]
+    nc_loc: int = AET_PT.shape[0]
+    n_t: int = AET_PT.shape[1]
 
     for itrc in range(nc_loc):
         # Get the starting perturbation to the phase
-        p_old = (AET_PT[itrc, 0] - PT[0]) % (2 * np.pi)
-        j = 0.0
+        p_old: float = (AET_PT[itrc, 0] - PT[0]) % (2 * np.pi)
+        j: float = 0.0
         for n in range(n_t):
             # Isolate just the perturbation to the intrinsic phase
-            p = (AET_PT[itrc, n] - PT[n]) % (2 * np.pi)
+            p: float = (AET_PT[itrc, n] - PT[n]) % (2 * np.pi)
 
             # If the phase has increased or decreased more than 6 (<~2 pi)
             # try absorbing that change into the reported phase permanently,
@@ -100,10 +100,10 @@ def spacecraft_channel_deriv_helper(spacecraft_channels: AntennaResponseChannels
 @njit(fastmath=True)
 def edge_rise_multiplier_helper(t: float, er: EdgeRiseModel, lc: LISAConstants) -> float:
     """Helper for getting LISA response in frequency domain"""
-    x = 1.0
-    Tstart = er.Tstart
-    Tend = er.Tend
-    t_rise = lc.t_rise
+    x: float = 1.0
+    Tstart: float = er.Tstart
+    Tend: float = er.Tend
+    t_rise: float = lc.t_rise
     if lc.rise_mode == 0:
         if Tstart < t < Tstart + t_rise:
             x = 0.5 * (1.0 - np.cos(np.pi * (t - Tstart) / t_rise))
@@ -200,19 +200,19 @@ def amp_phase_loop_helper(F: NDArray[np.floating], T: NDArray[np.floating], wave
     # but I am not sure if including such delta functions would be better in other use cases.
     # The code implicitly assumes postive frequencies.
 
-    nc_channel = spacecraft_channels.RR.shape[0]
-    AET_P = AET_waveform.P
-    AET_A = AET_waveform.A
-    AET_X = AET_waveform.X
+    nc_channel: int = spacecraft_channels.RR.shape[0]
+    AET_P: NDArray[np.floating] = AET_waveform.P
+    AET_A: NDArray[np.floating] = AET_waveform.A
+    AET_X: NDArray[np.floating] = AET_waveform.X
 
-    wave_P = waveform.P
-    wave_A = waveform.A
-    wave_X = waveform.X
+    wave_P: NDArray[np.floating] = waveform.P
+    wave_A: NDArray[np.floating] = waveform.A
+    wave_X: NDArray[np.floating] = waveform.X
 
-    RR_loc = spacecraft_channels.RR
-    II_loc = spacecraft_channels.II
-    dRR_loc = spacecraft_channels.dRR
-    dII_loc = spacecraft_channels.dII
+    RR_loc: NDArray[np.floating] = spacecraft_channels.RR
+    II_loc: NDArray[np.floating] = spacecraft_channels.II
+    dRR_loc: NDArray[np.floating] = spacecraft_channels.dRR
+    dII_loc: NDArray[np.floating] = spacecraft_channels.dII
 
     assert len(AET_P.shape) == 2
     assert len(F.shape) == 1
@@ -228,19 +228,19 @@ def amp_phase_loop_helper(F: NDArray[np.floating], T: NDArray[np.floating], wave
     assert 0 <= nx_lim.nx_min <= nx_lim.nx_max <= F.shape[0]
 
     for n in prange(nx_lim.nx_min, nx_lim.nx_max):
-        f_on_f = F[n] / lc.fstr
+        f_on_f: float = F[n] / lc.fstr
 
         # including TDI + fractional frequency modifiers
-        Ampx = wave_A[n] * (8 * f_on_f * np.sin(f_on_f))
+        Ampx: float = wave_A[n] * (8 * f_on_f * np.sin(f_on_f))
         for itrc in range(nc_channel):
-            RR = RR_loc[itrc, n]
-            II = II_loc[itrc, n]
-            dRR = dRR_loc[itrc, n]
-            dII = dII_loc[itrc, n]
+            RR: float = RR_loc[itrc, n]
+            II: float = II_loc[itrc, n]
+            dRR: float = dRR_loc[itrc, n]
+            dII: float = dII_loc[itrc, n]
 
             if RR == 0.0 and II == 0.0:
                 # Handle zero denominator phase.
-                p = 0.0
+                p: float = 0.0
 
                 # Handle zero denominator FT without a delta function.
                 # Note that the second derivative could be more complicated here,
