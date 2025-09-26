@@ -58,8 +58,14 @@ class IterativeFitManager(StateManager):
         self.state_check()
 
     @override
-    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'iterative_manager') -> h5py.Group:
-        hf_manager = hf_in.create_group(group_name)
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'iterative_manager', group_mode: int = 0) -> h5py.Group:
+        if group_mode == 0:
+            hf_manager = hf_in.create_group(group_name)
+        elif group_mode == 1:
+            hf_manager = hf_in
+        else:
+            msg = 'Unrecognized option for group mode'
+            raise NotImplementedError(msg)
         hf_manager.attrs['itrn'] = self.itrn
         hf_manager.attrs['n_full_converged'] = self.n_full_converged
         hf_manager.attrs['creator_name'] = self.__class__.__name__

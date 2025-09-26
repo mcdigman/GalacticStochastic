@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import h5py
 import numpy as np
+from numpy.testing import assert_allclose
 
 from GalacticStochastic.galactic_fit_helpers import get_S_cyclo
 from WaveletWaveforms.sparse_waveform_functions import SparseWaveletWaveform, sparse_addition_helper
 
 if TYPE_CHECKING:
+    import h5py
     from numpy.typing import NDArray
 
     from WaveletWaveforms.wdm_config import WDMWaveletConstants
@@ -76,9 +77,15 @@ class BGDecomposition:
         self.power_galactic_below_high: list[NDArray[np.floating]] = []
         self.power_galactic_total: list[NDArray[np.floating]] = []
 
-    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'background') -> h5py.Group:
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'background', group_mode=0) -> h5py.Group:
         """Store the background to an hdf5 file"""
-        hf_background = hf_in.create_group(group_name)
+        if group_mode == 0:
+            hf_background = hf_in.create_group(group_name)
+        elif group_mode == 1:
+            hf_background = hf_in
+        else:
+            msg = 'Unrecognized option for group mode'
+            raise NotImplementedError(msg)
         hf_background.attrs['creator_name'] = self.__class__.__name__
         hf_background.attrs['storage_mode'] = self.storage_mode
         hf_background.attrs['track_mode'] = self.track_mode
@@ -138,7 +145,7 @@ class BGDecomposition:
                 self.galactic_total_cache = self.get_galactic_total(bypass_check=True)
             else:
                 # check all contributions to the total signal are tracked accurately
-                assert np.allclose(
+                assert_allclose(
                     self.galactic_total_cache, self.get_galactic_total(bypass_check=True), atol=1.0e-300, rtol=1.0e-6,
                 )
 

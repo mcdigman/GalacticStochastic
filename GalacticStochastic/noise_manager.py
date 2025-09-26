@@ -78,9 +78,16 @@ class NoiseModelManager(StateManager):
         del S_lower
 
     @override
-    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'noise_model') -> h5py.Group:
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'noise_model', group_mode: int = 0) -> h5py.Group:
+        if group_mode == 0:
+            hf_noise = hf_in.create_group(group_name)
+        elif group_mode == 1:
+            hf_noise = hf_in
+        else:
+            msg = 'Unrecognized option for group mode'
+            raise NotImplementedError(msg)
+
         storage_mode = self.ic.noise_model_storage_mode
-        hf_noise = hf_in.create_group(group_name)
         hf_noise.attrs['creator_name'] = self.__class__.__name__
         hf_noise.attrs['storage_mode'] = storage_mode
         hf_noise.attrs['itrn'] = self.itrn
@@ -116,6 +123,9 @@ class NoiseModelManager(StateManager):
         # storing the fit state will probably be done more than once, but it shouldn't be very large
         # and it is possibly more self-descriptive that way
         _ = self.fit_state.store_hdf5(hf_noise)
+
+        _ = self.noise_upper.store_hdf5(hf_noise, group_name='noise_upper')
+        _ = self.noise_lower.store_hdf5(hf_noise, group_name='noise_lower')
 
         # store all the configuration objects to the file
 

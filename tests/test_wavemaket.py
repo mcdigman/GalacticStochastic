@@ -349,7 +349,7 @@ def test_wavemaket_extreme_size(p_offset: float, f0_mult: float, direct: bool) -
     p_design = 2 * np.pi * cumtrapz(f_design, T_fine, initial=0) + p_offset
     f_design += f_input
     p_design += 2 * np.pi * (f_input * T_fine)
-    assert np.allclose(f_design, cumtrapz(fd_design, T_fine, initial=0) + f_input)
+    assert_allclose(f_design, cumtrapz(fd_design, T_fine, initial=0) + f_input)
     a_design = np.full(nd_loc, 1.)
     time_design = a_design * np.cos(p_design)
 

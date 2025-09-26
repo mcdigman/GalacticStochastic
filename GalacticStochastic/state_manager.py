@@ -34,5 +34,5 @@ class StateManager(ABC):
         return
 
     @abstractmethod
-    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'state_manager') -> h5py.Group:
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'state_manager', group_mode: int = 0) -> h5py.Group:
         """Store attributes, configuration, and results to an hdf5 file."""

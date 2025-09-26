@@ -3,6 +3,7 @@
 from abc import ABC
 from typing import TYPE_CHECKING, override
 
+import h5py
 import numpy as np
 
 from LisaWaveformTools.lisa_config import LISAConstants
@@ -17,12 +18,13 @@ if TYPE_CHECKING:
 
 class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFreq], ABC):
     """class to store a binary waveform in frequency domain and update for search"""
-    def __init__(self, params: SourceParams, lc: LISAConstants, nf_lim_absolute: PixelGenericRange, freeze_limits: int, T_obs: float, n_pad_F: int = 10) -> None:
+    def __init__(self, params: SourceParams, lc: LISAConstants, nf_lim_absolute: PixelGenericRange, freeze_limits: int, T_obs: float, n_pad_F: int = 10, response_mode: int = 0) -> None:
         """Construct a binary wavelet object"""
         self._lc: LISAConstants = lc
         self._nc_waveform: int = self._lc.nc_waveform
         self._consistent_extrinsic: bool = False
         self._n_pad_F: int = n_pad_F
+        self.response_mode = response_mode
 
         if lc.rise_mode == 3:
             self._er: EdgeRiseModel = EdgeRiseModel(-np.inf, np.inf)
@@ -82,8 +84,6 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
         del AET_TFps
 
         self.TTRef: float = 0.
-        # moved this line from end
-        self.Tend: float = np.inf
 
         self._tdi_waveform: StationaryWaveformFreq = tdi_waveform
         self._intrinsic_waveform: StationaryWaveformFreq = intrinsic_waveform
@@ -91,6 +91,62 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
         super().__init__(params, intrinsic_waveform, tdi_waveform)
 
         self.freeze_limits = freeze_limits
+
+    @override
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'source_waveform', group_mode: int = 0) -> h5py.Group:
+        hf_source = super().store_hdf5(hf_in, group_name=group_name, group_mode=group_mode)
+
+        hf_source.attrs['channels_name'] = self._spacecraft_channels.__class__.__name__
+        hf_source.attrs['response_mode'] = self.response_mode
+        hf_source.attrs['nc_waveform'] = self._nc_waveform
+        hf_source.attrs['itrfCut'] = self.itrFCut
+        hf_source.attrs['TTRef'] = self.TTRef
+        hf_source.attrs['freeze_limits'] = self.freeze_limits
+        hf_source.attrs['n_pad_F'] = self._n_pad_F
+        hf_source.attrs['NF'] = self.NF
+        hf_source.attrs['t_gen'] = self._t_gen
+
+        hf_source.create_dataset('T', data=self.FFs, compression='gzip')
+
+        hf_source.create_dataset('spacecraft_channel_t', data=self._spacecraft_channels.x, compression='gzip')
+        hf_source.create_dataset('RR', data=self._spacecraft_channels.RR, compression='gzip')
+        hf_source.create_dataset('II', data=self._spacecraft_channels.II, compression='gzip')
+        hf_source.create_dataset('dRR', data=self._spacecraft_channels.dRR, compression='gzip')
+        hf_source.create_dataset('dII', data=self._spacecraft_channels.dII, compression='gzip')
+
+        hf_source.create_dataset('kdotx', data=self.kdotx, compression='gzip')
+
+        hf_source.create_dataset('tdi_F', data=self._tdi_waveform.F, compression='gzip')
+        hf_source.create_dataset('tdi_AF', data=self._tdi_waveform.AF, compression='gzip')
+        hf_source.create_dataset('tdi_TF', data=self._tdi_waveform.TF, compression='gzip')
+        hf_source.create_dataset('tdi_TFp', data=self._tdi_waveform.TFp, compression='gzip')
+
+        hf_source.create_dataset('intrinsic_F', data=self._intrinsic_waveform.F, compression='gzip')
+        hf_source.create_dataset('intrinsic_AF', data=self._intrinsic_waveform.AF, compression='gzip')
+        hf_source.create_dataset('intrinsic_TF', data=self._intrinsic_waveform.TF, compression='gzip')
+        hf_source.create_dataset('intrinsic_TFp', data=self._intrinsic_waveform.TFp, compression='gzip')
+
+        hf_lc = hf_source.create_group('lc')
+        hf_source.attrs['lc_name'] = self._lc.__class__.__name__
+        for key in self._lc._fields:
+            hf_lc.attrs[key] = getattr(self._lc, key)
+
+        hf_er = hf_source.create_group('er')
+        hf_source.attrs['er_name'] = self._er.__class__.__name__
+        for key in self._er._fields:
+            hf_er.attrs[key] = getattr(self._er, key)
+
+        hf_source.attrs['nf_lim_name'] = self.nf_lim.__class__.__name__
+        hf_nf = hf_source.create_group('nf_lim_waveform')
+        for key in self.nf_lim._fields:
+            hf_nf.attrs[key] = getattr(self.nf_lim, key)
+
+        hf_source.attrs['nf_lim_absolute_name'] = self.nf_lim_absolute.__class__.__name__
+        hf_nfa = hf_source.create_group('nf_lim_absolute')
+        for key in self.nf_lim_absolute._fields:
+            hf_nfa.attrs[key] = getattr(self.nf_lim_absolute, key)
+
+        return hf_source
 
     def _update_bounds(self) -> None:
         """Update the boundaries to calculate extrinsic parameters at"""

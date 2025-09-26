@@ -104,22 +104,24 @@ class BinaryInclusionState(StateManager):
         self.n_brights_cur: NDArray[np.integer] = np.zeros(self.fit_state.get_n_itr_cut() + 1, dtype=np.int64)
 
     @override
-    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'inclusion_state', noise_recurse: int = 1) -> h5py.Group:
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'inclusion_state', group_mode: int = 0, noise_recurse: int = 1) -> h5py.Group:
         storage_mode = self.ic.inclusion_state_storage_mode
-        hf_include = hf_in.create_group(group_name)
+        if group_mode == 0:
+            hf_include = hf_in.create_group(group_name)
+        elif group_mode == 1:
+            hf_include = hf_in
+        else:
+            msg = 'Unrecognized option for group mode'
+            raise NotImplementedError(msg)
         hf_include.attrs['storage_mode'] = storage_mode
         hf_include.attrs['itrn'] = self.itrn
         hf_include.attrs['n_bin_use'] = self.n_bin_use
         hf_include.attrs['n_tot'] = self.n_tot
-        hf_include.attrs['nt_lim_waveform'] = self.nt_lim_waveform
         hf_include.attrs['fmin_binary'] = self.fmin_binary
         hf_include.attrs['fmax_binary'] = self.fmax_binary
         hf_include.attrs['noise_manager_name'] = self.noise_manager.__class__.__name__
         hf_include.attrs['fit_state_name'] = self.fit_state.__class__.__name__
         hf_include.attrs['waveform_manager_name'] = self.waveform_manager.__class__.__name__
-        hf_include.attrs['wc_name'] = self.wc.__class__.__name__
-        hf_include.attrs['lc_name'] = self.lc.__class__.__name__
-        hf_include.attrs['ic_name'] = self.ic.__class__.__name__
 
         _ = hf_include.create_dataset('argbinmap', data=self.argbinmap, compression='gzip')
         _ = hf_include.create_dataset('faints_old', data=self.faints_old, compression='gzip')
@@ -162,21 +164,30 @@ class BinaryInclusionState(StateManager):
             raise NotImplementedError(msg)
 
         _ = self.fit_state.store_hdf5(hf_include)
+        _ = self.waveform_manager.store_hdf5(hf_include)
 
         # the wavelet constants
+        hf_include.attrs['wc_name'] = self.wc.__class__.__name__
         hf_wc = hf_include.create_group('wc')
         for key in self.wc._fields:
             hf_wc.attrs[key] = getattr(self.wc, key)
 
         # lisa related constants
         hf_lc = hf_include.create_group('lc')
+        hf_include.attrs['lc_name'] = self.lc.__class__.__name__
         for key in self.lc._fields:
             hf_lc.attrs[key] = getattr(self.lc, key)
 
         # iterative fit related constants
+        hf_include.attrs['ic_name'] = self.ic.__class__.__name__
         hf_ic = hf_include.create_group('ic')
         for key in self.ic._fields:
             hf_ic.attrs[key] = getattr(self.ic, key)
+
+        hf_include.attrs['nt_lim_name'] = self.nt_lim_waveform.__class__.__name__
+        hf_nt = hf_include.create_group('nt_lim_waveform')
+        for key in self.nt_lim_waveform._fields:
+            hf_nt.attrs[key] = getattr(self.nt_lim_waveform, key)
 
         return hf_include
 

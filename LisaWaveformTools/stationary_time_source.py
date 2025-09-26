@@ -2,6 +2,7 @@
 from abc import ABC
 from typing import override
 
+import h5py
 import numpy as np
 from numpy.typing import NDArray
 
@@ -82,23 +83,78 @@ class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTi
         super().__init__(params, intrinsic_waveform, tdi_waveform)
 
     @override
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'source_waveform', group_mode: int = 0) -> h5py.Group:
+        hf_source = super().store_hdf5(hf_in, group_name=group_name, group_mode=group_mode)
+
+        hf_source.attrs['channels_name'] = self._spacecraft_channels.__class__.__name__
+        hf_source.attrs['response_mode'] = self.response_mode
+        hf_source.attrs['nc_waveform'] = self._nc_waveform
+
+        hf_source.attrs['spacecraft_orbits_name'] = self._spacecraft_orbits.__class__.__name__
+        hf_source.create_dataset('spacecraft_x', data=self._spacecraft_orbits.x, compression='gzip')
+        hf_source.create_dataset('spacecraft_y', data=self._spacecraft_orbits.y, compression='gzip')
+        hf_source.create_dataset('spacecraft_z', data=self._spacecraft_orbits.z, compression='gzip')
+
+        hf_source.create_dataset('spacecraft_xa', data=self._spacecraft_orbits.xa, compression='gzip')
+        hf_source.create_dataset('spacecraft_ya', data=self._spacecraft_orbits.ya, compression='gzip')
+        hf_source.create_dataset('spacecraft_za', data=self._spacecraft_orbits.za, compression='gzip')
+
+        hf_source.create_dataset('T', data=self._TTs, compression='gzip')
+
+        hf_source.create_dataset('spacecraft_channel_t', data=self._spacecraft_channels.x, compression='gzip')
+        hf_source.create_dataset('RR', data=self._spacecraft_channels.RR, compression='gzip')
+        hf_source.create_dataset('II', data=self._spacecraft_channels.II, compression='gzip')
+        hf_source.create_dataset('dRR', data=self._spacecraft_channels.dRR, compression='gzip')
+        hf_source.create_dataset('dII', data=self._spacecraft_channels.dII, compression='gzip')
+
+        hf_source.create_dataset('wavefront_time', data=self._wavefront_time, compression='gzip')
+        hf_source.create_dataset('kdotx', data=self._kdotx, compression='gzip')
+
+        hf_source.create_dataset('tdi_T', data=self._tdi_waveform.T, compression='gzip')
+        hf_source.create_dataset('tdi_AT', data=self._tdi_waveform.AT, compression='gzip')
+        hf_source.create_dataset('tdi_FT', data=self._tdi_waveform.FT, compression='gzip')
+        hf_source.create_dataset('tdi_FTd', data=self._tdi_waveform.FTd, compression='gzip')
+
+        hf_source.create_dataset('intrinsic_T', data=self._intrinsic_waveform.T, compression='gzip')
+        hf_source.create_dataset('intrinsic_AT', data=self._intrinsic_waveform.AT, compression='gzip')
+        hf_source.create_dataset('intrinsic_FT', data=self._intrinsic_waveform.FT, compression='gzip')
+        hf_source.create_dataset('intrinsic_FTd', data=self._intrinsic_waveform.FTd, compression='gzip')
+
+        hf_lc = hf_source.create_group('lc')
+        hf_source.attrs['lc_name'] = self._lc.__class__.__name__
+        for key in self._lc._fields:
+            hf_lc.attrs[key] = getattr(self._lc, key)
+
+        hf_er = hf_source.create_group('er')
+        hf_source.attrs['er_name'] = self._er.__class__.__name__
+        for key in self._er._fields:
+            hf_er.attrs[key] = getattr(self._er, key)
+
+        hf_source.attrs['nt_lim_name'] = self._nt_lim_waveform.__class__.__name__
+        hf_nt = hf_source.create_group('nt_lim_waveform')
+        for key in self._nt_lim_waveform._fields:
+            hf_nt.attrs[key] = getattr(self._nt_lim_waveform, key)
+
+        return hf_source
+
+    @override
     def _update_extrinsic(self) -> None:
         """Update the intrinsic_waveform with respect to the extrinsic parameters."""
         # TODO fix F_min and nf_range
-        nt_lim = PixelGenericRange(0, self._nt_range, self._nt_lim_waveform.dx, self._lc.t0)
+        # nt_lim = PixelGenericRange(0, self._nt_range, self._nt_lim_waveform.dx, self._lc.t0)
         if self.response_mode in (0, 1):
             rigid_adiabatic_antenna(
                 self._spacecraft_channels,
                 self.params.extrinsic,
                 self._TTs,
                 self.intrinsic_waveform.FT,
-                nt_lim,
+                self._nt_lim_waveform,
                 self._kdotx,
                 self._lc,
             )
             get_time_tdi_amp_phase(
                 self._spacecraft_channels, self._tdi_waveform, self.intrinsic_waveform, self._lc, self._er,
-                nt_lim,
+                self._nt_lim_waveform,
             )
         elif self.response_mode == 2:
             # intrinsic only, no rigid adiabatic response

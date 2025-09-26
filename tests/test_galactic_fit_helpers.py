@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 import scipy.ndimage
 import tomllib
+from numpy.testing import assert_allclose
 from numpy.typing import NDArray
 from scipy.interpolate import InterpolatedUnivariateSpline
 
@@ -74,16 +75,16 @@ def test_filter_periods_fft_full(sign_low: int, sign_high: int) -> None:
 
     r_fft1, amp_got, angle_got = filter_periods_fft(xs, wc.Nt, period_list, wc)
 
-    assert np.allclose(amp_got, amp_exp, atol=1.0e-12, rtol=1.0e-12)
-    assert np.allclose(
+    assert_allclose(amp_got, amp_exp, atol=1.0e-12, rtol=1.0e-12)
+    assert_allclose(
         (angle_got[:-1] - angle_exp[:-1] + np.pi) % (2 * np.pi) + angle_exp[:-1] - np.pi,
         angle_exp[:-1],
         atol=1.0e-10,
         rtol=1.0e-10,
     )
-    assert np.allclose(angle_got[-1], np.pi / 4.0)
+    assert_allclose(angle_got[-1], np.pi / 4.0)
 
-    assert np.allclose(r_fft1, xs, atol=1.0e-10, rtol=1.0e-10)
+    assert_allclose(r_fft1, xs, atol=1.0e-10, rtol=1.0e-10)
 
 
 def test_filter_periods_fft_full2() -> None:
@@ -102,7 +103,7 @@ def test_filter_periods_fft_full2() -> None:
 
     r_fft1, _, _ = filter_periods_fft(xs, wc.Nt, period_list, wc)
 
-    assert np.allclose(r_fft1, xs, atol=1.0e-10, rtol=1.0e-10)
+    assert_allclose(r_fft1, xs, atol=1.0e-10, rtol=1.0e-10)
 
 
 @pytest.mark.parametrize('itrk', [0.25, 0.5, 0.9, 1.0, 1.1, 1.5, 2.0, 2.5, 3.0, 15.0, 16.0, 17.0])
@@ -126,10 +127,10 @@ def test_filter_periods_fft1(itrk: float) -> None:
 
     r_fft1, amp_got, _ = filter_periods_fft(xs, wc.Nt, period_list, wc)
 
-    assert np.allclose(amp_got, amp_exp, atol=1.0e-12, rtol=1.0e-12)
-    assert np.allclose(angle_exp, angle_exp, atol=1.0e-12, rtol=1.0e-12)
+    assert_allclose(amp_got, amp_exp, atol=1.0e-12, rtol=1.0e-12)
+    assert_allclose(angle_exp, angle_exp, atol=1.0e-12, rtol=1.0e-12)
 
-    assert np.allclose(r_fft1, xs, atol=1.0e-12, rtol=1.0e-12)
+    assert_allclose(r_fft1, xs, atol=1.0e-12, rtol=1.0e-12)
 
 
 def test_stationary_mean_scramble_invariance() -> None:
@@ -153,7 +154,7 @@ def test_stationary_mean_scramble_invariance() -> None:
     S_got2, _, _, _, _ = get_S_cyclo(bg_here2, S_inst_m, wc, 1.0, 0, period_list=())
 
     # check for expected invariance
-    assert np.allclose(S_got1, S_got2, atol=1.0e-14, rtol=1.0e-13)
+    assert_allclose(S_got1, S_got2, atol=1.0e-14, rtol=1.0e-13)
 
 
 def get_noise_model_helper(model_name: str) -> NDArray[np.floating]:
@@ -237,7 +238,7 @@ def stationary_mean_smooth_helper(bg_models: list[str], noise_models: list[str],
         for itrf in range(wc.Nf):
             got_loc = S_got[0, itrf, itrc]
             pred_loc = S_inst_m[itrf, itrc] + f_mult_smooth[itrf, itrc] ** 2
-            assert np.allclose(
+            assert_allclose(
                 got_loc,
                 pred_loc,
                 atol=5 * (f_mult_smooth[itrf, itrc] ** 2) / np.sqrt(wc.Nt),
@@ -298,17 +299,17 @@ def test_nonstationary_mean_faint_alternate(amp2_mult: float) -> None:
     _, amp_got1, _ = filter_periods_fft(t_mult1**2 + 1.0, wc.Nt, period_list, wc)
 
     if amp2**2 < 0.1 * amp1**2:
-        assert np.allclose(amp_got[2 * int(wc.Tobs / gc.SECSYEAR) * itrk1, :], 1.0, atol=1.0e-10, rtol=1.0e-10)
-        assert np.allclose(amp_got[int(wc.Tobs / gc.SECSYEAR) * itrk1, :], 0.0, atol=1.0e-10, rtol=1.0e-10)
-        assert np.allclose(amp_got[2 * int(wc.Tobs / gc.SECSYEAR) * itrk2, :], 0.0, atol=1.0e-10, rtol=1.0e-10)
-        assert np.allclose(amp_got[int(wc.Tobs / gc.SECSYEAR) * itrk2, :], 0.0, atol=1.0e-10, rtol=1.0e-10)
+        assert_allclose(amp_got[2 * int(wc.Tobs / gc.SECSYEAR) * itrk1, :], 1.0, atol=1.0e-10, rtol=1.0e-10)
+        assert_allclose(amp_got[int(wc.Tobs / gc.SECSYEAR) * itrk1, :], 0.0, atol=1.0e-10, rtol=1.0e-10)
+        assert_allclose(amp_got[2 * int(wc.Tobs / gc.SECSYEAR) * itrk2, :], 0.0, atol=1.0e-10, rtol=1.0e-10)
+        assert_allclose(amp_got[int(wc.Tobs / gc.SECSYEAR) * itrk2, :], 0.0, atol=1.0e-10, rtol=1.0e-10)
     else:
         assert not np.allclose(amp_got[2 * int(wc.Tobs / gc.SECSYEAR) * itrk1, :], 1.0, atol=1.0e-10, rtol=1.0e-10)
-        assert np.allclose(amp_got[int(wc.Tobs / gc.SECSYEAR) * itrk1, :], 0.0, atol=1.0e-10, rtol=1.0e-10)
+        assert_allclose(amp_got[int(wc.Tobs / gc.SECSYEAR) * itrk1, :], 0.0, atol=1.0e-10, rtol=1.0e-10)
         assert not np.allclose(amp_got[2 * int(wc.Tobs / gc.SECSYEAR) * itrk2, :], 0.0, atol=1.0e-10, rtol=1.0e-10)
-        assert np.allclose(amp_got[int(wc.Tobs / gc.SECSYEAR) * itrk2, :], 0.0, atol=1.0e-10, rtol=1.0e-10)
+        assert_allclose(amp_got[int(wc.Tobs / gc.SECSYEAR) * itrk2, :], 0.0, atol=1.0e-10, rtol=1.0e-10)
 
-    assert np.allclose(
+    assert_allclose(
         amp_got[2 * int(wc.Tobs / gc.SECSYEAR) * itrk1, :] + amp_got[2 * int(wc.Tobs / gc.SECSYEAR) * itrk2, :],
         1.0,
         atol=1.0e-10,
@@ -386,7 +387,7 @@ def test_nonstationary_mean_zero_case() -> None:
             got_loc = S_got[:, itrf, itrc]
             bg_loc = f_mult_smooth[itrf, itrc] ** 2 * t_mult[:, itrc] ** 2
             pred_loc = S_inst_m[itrf, itrc] + bg_loc
-            assert np.allclose(
+            assert_allclose(
                 got_loc,
                 pred_loc,
                 atol=5 * (f_mult_smooth[itrf, itrc] ** 2) / np.sqrt(wc.Nt),
@@ -482,7 +483,7 @@ def nonstationary_mean_smooth_helper(
             got_loc = S_got[:, itrf, itrc]
             bg_loc = f_mult_smooth[itrf, itrc] ** 2 * t_mult[:, itrc] ** 2
             pred_loc = S_inst_m[itrf, itrc] + bg_loc
-            assert np.allclose(
+            assert_allclose(
                 got_loc,
                 pred_loc,
                 atol=5 * (f_mult_smooth[itrf, itrc] ** 2) / np.sqrt(wc.Nt),

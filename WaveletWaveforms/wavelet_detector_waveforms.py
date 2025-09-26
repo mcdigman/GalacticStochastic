@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from typing import Generic, override
 from warnings import warn
 
+import h5py
+
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.stationary_source_waveform import SourceParams, StationarySourceWaveform, StationaryWaveformTime, StationaryWaveformType
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, SparseWaveletWaveform
@@ -30,6 +32,34 @@ class SparseWaveletSourceWaveform(ABC, Generic[StationaryWaveformType]):
         self.update_params(params)
 
         assert self.consistent, 'SparseWaveletSourceWaveform failed to initialize consistently. '
+
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'wavelet_waveform', group_mode: int = 0) -> h5py.Group:
+        """Store attributes, configuration, and results to an hdf5 file."""
+        if group_mode == 0:
+            hf_wavelet = hf_in.create_group(group_name)
+        elif group_mode == 1:
+            hf_wavelet = hf_in
+        else:
+            msg = 'Unrecognized option for group mode'
+            raise NotImplementedError(msg)
+
+        hf_wavelet.attrs['creator_name'] = self.__class__.__name__
+        hf_wavelet.attrs['params_name'] = self._params.__class__.__name__
+        hf_wavelet.attrs['wavelet_waveform_name'] = self._wavelet_waveform.__class__.__name__
+        hf_wavelet.attrs['source_waveform_name'] = self._source_waveform.__class__.__name__
+        hf_wavelet.attrs['consistent'] = self._consistent
+        hf_wavelet.attrs['consistent_source'] = self.consistent_source
+        # TODO may need to store params a different way
+        hf_wavelet.attrs['params'] = self._params
+
+        _ = hf_wavelet.create_dataset('wave_value', data=self._wavelet_waveform.wave_value, compression='gzip')
+        _ = hf_wavelet.create_dataset('pixel_index', data=self._wavelet_waveform.pixel_index, compression='gzip')
+        _ = hf_wavelet.create_dataset('n_set', data=self._wavelet_waveform.n_set, compression='gzip')
+        _ = hf_wavelet.create_dataset('N_max', data=[self._wavelet_waveform.N_max], compression='gzip')
+
+        _ = self._source_waveform.store_hdf5(hf_wavelet)
+
+        return hf_wavelet
 
     @property
     def params(self) -> SourceParams:
@@ -123,7 +153,7 @@ class SparseWaveletSourceWaveform(ABC, Generic[StationaryWaveformType]):
 class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform[StationaryWaveformTime]):
     """Store a sparse binary wavelet for a time domain taylor waveform."""
 
-    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, source_waveform: StationarySourceWaveform[StationaryWaveformTime], *, wavelet_mode: int = 1) -> None:
+    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, source_waveform: StationarySourceWaveform[StationaryWaveformTime], *, wavelet_mode: int = 1, storage_mode: int = 0) -> None:
         """Construct a sparse binary wavelet for a time domain taylor intrinsic_waveform with interpolation."""
         self._wc: WDMWaveletConstants = wc
         self._lc: LISAConstants = lc
@@ -131,20 +161,53 @@ class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform[StationaryWaveformTime
         self._wavelet_mode: int = wavelet_mode
 
         # store the intrinsic_waveform
-        self._source_waveform: StationarySourceWaveform[StationaryWaveformTime] = source_waveform
+        # self._source_waveform: StationarySourceWaveform[StationaryWaveformTime] = source_waveform
 
         # get a blank wavelet intrinsic_waveform with the correct size for the sparse taylor time method
         # when consistent is set to True, it will be the correct intrinsic_waveform
         wavelet_waveform_loc: SparseWaveletWaveform = get_empty_sparse_taylor_time_waveform(int(self._lc.nc_waveform), wc)
 
         # interpolation for wavelet taylor expansion
+        # TODO need better way of setting whether cache is checked, whether to output, and whether to store in hdf5
         self._taylor_time_table: WaveletTaylorTimeCoeffs = get_taylor_table_time(
             self._wc,
             cache_mode='check',
             output_mode='skip',
         )
 
+        self._storage_mode: int = storage_mode
+
         super().__init__(params, wavelet_waveform_loc, source_waveform)
+
+    @override
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'wavelet_waveform', group_mode: int = 0) -> h5py.Group:
+        hf_wavelet = super().store_hdf5(hf_in, group_name=group_name, group_mode=group_mode)
+
+        hf_wavelet.attrs['wavelet_mode'] = self._wavelet_mode
+        hf_wavelet.attrs['storage_mode'] = self._storage_mode
+        hf_wavelet.attrs['taylor_time_table_name'] = self._taylor_time_table.__class__.__name__
+
+        if self._storage_mode == 0:
+            hf_wavelet.create_dataset('Nfsam', data=self._taylor_time_table.Nfsam, compression='gzip')
+            hf_wavelet.create_dataset('evc', data=self._taylor_time_table.evc, compression='gzip')
+            hf_wavelet.create_dataset('evs', data=self._taylor_time_table.evs, compression='gzip')
+            hf_wavelet.create_dataset('wavelet_norm', data=self._taylor_time_table.wavelet_norm, compression='gzip')
+
+        hf_wavelet.attrs['nt_lim_name'] = self._nt_lim_waveform.__class__.__name__
+        hf_nt = hf_wavelet.create_group('nt_lim_waveform')
+        for key in self._nt_lim_waveform._fields:
+            hf_nt.attrs[key] = getattr(self._nt_lim_waveform, key)
+
+        hf_wavelet.attrs['wc_name'] = self._wc.__class__.__name__
+        hf_wc = hf_wavelet.create_group('wc')
+        for key in self._wc._fields:
+            hf_wc.attrs[key] = getattr(self._wc, key)
+
+        hf_lc = hf_wavelet.create_group('lc')
+        hf_wavelet.attrs['lc_name'] = self._lc.__class__.__name__
+        for key in self._lc._fields:
+            hf_lc.attrs[key] = getattr(self._lc, key)
+        return hf_wavelet
 
     @override
     def _update_wavelet_waveform(self) -> None:
@@ -175,14 +238,16 @@ class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform[StationaryWaveformTime
 class BinaryWaveletSparseTime(SparseWaveletSourceWaveform[StationaryWaveformTime]):
     """Store a sparse binary wavelet for a time domain sparse waveform."""
 
-    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, source_waveform: StationarySourceWaveform[StationaryWaveformTime]) -> None:
+    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, source_waveform: StationarySourceWaveform[StationaryWaveformTime], *, storage_mode=0, wavelet_mode=0) -> None:
         """Construct a sparse binary wavelet for a time domain taylor intrinsic_waveform with interpolation."""
         self._wc: WDMWaveletConstants = wc
         self._lc: LISAConstants = lc
         self._nt_lim_waveform: PixelGenericRange = nt_lim_waveform
+        self._storage_mode = storage_mode
+        self._wavelet_mode = wavelet_mode
 
         # store the intrinsic_waveform
-        self._source_waveform: StationarySourceWaveform[StationaryWaveformTime] = source_waveform
+        # self._source_waveform: StationarySourceWaveform[StationaryWaveformTime] = source_waveform
 
         # get a blank wavelet intrinsic_waveform with the correct size for the sparse taylor time method
         # when consistent is set to True, it will be the correct intrinsic_waveform
@@ -192,6 +257,34 @@ class BinaryWaveletSparseTime(SparseWaveletSourceWaveform[StationaryWaveformTime
         self._sparse_table: SparseTimeCoefficientTable = get_sparse_table_helper(self._wc)
 
         super().__init__(params, wavelet_waveform_loc, source_waveform)
+
+    @override
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'wavelet_waveform', group_mode: int = 0) -> h5py.Group:
+        hf_wavelet = super().store_hdf5(hf_in, group_name=group_name, group_mode=group_mode)
+
+        hf_wavelet.attrs['wavelet_mode'] = self._wavelet_mode
+        hf_wavelet.attrs['storage_mode'] = self._storage_mode
+        hf_wavelet.attrs['sparse_table_name'] = self._sparse_table.__class__.__name__
+
+        if self._storage_mode == 0:
+            hf_wavelet.create_dataset('cM', data=self._sparse_table.cM, compression='gzip')
+            hf_wavelet.create_dataset('sM', data=self._sparse_table.sM, compression='gzip')
+
+        hf_wavelet.attrs['nt_lim_name'] = self._nt_lim_waveform.__class__.__name__
+        hf_nt = hf_wavelet.create_group('nt_lim_waveform')
+        for key in self._nt_lim_waveform._fields:
+            hf_nt.attrs[key] = getattr(self._nt_lim_waveform, key)
+
+        hf_wavelet.attrs['wc_name'] = self._wc.__class__.__name__
+        hf_wc = hf_wavelet.create_group('wc')
+        for key in self._wc._fields:
+            hf_wc.attrs[key] = getattr(self._wc, key)
+
+        hf_lc = hf_wavelet.create_group('lc')
+        hf_wavelet.attrs['lc_name'] = self._lc.__class__.__name__
+        for key in self._lc._fields:
+            hf_lc.attrs[key] = getattr(self._lc, key)
+        return hf_wavelet
 
     @override
     def _update_wavelet_waveform(self) -> None:

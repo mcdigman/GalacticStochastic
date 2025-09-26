@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import override
 
+import h5py
 import numpy as np
 
 # import numba as nb
@@ -58,6 +59,29 @@ class DenseNoiseModel(ABC):
     @abstractmethod
     def get_S(self) -> NDArray[np.floating]:
         """Get the dense noise covariance matrix"""
+
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'dense_noise_model', group_mode: int = 0) -> h5py.Group:
+        """Store attributes, configuration, and results to an hdf5 file."""
+        if group_mode == 0:
+            hf_noise = hf_in.create_group(group_name)
+        elif group_mode == 1:
+            hf_noise = hf_in
+        else:
+            msg = 'Unrecognized option for group mode'
+            raise NotImplementedError(msg)
+
+        hf_noise.attrs['creator_name'] = self.__class__.__name__
+        hf_noise.attrs['prune'] = self.prune
+        hf_noise.attrs['seed'] = self.seed
+        hf_noise.attrs['nc_snr'] = self.nc_snr
+        hf_noise.attrs['nc_noise'] = self.nc_noise
+        hf_noise.attrs['wc_name'] = self.wc.__class__.__name__
+
+        hf_wc = hf_noise.create_group('wc')
+        for key in self.wc._fields:
+            hf_wc.attrs[key] = getattr(self.wc, key)
+
+        return hf_noise
 
     def get_nc_snr(self) -> int:
         """Get the number of S/N channels"""
@@ -163,6 +187,16 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
             self.chol_S[:, 0, :] = 0.0
             self.inv_chol_S[:, 0, :] = 0.0
             self.inv_S[:, 0, :] = 0.0
+
+    @override
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'dense_noise_model', group_mode=0) -> h5py.Group:
+        """Store attributes, configuration, and results to an hdf5 file."""
+        hf_noise = super().store_hdf5(hf_in, group_name='group_name', group_mode=group_mode)
+
+        # all other attributes can be derived from S
+        hf_noise.create_dataset('S', data=self.S, compression='gzip')
+
+        return hf_noise
 
     @override
     def generate_dense_noise(self) -> NDArray[np.floating]:
@@ -301,6 +335,18 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
                     self.inv_S[j, 0, itrc] = self.inv_S_stat_m[0, itrc]
                     self.inv_chol_S[j, 0, itrc] = self.inv_chol_S_stat_m[0, itrc]
                     self.chol_S[j, 0, itrc] = self.chol_S_stat_m[0, itrc]
+
+    @override
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'dense_noise_model', group_mode=0) -> h5py.Group:
+        """Store attributes, configuration, and results to an hdf5 file."""
+        hf_noise = super().store_hdf5(hf_in, group_name='group_name', group_mode=group_mode)
+
+        # all other attributes can be derived from S_stat_m
+        hf_noise.create_dataset('S_stat_m', data=self.S_stat_m, compression='gzip')
+
+        hf_noise.create_dataset('S', data=self.S, compression='gzip')
+
+        return hf_noise
 
     @override
     def generate_dense_noise(self) -> NDArray[np.floating]:

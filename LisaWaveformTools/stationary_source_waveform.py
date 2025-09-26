@@ -4,6 +4,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Generic, NamedTuple, TypeVar
 
+import h5py
+
 if TYPE_CHECKING:
     import numpy as np
     from numpy.typing import NDArray
@@ -103,6 +105,26 @@ class StationarySourceWaveform(Generic[StationaryWaveformType], ABC):
         assert self.consistent_instrinsic, 'StationarySourceWaveform failed to initialize consistently.'
         assert self.consistent_extrinsic, 'StationarySourceWaveform failed to initialize consistently.'
         assert self.consistent, 'StationarySourceWaveform failed to initialize consistently.'
+
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'source_waveform', group_mode: int = 0) -> h5py.Group:
+        """Store attributes, configuration, and results to an hdf5 file."""
+        if group_mode == 0:
+            hf_source = hf_in.create_group(group_name)
+        elif group_mode == 1:
+            hf_source = hf_in
+        else:
+            msg = 'Unrecognized option for group mode'
+            raise NotImplementedError(msg)
+
+        hf_source.attrs['creator_name'] = self.__class__.__name__
+        hf_source.attrs['params_name'] = self._params.__class__.__name__
+        hf_source.attrs['intrinsic_waveform_name'] = self._intrinsic_waveform.__class__.__name__
+        hf_source.attrs['tdi_waveform_name'] = self._tdi_waveform.__class__.__name__
+        hf_source.attrs['_consistent'] = self._consistent
+        hf_source.attrs['_consistent_extrinsic'] = self._consistent_extrinsic
+        hf_source.attrs['_consistent_intrinsic'] = self._consistent_intrinsic
+        hf_source.attrs['_params'] = self._params
+        return hf_source
 
     @abstractmethod
     def _update_intrinsic(self) -> None:

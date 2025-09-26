@@ -5,6 +5,7 @@ from typing import Any
 
 import h5py
 import numpy as np
+from numpy.testing import assert_allclose
 from numpy.typing import NDArray
 
 from GalacticStochastic.background_decomposition import load_bgd_from_hdf5
@@ -217,7 +218,7 @@ def load_preliminary_galactic_file(config: dict[str, Any], ic: IterationConfig, 
 
     # check input S makes sense, first value not checked as it may not be consistent
     S_inst_m_alt = instrument_noise_AET_wdm_m(lc, wc)
-    assert np.allclose(S_inst_m[1:], S_inst_m_alt[1:], atol=1.0e-80, rtol=1.0e-13)
+    assert_allclose(S_inst_m[1:], S_inst_m_alt[1:], atol=1.0e-80, rtol=1.0e-13)
 
     hf_in.close()
 

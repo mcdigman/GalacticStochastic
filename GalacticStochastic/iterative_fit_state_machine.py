@@ -67,8 +67,14 @@ class IterativeFitState(StateManager):
         self.itrn: int = 0
 
     @override
-    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'fit_state') -> h5py.Group:
-        hf_state = hf_in.create_group(group_name)
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'fit_state', group_mode: int = 0) -> h5py.Group:
+        if group_mode == 0:
+            hf_state = hf_in.create_group(group_name)
+        elif group_mode == 1:
+            hf_state = hf_in
+        else:
+            msg = 'Unrecognized option for group mode'
+            raise NotImplementedError(msg)
         hf_state.attrs['storage_mode'] = self.ic.fit_state_storage_mode
         _ = hf_state.create_dataset('bright_converged', data=self.bright_converged)
         _ = hf_state.create_dataset('faint_converged', data=self.faint_converged)
