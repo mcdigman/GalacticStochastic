@@ -16,7 +16,7 @@ from WaveletWaveforms.wdm_config import get_wavelet_model
 
 
 @pytest.mark.parametrize('scale_mult', [1.0, 2.0])
-def test_unit_noise_generation_stat(scale_mult) -> None:
+def test_unit_noise_generation_stat(scale_mult: float) -> None:
     """Test unit normal noise for stationary model produced with input spectrum S_stat_m = 1"""
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 
@@ -53,7 +53,7 @@ def test_unit_noise_generation_stat(scale_mult) -> None:
 
 
 @pytest.mark.parametrize('var_select', ['const1', 'const2', 'cos1'])
-def test_unit_noise_generation_cyclo_time(var_select) -> None:
+def test_unit_noise_generation_cyclo_time(var_select: str) -> None:
     """Test unit normal noise for nonstationary model produced with input spectrum S_stat_m = 1"""
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 

@@ -17,7 +17,7 @@ from WaveletWaveforms.wdm_config import get_wavelet_model
 
 
 @pytest.mark.parametrize('fdot_mult', [0.8])
-def test_ts_match_TT_TS(fdot_mult):
+def test_ts_match_TT_TS(fdot_mult: float) -> None:
     """Test for match between different methods of getting wavelet transform"""
     toml_filename_in = 'tests/sparse_wdm_test_config1.toml'
 
@@ -100,7 +100,7 @@ def test_ts_match_TT_TS(fdot_mult):
 
 
 @pytest.mark.parametrize('fdot_mult', [0.8])
-def test_ts_match_TTexact_TS(fdot_mult):
+def test_ts_match_TTexact_TS(fdot_mult: float) -> None:
     """Test for match between different methods of getting wavelet transform"""
     toml_filename_in = 'tests/sparse_wdm_test_config1.toml'
 
@@ -183,7 +183,7 @@ def test_ts_match_TTexact_TS(fdot_mult):
 
 
 @pytest.mark.parametrize('fdot_mult', [0.8])
-def test_Chirp_wdm_match_TT_TTexact(fdot_mult):
+def test_Chirp_wdm_match_TT_TTexact(fdot_mult: float) -> None:
     """Test for match between different methods of getting wavelet transform"""
     toml_filename_in = 'tests/sparse_wdm_test_config1.toml'
 
@@ -241,7 +241,7 @@ def test_Chirp_wdm_match_TT_TTexact(fdot_mult):
 
 
 @pytest.mark.parametrize('fdot_mult', [0.8])
-def test_Chirp_wdm_match_TT_long(fdot_mult):
+def test_Chirp_wdm_match_TT_long(fdot_mult: float) -> None:
     """Test for match between different methods of getting wavelet transform"""
     toml_filename_in = 'tests/sparse_wdm_test_config1.toml'
 
@@ -345,7 +345,7 @@ def test_Chirp_wdm_match_TT_long(fdot_mult):
 
 
 @pytest.mark.parametrize('fdot_mult', [0.8])
-def test_Chirp_wdm_match_TS_long(fdot_mult):
+def test_Chirp_wdm_match_TS_long(fdot_mult: float) -> None:
     """Test for match between different methods of getting wavelet transform"""
     toml_filename_in = 'tests/sparse_wdm_test_config1.toml'
 

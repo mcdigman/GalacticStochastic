@@ -10,27 +10,22 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 def instrument_noise1(f: NDArray[np.float64], lc: LISAConstants) -> NDArray[np.float64]:
     # Power spectral density of the detector noise and transfer frequency
-    Sps = 9.0e-24  # should match sangria v2? Should it be backlinknoise or readoutnoise?
-    Sacc = 5.76e-30  # from sangria v2
-    fonfs = f / lc.fstr
+    Sps: float = 9.0e-24  # should match sangria v2? Should it be backlinknoise or readoutnoise?
+    Sacc: float = 5.76e-30  # from sangria v2
+    fonfs: NDArray[np.float64] = f / lc.fstr
     # To match the LDC power spectra need a factor of 2 here. No idea why... (one sided/two sided?)
-    LC = 2.0 * fonfs * fonfs
+    LC: NDArray[np.float64] = (2.0 * fonfs * fonfs).astype(np.float64)
     # roll-offs
-    rolla = (1.0 + pow((4.0e-4 / f), 2.0)) * (1.0 + pow((f / 8.0e-3), 4.0))
-    rollw = 1.0 + pow((2.0e-3 / f), 4.0)
-    # Calculate the power spectral density of the detector noise at the given frequency
-    # not and exact match to the LDC, but within 10%
-    return (
-        LC
-        * 16.0
-        / 3.0
-        * pow(np.sin(fonfs), 2.0)
-        * (
+    rolla: NDArray[np.float64] = ((1.0 + pow((4.0e-4 / f), 2.0)) * (1.0 + pow((f / 8.0e-3), 4.0))).astype(np.float64)
+    rollw: NDArray[np.float64] = (1.0 + pow((2.0e-3 / f), 4.0)).astype(np.float64)
+    scale_part: NDArray[np.float64] = (LC * 16.0 / 3.0 * pow(np.sin(fonfs), 2.0) / pow(2.0 * lc.Larm, 2.0)).astype(np.float64)
+    add_part: NDArray[np.float64] = (
             (2.0 + np.cos(fonfs)) * Sps * rollw
             + 2.0 * (3.0 + 2.0 * np.cos(fonfs) + np.cos(2.0 * fonfs)) * (Sacc / pow(2.0 * np.pi * f, 4.0) * rolla)
-        )
-        / pow(2.0 * lc.Larm, 2.0)
-    )
+        ).astype(np.float64)
+    # Calculate the power spectral density of the detector noise at the given frequency
+    # not and exact match to the LDC, but within 10%
+    return scale_part * add_part
 
 
 def instrument_noise_AET(f: NDArray[np.float64], lc: LISAConstants) -> NDArray[np.float64]:
@@ -63,9 +58,9 @@ def instrument_noise_AET_wdm_loop(
     # realistically this really only needs run once and is fast enough without jit
     # TODO check normalization
     # TODO get first and last bins correct
-    nrm: float = np.sqrt(12318.0 / wc.Nf) * np.linalg.norm(phif)
+    nrm: float = float(np.sqrt(12318.0 / wc.Nf)) * float(np.linalg.norm(phif))
     print('nrm instrument', nrm)
-    phif /= nrm
+    phif = phif / nrm
     phif2 = phif**2
 
     half_Nt = wc.Nt // 2
@@ -103,9 +98,9 @@ def instrument_noise_AET_wdm_m(lc: LISAConstants, wc: WDMWaveletConstants) -> ND
 
     """
     # TODO why no plus 1?
-    ls = np.arange(-wc.Nt // 2, wc.Nt // 2)
-    fs = ls / wc.Tobs
-    phif: NDArray[np.float64] = np.sqrt(wc.dt) * phitilde_vec(2 * np.pi * fs * wc.dt, wc.Nf, wc.nx)
+    ls: NDArray[np.integer] = np.arange(-wc.Nt // 2, wc.Nt // 2)
+    fs: NDArray[np.floating] = ls / wc.Tobs
+    phif: NDArray[np.float64] = (np.sqrt(wc.dt) * phitilde_vec(2 * np.pi * fs * wc.dt, wc.Nf, wc.nx)).astype(np.float64)
 
     # TODO check ad hoc normalization factor
     return instrument_noise_AET_wdm_loop(phif, lc, wc)

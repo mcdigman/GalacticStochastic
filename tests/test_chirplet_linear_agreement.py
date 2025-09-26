@@ -17,7 +17,7 @@ from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
 
-def test_cross_waveform_agreement_time():
+def test_cross_waveform_agreement_time() -> None:
     """Test the linear frequency and chirplet time domain waveforms agree"""
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 
@@ -96,7 +96,7 @@ def test_cross_waveform_agreement_time():
                     rtol=1.e-10)
 
 
-def test_cross_waveform_agreement_time2():
+def test_cross_waveform_agreement_time2() -> None:
     """Test the non TDI parts of the waveform agree between the time and frequency domain cases"""
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 
@@ -170,7 +170,7 @@ def test_cross_waveform_agreement_time2():
     assert_allclose(linear_time.tdi_waveform.AT, chirplet_time.tdi_waveform.AT, atol=1.e-20, rtol=1.e-10)
 
 
-def test_cross_waveform_agreement_freq2():
+def test_cross_waveform_agreement_freq2() -> None:
     """Test the linear frequency and chirplet frequency domain waveforms agree"""
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 

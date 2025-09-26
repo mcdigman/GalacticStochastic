@@ -3,8 +3,9 @@ from pathlib import Path
 import h5py
 import numpy as np
 import tomllib
+from numpy.typing import NDArray
 
-from LisaWaveformTools.lisa_config import get_lisa_constants
+from LisaWaveformTools.lisa_config import LISAConstants, get_lisa_constants
 from LisaWaveformTools.ra_waveform_freq import rigid_adiabatic_antenna
 from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels
 from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams
@@ -13,7 +14,7 @@ from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 # If you need a toml config, import get_lisa_constants, Path, tomllib, etc., and update generate_test_inputs accordingly.
 
 
-def generate_test_inputs(seed, nt_loc=128):
+def generate_test_inputs(seed: int, nt_loc: int = 128) -> tuple[AntennaResponseChannels, ExtrinsicParams, NDArray[np.floating], NDArray[np.floating], int, int, NDArray[np.floating], LISAConstants]:
     """Programmatically create varied yet deterministic test inputs for rigid_adiabatic_antenna."""
     toml_filename = 'tests/raantenna_test_config1.toml'
     with Path(toml_filename).open('rb') as f:
@@ -59,7 +60,7 @@ def generate_test_inputs(seed, nt_loc=128):
     return spacecraft_channels, params_extrinsic, ts, FFs, nf_low, NTs, kdotx, lc
 
 
-def main(seeds, output_path):
+def main(seeds: list[int], output_path: str) -> None:
     with h5py.File(output_path, 'w') as f:
         realizations = f.create_group('realizations')
         for seed in seeds:

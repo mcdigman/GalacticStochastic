@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 import scipy.ndimage
 import tomllib
+from numpy.typing import NDArray
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 import GalacticStochastic.global_const as gc
@@ -29,7 +30,7 @@ bg_base = rng_in.normal(0.0, 1.0, (wc.Nt, wc.Nf, nc_galaxy))
 
 @pytest.mark.parametrize('sign_high', [1, -1])
 @pytest.mark.parametrize('sign_low', [1, -1])
-def test_filter_periods_fft_full(sign_low, sign_high) -> None:
+def test_filter_periods_fft_full(sign_low: int, sign_high: int) -> None:
     """Test filtering max period with ffts for fixed fourier amplitude"""
     rng = np.random.default_rng(442)
 
@@ -105,7 +106,7 @@ def test_filter_periods_fft_full2() -> None:
 
 
 @pytest.mark.parametrize('itrk', [0.25, 0.5, 0.9, 1.0, 1.1, 1.5, 2.0, 2.5, 3.0, 15.0, 16.0, 17.0])
-def test_filter_periods_fft1(itrk) -> None:
+def test_filter_periods_fft1(itrk: float) -> None:
     """Test filtering 1 period with ffts"""
     period_list = (itrk,)
     amp_exp = np.array([[0.1, 0.2, 1.0]])
@@ -155,7 +156,7 @@ def test_stationary_mean_scramble_invariance() -> None:
     assert np.allclose(S_got1, S_got2, atol=1.0e-14, rtol=1.0e-13)
 
 
-def get_noise_model_helper(model_name):
+def get_noise_model_helper(model_name: str) -> NDArray[np.floating]:
     """Helper to get some useful noise model multipliers given a name"""
     if model_name == 'powerlaw1':
         f_mult = ((np.arange(0, wc.Nf) + 1) / wc.Nf) ** 2
@@ -185,7 +186,7 @@ def get_noise_model_helper(model_name):
     return f_mult
 
 
-def stationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, filter_periods) -> None:
+def stationary_mean_smooth_helper(bg_models: list[str], noise_models: list[str], smooth_lengthf: float, filter_periods: int) -> None:
     """Helper to test stationary mean with several lengths of spectral smoothing
     can reproduce injected input spectrum
     """
@@ -245,7 +246,7 @@ def stationary_mean_smooth_helper(bg_models, noise_models, smooth_lengthf, filte
 
 
 @pytest.mark.parametrize('amp2_mult', [0.0, 0.09, 0.11, 0.5, 0.9, 1.0, 2.0])
-def test_nonstationary_mean_faint_alternate(amp2_mult) -> None:
+def test_nonstationary_mean_faint_alternate(amp2_mult: float) -> None:
     """Test a case where there is a faint alternate frequency with a different periodicity;
     the fainter periodicity should be ignored completely
     """
@@ -394,7 +395,7 @@ def test_nonstationary_mean_zero_case() -> None:
 
 
 def nonstationary_mean_smooth_helper(
-    bg_models, noise_models, smooth_lengthf, filter_periods, itrk1, amp1, phase1,
+        bg_models: list[str], noise_models: list[str], smooth_lengthf: float, filter_periods: int, itrk1: int, amp1: float, phase1: float,
 ) -> None:
     """Helper to test stationary mean with several lengths of spectral smoothing
     can reproduce injected input spectrum
@@ -493,7 +494,7 @@ def nonstationary_mean_smooth_helper(
 @pytest.mark.parametrize('noise_model', ['sin1', 'sin2', 'sin3'])
 @pytest.mark.parametrize('itrk', [16])
 @pytest.mark.parametrize('phase', [0.2])
-def test_nonstationary_bg_power_bg_slope(bg_model, noise_model, itrk, phase) -> None:
+def test_nonstationary_bg_power_bg_slope(bg_model: str, noise_model: str, itrk: int, phase: float) -> None:
     """Test that smoothed time varying spectrum with different brightnesses constant noise model
     produces expected results
     """
@@ -506,7 +507,7 @@ def test_nonstationary_bg_power_bg_slope(bg_model, noise_model, itrk, phase) -> 
 @pytest.mark.parametrize('noise_model', ['white_equal'])
 @pytest.mark.parametrize('itrk', [16])
 @pytest.mark.parametrize('phase', [0.2])
-def test_nonstationary_bg_power_bg_brightness(bg_model, noise_model, itrk, phase) -> None:
+def test_nonstationary_bg_power_bg_brightness(bg_model: str, noise_model: str, itrk: int, phase: float) -> None:
     """Test that smoothed time varying spectrum with different brightnesses constant noise model
     produces expected results
     """
@@ -520,7 +521,7 @@ def test_nonstationary_bg_power_bg_brightness(bg_model, noise_model, itrk, phase
 @pytest.mark.parametrize('itrk', [2])
 @pytest.mark.parametrize('phase', [0.0, 0.3])
 @pytest.mark.parametrize('amp', [0.0, 0.1, 0.2, 0.4, 0.5, 0.8, 0.999, 1.0, 1.2])
-def test_nonstationary_bg_power_bg_amp(bg_model, noise_model, itrk, phase, amp) -> None:
+def test_nonstationary_bg_power_bg_amp(bg_model: str, noise_model: str, itrk: int, phase: float, amp: float) -> None:
     """Test that smoothed time varying spectrum with different modulation amplitudes constant noise model
     produces expected results
     """
@@ -533,7 +534,7 @@ def test_nonstationary_bg_power_bg_amp(bg_model, noise_model, itrk, phase, amp) 
 @pytest.mark.parametrize('noise_model', ['white_equal'])
 @pytest.mark.parametrize('itrk', [1, 2, 3, 4, 5, 16, 32, 64, 127, 128, 129])
 @pytest.mark.parametrize('phase', [0.7])
-def test_nonstationary_bg_power_harmonic(bg_model, noise_model, itrk, phase) -> None:
+def test_nonstationary_bg_power_harmonic(bg_model: str, noise_model: str, itrk: int, phase: float) -> None:
     """Test that smoothed time varying spectrum with constant noise model
     produces expected results with different known injected time variation
     """
@@ -546,7 +547,7 @@ def test_nonstationary_bg_power_harmonic(bg_model, noise_model, itrk, phase) -> 
 @pytest.mark.parametrize('noise_model', ['white_faint', 'white_equal', 'white_bright'])
 @pytest.mark.parametrize('itrk', [16])
 @pytest.mark.parametrize('phase', [0.2])
-def test_nonstationary_bg_power_noise_brightness(bg_model, noise_model, itrk, phase) -> None:
+def test_nonstationary_bg_power_noise_brightness(bg_model: str, noise_model: str, itrk: int, phase: float) -> None:
     """Test that smoothed time varying spectrum with different noises brightnesses constant background brightness
     produces expected results
     """
@@ -578,7 +579,7 @@ def test_nonstationary_bg_power_noise_brightness(bg_model, noise_model, itrk, ph
         2 * np.pi + 0.01,
     ],
 )
-def test_nonstationary_bg_power_phase(bg_model, noise_model, itrk, phase) -> None:
+def test_nonstationary_bg_power_phase(bg_model: str, noise_model: str, itrk: int, phase: float) -> None:
     """Test that smoothed time varying spectrum with constant noise model produces expected results
     with different phases
     """
@@ -614,7 +615,7 @@ def test_different_noise_bg_spectra() -> None:
 
 @pytest.mark.parametrize('bg_model', ['white_faint', 'white_equal', 'white_bright'])
 @pytest.mark.parametrize('noise_model', ['white_equal'])
-def test_stationary_bg_power(bg_model, noise_model) -> None:
+def test_stationary_bg_power(bg_model: str, noise_model: str) -> None:
     """Test that smoothed time invariant spectrum with constant noise model produces expected results
     with different background noise powers
     """
@@ -623,7 +624,7 @@ def test_stationary_bg_power(bg_model, noise_model) -> None:
 
 @pytest.mark.parametrize('bg_model', ['white_equal'])
 @pytest.mark.parametrize('noise_model', ['white_faint', 'white_equal', 'white_bright'])
-def test_stationary_noise_power(bg_model, noise_model) -> None:
+def test_stationary_noise_power(bg_model: str, noise_model: str) -> None:
     """Test that smoothed time invariant spectrum with constant noise model produces expected results
     with different instrument noise powers
     """
@@ -634,7 +635,7 @@ def test_stationary_noise_power(bg_model, noise_model) -> None:
     'bg_model', ['sin1', 'sin2', 'sin3', 'powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2'])
 @pytest.mark.parametrize('noise_model', ['white_equal'])
 @pytest.mark.parametrize('smooth_lengthf', [1.0])
-def test_stationary_filter_bg_(bg_model, noise_model, smooth_lengthf) -> None:
+def test_stationary_filter_bg_(bg_model: str, noise_model: str, smooth_lengthf: float) -> None:
     """Test nothing unexpected happens if filter_periods is true but the noise model has no harmonics"""
     stationary_mean_smooth_helper(
         [bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], smooth_lengthf, True,
@@ -646,7 +647,7 @@ def test_stationary_filter_bg_(bg_model, noise_model, smooth_lengthf) -> None:
 )
 @pytest.mark.parametrize('noise_model', ['white_equal'])
 @pytest.mark.parametrize('smooth_lengthf', [0.1, 1.0, 10.0, 100.0])
-def test_stationary_mean_bg_smooth(bg_model, noise_model, smooth_lengthf) -> None:
+def test_stationary_mean_bg_smooth(bg_model: str, noise_model: str, smooth_lengthf: float) -> None:
     """Test that smoothed time invariant spectrum with constant instrument noise model produces expected results
     with different smoothing lengths
     """
@@ -660,7 +661,7 @@ def test_stationary_mean_bg_smooth(bg_model, noise_model, smooth_lengthf) -> Non
     'noise_model', ['sin1', 'sin2', 'sin3', 'powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2'],
 )
 @pytest.mark.parametrize('smooth_lengthf', [1.0, 100.0])
-def test_stationary_mean__instrument_smooth(bg_model, noise_model, smooth_lengthf) -> None:
+def test_stationary_mean__instrument_smooth(bg_model: str, noise_model: str, smooth_lengthf: float) -> None:
     """Test that smoothed time invariant spectrum with different pairs of instrument and bg noise model
     produces expected results
     """

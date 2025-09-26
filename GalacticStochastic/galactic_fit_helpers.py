@@ -59,7 +59,7 @@ def S_gal_model_alt(
 def filter_periods_fft(
     r_mean: NDArray[np.floating],
     Nt_loc: int,
-    period_list: tuple[int, ...] | tuple[np.floating, ...],
+    period_list: tuple[int, ...] | tuple[float, ...] | tuple[np.floating, ...],
     wc: WDMWaveletConstants,
     *,
     period_tolerance: float = 0.01,
@@ -98,7 +98,7 @@ def filter_periods_fft(
         if angle_fft[-1] < angle_small:
             abs_fft[-1] = -abs_fft[-1]
 
-        rec = 1.0 + abs_fft[0] / 2.0 + np.zeros(Nt_loc, dtype=np.float64)
+        rec: NDArray[np.floating] = 1.0 + abs_fft[0] / 2.0 + np.zeros(Nt_loc, dtype=np.float64)
 
         # iterate over the periods we want to restrict to
         for itrk, k in enumerate(period_list):
@@ -118,7 +118,7 @@ def filter_periods_fft(
                 # set amplitude and phase in highest frequency case
                 amp_got[itrk, itrc] = abs_fft[-1] / np.sqrt(2.0)
                 angle_got[itrk, itrc] = np.pi / 4.0
-                rec += amp_got[itrk, itrc] * np.cos(k * wts - angle_got[itrk, itrc])
+                rec = amp_got[itrk, itrc] * np.cos(k * wts - angle_got[itrk, itrc])
             else:
                 # set amplitude and phase in other cases
                 rec += abs_fft[idx] * np.cos(k * wts - angle_fft[idx])
@@ -169,29 +169,29 @@ def get_S_cyclo(
         assert isinstance(wc.Nt, int)
         Nt_loc = wc.Nt
 
-    nc_s = S_inst_m.shape[1]
+    nc_s: int = S_inst_m.shape[1]
 
-    S_in = (galactic_below[..., :nc_s].reshape((wc.Nt, wc.Nf, nc_s))) ** 2
+    S_in: NDArray[np.floating] = (galactic_below[..., :nc_s].reshape((wc.Nt, wc.Nf, nc_s))) ** 2
     del galactic_below
 
-    S_in_mean = np.mean(S_in, axis=0)
+    S_in_mean: NDArray[np.floating] = np.mean(S_in, axis=0)
 
     if filter_periods == 0:
         r_smooth: NDArray[np.floating] = np.zeros((wc.Nt, nc_s), dtype=np.float64) + 1.0
         amp_got: NDArray[np.floating] = np.zeros((0, nc_s), dtype=np.float64)
         angle_got: NDArray[np.floating] = np.zeros((0, nc_s), dtype=np.float64)
     else:
-        r_mean = np.zeros((wc.Nt, nc_s), dtype=np.float64)
+        r_mean: NDArray[np.floating] = np.zeros((wc.Nt, nc_s), dtype=np.float64)
         # whitened mean galaxy power
-        Sw_in_mean = np.zeros_like(S_in_mean)
+        Sw_in_mean: NDArray[np.floating] = np.zeros_like(S_in_mean)
         Sw_in_mean[S_inst_m > 0.0] = np.abs(S_in_mean[S_inst_m > 0.0] / S_inst_m[S_inst_m > 0.0])
 
         for itrc in range(nc_s):
             # completely cut out faint frequencies for calculating the envelope modulation
             # faint frequencies are different and noisier, so just weighting may not work
-            mask = Sw_in_mean[:, itrc] > faint_cutoff_thresh * np.max(Sw_in_mean[:, itrc])
-            stabilizer = t_stabilizer_mult * np.max(S_in_mean[mask, itrc])
-            Sw_in = S_in[:, mask, itrc] / (S_in_mean[mask, itrc] + stabilizer)
+            mask: NDArray[np.bool_] = Sw_in_mean[:, itrc] > faint_cutoff_thresh * np.max(Sw_in_mean[:, itrc])
+            stabilizer: float = t_stabilizer_mult * float(np.max(S_in_mean[mask, itrc]))
+            Sw_in: NDArray[np.floating] = S_in[:, mask, itrc] / (S_in_mean[mask, itrc] + stabilizer)
             r_mean[:, itrc] = np.mean(Sw_in, axis=1)
 
             del Sw_in
@@ -203,7 +203,7 @@ def get_S_cyclo(
         del Sw_in_mean
 
         # input ratio can't be negative except due to numerical noise (will enforce nonzero later)
-        r_mean_abs = np.abs(r_mean)
+        r_mean_abs: NDArray[np.floating] = np.abs(r_mean)
 
         del r_mean
 
@@ -224,7 +224,7 @@ def get_S_cyclo(
         r_smooth = np.abs(r_smooth)
 
     # get mean of demodulated spectrum as a function of time with time variation removed
-    S_demod_mean = np.zeros((wc.Nf, nc_s))
+    S_demod_mean: NDArray[np.floating] = np.zeros((wc.Nf, nc_s))
 
     for itrc in range(nc_s):
         S_demod_mean[:, itrc] = np.mean(np.abs(S_in[:, :, itrc].T / r_smooth[:, itrc]), axis=1)

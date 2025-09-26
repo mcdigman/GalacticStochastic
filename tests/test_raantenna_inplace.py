@@ -1,9 +1,8 @@
 """Testing file to ensure rigid_adiabatic_antenna behavior is unchanged"""
-from typing import Tuple
-
 import h5py
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from LisaWaveformTools.ra_waveform_freq import rigid_adiabatic_antenna
 from tests.generate_raantenna_test_outputs import generate_test_inputs
@@ -12,7 +11,7 @@ from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 KNOWN_HDF5_PATH = 'tests/known_raantenna_outputs.hdf5'
 
 
-def load_known_outputs(hdf5_path) -> Tuple[dict, list[int]]:
+def load_known_outputs(hdf5_path: str) -> tuple[dict[int, tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]], list[int]]:
     """Load reference sc_channels and kdotx arrays from HDF5."""
     with h5py.File(hdf5_path, 'r') as f:
         seeds: list[int] = []
@@ -46,7 +45,7 @@ _outputs_dict, _all_seeds = load_known_outputs(KNOWN_HDF5_PATH)
 
 
 @pytest.mark.parametrize('seed', _all_seeds)
-def test_raantenna_inplace_parametrized(seed):
+def test_raantenna_inplace_parametrized(seed: int) -> None:
     spacecraft_channels, params_extrinsic, ts, FFs, nf_low, NTs, kdotx, lc = generate_test_inputs(seed)
     ref_RR, ref_II, ref_kdotx = _outputs_dict[seed]
     kdotx_test = kdotx.copy()

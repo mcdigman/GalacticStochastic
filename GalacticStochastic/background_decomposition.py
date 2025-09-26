@@ -219,7 +219,7 @@ class BGDecomposition:
         sparse_addition_helper(wavelet_waveform, self.galactic_above)
 
 
-def _check_correct_component_shape(nc: int, wc: WDMWaveletConstants, galactic_component: NDArray[np.floating], *, shape_mode=0) -> NDArray[np.floating]:
+def _check_correct_component_shape(nc: int, wc: WDMWaveletConstants, galactic_component: NDArray[np.floating], *, shape_mode: int = 0) -> NDArray[np.floating]:
     assert galactic_component.size == wc.Nt * wc.Nf * nc, 'Incorrectly sized galaxy component'
 
     shape1 = (wc.Nt * wc.Nf, nc)

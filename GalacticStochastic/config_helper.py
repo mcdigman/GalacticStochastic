@@ -1,6 +1,7 @@
 """Load all the configuration objects that are needed from a toml file"""
 
 from pathlib import Path
+from typing import Any
 
 import tomllib
 
@@ -9,12 +10,12 @@ from LisaWaveformTools.lisa_config import LISAConstants, get_lisa_constants
 from WaveletWaveforms.wdm_config import WDMWaveletConstants, get_wavelet_model
 
 
-def get_config_objects(toml_filename: str) -> tuple[dict, WDMWaveletConstants, LISAConstants, IterationConfig]:
+def get_config_objects(toml_filename: str) -> tuple[dict[str, Any], WDMWaveletConstants, LISAConstants, IterationConfig]:
     """Load the configuration from the input toml filename
     and create some of the config objects the iterative fit will need
     """
     with Path(toml_filename).open('rb') as f:
-        config = tomllib.load(f)
+        config: dict[str, Any] = tomllib.load(f)
 
     wc = get_wavelet_model(config)
 

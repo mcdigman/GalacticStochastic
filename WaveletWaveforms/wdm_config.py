@@ -1,6 +1,6 @@
 """read wavelet transform constants in from config file and compute derived parameters"""
 
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 import numpy as np
 
@@ -32,37 +32,38 @@ class WDMWaveletConstants(NamedTuple):
     L: int
 
 
-def get_wavelet_model(config: dict) -> WDMWaveletConstants:
+def get_wavelet_model(config: dict[str, Any]) -> WDMWaveletConstants:
+    config_wc: dict[str, int | float] = config['wavelet_constants']
     # number of time pixels (should be even)
-    Nf = int(config['wavelet_constants']['Nf'])
+    Nf = int(config_wc['Nf'])
     assert Nf & 1 == 0  # check even
 
     # number of frequency pixels (should be even)
-    Nt = int(config['wavelet_constants']['Nt'])
+    Nt = int(config_wc['Nt'])
     assert Nt & 1 == 0  # check even
 
     # time sampling cadence (units of seconds)
-    dt = float(config['wavelet_constants']['dt'])
+    dt = float(config_wc['dt'])
     assert dt > 0.0
 
     # over sampling
-    mult = int(config['wavelet_constants']['mult'])
+    mult = int(config_wc['mult'])
 
     # number of frequency steps in interpolation table
-    Nsf = int(config['wavelet_constants']['Nsf'])
+    Nsf = int(config_wc['Nsf'])
 
     # number of fdots in interpolation table
-    Nfd = int(config['wavelet_constants']['Nfd'])
+    Nfd = int(config_wc['Nfd'])
 
     # fractional fdot increment in interpolation table
-    dfdot = float(config['wavelet_constants']['dfdot'])
+    dfdot = float(config_wc['dfdot'])
 
     # number of fdot increments which are less than zero in the interpolation table
-    Nfd_negative = int(config['wavelet_constants']['Nfd_negative'])
+    Nfd_negative = int(config_wc['Nfd_negative'])
     assert Nfd_negative < Nfd
 
     # number of time steps used to compute the interpolation table; must be an integer times mult
-    Nst = int(config['wavelet_constants']['Nst'])
+    Nst = int(config_wc['Nst'])
 
     dkstep = int(Nst // mult)
     if dkstep * mult != Nst:
@@ -70,10 +71,10 @@ def get_wavelet_model(config: dict) -> WDMWaveletConstants:
         raise ValueError(msg)
 
     # filter steepness of wavelet transform
-    nx = float(config['wavelet_constants']['nx'])
+    nx = float(config_wc['nx'])
 
     # reduced filter length; must be a power of 2
-    L = int(config['wavelet_constants']['L'])
+    L = int(config_wc['L'])
     assert L > 0
     assert (L & (L - 1)) == 0  # check power of 2
 

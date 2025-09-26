@@ -47,7 +47,7 @@ class NoiseModelManager(StateManager):
 
         self.itrn: int = 0
 
-        self.idx_S_save: NDArray = np.hstack(
+        self.idx_S_save: NDArray[np.integer] = np.hstack(
             [
                 np.arange(0, min(10, self.fit_state.get_n_itr_cut())),
                 np.arange(min(10, self.fit_state.get_n_itr_cut()), 4),

@@ -9,12 +9,14 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 from LisaWaveformTools.linear_frequency_source import LinearFrequencyIntrinsicParams, LinearFrequencySourceWaveformTime
 from LisaWaveformTools.linear_frequency_source_freq import LinearFrequencySourceWaveformFreq
 from LisaWaveformTools.lisa_config import get_lisa_constants
+from LisaWaveformTools.stationary_freq_source import StationarySourceWaveformFreq
 from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams
+from LisaWaveformTools.stationary_time_source import StationarySourceWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
 
-def test_intrinsic_waveform_agreement():
+def test_intrinsic_waveform_agreement() -> None:
     """Test the non TDI parts of the waveform agree between the time and frequency domain cases"""
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 
@@ -98,7 +100,7 @@ def test_intrinsic_waveform_agreement():
     assert_allclose(PFT[mask], f_wave.PF[mask], atol=1.e-20, rtol=1.e-10)
 
 
-def test_intrinsic_update_consistent1_time():
+def test_intrinsic_update_consistent1_time() -> None:
     """Test the non TDI parts of the waveform update consistently."""
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 
@@ -175,7 +177,7 @@ def test_intrinsic_update_consistent1_time():
         lc=lc,
     )
 
-    def assert_match_time(wave1, wave2):
+    def assert_match_time(wave1: StationarySourceWaveformTime, wave2: StationarySourceWaveformTime) -> None:
         assert_array_equal(wave1.wavefront_time, wave2.wavefront_time)
         assert_equal(wave1.nc_waveform, wave2.nc_waveform)
         assert_equal(wave1.intrinsic_waveform.T, wave2.intrinsic_waveform.T)
@@ -232,7 +234,7 @@ def test_intrinsic_update_consistent1_time():
 
 
 @pytest.mark.parametrize('freeze_limits', [True, False])
-def test_intrinsic_update_consistent1_freq(freeze_limits):
+def test_intrinsic_update_consistent1_freq(freeze_limits: bool) -> None:
     """Test the non TDI parts of the waveform update consistently."""
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 
@@ -321,7 +323,7 @@ def test_intrinsic_update_consistent1_freq(freeze_limits):
         n_pad_F=10,  # optional, default is 10
     )
 
-    def assert_match_freq(wave1, wave2):
+    def assert_match_freq(wave1: StationarySourceWaveformFreq, wave2: StationarySourceWaveformFreq) -> None:
         assert_equal(wave1.nc_waveform, wave2.nc_waveform)
         assert_equal(wave1.intrinsic_waveform.F, wave2.intrinsic_waveform.F)
         assert_equal(wave1.tdi_waveform.F, wave2.tdi_waveform.F)

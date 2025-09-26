@@ -14,13 +14,15 @@ from WDMWaveletTransforms.wavelet_transforms import transform_wavelet_freq, tran
 from LisaWaveformTools.chirplet_source_freq import LinearChirpletSourceWaveformFreq
 from LisaWaveformTools.chirplet_source_time import LinearChirpletSourceWaveformTime
 from LisaWaveformTools.lisa_config import get_lisa_constants
+from LisaWaveformTools.stationary_freq_source import StationarySourceWaveformFreq
 from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams
+from LisaWaveformTools.stationary_time_source import StationarySourceWaveformTime
 from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
 
-def test_intrinsic_waveform_agreement():
+def test_intrinsic_waveform_agreement() -> None:
     """Test the non TDI parts of the waveform agree between the time and frequency domain cases"""
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 
@@ -110,7 +112,7 @@ def test_intrinsic_waveform_agreement():
     assert_allclose(PFT[mask], f_wave.PF[mask], atol=1.e-5, rtol=1.e-10)
 
 
-def test_intrinsic_update_consistent1_time():
+def test_intrinsic_update_consistent1_time() -> None:
     """Test the non TDI parts of the waveform update consistently."""
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 
@@ -197,7 +199,7 @@ def test_intrinsic_update_consistent1_time():
         lc=lc,
     )
 
-    def assert_match_time(wave1, wave2):
+    def assert_match_time(wave1: StationarySourceWaveformTime, wave2: StationarySourceWaveformTime) -> None:
         assert_array_equal(wave1.wavefront_time, wave2.wavefront_time)
         assert_equal(wave1.nc_waveform, wave2.nc_waveform)
         assert_equal(wave1.intrinsic_waveform.T, wave2.intrinsic_waveform.T)
@@ -254,7 +256,7 @@ def test_intrinsic_update_consistent1_time():
 
 
 @pytest.mark.parametrize('freeze_limits', [True, False])
-def test_intrinsic_update_consistent1_freq(freeze_limits):
+def test_intrinsic_update_consistent1_freq(freeze_limits: bool) -> None:
     """Test the non TDI parts of the waveform update consistently."""
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 
@@ -353,7 +355,7 @@ def test_intrinsic_update_consistent1_freq(freeze_limits):
         n_pad_F=10,  # optional, default is 10
     )
 
-    def assert_match_freq(wave1, wave2):
+    def assert_match_freq(wave1: StationarySourceWaveformFreq, wave2: StationarySourceWaveformFreq) -> None:
         assert_equal(wave1.nc_waveform, wave2.nc_waveform)
         assert_equal(wave1.intrinsic_waveform.F, wave2.intrinsic_waveform.F)
         assert_equal(wave1.tdi_waveform.F, wave2.tdi_waveform.F)
@@ -436,7 +438,7 @@ def test_intrinsic_update_consistent1_freq(freeze_limits):
 @pytest.mark.parametrize('m', [1])
 @pytest.mark.parametrize('use_tukey', [True, False])
 @pytest.mark.parametrize('use_cos', [True, False])
-def test_sincos_low_wdm_match(m, use_tukey, use_cos):
+def test_sincos_low_wdm_match(m: int, use_tukey: bool, use_cos: bool) -> None:
     """Test for match for known pure sinusoidal signal at low frequency"""
     toml_filename_in = 'tests/sparse_wdm_test_config1.toml'
 
@@ -498,7 +500,7 @@ def test_sincos_low_wdm_match(m, use_tukey, use_cos):
 @pytest.mark.parametrize('Nf_loc', [1024, 2048])
 @pytest.mark.parametrize('m', [7, 8])
 @pytest.mark.parametrize('use_cos', [True, False])
-def test_sincos_wdm_match(dt_loc, Nt_loc, Nf_loc, m, use_cos):
+def test_sincos_wdm_match(dt_loc: float, Nt_loc: int, Nf_loc: int, m: int, use_cos: bool) -> None:
     """Test for known sinusoidal signal match"""
     toml_filename_in = 'tests/sparse_wdm_test_config1.toml'
 

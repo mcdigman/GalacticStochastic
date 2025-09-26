@@ -1,6 +1,7 @@
 """index for loading the current versions of files"""
 
 from pathlib import Path
+from typing import Any
 
 import h5py
 import numpy as np
@@ -27,8 +28,8 @@ labels_gb = [
 ]
 
 
-def get_common_noise_filename(config: dict, snr_thresh, wc: WDMWaveletConstants) -> str:
-    galaxy_dir = config['files']['galaxy_dir']
+def get_common_noise_filename(config: dict[str, Any], snr_thresh, wc: WDMWaveletConstants) -> str:
+    galaxy_dir = str(config['files']['galaxy_dir'])
     return (
         galaxy_dir
         + ('preprocessed_background=%.2f' % snr_thresh)
@@ -40,8 +41,8 @@ def get_common_noise_filename(config: dict, snr_thresh, wc: WDMWaveletConstants)
     )
 
 
-def get_preliminary_filename(config: dict, snr_thresh: float, Nf: int, Nt: int, dt: float) -> str:
-    galaxy_dir = config['files']['galaxy_dir']
+def get_preliminary_filename(config: dict[str, Any], snr_thresh: float, Nf: int, Nt: int, dt: float) -> str:
+    galaxy_dir = str(config['files']['galaxy_dir'])
     return (
         galaxy_dir
         + ('preprocessed_background=%.2f' % snr_thresh)
@@ -53,12 +54,12 @@ def get_preliminary_filename(config: dict, snr_thresh: float, Nf: int, Nt: int, 
     )
 
 
-def get_galaxy_filename(config: dict) -> str:
-    return config['files']['galaxy_dir'] + config['files']['galaxy_file']
+def get_galaxy_filename(config: dict[str, Any]) -> str:
+    return str(config['files']['galaxy_dir']) + str(config['files']['galaxy_file'])
 
 
-def get_processed_gb_filename(config: dict, stat_only, snr_thresh, wc: WDMWaveletConstants, nt_lim_snr: PixelGenericRange) -> str:
-    galaxy_dir = config['files']['galaxy_dir']
+def get_processed_gb_filename(config: dict[str, Any], stat_only, snr_thresh, wc: WDMWaveletConstants, nt_lim_snr: PixelGenericRange) -> str:
+    galaxy_dir = str(config['files']['galaxy_dir'])
     return (
         galaxy_dir
         + ('gb8_processed_snr=%.2f' % snr_thresh)
@@ -77,7 +78,7 @@ def get_processed_gb_filename(config: dict, stat_only, snr_thresh, wc: WDMWavele
     )
 
 
-def get_noise_common(config: dict, snr_thresh, wc: WDMWaveletConstants, lc):
+def get_noise_common(config: dict[str, Any], snr_thresh, wc: WDMWaveletConstants, lc):
     try:
         filename_gb_common = get_common_noise_filename(config, snr_thresh, wc)
         hf_in = h5py.File(filename_gb_common, 'r')
@@ -129,8 +130,7 @@ def _source_mask_read_helper(hf_sky: h5py.Group, key: str, fmin: float, fmax: fl
     return n_loc, params
 
 
-def get_full_galactic_params(
-    config: dict):
+def get_full_galactic_params(config: dict[str, Any]):
     """Get the galaxy dataset binaries"""
     # dgb is detached galactic binaries, igb is interacting galactic binaries, vgb is verification
     categories = config['iterative_fit_constants'].get('component_list', ['dgb', 'igb', 'vgb'])
@@ -170,7 +170,7 @@ def get_full_galactic_params(
     return params_gb, ns_got
 
 
-def load_preliminary_galactic_file(config: dict, ic: IterationConfig, wc: WDMWaveletConstants, lc: LISAConstants):
+def load_preliminary_galactic_file(config: dict[str, Any], ic: IterationConfig, wc: WDMWaveletConstants, lc: LISAConstants):
     snr_thresh = ic.snr_thresh
     preliminary_gb_filename = get_preliminary_filename(config, snr_thresh, wc.Nf, wc.Nt, wc.dt)
 
@@ -225,7 +225,7 @@ def load_preliminary_galactic_file(config: dict, ic: IterationConfig, wc: WDMWav
 
 
 def load_processed_gb_file(
-    config: dict, snr_thresh, wc: WDMWaveletConstants, nt_lim_snr: PixelGenericRange, *, stat_only,
+    config: dict[str, Any], snr_thresh, wc: WDMWaveletConstants, nt_lim_snr: PixelGenericRange, *, stat_only,
 ):
     # TODO loading should produce a galactic background decomposition object
     filename_in = get_processed_gb_filename(config, stat_only, snr_thresh, wc, nt_lim_snr)
@@ -254,7 +254,7 @@ def load_processed_gb_file(
 
 def store_preliminary_gb_file(
     config_filename: str,
-    config: dict,
+    config: dict[str, Any],
     wc: WDMWaveletConstants,
     lc: LISAConstants,
     ic: IterationConfig,
@@ -316,7 +316,7 @@ def store_preliminary_gb_file(
 
 
 def store_processed_gb_file(
-    config: dict,
+    config: dict[str, Any],
     wc: WDMWaveletConstants,
     lc: LISAConstants,
     ic: IterationConfig,
@@ -347,26 +347,26 @@ def store_processed_gb_file(
     hf_out = h5py.File(filename_out, 'w')
     hf_S = hf_out.create_group('S')
     hf_signal = hf_out.create_group('signal')
-    hf_signal.create_dataset('galactic_below', data=bgd.get_galactic_below_low(), compression='gzip')
-    hf_signal.create_dataset('galactic_above', data=bgd.get_galactic_coadd_resolvable(), compression='gzip')
-    hf_signal.create_dataset('galactic_undecided', data=bgd.get_galactic_coadd_undecided(), compression='gzip')
+    _ = hf_signal.create_dataset('galactic_below', data=bgd.get_galactic_below_low(), compression='gzip')
+    _ = hf_signal.create_dataset('galactic_above', data=bgd.get_galactic_coadd_resolvable(), compression='gzip')
+    _ = hf_signal.create_dataset('galactic_undecided', data=bgd.get_galactic_coadd_undecided(), compression='gzip')
 
-    hf_S.create_dataset('period_list', data=period_list)
+    _ = hf_S.create_dataset('period_list', data=period_list)
     hf_S.attrs['n_bin_use'] = n_bin_use
-    hf_S.create_dataset('S_stat_m', data=S_inst_m)
-    hf_S.create_dataset('snrs_tot_upper', data=snrs_tot_upper[n_full_converged], compression='gzip')
-    hf_S.create_dataset('argbinmap', data=argbinmap, compression='gzip')
+    _ = hf_S.create_dataset('S_stat_m', data=S_inst_m)
+    _ = hf_S.create_dataset('snrs_tot_upper', data=snrs_tot_upper[n_full_converged], compression='gzip')
+    _ = hf_S.create_dataset('argbinmap', data=argbinmap, compression='gzip')
 
-    hf_S.create_dataset('faints_old', data=faints_old, compression='gzip')
-    hf_S.create_dataset('faints_cur', data=faints_cur[n_full_converged], compression='gzip')
+    _ = hf_S.create_dataset('faints_old', data=faints_old, compression='gzip')
+    _ = hf_S.create_dataset('faints_cur', data=faints_cur[n_full_converged], compression='gzip')
 
-    hf_S.create_dataset('brights', data=brights[n_full_converged], compression='gzip')
-    hf_S.create_dataset('S_final', data=S_final, compression='gzip')
+    _ = hf_S.create_dataset('brights', data=brights[n_full_converged], compression='gzip')
+    _ = hf_S.create_dataset('S_final', data=S_final, compression='gzip')
 
-    hf_S.create_dataset('source_gb_file', data=get_galaxy_filename(config))
-    hf_S.create_dataset('preliminary_gb_file', data=filename_gb_init)  # TODO these are redundant as constructed
-    hf_S.create_dataset('init_gb_file', data=filename_gb_init)
-    hf_S.create_dataset('common_gb_noise_file', data=filename_gb_common)
+    _ = hf_S.create_dataset('source_gb_file', data=get_galaxy_filename(config))
+    _ = hf_S.create_dataset('preliminary_gb_file', data=filename_gb_init)  # TODO these are redundant as constructed
+    _ = hf_S.create_dataset('init_gb_file', data=filename_gb_init)
+    _ = hf_S.create_dataset('common_gb_noise_file', data=filename_gb_common)
 
     hf_wc = hf_out.create_group('_wc')
     for key in wc._fields:

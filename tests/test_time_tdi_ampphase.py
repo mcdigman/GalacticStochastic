@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 import tomllib
 from numpy.testing import assert_allclose
+from numpy.typing import NDArray
 from scipy.integrate import cumulative_trapezoid as cumtrapz
 from scipy.signal import butter, filtfilt
 from WDMWaveletTransforms.transform_freq_funcs import tukey
@@ -36,7 +37,7 @@ wc_in = get_wavelet_model(config_in)
 taylor_time_table = get_taylor_table_time(wc_in, cache_mode='check', output_mode='hf')
 
 
-def get_waveform_helper(p_input, f_input, fp_input, fpp_input, amp_input, nt_loc, DT, nc_waveform, max_f):
+def get_waveform_helper(p_input: float, f_input: float, fp_input: float, fpp_input: float, amp_input: float, nt_loc: int, DT: float, nc_waveform: int, max_f: float) -> tuple[StationaryWaveformTime, StationaryWaveformTime, int]:
     """Help get intrinsic_waveform objects."""
     T = np.arange(nt_loc) * DT
     PT = 2 * np.pi * (f_input + 1.0 / 2.0 * fp_input * T + 1.0 / 6.0 * fpp_input * T**2) * T + p_input
@@ -65,11 +66,11 @@ def get_waveform_helper(p_input, f_input, fp_input, fpp_input, amp_input, nt_loc
     return waveform, AET_waveform, arg_cut
 
 
-def get_RR_t_mult(rr_model, nt_loc, nf_loc, dt):
+def get_RR_t_mult(rr_model: str, nt_loc: int, nf_loc: int, dt: float) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
     """Get a multiplier for RR and II for testing"""
     if rr_model == 'const':
-        RR_t_mult = np.full(nt_loc * nf_loc, 1.0)
-        II_t_mult = np.full(nt_loc * nf_loc, 1.0)
+        RR_t_mult: NDArray[np.floating] = np.full(nt_loc * nf_loc, 1.0)
+        II_t_mult: NDArray[np.floating] = np.full(nt_loc * nf_loc, 1.0)
     elif rr_model == 'lin17':
         RR_t_mult = np.linspace(
             0.17946632189870892,
@@ -148,7 +149,7 @@ def get_RR_t_mult(rr_model, nt_loc, nf_loc, dt):
     'rr_model', ['const', 'lin1', 'lin2', 'lin3', 'lin10', 'lin11', 'lin12', 'lin13', 'lin14', 'lin15', 'lin16'],
 )
 # @pytest.mark.skip()
-def test_ExtractAmpPhase_inplace_basic(f0_mult, rr_model, f0p_mult):
+def test_ExtractAmpPhase_inplace_basic(f0_mult: float, rr_model: str, f0p_mult: float) -> None:
     """Test the extraction in some easier cases"""
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 
@@ -184,8 +185,8 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult, rr_model, f0p_mult):
     RR_scale_mult = np.array([0.9, 0.5, 0.3])
     II_scale_mult = np.array([0.4, 0.7, 0.8])
     if rr_model == 'const':
-        RR_t_mult = np.full(nt_loc, 1.0)
-        II_t_mult = np.full(nt_loc, 1.0)
+        RR_t_mult: NDArray[np.floating] = np.full(nt_loc, 1.0)
+        II_t_mult: NDArray[np.floating] = np.full(nt_loc, 1.0)
     elif rr_model == 'lin1':
         RR_t_mult = np.linspace(0.5, 1.5, nt_loc)
         II_t_mult = np.linspace(0.5, 1.5, nt_loc)
@@ -425,7 +426,7 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult, rr_model, f0p_mult):
     ],
 )
 # @pytest.mark.skip()
-def test_time_tdi_inplace_nearzero(f0_mult, rr_model, f0p_mult):
+def test_time_tdi_inplace_nearzero(f0_mult: float, rr_model: str, f0p_mult: float) -> None:
     """Test extraction in cases where the RR or II or both go near zero"""
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 
@@ -450,10 +451,10 @@ def test_time_tdi_inplace_nearzero(f0_mult, rr_model, f0p_mult):
 
     AT = np.full(nt_loc, amp_input)
 
-    AET_PT = np.zeros((nc_waveform, nt_loc))
-    AET_FT = np.zeros((nc_waveform, nt_loc))
-    AET_FTd = np.zeros((nc_waveform, nt_loc))
-    AET_AT = np.zeros((nc_waveform, nt_loc))
+    AET_PT: NDArray[np.floating] = np.zeros((nc_waveform, nt_loc))
+    AET_FT: NDArray[np.floating] = np.zeros((nc_waveform, nt_loc))
+    AET_FTd: NDArray[np.floating] = np.zeros((nc_waveform, nt_loc))
+    AET_AT: NDArray[np.floating] = np.zeros((nc_waveform, nt_loc))
     waveform = StationaryWaveformTime(T.copy(), PT.copy(), FT.copy(), FTd.copy(), AT.copy())
     AET_waveform = StationaryWaveformTime(T.copy(), AET_PT.copy(), AET_FT.copy(), AET_FTd.copy(), AET_AT.copy())
 
@@ -463,8 +464,8 @@ def test_time_tdi_inplace_nearzero(f0_mult, rr_model, f0p_mult):
     RR_scale_mult = np.array([1.0, 1.0, 1.0])
     II_scale_mult = np.array([1.0, 1.0, 1.0])
     if rr_model == 'const':
-        RR_t_mult = np.full(nt_loc, 1.0)
-        II_t_mult = np.full(nt_loc, 1.0)
+        RR_t_mult: NDArray[np.floating] = np.full(nt_loc, 1.0)
+        II_t_mult: NDArray[np.floating] = np.full(nt_loc, 1.0)
     elif rr_model == 'lin1':
         RR_t_mult = np.linspace(0.5, 1.5, nt_loc)
         II_t_mult = np.linspace(0.5, 1.5, nt_loc)
@@ -706,7 +707,7 @@ def test_time_tdi_inplace_nearzero(f0_mult, rr_model, f0p_mult):
 @pytest.mark.parametrize('f0p_mult', [-0.2, 0.0, 1.0e-5, 0.2, 0.9])
 @pytest.mark.parametrize('rr_model', ['quad2', 'sin1', 'sin2', 'sin3', 'sin4', 'sin5', 'lin18', 'lin17', 'const'])
 # @pytest.mark.skip()
-def test_time_tdi_inplace_transform(f0_mult, rr_model, f0p_mult):
+def test_time_tdi_inplace_transform(f0_mult: float, rr_model: str, f0p_mult: float) -> None:
     """Test whether the signal computed in the time domain matches computing
     it in the wavelet domain and transforming to time.
     """
@@ -768,7 +769,7 @@ def test_time_tdi_inplace_transform(f0_mult, rr_model, f0p_mult):
     wavemaket(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table, force_nulls=False)
 
     # get the dense wavelet intrinsic_waveform
-    wavelet_dense = np.zeros((nt_loc * wc.Nf, nc_waveform))
+    wavelet_dense: NDArray[np.floating] = np.zeros((nt_loc * wc.Nf, nc_waveform))
     sparse_addition_helper(wavelet_waveform, wavelet_dense)
     wavelet_dense = wavelet_dense.reshape((nt_loc, wc.Nf, nc_waveform))
 
