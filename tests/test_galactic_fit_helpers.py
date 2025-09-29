@@ -387,7 +387,7 @@ def test_nonstationary_mean_zero_case() -> None:
             got_loc = S_got[:, itrf, itrc]
             bg_loc = f_mult_smooth[itrf, itrc] ** 2 * t_mult[:, itrc] ** 2
             pred_loc = S_inst_m[itrf, itrc] + bg_loc
-            assert_allclose(
+            assert np.allclose(
                 got_loc,
                 pred_loc,
                 atol=5 * (f_mult_smooth[itrf, itrc] ** 2) / np.sqrt(wc.Nt),
@@ -483,7 +483,7 @@ def nonstationary_mean_smooth_helper(
             got_loc = S_got[:, itrf, itrc]
             bg_loc = f_mult_smooth[itrf, itrc] ** 2 * t_mult[:, itrc] ** 2
             pred_loc = S_inst_m[itrf, itrc] + bg_loc
-            assert_allclose(
+            assert np.allclose(
                 got_loc,
                 pred_loc,
                 atol=5 * (f_mult_smooth[itrf, itrc] ** 2) / np.sqrt(wc.Nt),

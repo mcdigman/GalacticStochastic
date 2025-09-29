@@ -118,7 +118,7 @@ def filter_periods_fft(
                 # set amplitude and phase in highest frequency case
                 amp_got[itrk, itrc] = abs_fft[-1] / np.sqrt(2.0)
                 angle_got[itrk, itrc] = np.pi / 4.0
-                rec = amp_got[itrk, itrc] * np.cos(k * wts - angle_got[itrk, itrc])
+                rec += amp_got[itrk, itrc] * np.cos(k * wts - angle_got[itrk, itrc])
             else:
                 # set amplitude and phase in other cases
                 rec += abs_fft[idx] * np.cos(k * wts - angle_fft[idx])
