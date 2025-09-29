@@ -9,7 +9,7 @@ import numpy as np
 import GalacticStochastic.global_const as gc
 from GalacticStochastic.state_manager import StateManager
 from LisaWaveformTools.linear_frequency_source import LinearFrequencyIntrinsicParams, LinearFrequencyWaveletWaveformTime
-from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams, SourceParams
+from LisaWaveformTools.source_params import ExtrinsicParams, SourceParams
 
 if TYPE_CHECKING:
     import h5py

@@ -7,7 +7,8 @@ from numba import njit
 from numpy.typing import NDArray
 
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.stationary_source_waveform import SourceParams, StationaryWaveformTime
+from LisaWaveformTools.source_params import SourceParams
+from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
 from LisaWaveformTools.stationary_time_source import StationarySourceWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletTaylorTime

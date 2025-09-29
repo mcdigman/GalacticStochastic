@@ -8,8 +8,9 @@ import numpy as np
 
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_freq import get_freq_tdi_amp_phase, rigid_adiabatic_antenna
+from LisaWaveformTools.source_params import SourceParams
 from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, EdgeRiseModel
-from LisaWaveformTools.stationary_source_waveform import SourceParams, StationarySourceWaveform, StationaryWaveformFreq
+from LisaWaveformTools.stationary_source_waveform import StationarySourceWaveform, StationaryWaveformFreq
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 if TYPE_CHECKING:

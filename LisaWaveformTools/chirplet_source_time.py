@@ -3,7 +3,7 @@
 from typing import override
 
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.stationary_source_waveform import SourceParams
+from LisaWaveformTools.source_params import SourceParams
 from LisaWaveformTools.stationary_time_source import StationarySourceWaveformTime
 from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams, chirplet_time_intrinsic
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange

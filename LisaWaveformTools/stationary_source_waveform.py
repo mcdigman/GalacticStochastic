@@ -4,47 +4,12 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Generic, NamedTuple, TypeVar
 
-import h5py
-
 if TYPE_CHECKING:
+    import h5py
     import numpy as np
     from numpy.typing import NDArray
 
-
-class ExtrinsicParams(NamedTuple):
-    """
-    Store the extrinsic parameters common to most detector intrinsic_waveform models.
-
-    Parameters
-    ----------
-    costh : float
-        Cosine of the source's ecliptic colatitude
-    phi : float
-        Source's ecliptic longitude in radians
-    cosi : float
-        Cosine of the source's inclination angle
-    psi : float
-        Source polarization angle in radians
-    """
-    costh: float
-    phi: float
-    cosi: float
-    psi: float
-
-
-class SourceParams(NamedTuple):
-    """
-    Store both the intrinsic and extrinsic parameters for a source.
-
-    Parameters
-    ----------
-    intrinsic: NamedTuple
-        The intrinsic parameters for the particular source class, e.g. LinearFrequencyIntrinsicParams
-    extrinsic: ExtrinsicParams
-        The extrinsic parameters for the source
-    """
-    intrinsic: NamedTuple
-    extrinsic: ExtrinsicParams
+    from LisaWaveformTools.source_params import SourceParams
 
 
 class StationaryWaveformTime(NamedTuple):

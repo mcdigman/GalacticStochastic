@@ -11,6 +11,7 @@ from LisaWaveformTools.ra_waveform_time import (
     apply_edge_rise_helper,
     spacecraft_channel_deriv_helper,
 )
+from LisaWaveformTools.source_params import ExtrinsicParams
 from LisaWaveformTools.spacecraft_objects import (
     AntennaResponseChannels,
     ComplexTransferFunction,
@@ -26,7 +27,6 @@ from LisaWaveformTools.spacecraft_objects import (
     TensorBasis,
 )
 from LisaWaveformTools.stationary_source_waveform import (
-    ExtrinsicParams,
     StationaryWaveformFreq,
     StationaryWaveformGeneric,
 )

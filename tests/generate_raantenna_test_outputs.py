@@ -7,8 +7,8 @@ from numpy.typing import NDArray
 
 from LisaWaveformTools.lisa_config import LISAConstants, get_lisa_constants
 from LisaWaveformTools.ra_waveform_freq import rigid_adiabatic_antenna
+from LisaWaveformTools.source_params import ExtrinsicParams
 from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels
-from LisaWaveformTools.stationary_source_waveform import ExtrinsicParams
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 # If you need a toml config, import get_lisa_constants, Path, tomllib, etc., and update generate_test_inputs accordingly.

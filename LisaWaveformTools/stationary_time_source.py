@@ -9,8 +9,9 @@ from numpy.typing import NDArray
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_freq import get_spacecraft_vec, get_tensor_basis, get_wavefront_time, rigid_adiabatic_antenna
 from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
+from LisaWaveformTools.source_params import SourceParams
 from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, EdgeRiseModel, SpacecraftOrbits
-from LisaWaveformTools.stationary_source_waveform import SourceParams, StationarySourceWaveform, StationaryWaveformTime
+from LisaWaveformTools.stationary_source_waveform import StationarySourceWaveform, StationaryWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 

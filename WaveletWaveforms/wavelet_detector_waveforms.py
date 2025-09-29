@@ -7,7 +7,8 @@ from warnings import warn
 import h5py
 
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.stationary_source_waveform import SourceParams, StationarySourceWaveform, StationaryWaveformTime, StationaryWaveformType
+from LisaWaveformTools.source_params import SourceParams
+from LisaWaveformTools.stationary_source_waveform import StationarySourceWaveform, StationaryWaveformTime, StationaryWaveformType
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, SparseWaveletWaveform
 from WaveletWaveforms.sparse_wavelet_time import SparseTimeCoefficientTable, get_empty_sparse_sparse_wavelet_time_waveform, get_sparse_table_helper, make_sparse_wavelet_time
 from WaveletWaveforms.taylor_time_coefficients import (
