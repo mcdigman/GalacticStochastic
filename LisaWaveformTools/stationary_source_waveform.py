@@ -2,14 +2,14 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Generic, NamedTuple, TypeVar
+from typing import TYPE_CHECKING, Generic, NamedTuple, TypeVar, cast
+
+from LisaWaveformTools.source_params import AbstractExtrinsicParamsManager, AbstractIntrinsicParamsManager, ExtrinsicParams, ExtrinsicParamsManager, ExtrinsicParamsType, IntrinsicParamsType, SourceParams
 
 if TYPE_CHECKING:
     import h5py
     import numpy as np
     from numpy.typing import NDArray
-
-    from LisaWaveformTools.source_params import SourceParams
 
 
 class StationaryWaveformTime(NamedTuple):
@@ -40,8 +40,19 @@ class StationaryWaveformGeneric(NamedTuple):
 StationaryWaveformType = TypeVar('StationaryWaveformType', bound=StationaryWaveformTime | StationaryWaveformFreq | StationaryWaveformGeneric)
 
 
-class StationarySourceWaveform(Generic[StationaryWaveformType], ABC):
+class StationarySourceWaveform(Generic[StationaryWaveformType, IntrinsicParamsType, ExtrinsicParamsType], ABC):
     """Abstract base class for intrinsic_waveform models to be used in the stationary wave approximation."""
+
+    @abstractmethod
+    def _create_intrinsic_params_manager(self, params_intrinsic: IntrinsicParamsType) -> AbstractIntrinsicParamsManager[IntrinsicParamsType]:
+        """Get an intrinsic parameter manager object"""
+
+    def _create_extrinsic_params_manager(self, params_extrinsic: ExtrinsicParamsType) -> AbstractExtrinsicParamsManager[ExtrinsicParamsType] | ExtrinsicParamsManager:
+        """Get an intrinsic parameter manager object"""
+        if not isinstance(params_extrinsic, ExtrinsicParams):
+            msg = """No implementation for input type"""
+            raise NotImplementedError(msg)
+        return ExtrinsicParamsManager(params_extrinsic)
 
     def __init__(
         self,
@@ -60,7 +71,11 @@ class StationarySourceWaveform(Generic[StationaryWaveformType], ABC):
         self._consistent: bool = False
         self._consistent_intrinsic: bool = False
         self._consistent_extrinsic: bool = False
-        self._params: SourceParams = params
+
+        intrinsic: IntrinsicParamsType = cast('IntrinsicParamsType', params.intrinsic)
+        extrinsic: ExtrinsicParamsType = cast('ExtrinsicParamsType', params.extrinsic)
+        self._intrinsic_params_manager = self._create_intrinsic_params_manager(intrinsic)
+        self._extrinsic_params_manager = self._create_extrinsic_params_manager(extrinsic)
 
         self._intrinsic_waveform: StationaryWaveformType = intrinsic_waveform
         self._tdi_waveform: StationaryWaveformType = tdi_waveform
@@ -82,13 +97,11 @@ class StationarySourceWaveform(Generic[StationaryWaveformType], ABC):
             raise NotImplementedError(msg)
 
         hf_source.attrs['creator_name'] = self.__class__.__name__
-        hf_source.attrs['params_name'] = self._params.__class__.__name__
         hf_source.attrs['intrinsic_waveform_name'] = self._intrinsic_waveform.__class__.__name__
         hf_source.attrs['tdi_waveform_name'] = self._tdi_waveform.__class__.__name__
         hf_source.attrs['_consistent'] = self._consistent
         hf_source.attrs['_consistent_extrinsic'] = self._consistent_extrinsic
         hf_source.attrs['_consistent_intrinsic'] = self._consistent_intrinsic
-        hf_source.attrs['_params'] = self._params
         return hf_source
 
     @abstractmethod
@@ -127,7 +140,13 @@ class StationarySourceWaveform(Generic[StationaryWaveformType], ABC):
         params : SourceParams
             Updated parameters (intrinsic and extrinsic) for the source.
         """
-        self.params = params
+        self._consistent_intrinsic = False
+        self._consistent_extrinsic = False
+        self._consistent = False
+        intrinsic: IntrinsicParamsType = cast('IntrinsicParamsType', params.intrinsic)
+        extrinsic: ExtrinsicParamsType = cast('ExtrinsicParamsType', params.extrinsic)
+        self._intrinsic_params_manager.params = intrinsic
+        self._extrinsic_params_manager.params = extrinsic
         self._update()
 
     @property
@@ -169,7 +188,7 @@ class StationarySourceWaveform(Generic[StationaryWaveformType], ABC):
     @property
     def params(self) -> SourceParams:
         """Get the current source parameters."""
-        return self._params
+        return SourceParams(self._intrinsic_params_manager.params, self._extrinsic_params_manager.params)
 
     @params.setter
     def params(self, params_in: SourceParams) -> None:
@@ -179,7 +198,10 @@ class StationarySourceWaveform(Generic[StationaryWaveformType], ABC):
         self._consistent_intrinsic = False
         self._consistent_extrinsic = False
         self._consistent = False
-        self._params = params_in
+        intrinsic: IntrinsicParamsType = cast('IntrinsicParamsType', params_in.intrinsic)
+        extrinsic: ExtrinsicParamsType = cast('ExtrinsicParamsType', params_in.extrinsic)
+        self._intrinsic_params_manager.params = intrinsic
+        self._extrinsic_params_manager.params = extrinsic
 
     @property
     def tdi_waveform(self) -> StationaryWaveformType:

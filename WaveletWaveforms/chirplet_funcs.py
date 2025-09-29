@@ -43,7 +43,7 @@ def _packed_from_intrinsic_chirplet_helper(params_in: LinearChirpletIntrinsicPar
     return np.array([params_in.amp_center_f, params_in.phi0, params_in.f_center, params_in.t_center, params_in.tau, params_in.gamma])
 
 
-def _validate_intrinsic_chirplet_helper(params_in: LinearChirpletIntrinsicParams):
+def _validate_intrinsic_chirplet_helper(params_in: LinearChirpletIntrinsicParams) -> bool:
     del params_in
     return True
 
@@ -52,23 +52,19 @@ class LinearChirpletParamsManager(AbstractIntrinsicParamsManager[LinearChirpletI
     """
     Manage creation, translation, and handling of ExtrinsicParams objects.
     """
-    def __init__(self, params_packed: NDArray[np.floating]) -> None:
-        assert len(params_packed.shape) == 1
-        assert params_packed.size == N_LINEAR_CHIRPLET_PACKED
+    def __init__(self, params: LinearChirpletIntrinsicParams) -> None:
         self._n_packed = N_LINEAR_CHIRPLET_PACKED
 
-        params_load = _load_intrinsic_chirplet_from_packed_helper(params_packed)
-
-        super().__init__(params_load)
+        super().__init__(params)
 
     @property
     @override
-    def n_packed(self):
+    def n_packed(self) -> int:
         return self._n_packed
 
     @property
     @override
-    def params_packed(self):
+    def params_packed(self) -> NDArray[np.floating]:
         return _packed_from_intrinsic_chirplet_helper(self._params)
 
     @params_packed.setter
@@ -77,7 +73,7 @@ class LinearChirpletParamsManager(AbstractIntrinsicParamsManager[LinearChirpletI
         assert params_in.size == self.n_packed
         self.params = _load_intrinsic_chirplet_from_packed_helper(params_in)
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
         return _validate_intrinsic_chirplet_helper(self.params)
 
 

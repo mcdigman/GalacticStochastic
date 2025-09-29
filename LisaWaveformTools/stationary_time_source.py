@@ -1,6 +1,6 @@
 """A source with linearly increasing frequency and constant amplitude."""
 from abc import ABC
-from typing import override
+from typing import Generic, override
 
 import h5py
 import numpy as np
@@ -9,13 +9,13 @@ from numpy.typing import NDArray
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_freq import get_spacecraft_vec, get_tensor_basis, get_wavefront_time, rigid_adiabatic_antenna
 from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
-from LisaWaveformTools.source_params import SourceParams
+from LisaWaveformTools.source_params import ExtrinsicParamsType, IntrinsicParamsType, SourceParams
 from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, EdgeRiseModel, SpacecraftOrbits
 from LisaWaveformTools.stationary_source_waveform import StationarySourceWaveform, StationaryWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 
-class StationarySourceWaveformTime(StationarySourceWaveform[StationaryWaveformTime], ABC):
+class StationarySourceWaveformTime(Generic[IntrinsicParamsType, ExtrinsicParamsType], StationarySourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType], ABC):
     """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain.
     """
 

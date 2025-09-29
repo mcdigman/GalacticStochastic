@@ -189,7 +189,7 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
             self.inv_S[:, 0, :] = 0.0
 
     @override
-    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'dense_noise_model', group_mode=0) -> h5py.Group:
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'dense_noise_model', group_mode: int = 0) -> h5py.Group:
         """Store attributes, configuration, and results to an hdf5 file."""
         hf_noise = super().store_hdf5(hf_in, group_name='group_name', group_mode=group_mode)
 
@@ -337,7 +337,7 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
                     self.chol_S[j, 0, itrc] = self.chol_S_stat_m[0, itrc]
 
     @override
-    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'dense_noise_model', group_mode=0) -> h5py.Group:
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'dense_noise_model', group_mode: int = 0) -> h5py.Group:
         """Store attributes, configuration, and results to an hdf5 file."""
         hf_noise = super().store_hdf5(hf_in, group_name='group_name', group_mode=group_mode)
 

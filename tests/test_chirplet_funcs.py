@@ -48,10 +48,9 @@ def test_intrinsic_waveform_agreement() -> None:
 
     # Setup the intrinsic parameters for the binary source
     intrinsic = LinearChirpletIntrinsicParams(10000., 0.1, fp, tp, tau, gamma)
-
     extrinsic = ExtrinsicParams(costh=0.1, phi=0.1, cosi=0.2, psi=0.3)  # Replace this with a real extrinsic param object if needed
 
-# Bundle parameters
+    # Bundle parameters
     params = SourceParams(
         intrinsic=intrinsic,
         extrinsic=extrinsic,

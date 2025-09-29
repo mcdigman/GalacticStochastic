@@ -58,7 +58,7 @@ def _packed_from_intrinsic_linear_frequency_helper(params: LinearFrequencyIntrin
     return np.array([params.amp0_t, params.phi0, params.F0, params.FTd0])
 
 
-def _validate_intrinsic_linear_frequency_helper(params: LinearFrequencyIntrinsicParams):
+def _validate_intrinsic_linear_frequency_helper(params: LinearFrequencyIntrinsicParams) -> bool:
     del params
     return True
 
@@ -67,23 +67,18 @@ class LinearFrequencyParamsManager(AbstractIntrinsicParamsManager[LinearFrequenc
     """
     Manage creation, translation, and handling of ExtrinsicParams objects.
     """
-    def __init__(self, params_packed: NDArray[np.floating]) -> None:
-        assert len(params_packed.shape) == 1
-        assert params_packed.size == N_LINEAR_FREQUENCY_PACKED
-        self._n_packed = N_LINEAR_FREQUENCY_PACKED
-
-        params_load = _load_intrinsic_linear_frequency_from_packed_helper(params_packed)
-
+    def __init__(self, params_load: LinearFrequencyIntrinsicParams) -> None:
+        self._n_packed: int = N_LINEAR_FREQUENCY_PACKED
         super().__init__(params_load)
 
     @property
     @override
-    def n_packed(self):
+    def n_packed(self) -> int:
         return self._n_packed
 
     @property
     @override
-    def params_packed(self):
+    def params_packed(self) -> NDArray[np.floating]:
         return _packed_from_intrinsic_linear_frequency_helper(self._params)
 
     @params_packed.setter
@@ -92,7 +87,7 @@ class LinearFrequencyParamsManager(AbstractIntrinsicParamsManager[LinearFrequenc
         assert params_in.size == self.n_packed
         self.params = _load_intrinsic_linear_frequency_from_packed_helper(params_in)
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
         return _validate_intrinsic_linear_frequency_helper(self.params)
 
 
@@ -152,6 +147,10 @@ class LinearFrequencySourceWaveformTime(StationarySourceWaveformTime):
 
         linear_frequency_intrinsic(self._intrinsic_waveform, self.params.intrinsic, self.wavefront_time)
         self._consistent_intrinsic = True
+
+    @override
+    def _create_intrinsic_params_manager(self, params_intrinsic: LinearFrequencyIntrinsicParams) -> LinearFrequencyParamsManager:
+        return LinearFrequencyParamsManager(params_intrinsic)
 
 
 class LinearFrequencyWaveletWaveformTime(BinaryWaveletTaylorTime):

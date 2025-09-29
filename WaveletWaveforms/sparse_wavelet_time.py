@@ -7,6 +7,7 @@ import scipy.fft as spf
 from numba import njit
 from numpy.typing import NDArray
 
+from LisaWaveformTools.source_params import ExtrinsicParamsType, IntrinsicParamsType
 from LisaWaveformTools.stationary_source_waveform import StationarySourceWaveform, StationaryWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, SparseWaveletWaveform
 from WaveletWaveforms.taylor_time_coefficients import wavelet
@@ -180,7 +181,7 @@ def get_empty_sparse_sparse_wavelet_time_waveform(nc: int, wc: WDMWaveletConstan
     return SparseWaveletWaveform(wave_value, pixel_index, n_set, N_max)
 
 
-def make_sparse_wavelet_time(wave: StationarySourceWaveform[StationaryWaveformTime], wavelet_waveform: SparseWaveletWaveform, sparse_table: SparseTimeCoefficientTable, wc: WDMWaveletConstants) -> None:
+def make_sparse_wavelet_time(wave: StationarySourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType], wavelet_waveform: SparseWaveletWaveform, sparse_table: SparseTimeCoefficientTable, wc: WDMWaveletConstants) -> None:
     """Calculate the wavelet waveform using the sparse time domain method."""
     # have sped this up by computing cos(Phase[k]), sin(Phase[k])
     # and passing in pre-computed arrays for cos(2.*np.pi*(double)(j*mq)/(double)(L))

@@ -6,7 +6,7 @@ import numpy as np
 from numba import njit
 from numpy.typing import NDArray
 
-from LisaWaveformTools.linear_frequency_source import LinearFrequencyIntrinsicParams
+from LisaWaveformTools.linear_frequency_source import LinearFrequencyIntrinsicParams, LinearFrequencyParamsManager
 from LisaWaveformTools.stationary_freq_source import StationarySourceWaveformFreq
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformFreq
 
@@ -59,6 +59,10 @@ def linear_frequency_intrinsic_freq(waveform: StationaryWaveformFreq, intrinsic_
 class LinearFrequencySourceWaveformFreq(StationarySourceWaveformFreq):
     """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain.
     """
+
+    @override
+    def _create_intrinsic_params_manager(self, params_intrinsic: LinearFrequencyIntrinsicParams) -> LinearFrequencyParamsManager:
+        return LinearFrequencyParamsManager(params_intrinsic)
 
     @override
     def _update_intrinsic(self) -> None:

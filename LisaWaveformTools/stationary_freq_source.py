@@ -1,14 +1,14 @@
 """functions to compute rigid adiabatic response in frequency domain"""
 
 from abc import ABC
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Generic, override
 
 import h5py
 import numpy as np
 
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.ra_waveform_freq import get_freq_tdi_amp_phase, rigid_adiabatic_antenna
-from LisaWaveformTools.source_params import SourceParams
+from LisaWaveformTools.source_params import ExtrinsicParamsType, IntrinsicParamsType, SourceParams
 from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, EdgeRiseModel
 from LisaWaveformTools.stationary_source_waveform import StationarySourceWaveform, StationaryWaveformFreq
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
-class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFreq], ABC):
+class StationarySourceWaveformFreq(Generic[IntrinsicParamsType, ExtrinsicParamsType], StationarySourceWaveform[StationaryWaveformFreq, IntrinsicParamsType, ExtrinsicParamsType], ABC):
     """class to store a binary waveform in frequency domain and update for search"""
     def __init__(self, params: SourceParams, lc: LISAConstants, nf_lim_absolute: PixelGenericRange, freeze_limits: int, T_obs: float, n_pad_F: int = 10, response_mode: int = 0) -> None:
         """Construct a binary wavelet object"""
@@ -220,7 +220,7 @@ class StationarySourceWaveformFreq(StationarySourceWaveform[StationaryWaveformFr
         """Recompute the waveform with updated parameters,
             if abbreviated skip getting AET_TFs and AET_TFps
         """
-        self.params: SourceParams = params
+        self.params = params
         self._update_intrinsic()
         if self.freeze_limits == 0:
             self._update_bounds()

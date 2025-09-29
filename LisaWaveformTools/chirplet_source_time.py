@@ -3,9 +3,9 @@
 from typing import override
 
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.source_params import SourceParams
+from LisaWaveformTools.source_params import ExtrinsicParams, SourceParams
 from LisaWaveformTools.stationary_time_source import StationarySourceWaveformTime
-from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams, chirplet_time_intrinsic
+from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams, LinearChirpletParamsManager, chirplet_time_intrinsic
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.sparse_wavelet_time import get_sparse_source_t_grid
 from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletSparseTime, BinaryWaveletTaylorTime
@@ -13,9 +13,13 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 # TODO do consistency checks
-class LinearChirpletSourceWaveformTime(StationarySourceWaveformTime):
+class LinearChirpletSourceWaveformTime(StationarySourceWaveformTime[LinearChirpletIntrinsicParams, ExtrinsicParams]):
     """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain.
     """
+
+    @override
+    def _create_intrinsic_params_manager(self, params_intrinsic: LinearChirpletIntrinsicParams) -> LinearChirpletParamsManager:
+        return LinearChirpletParamsManager(params_intrinsic)
 
     @override
     def _update_intrinsic(self) -> None:

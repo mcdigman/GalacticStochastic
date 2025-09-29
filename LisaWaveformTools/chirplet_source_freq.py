@@ -3,13 +3,17 @@
 from typing import override
 
 from LisaWaveformTools.stationary_freq_source import StationarySourceWaveformFreq
-from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams, chirplet_freq_intrinsic
+from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams, LinearChirpletParamsManager, chirplet_freq_intrinsic
 
 
 # TODO do consistency checks
 class LinearChirpletSourceWaveformFreq(StationarySourceWaveformFreq):
     """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain.
     """
+
+    @override
+    def _create_intrinsic_params_manager(self, params_intrinsic: LinearChirpletIntrinsicParams) -> LinearChirpletParamsManager:
+        return LinearChirpletParamsManager(params_intrinsic)
 
     @override
     def _update_intrinsic(self) -> None:

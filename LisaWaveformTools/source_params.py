@@ -131,9 +131,9 @@ class AbstractIntrinsicParamsManager(AbstractParamsManager[IntrinsicParamsType],
 
 
 class SourceParamsManager(Generic[ExtrinsicParamsType, IntrinsicParamsType], AbstractParamsManager[SourceParams]):
-    def __init__(self, intrinsic_manager: AbstractIntrinsicParamsManager[IntrinsicParamsType], extrinsic_manager: AbstractExtrinsicParamsManager[ExtrinsicParamsType]) -> None:
-        self._intrinsic_manager: AbstractIntrinsicParamsManager[IntrinsicParamsType] = intrinsic_manager
-        self._extrinsic_manager: AbstractExtrinsicParamsManager[ExtrinsicParamsType] = extrinsic_manager
+    def __init__(self, intrinsic: AbstractIntrinsicParamsManager[IntrinsicParamsType], extrinsic: AbstractExtrinsicParamsManager[ExtrinsicParamsType]) -> None:
+        self._intrinsic_manager: AbstractIntrinsicParamsManager[IntrinsicParamsType] = intrinsic
+        self._extrinsic_manager: AbstractExtrinsicParamsManager[ExtrinsicParamsType] = extrinsic
 
         self._n_extrinsic: int = self._extrinsic_manager.n_packed
         self._n_intrinsic: int = self._intrinsic_manager.n_packed
@@ -173,23 +173,18 @@ class ExtrinsicParamsManager(AbstractExtrinsicParamsManager[ExtrinsicParams]):
     """
     Manage creation, translation, and handling of ExtrinsicParams objects.
     """
-    def __init__(self, params_packed: NDArray[np.floating]) -> None:
-        assert len(params_packed.shape) == 1
-        assert params_packed.size == N_EXTRINSIC_PACKED
-        self._n_packed = N_EXTRINSIC_PACKED
-
-        params_load = _load_extrinsic_from_packed_helper(params_packed)
-
-        super().__init__(params_load)
+    def __init__(self, params: ExtrinsicParams) -> None:
+        self._n_packed: int = N_EXTRINSIC_PACKED
+        super().__init__(params)
 
     @property
     @override
-    def n_packed(self):
+    def n_packed(self) -> int:
         return self._n_packed
 
     @property
     @override
-    def params_packed(self):
+    def params_packed(self) -> NDArray[np.floating]:
         return _packed_from_extrinsic_helper(self._params)
 
     @params_packed.setter
@@ -198,5 +193,5 @@ class ExtrinsicParamsManager(AbstractExtrinsicParamsManager[ExtrinsicParams]):
         assert params_in.size == self.n_packed
         self.params = _load_extrinsic_from_packed_helper(params_in)
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
         return _validate_extrinsic_helper(self.params)
