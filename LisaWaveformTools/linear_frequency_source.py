@@ -7,7 +7,7 @@ from numba import njit
 from numpy.typing import NDArray
 
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.source_params import AbstractIntrinsicParamsManager, SourceParams
+from LisaWaveformTools.source_params import AbstractIntrinsicParamsManager, ExtrinsicParams, SourceParams
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
 from LisaWaveformTools.stationary_time_source import StationarySourceWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
@@ -85,7 +85,7 @@ class LinearFrequencyParamsManager(AbstractIntrinsicParamsManager[LinearFrequenc
     @override
     def params_packed(self, params_in: NDArray[np.floating]) -> None:
         assert params_in.size == self.n_packed
-        self.params = _load_intrinsic_linear_frequency_from_packed_helper(params_in)
+        self.params: LinearFrequencyIntrinsicParams = _load_intrinsic_linear_frequency_from_packed_helper(params_in)
 
     def is_valid(self) -> bool:
         return _validate_intrinsic_linear_frequency_helper(self.params)
@@ -133,7 +133,7 @@ def linear_frequency_intrinsic(waveform: StationaryWaveformTime, intrinsic_param
 
 
 # TODO do consistency checks
-class LinearFrequencySourceWaveformTime(StationarySourceWaveformTime):
+class LinearFrequencySourceWaveformTime(StationarySourceWaveformTime[LinearFrequencyIntrinsicParams, ExtrinsicParams]):
     """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain.
     """
 
@@ -153,7 +153,7 @@ class LinearFrequencySourceWaveformTime(StationarySourceWaveformTime):
         return LinearFrequencyParamsManager(params_intrinsic)
 
 
-class LinearFrequencyWaveletWaveformTime(BinaryWaveletTaylorTime):
+class LinearFrequencyWaveletWaveformTime(BinaryWaveletTaylorTime[LinearFrequencyIntrinsicParams, ExtrinsicParams]):
     """Store a sparse wavelet intrinsic_waveform for a source with linearly increasing frequency and constant amplitude,
     using the Taylor time method.
     """

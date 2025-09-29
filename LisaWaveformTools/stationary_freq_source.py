@@ -25,7 +25,7 @@ class StationarySourceWaveformFreq(Generic[IntrinsicParamsType, ExtrinsicParamsT
         self._nc_waveform: int = self._lc.nc_waveform
         self._consistent_extrinsic: bool = False
         self._n_pad_F: int = n_pad_F
-        self.response_mode = response_mode
+        self.response_mode: int = response_mode
 
         if lc.rise_mode == 3:
             self._er: EdgeRiseModel = EdgeRiseModel(-np.inf, np.inf)
@@ -220,7 +220,7 @@ class StationarySourceWaveformFreq(Generic[IntrinsicParamsType, ExtrinsicParamsT
         """Recompute the waveform with updated parameters,
             if abbreviated skip getting AET_TFs and AET_TFps
         """
-        self.params = params
+        self.params: SourceParams = params
         self._update_intrinsic()
         if self.freeze_limits == 0:
             self._update_bounds()

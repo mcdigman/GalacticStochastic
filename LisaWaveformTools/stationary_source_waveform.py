@@ -39,6 +39,8 @@ class StationaryWaveformGeneric(NamedTuple):
 # Subclasses can be either in time or frequency domain
 StationaryWaveformType = TypeVar('StationaryWaveformType', bound=StationaryWaveformTime | StationaryWaveformFreq | StationaryWaveformGeneric)
 
+StationarySourceWaveformType = TypeVar('StationarySourceWaveformType')
+
 
 class StationarySourceWaveform(Generic[StationaryWaveformType, IntrinsicParamsType, ExtrinsicParamsType], ABC):
     """Abstract base class for intrinsic_waveform models to be used in the stationary wave approximation."""
@@ -74,8 +76,8 @@ class StationarySourceWaveform(Generic[StationaryWaveformType, IntrinsicParamsTy
 
         intrinsic: IntrinsicParamsType = cast('IntrinsicParamsType', params.intrinsic)
         extrinsic: ExtrinsicParamsType = cast('ExtrinsicParamsType', params.extrinsic)
-        self._intrinsic_params_manager = self._create_intrinsic_params_manager(intrinsic)
-        self._extrinsic_params_manager = self._create_extrinsic_params_manager(extrinsic)
+        self._intrinsic_params_manager: AbstractIntrinsicParamsManager[IntrinsicParamsType] = self._create_intrinsic_params_manager(intrinsic)
+        self._extrinsic_params_manager: AbstractExtrinsicParamsManager[ExtrinsicParamsType] | ExtrinsicParamsManager = self._create_extrinsic_params_manager(extrinsic)
 
         self._intrinsic_waveform: StationaryWaveformType = intrinsic_waveform
         self._tdi_waveform: StationaryWaveformType = tdi_waveform
@@ -99,9 +101,13 @@ class StationarySourceWaveform(Generic[StationaryWaveformType, IntrinsicParamsTy
         hf_source.attrs['creator_name'] = self.__class__.__name__
         hf_source.attrs['intrinsic_waveform_name'] = self._intrinsic_waveform.__class__.__name__
         hf_source.attrs['tdi_waveform_name'] = self._tdi_waveform.__class__.__name__
+        hf_source.attrs['intrinsic_param_manager_name'] = self._intrinsic_params_manager.__class__.__name__
+        hf_source.attrs['extrinsic_param_manager_name'] = self._extrinsic_params_manager.__class__.__name__
         hf_source.attrs['_consistent'] = self._consistent
         hf_source.attrs['_consistent_extrinsic'] = self._consistent_extrinsic
         hf_source.attrs['_consistent_intrinsic'] = self._consistent_intrinsic
+        self._intrinsic_params_manager.store_hdf5(hf_source, group_name='intrinsic')
+        self._extrinsic_params_manager.store_hdf5(hf_source, group_name='extrinsic')
         return hf_source
 
     @abstractmethod

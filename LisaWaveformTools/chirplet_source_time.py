@@ -33,7 +33,7 @@ class LinearChirpletSourceWaveformTime(StationarySourceWaveformTime[LinearChirpl
         self._consistent_intrinsic = True
 
 
-class LinearChirpletWaveletTaylorTime(BinaryWaveletTaylorTime):
+class LinearChirpletWaveletTaylorTime(BinaryWaveletTaylorTime[LinearChirpletIntrinsicParams, ExtrinsicParams]):
     """Store a sparse wavelet intrinsic_waveform for a source with linearly increasing frequency and constant amplitude,
     using the Taylor time method.
     """
@@ -48,7 +48,7 @@ class LinearChirpletWaveletTaylorTime(BinaryWaveletTaylorTime):
         super().__init__(params, wc, lc, nt_lim_waveform, source_waveform, wavelet_mode=wavelet_mode)
 
 
-class LinearChirpletWaveletSparseTime(BinaryWaveletSparseTime):
+class LinearChirpletWaveletSparseTime(BinaryWaveletSparseTime[LinearChirpletIntrinsicParams, ExtrinsicParams]):
     """Store a sparse wavelet intrinsic_waveform for a source with linearly increasing frequency and constant amplitude,
     using the Taylor time method.
     """

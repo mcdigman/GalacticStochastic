@@ -71,8 +71,8 @@ class NoiseModelManager(StateManager):
             self.itr_save += 1
         S_lower = np.asarray(np.min([S_lower, S_upper], axis=0), dtype=np.float64)
 
-        self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, wc, prune=True, nc_snr=lc.nc_snr)
-        self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, wc, prune=True, nc_snr=lc.nc_snr)
+        self.noise_upper: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(S_upper, wc, prune=True, nc_snr=lc.nc_snr)
+        self.noise_lower: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(S_lower, wc, prune=True, nc_snr=lc.nc_snr)
 
         del S_upper
         del S_lower

@@ -96,7 +96,7 @@ class BinaryInclusionState(StateManager):
         self.faints_cur: NDArray[np.bool_] = np.zeros((self.fit_state.get_n_itr_cut(), self.n_bin_use), dtype=np.bool_)
 
         params0 = unpack_params_gb(self.params_gb[0])
-        self.waveform_manager = LinearFrequencyWaveletWaveformTime(params0, wc, self.lc, self.nt_lim_waveform)
+        self.waveform_manager: LinearFrequencyWaveletWaveformTime = LinearFrequencyWaveletWaveformTime(params0, wc, self.lc, self.nt_lim_waveform)
 
         self.itrn: int = 0
 

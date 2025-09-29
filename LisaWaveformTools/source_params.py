@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Generic, NamedTuple, TypeVar, override
 import numpy as np
 
 if TYPE_CHECKING:
+    import h5py
     from numpy.typing import NDArray
 
 N_EXTRINSIC_PACKED = 4
@@ -78,7 +79,7 @@ IntrinsicParamsType = TypeVar('IntrinsicParamsType', bound=NamedTuple)
 ExtrinsicParamsType = TypeVar('ExtrinsicParamsType', bound=ExtrinsicParams)
 SourceParamsType = TypeVar('SourceParamsType')
 
-ParamsType = TypeVar('ParamsType')
+ParamsType = TypeVar('ParamsType', bound=NamedTuple)
 
 
 class AbstractParamsManager(Generic[ParamsType], ABC):
@@ -114,6 +115,26 @@ class AbstractParamsManager(Generic[ParamsType], ABC):
     @abstractmethod
     def is_valid(self) -> bool:
         pass
+
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'params', group_mode: int = 0) -> h5py.Group:
+        """Store the object as a group in an hdf5 file"""
+        if group_mode == 0:
+            hf_params = hf_in.create_group(group_name)
+        elif group_mode == 1:
+            hf_params = hf_in
+        else:
+            msg = 'Unrecognized option for group mode'
+            raise NotImplementedError(msg)
+        hf_params.attrs['creator_name'] = self.__class__.__name__
+        hf_params.attrs['n_packed'] = self.n_packed
+
+        hf_params.create_dataset('packed', data=self.params_packed)
+
+        hf_p = hf_params.create_group('params')
+        for key in self.params._fields:
+            hf_p.attrs[key] = getattr(self.params, key)
+
+        return hf_params
 
 
 class AbstractExtrinsicParamsManager(AbstractParamsManager[ExtrinsicParamsType], ABC):
@@ -160,7 +181,7 @@ class SourceParamsManager(Generic[ExtrinsicParamsType, IntrinsicParamsType], Abs
         intrinsic_loc = params_in[self._n_extrinsic:self._n_extrinsic + self._n_intrinsic]
         self._extrinsic_manager.params_packed = extrinsic_loc
         self._intrinsic_manager.params_packed = intrinsic_loc
-        self.params = SourceParams(self._intrinsic_manager.params, self._extrinsic_manager.params)
+        self.params: SourceParams = SourceParams(self._intrinsic_manager.params, self._extrinsic_manager.params)
 
     @override
     def is_valid(self) -> bool:
@@ -191,7 +212,7 @@ class ExtrinsicParamsManager(AbstractExtrinsicParamsManager[ExtrinsicParams]):
     @override
     def params_packed(self, params_in: NDArray[np.floating]) -> None:
         assert params_in.size == self.n_packed
-        self.params = _load_extrinsic_from_packed_helper(params_in)
+        self.params: ExtrinsicParams = _load_extrinsic_from_packed_helper(params_in)
 
     def is_valid(self) -> bool:
         return _validate_extrinsic_helper(self.params)

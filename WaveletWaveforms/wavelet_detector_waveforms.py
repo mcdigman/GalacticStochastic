@@ -46,12 +46,20 @@ class SparseWaveletSourceWaveform(Generic[StationaryWaveformType, IntrinsicParam
 
         hf_wavelet.attrs['creator_name'] = self.__class__.__name__
         hf_wavelet.attrs['params_name'] = self._params.__class__.__name__
+        hf_wavelet.attrs['extrinsic_params_name'] = self._params.extrinsic.__class__.__name__
+        hf_wavelet.attrs['intrinsic_params_name'] = self._params.intrinsic.__class__.__name__
         hf_wavelet.attrs['wavelet_waveform_name'] = self._wavelet_waveform.__class__.__name__
         hf_wavelet.attrs['source_waveform_name'] = self._source_waveform.__class__.__name__
         hf_wavelet.attrs['consistent'] = self._consistent
         hf_wavelet.attrs['consistent_source'] = self.consistent_source
-        # TODO may need to store params a different way
-        hf_wavelet.attrs['params'] = self._params
+
+        hf_p = hf_wavelet.create_group('params_intrinsic')
+        for key in self._params.intrinsic._fields:
+            hf_p.attrs[key] = getattr(self._params.intrinsic, key)
+
+        hf_i = hf_wavelet.create_group('params_extrinsic')
+        for key in self._params.extrinsic._fields:
+            hf_i.attrs[key] = getattr(self._params.extrinsic, key)
 
         _ = hf_wavelet.create_dataset('wave_value', data=self._wavelet_waveform.wave_value, compression='gzip')
         _ = hf_wavelet.create_dataset('pixel_index', data=self._wavelet_waveform.pixel_index, compression='gzip')
@@ -244,8 +252,8 @@ class BinaryWaveletSparseTime(SparseWaveletSourceWaveform[StationaryWaveformTime
         self._wc: WDMWaveletConstants = wc
         self._lc: LISAConstants = lc
         self._nt_lim_waveform: PixelGenericRange = nt_lim_waveform
-        self._storage_mode = storage_mode
-        self._wavelet_mode = wavelet_mode
+        self._storage_mode: int = storage_mode
+        self._wavelet_mode: int = wavelet_mode
 
         # store the intrinsic_waveform
         # self._source_waveform: StationarySourceWaveform[StationaryWaveformTime] = source_waveform
