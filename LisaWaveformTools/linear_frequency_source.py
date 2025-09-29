@@ -7,7 +7,7 @@ from numba import njit
 from numpy.typing import NDArray
 
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.source_params import SourceParams
+from LisaWaveformTools.source_params import AbstractIntrinsicParamsManager, SourceParams
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
 from LisaWaveformTools.stationary_time_source import StationarySourceWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
@@ -39,6 +39,61 @@ class LinearFrequencyIntrinsicParams(NamedTuple):
     phi0: float
     F0: float
     FTd0: float
+
+
+N_LINEAR_FREQUENCY_PACKED = 4
+
+
+def _load_intrinsic_linear_frequency_from_packed_helper(params_packed: NDArray[np.floating]) -> LinearFrequencyIntrinsicParams:
+    assert len(params_packed.shape) == 1
+    assert params_packed.size == N_LINEAR_FREQUENCY_PACKED
+    amp0_t = params_packed[0]
+    phi0 = params_packed[1]
+    F0 = params_packed[2]
+    FTd0 = params_packed[3]
+    return LinearFrequencyIntrinsicParams(amp0_t, phi0, F0, FTd0)
+
+
+def _packed_from_intrinsic_linear_frequency_helper(params: LinearFrequencyIntrinsicParams) -> NDArray[np.floating]:
+    return np.array([params.amp0_t, params.phi0, params.F0, params.FTd0])
+
+
+def _validate_intrinsic_linear_frequency_helper(params: LinearFrequencyIntrinsicParams):
+    del params
+    return True
+
+
+class LinearFrequencyParamsManager(AbstractIntrinsicParamsManager[LinearFrequencyIntrinsicParams]):
+    """
+    Manage creation, translation, and handling of ExtrinsicParams objects.
+    """
+    def __init__(self, params_packed: NDArray[np.floating]) -> None:
+        assert len(params_packed.shape) == 1
+        assert params_packed.size == N_LINEAR_FREQUENCY_PACKED
+        self._n_packed = N_LINEAR_FREQUENCY_PACKED
+
+        params_load = _load_intrinsic_linear_frequency_from_packed_helper(params_packed)
+
+        super().__init__(params_load)
+
+    @property
+    @override
+    def n_packed(self):
+        return self._n_packed
+
+    @property
+    @override
+    def params_packed(self):
+        return _packed_from_intrinsic_linear_frequency_helper(self._params)
+
+    @params_packed.setter
+    @override
+    def params_packed(self, params_in: NDArray[np.floating]) -> None:
+        assert params_in.size == self.n_packed
+        self.params = _load_intrinsic_linear_frequency_from_packed_helper(params_in)
+
+    def is_valid(self):
+        return _validate_intrinsic_linear_frequency_helper(self.params)
 
 
 # TODO check factor of 2pi

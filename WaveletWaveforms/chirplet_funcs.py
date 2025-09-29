@@ -1,10 +1,12 @@
 """helper functions for Chirp_WDM"""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple, override
 
 import numpy as np
 from numba import njit
+
+from LisaWaveformTools.source_params import AbstractIntrinsicParamsManager
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -20,6 +22,63 @@ class LinearChirpletIntrinsicParams(NamedTuple):
     t_center: float
     tau: float
     gamma: float
+
+
+N_LINEAR_CHIRPLET_PACKED = 6
+
+
+def _load_intrinsic_chirplet_from_packed_helper(params_in: NDArray[np.floating]) -> LinearChirpletIntrinsicParams:
+    assert len(params_in.shape) == 1
+    assert params_in.size == N_LINEAR_CHIRPLET_PACKED
+    amp_center_f = params_in[0]
+    phi0 = params_in[1]
+    f_center = params_in[2]
+    t_center = params_in[3]
+    tau = params_in[4]
+    gamma = params_in[5]
+    return LinearChirpletIntrinsicParams(amp_center_f, phi0, f_center, t_center, tau, gamma)
+
+
+def _packed_from_intrinsic_chirplet_helper(params_in: LinearChirpletIntrinsicParams) -> NDArray[np.floating]:
+    return np.array([params_in.amp_center_f, params_in.phi0, params_in.f_center, params_in.t_center, params_in.tau, params_in.gamma])
+
+
+def _validate_intrinsic_chirplet_helper(params_in: LinearChirpletIntrinsicParams):
+    del params_in
+    return True
+
+
+class LinearChirpletParamsManager(AbstractIntrinsicParamsManager[LinearChirpletIntrinsicParams]):
+    """
+    Manage creation, translation, and handling of ExtrinsicParams objects.
+    """
+    def __init__(self, params_packed: NDArray[np.floating]) -> None:
+        assert len(params_packed.shape) == 1
+        assert params_packed.size == N_LINEAR_CHIRPLET_PACKED
+        self._n_packed = N_LINEAR_CHIRPLET_PACKED
+
+        params_load = _load_intrinsic_chirplet_from_packed_helper(params_packed)
+
+        super().__init__(params_load)
+
+    @property
+    @override
+    def n_packed(self):
+        return self._n_packed
+
+    @property
+    @override
+    def params_packed(self):
+        return _packed_from_intrinsic_chirplet_helper(self._params)
+
+    @params_packed.setter
+    @override
+    def params_packed(self, params_in: NDArray[np.floating]) -> None:
+        assert params_in.size == self.n_packed
+        self.params = _load_intrinsic_chirplet_from_packed_helper(params_in)
+
+    def is_valid(self):
+        return _validate_intrinsic_chirplet_helper(self.params)
 
 
 @njit()
