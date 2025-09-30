@@ -91,8 +91,9 @@ class IterativeFitManager(StateManager):
         t1n = perf_counter()
 
         # decide whether convergence has been achieved before calling advance_state
-        _ = self.fit_state.bright_convergence_decision(self.bis)
-        _ = self.fit_state.faint_convergence_decision(self.bis)
+        inclusion_data = self.bis.convergence_decision_helper()
+        _ = self.fit_state.bright_convergence_decision(inclusion_data)
+        _ = self.fit_state.faint_convergence_decision(inclusion_data)
 
         self.fit_state.advance_state()
         self.noise_manager.advance_state()

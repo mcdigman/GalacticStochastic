@@ -22,10 +22,12 @@ if TYPE_CHECKING:
     from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
     from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
+N_PAR_GB = 8
+
 
 def unpack_params_gb(params_in: NDArray[np.floating]) -> SourceParams:
     assert len(params_in.shape) == 1
-    assert params_in.size == 8
+    assert params_in.size == N_PAR_GB
     # Ecliptic latitude to cosine of ecliptic colatitude
     costh = float(np.cos(np.pi / 2 - params_in[1]))
     # Ecliptic longitude
@@ -65,6 +67,9 @@ class BinaryInclusionState(StateManager):
         self._noise_manager: NoiseModelManager = noise_manager
         self._fit_state: IterativeFitState = fit_state
 
+        assert len(params_gb_in.shape) == 2
+        assert params_gb_in.shape[1] == N_PAR_GB
+
         self._n_tot: int = params_gb_in.shape[0]
         self._fmin_binary: float = max(0.0, ic.fmin_binary)
         self._fmax_binary: float = min((wc.Nf - 1) * wc.DF, ic.fmax_binary)
@@ -95,8 +100,12 @@ class BinaryInclusionState(StateManager):
         self._decided: NDArray[np.bool_] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use), dtype=np.bool_)
         self._faints_cur: NDArray[np.bool_] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use), dtype=np.bool_)
 
-        params0 = unpack_params_gb(self._params_gb[0])
+        params0_sel: NDArray[np.floating] = self._params_gb[0]
+        params0: SourceParams = unpack_params_gb(params0_sel)
         self._waveform_manager: LinearFrequencyWaveletWaveformTime = LinearFrequencyWaveletWaveformTime(params0, wc, self._lc, self._nt_lim_waveform)
+
+        del params0
+        del params0_sel
 
         self._itrn: int = 0
 
@@ -128,16 +137,16 @@ class BinaryInclusionState(StateManager):
         _ = hf_include.create_dataset('n_faints_cur', data=self._n_faints_cur, compression='gzip')
         _ = hf_include.create_dataset('n_brights_cur', data=self._n_brights_cur, compression='gzip')
 
-        _ = hf_include.create_dataset('faints_cur', data=self._faints_cur[:self._itrn].copy(), compression='gzip')
-        _ = hf_include.create_dataset('decided', data=self._decided[:self._itrn].copy(), compression='gzip')
-        _ = hf_include.create_dataset('brights', data=self._brights[:self._itrn].copy(), compression='gzip')
+        _ = hf_include.create_dataset('faints_cur', data=self._faints_cur[:self._itrn], compression='gzip')
+        _ = hf_include.create_dataset('decided', data=self._decided[:self._itrn], compression='gzip')
+        _ = hf_include.create_dataset('brights', data=self._brights[:self._itrn], compression='gzip')
 
         if storage_mode in (0, 2):
             # store full snrs
-            _ = hf_include.create_dataset('snrs_upper', data=self._snrs_upper[:self._itrn].copy(), compression='gzip')
-            _ = hf_include.create_dataset('snrs_lower', data=self._snrs_lower[:self._itrn].copy(), compression='gzip')
-            _ = hf_include.create_dataset('snrs_tot_upper', data=self._snrs_tot_upper[self._itrn].copy(), compression='gzip')
-            _ = hf_include.create_dataset('snrs_tot_lower', data=self._snrs_tot_lower[self._itrn].copy(), compression='gzip')
+            _ = hf_include.create_dataset('snrs_upper', data=self._snrs_upper[:self._itrn], compression='gzip')
+            _ = hf_include.create_dataset('snrs_lower', data=self._snrs_lower[:self._itrn], compression='gzip')
+            _ = hf_include.create_dataset('snrs_tot_upper', data=self._snrs_tot_upper[self._itrn], compression='gzip')
+            _ = hf_include.create_dataset('snrs_tot_lower', data=self._snrs_tot_lower[self._itrn], compression='gzip')
 
         if storage_mode in (1, 3):
             # store last snrs
@@ -158,7 +167,7 @@ class BinaryInclusionState(StateManager):
         if noise_recurse == 0:
             pass
         elif noise_recurse == 1:
-            self._noise_manager.store_hdf5(hf_include)
+            _ = self._noise_manager.store_hdf5(hf_include)
         else:
             msg = 'Unrecognized option for noise_recurse'
             raise NotImplementedError(msg)
@@ -237,6 +246,9 @@ class BinaryInclusionState(StateManager):
         else:
             delta_brights = int(self._n_brights_cur[self._itrn - 1] - self._n_brights_cur[self._itrn - 2])
         return delta_brights
+
+    def convergence_decision_helper(self) -> tuple[tuple[bool, bool, bool], int, int]:
+        return (self.oscillation_check_helper(), self.delta_faint_check_helper(), self.delta_bright_check_helper())
 
     def run_binary_coadd(self, itrb: int) -> None:
         """Get the intrinsic_waveform for a binary, store its snr, and decide which spectrum to add it to."""
@@ -395,12 +407,11 @@ class BinaryInclusionState(StateManager):
     def state_check(self) -> None:
         """Do any self consistency checks based on the current state"""
         if self._itrn > 0:
-            assert self._itrn == self._fit_state._itrn
-            if self._fit_state._bright_converged[self._itrn - 1]:
+            if self._fit_state.get_bright_converged_old():
                 assert self._itrn > 1
                 assert np.all(self._brights[self._itrn - 1] == self._brights[self._itrn - 2])
 
-            if self._fit_state._faint_converged[self._itrn - 1]:
+            if self._fit_state.get_faint_converged_old():
                 assert self._itrn > 1
                 assert np.all(self._faints_cur[self._itrn - 1] == self._faints_cur[self._itrn - 2])
 

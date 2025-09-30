@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, override
 import h5py
 import numpy as np
 
-from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
 from GalacticStochastic.iteration_config import IterationConfig
 from GalacticStochastic.state_manager import StateManager
 
@@ -199,9 +198,10 @@ class IterativeFitState(StateManager):
         self._noise_safe_lower_log[self._itrn] = self._noise_safe_lower
         self._noise_safe_upper_log[self._itrn] = self._noise_safe_lower
 
-    def bright_convergence_decision(self, bis: BinaryInclusionState) -> bool:
+    def bright_convergence_decision(self, inclusion_data: tuple[tuple[bool, bool, bool], int, int]) -> bool:
         """Make a decision about whether the bright binaries are converged; needs a BinaryInclusionState object"""
         (do_faint_check_in, bright_converged_in, faint_converged_in, _force_converge_in) = self.get_state()
+        ((cycling, converged_or_cycling, old_match), _, delta_brights) = inclusion_data
         noise_safe = True
 
         # short circuit if we have previously decided bright adaptation is converged
@@ -211,30 +211,27 @@ class IterativeFitState(StateManager):
             return noise_safe
 
         # don't check for convergence in first iteration
-        if self._itrn > 1:
-            # bright adaptation is either converged or oscillating
-            cycling, converged_or_cycling, old_match = bis.oscillation_check_helper()
-            if self.get_force_converge() or converged_or_cycling:
-                delta_brights = bis.delta_bright_check_helper()
-                assert delta_brights == 0 or self.get_force_converge() or old_match
-                if do_faint_check_in:
-                    print('bright adaptation converged at ' + str(self._itrn))
-                    self.bright_state_request = (False, True, True, False)
+        # bright adaptation is either converged or oscillating
+        if self._itrn > 1 and (self.get_force_converge() or converged_or_cycling):
+            assert delta_brights == 0 or self.get_force_converge() or old_match
+            if do_faint_check_in:
+                print('bright adaptation converged at ' + str(self._itrn))
+                self.bright_state_request = (False, True, True, False)
+            else:
+                if cycling:
+                    print('cycling detected at ' + str(self._itrn) + ', doing final check iteration aborting')
+                    force_converge_loc = True
                 else:
-                    if cycling:
-                        print('cycling detected at ' + str(self._itrn) + ', doing final check iteration aborting')
-                        force_converge_loc = True
-                    else:
-                        force_converge_loc = False
-                    print(
-                        'bright adaptation predicted initial converged at '
-                        + str(self._itrn)
-                        + ' next iteration will be check iteration',
-                    )
-                    self.bright_state_request = (True, False, faint_converged_in, force_converge_loc)
+                    force_converge_loc = False
+                print(
+                    'bright adaptation predicted initial converged at '
+                    + str(self._itrn)
+                    + ' next iteration will be check iteration',
+                )
+                self.bright_state_request = (True, False, faint_converged_in, force_converge_loc)
 
-                self._noise_safe_upper = noise_safe
-                return noise_safe
+            self._noise_safe_upper = noise_safe
+            return noise_safe
 
         # bright adaptation has not converged, get a new noise model
         noise_safe = False
@@ -242,8 +239,9 @@ class IterativeFitState(StateManager):
         self._noise_safe_upper = noise_safe
         return noise_safe
 
-    def faint_convergence_decision(self, bis: BinaryInclusionState) -> bool:
+    def faint_convergence_decision(self, inclusion_data: tuple[tuple[bool, bool, bool], int, int]) -> bool:
         """Make a decision about whether the faint binaries are converged; needs a BinaryInclusionState object"""
+        (_, delta_faints, _) = inclusion_data
         (do_faint_check_in, bright_converged_in, faint_converged_in, force_converge_in) = self.bright_state_request
 
         if not faint_converged_in or do_faint_check_in:
@@ -256,7 +254,6 @@ class IterativeFitState(StateManager):
                 # because after this point the convergence isn't guaranteed to be monotonic
                 print('disabled faint component adaptation at ' + str(self._itrn))
 
-            delta_faints = bis.delta_faint_check_helper()
             if do_faint_check_in and faint_converged_loc:
                 print('overriding faint convergence to check background model')
                 faint_converged_loc = False
@@ -335,3 +332,11 @@ class IterativeFitState(StateManager):
     def print_report(self) -> None:
         """Do any printing desired after convergence has been achieved and the loop ends"""
         return
+
+    def get_bright_converged_old(self) -> bool:
+        assert self._itrn > 0
+        return self._bright_converged[self._itrn - 1]
+
+    def get_faint_converged_old(self) -> bool:
+        assert self._itrn > 0
+        return self._faint_converged[self._itrn - 1]
