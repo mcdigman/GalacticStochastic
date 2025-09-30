@@ -50,7 +50,7 @@ if __name__ == '__main__':
             ic,
             bgd.get_galactic_below_low(),
             noise_manager.S_inst_m,
-            bis.snrs_tot_lower,
+            bis._snrs_tot_lower,
         )
 
     do_plot_noise_spectrum_ambiguity = True

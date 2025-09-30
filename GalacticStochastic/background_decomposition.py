@@ -37,34 +37,34 @@ class BGDecomposition:
             msg = 'Unrecognized option for storage mode'
             raise ValueError(msg)
 
-        self.wc: WDMWaveletConstants = wc
-        self.storage_mode: int = storage_mode
-        self.nc_galaxy: int = nc_galaxy
-        self.shape1: tuple[int, int] = (wc.Nt * wc.Nf, self.nc_galaxy)
-        self.shape2: tuple[int, int, int] = (wc.Nt, wc.Nf, self.nc_galaxy)
+        self._wc: WDMWaveletConstants = wc
+        self._storage_mode: int = storage_mode
+        self._nc_galaxy: int = nc_galaxy
+        self._shape1: tuple[int, int] = (wc.Nt * wc.Nf, self.nc_galaxy)
+        self._shape2: tuple[int, int, int] = (wc.Nt, wc.Nf, self.nc_galaxy)
 
         if galactic_floor is None:
-            self.galactic_floor: NDArray[np.floating] = np.zeros(self.shape1, dtype=np.float64)
+            self.galactic_floor: NDArray[np.floating] = np.zeros(self._shape1, dtype=np.float64)
         else:
-            assert galactic_floor.shape == self.shape1
+            assert galactic_floor.shape == self._shape1
             self.galactic_floor = galactic_floor
 
         if galactic_below is None:
-            self.galactic_below: NDArray[np.floating] = np.zeros(self.shape1)
+            self.galactic_below: NDArray[np.floating] = np.zeros(self._shape1)
         else:
-            assert galactic_below.shape == self.shape1
+            assert galactic_below.shape == self._shape1
             self.galactic_below = galactic_below
 
         if galactic_undecided is None:
-            self.galactic_undecided: NDArray[np.floating] = np.zeros(self.shape1, dtype=np.float64)
+            self.galactic_undecided: NDArray[np.floating] = np.zeros(self._shape1, dtype=np.float64)
         else:
-            assert galactic_undecided.shape == self.shape1
+            assert galactic_undecided.shape == self._shape1
             self.galactic_undecided = galactic_undecided
 
         if galactic_above is None:
-            self.galactic_above: NDArray[np.floating] = np.zeros(self.shape1, dtype=np.float64)
+            self.galactic_above: NDArray[np.floating] = np.zeros(self._shape1, dtype=np.float64)
         else:
-            assert galactic_above.shape == self.shape1
+            assert galactic_above.shape == self._shape1
             self.galactic_above = galactic_above
 
         self.galactic_total_cache:  NDArray[np.floating] | None = None
@@ -77,6 +77,10 @@ class BGDecomposition:
         self.power_galactic_below_high: list[NDArray[np.floating]] = []
         self.power_galactic_total: list[NDArray[np.floating]] = []
 
+    @property
+    def nc_galaxy(self) -> int:
+        return self._nc_galaxy
+
     def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'background', group_mode: int = 0) -> h5py.Group:
         """Store the background to an hdf5 file"""
         if group_mode == 0:
@@ -87,13 +91,13 @@ class BGDecomposition:
             msg = 'Unrecognized option for group mode'
             raise NotImplementedError(msg)
         hf_background.attrs['creator_name'] = self.__class__.__name__
-        hf_background.attrs['storage_mode'] = self.storage_mode
+        hf_background.attrs['storage_mode'] = self._storage_mode
         hf_background.attrs['track_mode'] = self.track_mode
         hf_background.attrs['nc_galaxy'] = self.nc_galaxy
-        hf_background.attrs['shape1'] = self.shape1
-        hf_background.attrs['shape2'] = self.shape2
+        hf_background.attrs['shape1'] = self._shape1
+        hf_background.attrs['shape2'] = self._shape2
 
-        if self.storage_mode == 0:
+        if self._storage_mode == 0:
             hf_background.create_dataset('galactic_below_low', data=self.get_galactic_below_low(), compression='gzip')
             hf_background.create_dataset('galactic_above', data=self.get_galactic_coadd_resolvable(), compression='gzip')
             hf_background.create_dataset('galactic_undecided', data=self.get_galactic_coadd_undecided(), compression='gzip')
@@ -157,24 +161,24 @@ class BGDecomposition:
     def log_state(self, S_mean: NDArray[np.floating]) -> None:
         """Record any diagnostics we want to track about this iteration"""
         power_undecided = np.asarray(np.sum(
-            np.sum((self.galactic_undecided**2).reshape(self.shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0,
+            np.sum((self.galactic_undecided**2).reshape(self._shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0,
         ), dtype=np.float64)
         power_above = np.asarray(np.sum(
-            np.sum((self.galactic_above**2).reshape(self.shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0,
+            np.sum((self.galactic_above**2).reshape(self._shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0,
         ), dtype=np.float64)
 
         power_total = np.asarray(np.sum(
-            np.sum((self.get_galactic_total(bypass_check=True) ** 2).reshape(self.shape2)[:, 1:, :], axis=0)
+            np.sum((self.get_galactic_total(bypass_check=True) ** 2).reshape(self._shape2)[:, 1:, :], axis=0)
             / S_mean[1:, :],
             axis=0,
         ), dtype=np.float64)
         power_below_high = np.asarray(np.sum(
-            np.sum((self.get_galactic_below_high(bypass_check=True) ** 2).reshape(self.shape2)[:, 1:, :], axis=0)
+            np.sum((self.get_galactic_below_high(bypass_check=True) ** 2).reshape(self._shape2)[:, 1:, :], axis=0)
             / S_mean[1:, :],
             axis=0,
         ), dtype=np.float64)
         power_below_low = np.asarray(np.sum(
-            np.sum((self.get_galactic_below_low(bypass_check=True) ** 2).reshape(self.shape2)[:, 1:, :], axis=0)
+            np.sum((self.get_galactic_below_low(bypass_check=True) ** 2).reshape(self._shape2)[:, 1:, :], axis=0)
             / S_mean[1:, :],
             axis=0,
         ), dtype=np.float64)
@@ -202,7 +206,7 @@ class BGDecomposition:
         """Get the upper estimate of the galactic power spectrum"""
         galactic_loc = self.get_galactic_below_high(bypass_check=True)
         S, _, _, _, _ = get_S_cyclo(
-            galactic_loc, S_mean, self.wc, smooth_lengthf, filter_periods, period_list=period_list,
+            galactic_loc, S_mean, self._wc, smooth_lengthf, filter_periods, period_list=period_list,
         )
         return S
 
@@ -210,7 +214,7 @@ class BGDecomposition:
         """Get the lower estimate of the galactic power spectrum"""
         galactic_loc = self.get_galactic_below_low(bypass_check=True)
         S, _, _, _, _ = get_S_cyclo(
-            galactic_loc, S_mean, self.wc, smooth_lengthf, filter_periods, period_list=period_list,
+            galactic_loc, S_mean, self._wc, smooth_lengthf, filter_periods, period_list=period_list,
         )
         return S
 

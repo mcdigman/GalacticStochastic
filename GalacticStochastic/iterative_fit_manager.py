@@ -28,9 +28,9 @@ class IterativeFitManager(StateManager):
         self.noise_manager: NoiseModelManager = noise_manager
         self.bis: BinaryInclusionState = bis
 
-        self.itrn: int = 0  # current iteration counter
+        self._itrn: int = 0  # current iteration counter
 
-        self.n_full_converged: int = self.fit_state.get_n_itr_cut() - 1
+        self._n_full_converged: int = self.fit_state.get_n_itr_cut() - 1
 
     def do_loop(self) -> None:
         """Do the entire iterative fitting loop"""
@@ -42,7 +42,7 @@ class IterativeFitManager(StateManager):
             if self.check_done():
                 break
 
-            self.itrn += 1
+            self._itrn += 1
 
         self.loop_finalize()
 
@@ -66,8 +66,8 @@ class IterativeFitManager(StateManager):
         else:
             msg = 'Unrecognized option for group mode'
             raise NotImplementedError(msg)
-        hf_manager.attrs['itrn'] = self.itrn
-        hf_manager.attrs['n_full_converged'] = self.n_full_converged
+        hf_manager.attrs['itrn'] = self._itrn
+        hf_manager.attrs['n_full_converged'] = self._n_full_converged
         hf_manager.attrs['creator_name'] = self.__class__.__name__
         hf_manager.attrs['inclusion_state_name'] = self.bis.__class__.__name__
         hf_manager.attrs['fit_state_name'] = self.fit_state.__class__.__name__
@@ -100,7 +100,7 @@ class IterativeFitManager(StateManager):
         t2n = perf_counter()
 
         print('made bg %3d in time %7.3fs fit time %7.3fs'
-              % (self.itrn, t1n - t0n, t2n - t1n))
+              % (self._itrn, t1n - t0n, t2n - t1n))
 
     @override
     def log_state(self) -> None:
@@ -119,8 +119,8 @@ class IterativeFitManager(StateManager):
     def check_done(self) -> bool:
         """Check whether the fitting procedure can bet stopped"""
         if self.fit_state.get_bright_converged() and self.fit_state.get_faint_converged():
-            print('result fully converged at ' + str(self.itrn) + ', no further iterations needed')
-            self.n_full_converged = self.itrn
+            print('result fully converged at ' + str(self._itrn) + ', no further iterations needed')
+            self._n_full_converged = self._itrn
             return True
         return False
 
