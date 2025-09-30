@@ -1,6 +1,5 @@
 """run iterative processing of galactic background"""
 
-import numpy as np
 
 import GalacticStochastic.global_file_index as gfi
 import GalacticStochastic.plot_creation_helpers as pch
@@ -13,16 +12,13 @@ from GalacticStochastic.noise_manager import NoiseModelManager
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 if __name__ == '__main__':
-    a = np.array([])
-
     config_file = 'default_parameters.toml'
     config, wc, lc, ic, instrument_random_seed = get_config_objects(config_file)
 
     galaxy_file = config['files']['galaxy_file']
-    galaxy_dir = config['files']['galaxy_dir']
 
     stat_only = True
-    preprocess_mode = True
+    preprocess_mode = 2
     nt_min = 0
     nt_max = wc.Nt
     nt_lim_snr = PixelGenericRange(nt_min, nt_max, wc.DT, 0.)
@@ -30,7 +26,7 @@ if __name__ == '__main__':
 
     params_gb, _ = gfi.get_full_galactic_params(config)
 
-    fit_state = IterativeFitState(ic, preprocess_mode=2)
+    fit_state = IterativeFitState(ic, preprocess_mode=preprocess_mode)
 
     bgd = BGDecomposition(wc, ic.nc_galaxy, storage_mode=ic.background_storage_mode)
 

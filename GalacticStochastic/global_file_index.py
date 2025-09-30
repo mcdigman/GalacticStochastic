@@ -79,25 +79,6 @@ def get_processed_gb_filename(config: dict[str, Any], stat_only, snr_thresh, wc:
     )
 
 
-def get_noise_common(config: dict[str, Any], snr_thresh, wc: WDMWaveletConstants, lc):
-    try:
-        filename_gb_common = get_common_noise_filename(config, snr_thresh, wc)
-        hf_in = h5py.File(filename_gb_common, 'r')
-
-        hf_S = hf_in['S']
-
-        if not isinstance(hf_S, h5py.Group):
-            msg = 'Unrecognized hdf5 file format'
-            raise TypeError(msg)
-
-        noise_realization_common = np.asarray(hf_S['noise_realization'])
-
-        hf_in.close()
-        return noise_realization_common
-    except KeyError:
-        return np.random.normal(0., 1., (wc.Nt, wc.Nf, lc.nc_waveform))
-
-
 def _source_mask_read_helper(hf_sky: h5py.Group, key: str, fmin: float, fmax: float) -> tuple[int, NDArray[np.floating]]:
     hf_loc = hf_sky[key]
 

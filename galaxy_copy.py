@@ -7,7 +7,6 @@ ldc_dir = 'LDC/'
 config = {'files': {'galaxy_file': galaxy_file, 'galaxy_dir': ldc_dir}}
 params_gb, ns_got = gfi.get_full_galactic_params(config)
 
-n_tot = int(ns_got.sum())
 n_dgb = ns_got[0]
 n_igb = ns_got[1]
 n_vgb = ns_got[2]

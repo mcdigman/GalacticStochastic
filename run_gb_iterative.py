@@ -1,6 +1,5 @@
 """run iterative processing of galactic background"""
 
-import numpy as np
 
 import GalacticStochastic.global_file_index as gfi
 import GalacticStochastic.plot_creation_helpers as pch
@@ -59,8 +58,6 @@ def fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, instrument_r
 
 
 if __name__ == '__main__':
-    a = np.array([])
-
     config_filename = 'default_parameters.toml'
     config, wc, lc, ic, instrument_random_seed = get_config_objects(config_filename)
 
