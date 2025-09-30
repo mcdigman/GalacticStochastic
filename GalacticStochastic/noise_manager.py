@@ -81,9 +81,9 @@ class NoiseModelManager(StateManager):
         S_lower = np.asarray(np.min([S_lower, S_upper], axis=0), dtype=np.float64)
 
         # TODO must set seed here
-        self.noise_upper: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(S_upper, wc, prune=True, nc_snr=lc.nc_snr, seed=self.instrument_random_seed)
-        self.noise_lower: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(S_lower, wc, prune=True, nc_snr=lc.nc_snr, seed=self.instrument_random_seed)
-        self.noise_instrument: DiagonalStationaryDenseNoiseModel = DiagonalStationaryDenseNoiseModel(self.S_inst_m, wc, prune=True, nc_snr=lc.nc_snr, seed=self.instrument_random_seed)
+        self.noise_upper: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(S_upper, wc, prune=1, nc_snr=lc.nc_snr, seed=self.instrument_random_seed)
+        self.noise_lower: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(S_lower, wc, prune=1, nc_snr=lc.nc_snr, seed=self.instrument_random_seed)
+        self.noise_instrument: DiagonalStationaryDenseNoiseModel = DiagonalStationaryDenseNoiseModel(self.S_inst_m, wc, prune=1, nc_snr=lc.nc_snr, seed=self.instrument_random_seed)
 
         del S_upper
         del S_lower
@@ -168,15 +168,15 @@ class NoiseModelManager(StateManager):
     def log_state(self) -> None:
         """Perform any internal logging that should be done after advance_state is run."""
         if self.itr_save < self.idx_S_save.size and self.itrn - 1 == self.idx_S_save[self.itr_save]:
-            self.S_record_upper[self.itr_save] = self.noise_upper.S[:, :, :]
-            self.S_record_lower[self.itr_save] = self.noise_lower.S[:, :, :]
+            self.S_record_upper[self.itr_save] = self.noise_upper.get_S()[:, :, :]
+            self.S_record_lower[self.itr_save] = self.noise_lower.get_S()[:, :, :]
             self.itr_save += 1
         self.bgd.log_state(self.S_inst_m)
 
     @override
     def loop_finalize(self) -> None:
         """Perform any logic desired after convergence has been achieved and the loop ends"""
-        self.S_final[:] = self.noise_upper.S[:, :, :]
+        self.S_final[:] = self.noise_upper.get_S()[:, :, :]
 
     @override
     def state_check(self) -> None:
@@ -186,12 +186,12 @@ class NoiseModelManager(StateManager):
     @override
     def print_report(self) -> None:
         """Do any printing desired after convergence has been achieved and the loop ends"""
-        res_mask = np.asarray(((self.noise_upper.S[:, :, 0] - self.S_inst_m[:, 0]).mean(axis=0) > 0.1 * self.S_inst_m[:, 0]) & (
+        res_mask = np.asarray(((self.noise_upper.get_S()[:, :, 0] - self.S_inst_m[:, 0]).mean(axis=0) > 0.1 * self.S_inst_m[:, 0]) & (
             self.S_inst_m[:, 0] > 0.0
         ), dtype=np.bool_)
         galactic_below_high = self.bgd.get_galactic_below_high()
         noise_divide = np.sqrt(
-            self.noise_upper.S[self.nt_lim_snr.nx_min:self.nt_lim_snr.nx_max, res_mask, :2] - self.S_inst_m[res_mask, :2],
+            self.noise_upper.get_S()[self.nt_lim_snr.nx_min:self.nt_lim_snr.nx_max, res_mask, :2] - self.S_inst_m[res_mask, :2],
         )
         points_res = (
             galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy)[
@@ -243,7 +243,7 @@ class NoiseModelManager(StateManager):
             S_upper = self.bgd.get_S_below_high(
                 self.S_inst_m, self.ic.smooth_lengthf[self.itrn], filter_periods, period_list,
             )
-            self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, self.wc, prune=True, nc_snr=self.lc.nc_snr)
+            self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, self.wc, prune=1, nc_snr=self.lc.nc_snr)
 
             del S_upper
 
@@ -252,8 +252,8 @@ class NoiseModelManager(StateManager):
             # use lower estimate of galactic bg
             filter_periods = not self.stat_only
             S_lower = self.bgd.get_S_below_low(self.S_inst_m, self.ic.smooth_lengthf_fix, filter_periods, period_list)
-            S_lower = np.asarray(np.min([S_lower, self.noise_upper.S], axis=0), dtype=np.float64)
-            self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, self.wc, prune=True, nc_snr=self.lc.nc_snr)
+            S_lower = np.asarray(np.min([S_lower, self.noise_upper.get_S()], axis=0), dtype=np.float64)
+            self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, self.wc, prune=1, nc_snr=self.lc.nc_snr)
             del S_lower
         self.itrn += 1
 

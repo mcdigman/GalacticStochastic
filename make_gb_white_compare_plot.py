@@ -71,11 +71,8 @@ def white_plot_ax(ax_in, title, data, extent_in):
     ax_in.tick_params(axis='both', direction='in', which='both', top=True, right=True)
     ax_in.set_yticks([1.0e-3, 2.0e-3, 3.0e-3])
     ax_in.set_yticklabels([])
-    for label_loc in ax_in[0].get_yticklabels(minor=False):
-        label_loc.get_font_properties().set_size(14)
 
-    for label_loc in ax_in.get_xticklabels(minor=False):
-        label_loc.get_font_properties().set_size(14)
+    ax_in.tick_params(axis='both', which='major', labelsize=14)
     return im_out
 
 
@@ -92,7 +89,7 @@ if __name__ == '__main__':
     ifm_cyclo = fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, instrument_random_seed, stat_only=False)
     ifm_stat = fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, instrument_random_seed, stat_only=True)
 
-    noise_realization = ifm_stat.noise_manager.get_instrument_realization(white_mode=1)
+    noise_realization = ifm_stat.noise_manager.get_instrument_realization()
 
     bgd_cyclo = ifm_cyclo.noise_manager.bgd
     bgd_stat = ifm_stat.noise_manager.bgd

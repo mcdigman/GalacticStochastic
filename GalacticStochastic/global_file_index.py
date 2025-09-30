@@ -29,19 +29,6 @@ labels_gb = [
 ]
 
 
-def get_common_noise_filename(config: dict[str, Any], snr_thresh, wc: WDMWaveletConstants) -> str:
-    galaxy_dir = str(config['files']['galaxy_dir'])
-    return (
-        galaxy_dir
-        + ('preprocessed_background=%.2f' % snr_thresh)
-        + '_Nf='
-        + str(wc.Nf)
-        + '_Nt='
-        + str(wc.Nt)
-        + '_dt=%.2f.hdf5' % wc.dt
-    )
-
-
 def get_preliminary_filename(config: dict[str, Any], snr_thresh: float, Nf: int, Nt: int, dt: float) -> str:
     galaxy_dir = str(config['files']['galaxy_dir'])
     return (
@@ -313,7 +300,6 @@ def store_processed_gb_file(
     stat_only = noise_manager.stat_only
 
     filename_gb_init = get_preliminary_filename(config, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
-    # filename_gb_common = get_common_noise_filename(config, ic.snr_thresh, wc)
     filename_out = get_processed_gb_filename(config, stat_only, ic.snr_thresh, wc, nt_lim_snr)
     filename_source_gb = get_galaxy_filename(config)
     filename_config = config.get('toml_filename', 'not_recorded')

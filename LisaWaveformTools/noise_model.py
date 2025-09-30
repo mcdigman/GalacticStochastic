@@ -54,11 +54,11 @@ def get_sparse_snr_helper(
 
 class DenseNoiseModel(ABC):
     def __init__(self, wc: WDMWaveletConstants, prune: int, nc_snr: int, nc_noise: int, seed: int = -1, storage_mode: int = 0) -> None:
-        self.wc: WDMWaveletConstants = wc
+        self._wc: WDMWaveletConstants = wc
         self.prune: int = prune
         self.seed: int = seed
-        self.nc_snr: int = nc_snr
-        self.nc_noise: int = nc_noise
+        self._nc_snr: int = nc_snr
+        self._nc_noise: int = nc_noise
         self.storage_mode: int = storage_mode
 
         if self.storage_mode not in (0, 1):
@@ -69,7 +69,7 @@ class DenseNoiseModel(ABC):
             msg = 'random seed cannot be negative; use -1 to use a different seed each time'
             raise ValueError(msg)
 
-        assert self.nc_snr <= self.nc_noise, (
+        assert self._nc_snr <= self._nc_noise, (
             'number of TDI channels to calculate S/N for must be less than or equal to the number of TDI channels in S'
         )
 
@@ -78,16 +78,16 @@ class DenseNoiseModel(ABC):
         """Get the inverse cholesky decomposition of the dense noise covariance matrix"""
 
     @abstractmethod
-    def get_inv_S(self) -> NDArray[np.floating]:
-        """Get the inverse of the dense noise covariance matrix"""
-
-    @abstractmethod
     def get_chol_S(self) -> NDArray[np.floating]:
         """Get the cholesky decomposition of the dense noise covariance matrix"""
 
     @abstractmethod
     def get_S(self) -> NDArray[np.floating]:
         """Get the dense noise covariance matrix"""
+
+    def get_inv_S(self) -> NDArray[np.floating]:
+        """Get the inverse of the dense noise covariance matrix"""
+        return self.get_inv_chol_S()**2
 
     def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_lim_snr: PixelGenericRange) -> NDArray[np.floating]:
         """Get s/n of intrinsic_waveform in each TDI channel. Parameters usually come from
@@ -107,7 +107,7 @@ class DenseNoiseModel(ABC):
             an array of shape (nc_noise) which is the S/N for each TDI channel represented.
 
         """
-        return get_sparse_snr_helper(wavelet_waveform, nt_lim_snr, self.wc, self.get_inv_chol_S(), self.nc_snr)
+        return get_sparse_snr_helper(wavelet_waveform, nt_lim_snr, self._wc, self.get_inv_chol_S(), self._nc_snr)
 
     def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'dense_noise_model', group_mode: int = 0) -> h5py.Group:
         """Store attributes, configuration, and results to an hdf5 file."""
@@ -122,14 +122,14 @@ class DenseNoiseModel(ABC):
         hf_noise.attrs['creator_name'] = self.__class__.__name__
         hf_noise.attrs['prune'] = self.prune
         hf_noise.attrs['seed'] = self.seed
-        hf_noise.attrs['nc_snr'] = self.nc_snr
-        hf_noise.attrs['nc_noise'] = self.nc_noise
-        hf_noise.attrs['wc_name'] = self.wc.__class__.__name__
+        hf_noise.attrs['nc_snr'] = self.get_nc_snr()
+        hf_noise.attrs['nc_noise'] = self.get_nc_noise()
+        hf_noise.attrs['wc_name'] = self._wc.__class__.__name__
         hf_noise.attrs['storage_mode'] = self.storage_mode
 
         hf_wc = hf_noise.create_group('wc')
-        for key in self.wc._fields:
-            hf_wc.attrs[key] = getattr(self.wc, key)
+        for key in self._wc._fields:
+            hf_wc.attrs[key] = getattr(self._wc, key)
 
         if self.storage_mode == 0:
             pass
@@ -140,11 +140,11 @@ class DenseNoiseModel(ABC):
 
     def get_nc_snr(self) -> int:
         """Get the number of S/N channels"""
-        return self.nc_snr
+        return self._nc_snr
 
     def get_nc_noise(self) -> int:
         """Get the number of noise channels"""
-        return self.nc_noise
+        return self._nc_noise
 
     def generate_dense_noise(self, white_mode: int = 0) -> NDArray[np.floating]:
         """Generate random noise for full matrix
@@ -166,15 +166,19 @@ class DenseNoiseModel(ABC):
         if white_mode not in (0, 1):
             msg = 'Unrecognized option for white_mode'
             raise ValueError(msg)
-        noise_res = np.zeros((self.wc.Nt, self.wc.Nf, self.nc_noise))
+        noise_res = np.zeros((self._wc.Nt, self._wc.Nf, self._nc_noise))
         if self.seed == -1:
             rng = np.random.default_rng()
         else:
             rng = np.random.default_rng(self.seed)
 
-        chol_S = self.get_chol_S()
-        for j in range(self.wc.Nt):
-            noise_res[j, :, :] = rng.normal(0.0, 1.0, (self.wc.Nf, self.nc_noise)) * chol_S[j, :, :]
+        if white_mode == 0:
+            chol_S = self.get_chol_S()
+            for j in range(self._wc.Nt):
+                noise_res[j, :, :] = rng.normal(0.0, 1.0, (self._wc.Nf, self._nc_noise)) * chol_S[j, :, :]
+        if white_mode == 1:
+            for j in range(self._wc.Nt):
+                noise_res[j, :, :] = rng.normal(0.0, 1.0, (self._wc.Nf, self._nc_noise))
         return noise_res
 
     def get_S_stat_m(self) -> NDArray[np.floating]:
@@ -182,15 +186,6 @@ class DenseNoiseModel(ABC):
         return np.mean(self.get_S(), axis=0)
 
 
-# @jitclass(
-#    [
-#        ('prune', nb.b1),
-#        ('S', nb.float64[:, :, :]),
-#        ('inv_S', nb.float64[:, :, :]),
-#        ('inv_chol_S', nb.float64[:, :, :]),
-#        ('chol_S', nb.float64[:, :, :]),
-#    ]
-# )
 class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
     """a class to handle the fully diagonal nonstationary
     instrument noise model to feed to snr and fisher matrix calculations
@@ -224,23 +219,20 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
         """
         super().__init__(wc, prune, nc_snr, int(S.shape[-1]), seed, storage_mode)
 
-        self.S: NDArray[np.floating] = S.copy()
-        self.inv_S: NDArray[np.floating] = np.zeros((self.wc.Nt, self.wc.Nf, self.nc_noise))
-        self.inv_chol_S: NDArray[np.floating] = np.zeros((self.wc.Nt, self.wc.Nf, self.nc_noise))
-        self.chol_S: NDArray[np.floating] = np.zeros((self.wc.Nt, self.wc.Nf, self.nc_noise))
+        self._S: NDArray[np.floating] = S.copy()
+        self._inv_chol_S: NDArray[np.floating] = np.zeros((self._wc.Nt, self._wc.Nf, self._nc_noise))
+        self._chol_S: NDArray[np.floating] = np.zeros((self._wc.Nt, self._wc.Nf, self._nc_noise))
         if self.prune:
             i_offset = 1
         else:
             i_offset = 0
-        for j in range(self.wc.Nt):
-            for itrc in range(self.nc_noise):
-                self.chol_S[j, i_offset:, itrc] = np.sqrt(self.S[j, i_offset:, itrc])
-                self.inv_chol_S[j, i_offset:, itrc] = 1.0 / self.chol_S[j, i_offset:, itrc]
-                self.inv_S[j, i_offset:, itrc] = self.inv_chol_S[j, i_offset:, itrc] ** 2
+        for j in range(self._wc.Nt):
+            for itrc in range(self._nc_noise):
+                self._chol_S[j, i_offset:, itrc] = np.sqrt(self._S[j, i_offset:, itrc])
+                self._inv_chol_S[j, i_offset:, itrc] = 1.0 / self._chol_S[j, i_offset:, itrc]
         if self.prune:
-            self.chol_S[:, 0, :] = 0.0
-            self.inv_chol_S[:, 0, :] = 0.0
-            self.inv_S[:, 0, :] = 0.0
+            self._chol_S[:, 0, :] = 0.0
+            self._inv_chol_S[:, 0, :] = 0.0
 
     @override
     def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'dense_noise_model', group_mode: int = 0) -> h5py.Group:
@@ -250,38 +242,19 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
     @override
     def get_inv_chol_S(self) -> NDArray[np.floating]:
         """Get the inverse cholesky decomposition of the dense noise covariance matrix"""
-        return self.inv_chol_S
-
-    @override
-    def get_inv_S(self) -> NDArray[np.floating]:
-        """Get the inverse of the dense noise covariance matrix"""
-        return self.inv_S
+        return self._inv_chol_S
 
     @override
     def get_chol_S(self) -> NDArray[np.floating]:
         """Get the cholesky decomposition of the dense noise covariance matrix"""
-        return self.chol_S
+        return self._chol_S
 
     @override
     def get_S(self) -> NDArray[np.floating]:
         """Get the dense noise covariance matrix"""
-        return self.chol_S * self.chol_S
+        return self._chol_S * self._chol_S
 
 
-# @jitclass(
-#    [
-#        ('prune', nb.b1),
-#        ('S_stat_m', nb.float64[:, :]),
-#        ('inv_S_stat_m', nb.float64[:, :]),
-#        ('inv_chol_S_stat_m', nb.float64[:, :]),
-#        ('S', nb.float64[:, :, :]),
-#        ('inv_S', nb.float64[:, :, :]),
-#        ('inv_chol_S', nb.float64[:, :, :]),
-#        ('chol_S_stat_m', nb.float64[:, :]),
-#        ('chol_S', nb.float64[:, :, :]),
-#        ('seed', nb.int64),
-#    ]
-# )
 class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
     """a class to handle the a diagonal stationary
     noise model to feed to snr and fisher matrix calculations
@@ -315,39 +288,34 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
 
         """
         super().__init__(wc, prune, nc_snr, int(S_stat_m.shape[-1]), seed, storage_mode=storage_mode)
-        self.S_stat_m_in: NDArray[np.floating] = S_stat_m
+        self._S_stat_m_in: NDArray[np.floating] = S_stat_m
 
-        self.inv_S_stat_m: NDArray[np.floating] = np.zeros((self.wc.Nf, self.nc_noise))
-        self.inv_chol_S_stat_m: NDArray[np.floating] = np.zeros((self.wc.Nf, self.nc_noise))
-        self.chol_S_stat_m: NDArray[np.floating] = np.zeros((self.wc.Nf, self.nc_noise))
+        self._inv_chol_S_stat_m: NDArray[np.floating] = np.zeros((self._wc.Nf, self._nc_noise))
+        self._chol_S_stat_m: NDArray[np.floating] = np.zeros((self._wc.Nf, self._nc_noise))
 
-        for m in range(self.wc.Nf):
+        for m in range(self._wc.Nf):
             if self.prune == 1 and m in (0, wc.Nf):
                 # currently m iterator doesn't even go to Nf,
                 # but if it did it would also need to be pruned
                 continue
-            for itrc in range(self.nc_noise):
-                self.inv_S_stat_m[m, itrc] = 1.0 / self.S_stat_m_in[m, itrc]
-                self.chol_S_stat_m[m, itrc] = np.sqrt(self.S_stat_m_in[m, itrc])
-                self.inv_chol_S_stat_m[m, itrc] = 1.0 / self.chol_S_stat_m[m, itrc]
+            for itrc in range(self._nc_noise):
+                self._chol_S_stat_m[m, itrc] = np.sqrt(self._S_stat_m_in[m, itrc])
+                self._inv_chol_S_stat_m[m, itrc] = 1.0 / self._chol_S_stat_m[m, itrc]
 
-        self.S: NDArray[np.floating] = np.zeros((self.wc.Nt, self.wc.Nf, self.nc_noise))
-        self.inv_S: NDArray[np.floating] = np.zeros((self.wc.Nt, self.wc.Nf, self.nc_noise))
-        self.inv_chol_S: NDArray[np.floating] = np.zeros((self.wc.Nt, self.wc.Nf, self.nc_noise))
-        self.chol_S: NDArray[np.floating] = np.zeros((self.wc.Nt, self.wc.Nf, self.nc_noise))
-        for j in range(self.wc.Nt):
-            for itrc in range(self.nc_noise):
-                self.S[j, 1:, itrc] = self.S_stat_m_in[1:, itrc]
-                self.inv_S[j, 1:, itrc] = self.inv_S_stat_m[1:, itrc]
-                self.inv_chol_S[j, 1:, itrc] = self.inv_chol_S_stat_m[1:, itrc]
-                self.chol_S[j, 1:, itrc] = self.chol_S_stat_m[1:, itrc]
+        self._S: NDArray[np.floating] = np.zeros((self._wc.Nt, self._wc.Nf, self._nc_noise))
+        self._inv_chol_S: NDArray[np.floating] = np.zeros((self._wc.Nt, self._wc.Nf, self._nc_noise))
+        self._chol_S: NDArray[np.floating] = np.zeros((self._wc.Nt, self._wc.Nf, self._nc_noise))
+        for j in range(self._wc.Nt):
+            for itrc in range(self._nc_noise):
+                self._S[j, 1:, itrc] = self._S_stat_m_in[1:, itrc]
+                self._inv_chol_S[j, 1:, itrc] = self._inv_chol_S_stat_m[1:, itrc]
+                self._chol_S[j, 1:, itrc] = self._chol_S_stat_m[1:, itrc]
                 if j % 2 == 0:
                     # NOTE right now this just necessarily drops the highest frequency term
                     # also note that lowest frequency term may be a bit different
-                    self.S[j, 0, itrc] = self.S_stat_m_in[0, itrc]
-                    self.inv_S[j, 0, itrc] = self.inv_S_stat_m[0, itrc]
-                    self.inv_chol_S[j, 0, itrc] = self.inv_chol_S_stat_m[0, itrc]
-                    self.chol_S[j, 0, itrc] = self.chol_S_stat_m[0, itrc]
+                    self._S[j, 0, itrc] = self._S_stat_m_in[0, itrc]
+                    self._inv_chol_S[j, 0, itrc] = self._inv_chol_S_stat_m[0, itrc]
+                    self._chol_S[j, 0, itrc] = self._chol_S_stat_m[0, itrc]
 
     @override
     def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'dense_noise_model', group_mode: int = 0) -> h5py.Group:
@@ -355,26 +323,21 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
         hf_noise = super().store_hdf5(hf_in, group_name=group_name, group_mode=group_mode)
 
         # all other attributes can be derived from S_stat_m
-        hf_noise.create_dataset('S_stat_m_in', data=self.S_stat_m_in, compression='gzip')
+        hf_noise.create_dataset('S_stat_m_in', data=self._S_stat_m_in, compression='gzip')
 
         return hf_noise
 
     @override
     def get_inv_chol_S(self) -> NDArray[np.floating]:
         """Get the inverse cholesky decomposition of the dense noise covariance matrix"""
-        return self.inv_chol_S
-
-    @override
-    def get_inv_S(self) -> NDArray[np.floating]:
-        """Get the inverse of the dense noise covariance matrix"""
-        return self.inv_S
+        return self._inv_chol_S
 
     @override
     def get_chol_S(self) -> NDArray[np.floating]:
         """Get the cholesky decomposition of the dense noise covariance matrix"""
-        return self.chol_S
+        return self._chol_S
 
     @override
     def get_S(self) -> NDArray[np.floating]:
         """Get the dense noise covariance matrix"""
-        return self.S
+        return self._S

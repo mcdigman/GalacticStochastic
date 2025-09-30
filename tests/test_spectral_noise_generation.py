@@ -158,7 +158,7 @@ def test_noise_normalization_match() -> None:
         )
 
     # check can generate noise through nonstationary method as well
-    noise_model_cyclo = DiagonalNonstationaryDenseNoiseModel(noise_model_stat.S, wc, True, nc_snr)
+    noise_model_cyclo = DiagonalNonstationaryDenseNoiseModel(noise_model_stat.get_S(), wc, True, nc_snr)
     noise_wave_var = noise_model_cyclo.generate_dense_noise()
     noise_realization_freq_var = np.zeros((ND // 2 + 1, nc_noise), dtype=np.complex128)
     for itrc in range(nc_noise):
