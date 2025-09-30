@@ -92,6 +92,11 @@ class BGDecomposition:
         hf_background.attrs['nc_galaxy'] = self.nc_galaxy
         hf_background.attrs['shape1'] = self.shape1
         hf_background.attrs['shape2'] = self.shape2
+
+        if self.storage_mode == 0:
+            hf_background.create_dataset('galactic_below_low', data=self.get_galactic_below_low(), compression='gzip')
+            hf_background.create_dataset('galactic_above', data=self.get_galactic_coadd_resolvable(), compression='gzip')
+            hf_background.create_dataset('galactic_undecided', data=self.get_galactic_coadd_undecided(), compression='gzip')
         return hf_background
 
     def get_galactic_total(self, *, bypass_check: bool = False) -> NDArray[np.floating]:

@@ -1,20 +1,23 @@
 """object to manage noise models for the iterative_fit_manager"""
 
-from typing import override
+from typing import TYPE_CHECKING, override
 
 import h5py
 import numpy as np
-from numpy.typing import NDArray
 
 from GalacticStochastic.background_decomposition import BGDecomposition
 from GalacticStochastic.iteration_config import IterationConfig
 from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
 from GalacticStochastic.state_manager import StateManager
 from GalacticStochastic.testing_tools import unit_normal_battery
+from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.noise_model import DiagonalNonstationaryDenseNoiseModel
+from LisaWaveformTools.noise_model import DiagonalNonstationaryDenseNoiseModel, DiagonalStationaryDenseNoiseModel
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 class NoiseModelManager(StateManager):
@@ -27,9 +30,9 @@ class NoiseModelManager(StateManager):
         lc: LISAConstants,
         fit_state: IterativeFitState,
         bgd: BGDecomposition,
-        S_inst_m: NDArray[np.floating],
         stat_only: int,
         nt_lim_snr: PixelGenericRange,
+        instrument_random_seed: int,
     ) -> None:
         """Create the noise model manager"""
         if ic.noise_model_storage_mode not in (0, 1, 2):
@@ -41,9 +44,15 @@ class NoiseModelManager(StateManager):
         self.wc: WDMWaveletConstants = wc
         self.bgd: BGDecomposition = bgd
         self.fit_state: IterativeFitState = fit_state
-        self.S_inst_m: NDArray[np.floating] = S_inst_m
         self.stat_only: int = stat_only
         self.nt_lim_snr: PixelGenericRange = nt_lim_snr
+        self.instrument_random_seed: int = instrument_random_seed
+
+        if ic.noise_model_mode == 0:
+            self.S_inst_m: NDArray[np.floating] = instrument_noise_AET_wdm_m(self.lc, self.wc)
+        else:
+            msg = 'Unrecognized option for noise model mode'
+            raise NotImplementedError(msg)
 
         self.itrn: int = 0
 
@@ -71,8 +80,10 @@ class NoiseModelManager(StateManager):
             self.itr_save += 1
         S_lower = np.asarray(np.min([S_lower, S_upper], axis=0), dtype=np.float64)
 
-        self.noise_upper: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(S_upper, wc, prune=True, nc_snr=lc.nc_snr)
-        self.noise_lower: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(S_lower, wc, prune=True, nc_snr=lc.nc_snr)
+        # TODO must set seed here
+        self.noise_upper: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(S_upper, wc, prune=True, nc_snr=lc.nc_snr, seed=self.instrument_random_seed)
+        self.noise_lower: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(S_lower, wc, prune=True, nc_snr=lc.nc_snr, seed=self.instrument_random_seed)
+        self.noise_instrument: DiagonalStationaryDenseNoiseModel = DiagonalStationaryDenseNoiseModel(self.S_inst_m, wc, prune=True, nc_snr=lc.nc_snr, seed=self.instrument_random_seed)
 
         del S_upper
         del S_lower
@@ -95,9 +106,11 @@ class NoiseModelManager(StateManager):
         hf_noise.attrs['stat_only'] = self.stat_only
         hf_noise.attrs['noise_upper_name'] = self.noise_upper.__class__.__name__
         hf_noise.attrs['noise_lower_name'] = self.noise_lower.__class__.__name__
+        hf_noise.attrs['noise_instrument_name'] = self.noise_instrument.__class__.__name__
         hf_noise.attrs['bgd_name'] = self.bgd.__class__.__name__
         hf_noise.attrs['fit_state_name'] = self.fit_state.__class__.__name__
         hf_noise.attrs['nt_lim_snr_name'] = self.nt_lim_snr.__class__.__name__
+        hf_noise.attrs['instrument_random_seed'] = self.instrument_random_seed
         hf_noise.attrs['wc_name'] = self.wc.__class__.__name__
         hf_noise.attrs['lc_name'] = self.lc.__class__.__name__
         hf_noise.attrs['ic_name'] = self.ic.__class__.__name__
@@ -126,6 +139,7 @@ class NoiseModelManager(StateManager):
 
         _ = self.noise_upper.store_hdf5(hf_noise, group_name='noise_upper')
         _ = self.noise_lower.store_hdf5(hf_noise, group_name='noise_lower')
+        _ = self.noise_instrument.store_hdf5(hf_noise, group_name='noise_instrument')
 
         # store all the configuration objects to the file
 
@@ -242,3 +256,6 @@ class NoiseModelManager(StateManager):
             self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, self.wc, prune=True, nc_snr=self.lc.nc_snr)
             del S_lower
         self.itrn += 1
+
+    def get_instrument_realization(self, white_mode: int = 1):
+        return self.noise_instrument.generate_dense_noise(white_mode=white_mode)

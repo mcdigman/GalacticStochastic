@@ -25,7 +25,7 @@ if __name__ == '__main__':
     snr_thresh = 7.0
     smooth_targ_length = 0.25
 
-    config, wc, lc, ic = config_helper.get_config_objects('default_parameters.toml')
+    config, wc, lc, ic, random_seed = config_helper.get_config_objects('default_parameters.toml')
     galaxy_dir = config['files']['galaxy_dir']
 
     fs = np.arange(0, wc.Nf) * wc.DF

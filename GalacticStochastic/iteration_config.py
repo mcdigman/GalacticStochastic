@@ -26,6 +26,7 @@ class IterationConfig(NamedTuple):
     fit_state_storage_mode: int
     inclusion_state_storage_mode: int
     manager_storage_mode: int
+    noise_model_mode: int
 
 
 def get_iteration_config(config: dict[str, Any]) -> IterationConfig:
@@ -136,6 +137,9 @@ def get_iteration_config(config: dict[str, Any]) -> IterationConfig:
     inclusion_state_storage_mode = int(config_ic.get('inclusion_state_storage_mode', 0))
     manager_storage_mode = int(config_ic.get('manager_storage_mode', 0))
 
+    # select mode for getting the instrument noise model
+    noise_model_mode = int(config_ic.get('noise_model_mode', 0))
+
     # make arrays into tuples to ensure the configuration is immutable
     return IterationConfig(
         max_iterations,
@@ -158,4 +162,5 @@ def get_iteration_config(config: dict[str, Any]) -> IterationConfig:
         fit_state_storage_mode,
         inclusion_state_storage_mode,
         manager_storage_mode,
+        noise_model_mode,
     )

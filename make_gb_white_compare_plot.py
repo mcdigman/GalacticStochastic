@@ -8,7 +8,6 @@ import scipy.special
 import scipy.stats
 
 import GalacticStochastic.global_const as gc
-import GalacticStochastic.global_file_index as gfi
 from GalacticStochastic import config_helper
 from GalacticStochastic.galactic_fit_helpers import get_S_cyclo
 from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
@@ -62,7 +61,7 @@ def result_normality_battery(signal_in):
 
 
 if __name__ == '__main__':
-    config, wc, lc, ic = config_helper.get_config_objects('default_parameters.toml')
+    config, wc, lc, ic, instrument_random_seed = config_helper.get_config_objects('default_parameters.toml')
     galaxy_dir = config['files']['galaxy_dir']
 
     nt_min = 256 * 6
@@ -75,10 +74,10 @@ if __name__ == '__main__':
     snr_thresh = 7.0
     smooth_lengthf = 6
 
-    noise_realization = gfi.get_noise_common(config, snr_thresh, wc, lc)
+    ifm_cyclo = fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, instrument_random_seed, stat_only=False)
+    ifm_stat = fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, instrument_random_seed, stat_only=True)
 
-    ifm_cyclo = fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, stat_only=False)
-    ifm_stat = fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, stat_only=True)
+    noise_realization = ifm_stat.noise_manager.get_instrument_realization(white_mode=1)
 
     bgd_cyclo = ifm_cyclo.noise_manager.bgd
     bgd_stat = ifm_stat.noise_manager.bgd

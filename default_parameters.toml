@@ -7,9 +7,10 @@ galaxy_file = 'galaxy_binaries.hdf5'
 
 [noise_realization]
 
-# unsigned integer, random seed for the noise realization to set for generating noise realization
+# signed integer, random seed for the noise realization to set for generating noise realization
 # so we don't have to store the whole array to disk
-noise_realization_seed = 31415926
+# if -1 the noise is seeded at runtime instead
+instrument_noise_realization_seed = 31415926
 
 [iterative_fit_constants]
 

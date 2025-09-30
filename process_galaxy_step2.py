@@ -10,19 +10,16 @@ from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
 from GalacticStochastic.iterative_fit_manager import IterativeFitManager
 from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
 from GalacticStochastic.noise_manager import NoiseModelManager
-from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 if __name__ == '__main__':
     a = np.array([])
 
     config_file = 'default_parameters.toml'
-    config, wc, lc, ic = get_config_objects(config_file)
+    config, wc, lc, ic, instrument_random_seed = get_config_objects(config_file)
 
     galaxy_file = config['files']['galaxy_file']
     galaxy_dir = config['files']['galaxy_dir']
-
-    S_inst_m = instrument_noise_AET_wdm_m(lc, wc)
 
     stat_only = True
     preprocess_mode = True
@@ -37,7 +34,7 @@ if __name__ == '__main__':
 
     bgd = BGDecomposition(wc, ic.nc_galaxy, storage_mode=ic.background_storage_mode)
 
-    noise_manager = NoiseModelManager(ic, wc, lc, fit_state, bgd, S_inst_m, stat_only, nt_lim_snr)
+    noise_manager = NoiseModelManager(ic, wc, lc, fit_state, bgd, stat_only, nt_lim_snr, instrument_random_seed)
 
     bis = BinaryInclusionState(wc, ic, lc, params_gb, noise_manager, fit_state, nt_lim_waveform)
 

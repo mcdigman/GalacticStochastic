@@ -97,10 +97,13 @@ def instrument_noise_AET_wdm_m(lc: LISAConstants, wc: WDMWaveletConstants) -> ND
         array shape is (freq. layers x number of TDI channels)
 
     """
-    # TODO why no plus 1?
-    ls: NDArray[np.integer] = np.arange(-wc.Nt // 2, wc.Nt // 2)
-    fs: NDArray[np.floating] = ls / wc.Tobs
-    phif: NDArray[np.float64] = (np.sqrt(wc.dt) * phitilde_vec(2 * np.pi * fs * wc.dt, wc.Nf, wc.nx)).astype(np.float64)
+    if lc.noise_curve_mode == 0:
+        # TODO why no plus 1?
+        ls: NDArray[np.integer] = np.arange(-wc.Nt // 2, wc.Nt // 2)
+        fs: NDArray[np.floating] = ls / wc.Tobs
+        phif: NDArray[np.float64] = (np.sqrt(wc.dt) * phitilde_vec(2 * np.pi * fs * wc.dt, wc.Nf, wc.nx)).astype(np.float64)
 
-    # TODO check ad hoc normalization factor
-    return instrument_noise_AET_wdm_loop(phif, lc, wc)
+        # TODO check ad hoc normalization factor
+        return instrument_noise_AET_wdm_loop(phif, lc, wc)
+    msg = 'Unrecognized option for noise curve mode'
+    raise NotImplementedError(msg)

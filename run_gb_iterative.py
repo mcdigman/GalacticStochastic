@@ -13,14 +13,14 @@ from GalacticStochastic.noise_manager import NoiseModelManager
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 
-def fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, stat_only, *, fetch_mode=0, output_mode=1):
+def fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, instrument_random_seed, stat_only, *, fetch_mode=0, output_mode=1):
     del fetch_mode
     nt_lim_snr = PixelGenericRange(nt_min, nt_max, wc.DT, 0.)
     nt_lim_waveform = PixelGenericRange(0, wc.Nt, wc.DT, 0.)
 
     print(nt_lim_snr.nx_min, nt_lim_snr.nx_max, nt_lim_waveform.nx_min, nt_lim_waveform.nx_max, wc.Nt, wc.Nf, stat_only)
 
-    galactic_below_in, snrs_tot_in, S_inst_m = gfi.load_preliminary_galactic_file(
+    galactic_below_in, snrs_tot_in, _ = gfi.load_preliminary_galactic_file(
         config, ic, wc, lc,
     )
 
@@ -31,9 +31,7 @@ def fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, stat_only, *
     bgd = BGDecomposition(wc, ic.nc_galaxy, galactic_floor=galactic_below_in.copy(), storage_mode=ic.background_storage_mode)
     del galactic_below_in
 
-    noise_manager = NoiseModelManager(ic, wc, lc, fit_state, bgd, S_inst_m, stat_only, nt_lim_snr)
-
-    del S_inst_m
+    noise_manager = NoiseModelManager(ic, wc, lc, fit_state, bgd, stat_only, nt_lim_snr, instrument_random_seed=instrument_random_seed)
 
     bis = BinaryInclusionState(wc, ic, lc, params_gb, noise_manager, fit_state, nt_lim_waveform, snrs_tot_in)
 
@@ -49,7 +47,6 @@ def fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, stat_only, *
         gfi.store_processed_gb_file(
             config,
             wc,
-            lc,
             ic,
             ifm,
         )
@@ -64,13 +61,14 @@ def fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, stat_only, *
 if __name__ == '__main__':
     a = np.array([])
 
-    config, wc, lc, ic = get_config_objects('default_parameters.toml')
+    config_filename = 'default_parameters.toml'
+    config, wc, lc, ic, instrument_random_seed = get_config_objects(config_filename)
 
     for itrm in [0, 1, 3, 7]:
         stat_only = False
         nt_min = 256 * (7 - itrm)
         nt_max = nt_min + 512 * (itrm + 1)
-        ifm = fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, stat_only=stat_only, fetch_mode=0, output_mode=1)
+        ifm = fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, instrument_random_seed, stat_only=stat_only, fetch_mode=0, output_mode=1)
 
     do_plot_noise_spectrum_ambiguity = True
     if do_plot_noise_spectrum_ambiguity:

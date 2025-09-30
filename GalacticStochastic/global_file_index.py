@@ -63,7 +63,7 @@ def get_processed_gb_filename(config: dict[str, Any], stat_only, snr_thresh, wc:
     galaxy_dir = str(config['files']['galaxy_dir'])
     return (
         galaxy_dir
-        + ('gb8_processed_snr=%.2f' % snr_thresh)
+        + ('gb9_processed_snr=%.2f' % snr_thresh)
         + '_Nf='
         + str(wc.Nf)
         + '_Nt='
@@ -319,66 +319,76 @@ def store_preliminary_gb_file(
 def store_processed_gb_file(
     config: dict[str, Any],
     wc: WDMWaveletConstants,
-    lc: LISAConstants,
     ic: IterationConfig,
     ifm: IterativeFitManager,
 ) -> None:
     noise_manager = ifm.noise_manager
-    bgd = noise_manager.bgd
-    n_full_converged = ifm.n_full_converged
-    bis = ifm.bis
+    # bgd = noise_manager.bgd
+    # n_full_converged = ifm.n_full_converged
+    # bis = ifm.bis
     nt_lim_snr = noise_manager.nt_lim_snr
-    S_inst_m = noise_manager.S_inst_m
-    S_final = noise_manager.S_final
+    # S_inst_m = noise_manager.S_inst_m
+    # S_final = noise_manager.S_final
     stat_only = noise_manager.stat_only
 
     filename_gb_init = get_preliminary_filename(config, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
-    filename_gb_common = get_common_noise_filename(config, ic.snr_thresh, wc)
+    # filename_gb_common = get_common_noise_filename(config, ic.snr_thresh, wc)
     filename_out = get_processed_gb_filename(config, stat_only, ic.snr_thresh, wc, nt_lim_snr)
-
-    period_list = ic.period_list
-
-    n_bin_use = bis.n_bin_use
-    snrs_tot_upper = bis.snrs_tot_upper
-    argbinmap = bis.argbinmap
-    faints_old = bis.faints_old
-    faints_cur = bis.faints_cur
-    brights = bis.brights
+    filename_source_gb = get_galaxy_filename(config)
+    filename_config = config.get('toml_filename', 'not_recorded')
 
     hf_out = h5py.File(filename_out, 'w')
-    hf_S = hf_out.create_group('S')
-    hf_signal = hf_out.create_group('signal')
-    _ = hf_signal.create_dataset('galactic_below', data=bgd.get_galactic_below_low(), compression='gzip')
-    _ = hf_signal.create_dataset('galactic_above', data=bgd.get_galactic_coadd_resolvable(), compression='gzip')
-    _ = hf_signal.create_dataset('galactic_undecided', data=bgd.get_galactic_coadd_undecided(), compression='gzip')
-
-    _ = hf_S.create_dataset('period_list', data=period_list)
-    hf_S.attrs['n_bin_use'] = n_bin_use
-    _ = hf_S.create_dataset('S_stat_m', data=S_inst_m)
-    _ = hf_S.create_dataset('snrs_tot_upper', data=snrs_tot_upper[n_full_converged], compression='gzip')
-    _ = hf_S.create_dataset('argbinmap', data=argbinmap, compression='gzip')
-
-    _ = hf_S.create_dataset('faints_old', data=faints_old, compression='gzip')
-    _ = hf_S.create_dataset('faints_cur', data=faints_cur[n_full_converged], compression='gzip')
-
-    _ = hf_S.create_dataset('brights', data=brights[n_full_converged], compression='gzip')
-    _ = hf_S.create_dataset('S_final', data=S_final, compression='gzip')
-
-    _ = hf_S.create_dataset('source_gb_file', data=get_galaxy_filename(config))
-    _ = hf_S.create_dataset('preliminary_gb_file', data=filename_gb_init)  # TODO these are redundant as constructed
-    _ = hf_S.create_dataset('init_gb_file', data=filename_gb_init)
-    _ = hf_S.create_dataset('common_gb_noise_file', data=filename_gb_common)
-
-    hf_wc = hf_out.create_group('_wc')
-    for key in wc._fields:
-        hf_wc.attrs[key] = getattr(wc, key)
-
-    hf_lc = hf_out.create_group('_lc')
-    for key in lc._fields:
-        hf_lc.attrs[key] = getattr(lc, key)
-
-    hf_ic = hf_out.create_group('ic')
-    for key in ic._fields:
-        hf_ic.attrs[key] = getattr(ic, key)
-
+    hf_itr = hf_out.create_group('iteration_results')
+    hf_out.attrs['filename_gb_init'] = filename_gb_init
+    hf_out.attrs['filename_config'] = filename_config
+    hf_out.attrs['filename_out'] = filename_out
+    hf_out.attrs['filnemae_source_gb'] = filename_source_gb
+    ifm.store_hdf5(hf_itr)
     hf_out.close()
+
+    # period_list = ic.period_list
+
+    # n_bin_use = bis.n_bin_use
+    # snrs_tot_upper = bis.snrs_tot_upper
+    # argbinmap = bis.argbinmap
+    # faints_old = bis.faints_old
+    # faints_cur = bis.faints_cur
+    # brights = bis.brights
+
+    # hf_out = h5py.File(filename_out, 'w')
+    # hf_S = hf_out.create_group('S')
+    # hf_signal = hf_out.create_group('signal')
+    # _ = hf_signal.create_dataset('galactic_below', data=bgd.get_galactic_below_low(), compression='gzip')
+    # _ = hf_signal.create_dataset('galactic_above', data=bgd.get_galactic_coadd_resolvable(), compression='gzip')
+    # _ = hf_signal.create_dataset('galactic_undecided', data=bgd.get_galactic_coadd_undecided(), compression='gzip')
+
+    # _ = hf_S.create_dataset('period_list', data=period_list)
+    # hf_S.attrs['n_bin_use'] = n_bin_use
+    # _ = hf_S.create_dataset('S_stat_m', data=S_inst_m)
+    # _ = hf_S.create_dataset('snrs_tot_upper', data=snrs_tot_upper[n_full_converged], compression='gzip')
+    # _ = hf_S.create_dataset('argbinmap', data=argbinmap, compression='gzip')
+
+    # _ = hf_S.create_dataset('faints_old', data=faints_old, compression='gzip')
+    # _ = hf_S.create_dataset('faints_cur', data=faints_cur[n_full_converged], compression='gzip')
+
+    # _ = hf_S.create_dataset('brights', data=brights[n_full_converged], compression='gzip')
+    # _ = hf_S.create_dataset('S_final', data=S_final, compression='gzip')
+
+    # _ = hf_S.create_dataset('source_gb_file', data=get_galaxy_filename(config))
+    # _ = hf_S.create_dataset('preliminary_gb_file', data=filename_gb_init)  # TODO these are redundant as constructed
+    # _ = hf_S.create_dataset('init_gb_file', data=filename_gb_init)
+    # _ = hf_S.create_dataset('common_gb_noise_file', data=filename_gb_common)
+
+    # hf_wc = hf_out.create_group('_wc')
+    # for key in wc._fields:
+    #    hf_wc.attrs[key] = getattr(wc, key)
+
+    # hf_lc = hf_out.create_group('_lc')
+    # for key in lc._fields:
+    #    hf_lc.attrs[key] = getattr(lc, key)
+
+    # hf_ic = hf_out.create_group('ic')
+    # for key in ic._fields:
+    #    hf_ic.attrs[key] = getattr(ic, key)
+
+    # hf_out.close()

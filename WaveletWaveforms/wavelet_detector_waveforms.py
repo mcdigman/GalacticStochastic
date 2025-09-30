@@ -164,6 +164,10 @@ class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform[StationaryWaveformTime
 
     def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, source_waveform: StationarySourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType], *, wavelet_mode: int = 1, storage_mode: int = 0) -> None:
         """Construct a sparse binary wavelet for a time domain taylor intrinsic_waveform with interpolation."""
+        if storage_mode not in (0, 1):
+            msg = 'Unrecognized option for storage_mode'
+            raise ValueError(msg)
+
         self._wc: WDMWaveletConstants = wc
         self._lc: LISAConstants = lc
         self._nt_lim_waveform: PixelGenericRange = nt_lim_waveform
