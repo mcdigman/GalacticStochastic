@@ -72,12 +72,18 @@ def fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, instrument_r
 if __name__ == '__main__':
     config_filename = 'default_parameters.toml'
     config, wc, lc, ic, instrument_random_seed = get_config_objects(config_filename)
+    stat_only = False
+    ifm_alt = fetch_or_run_iterative_loop(0, wc.Nt, config, wc, lc, ic, instrument_random_seed, stat_only=stat_only, fetch_mode=0, output_mode=1)
+    # ifm = fetch_or_run_iterative_loop(0, wc.Nt, config, wc, lc, ic, instrument_random_seed, stat_only=stat_only, fetch_mode=0, output_mode=1)
 
-    for itrm in [0, 1, 3, 7]:
+    # for itrm in [0, 1, 3, 7]:
+    for itrm in [0]:
         stat_only = False
         nt_min = 256 * (7 - itrm)
         nt_max = nt_min + 512 * (itrm + 1)
         ifm = fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, instrument_random_seed, stat_only=stat_only, fetch_mode=0, output_mode=1)
+
+    gfi.load_processed_galactic_file_alt(ifm, config, ic, wc, (0, wc.Nt), stat_only=stat_only)
 
     do_plot_noise_spectrum_ambiguity = True
     if do_plot_noise_spectrum_ambiguity:

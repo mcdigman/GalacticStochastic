@@ -164,6 +164,124 @@ class NoiseModelManager(StateManager):
 
         return hf_noise
 
+    def load_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'noise_model', group_mode: int = 0) -> None:
+        """Load the object from an hdf5 group"""
+        if group_mode == 0:
+            hf_noise = hf_in['noise_model']
+        elif group_mode == 1:
+            hf_noise = hf_in
+        else:
+            msg = 'Unrecognized option for group mode'
+            raise NotImplementedError(msg)
+        if not isinstance(hf_noise, h5py.Group):
+            msg = 'Could not find group ' + group_name + ' in hdf5 file'
+            raise TypeError(msg)
+
+        assert hf_noise.attrs['creator_name'] == self.__class__.__name__, 'incorrect creator name found in hdf5 file'
+        storage_mode_temp = hf_noise.attrs['storage_mode']
+        assert isinstance(storage_mode_temp, (int, np.integer))
+        storage_mode = int(storage_mode_temp)
+        itrn_temp = hf_noise.attrs['itrn']
+        assert isinstance(itrn_temp, (int, np.integer))
+        self.itrn = int(itrn_temp)
+        itr_save_temp = hf_noise.attrs['itr_save']
+        assert isinstance(itr_save_temp, (int, np.integer))
+        self.itr_save = int(itr_save_temp)
+        stat_only_temp = hf_noise.attrs['stat_only']
+        assert isinstance(stat_only_temp, (int, np.integer, bool, np.bool_))
+        self.stat_only = bool(stat_only_temp)
+        assert hf_noise.attrs['noise_upper_name'] == self.noise_upper.__class__.__name__, 'incorrect noise upper name found in hdf5 file'
+        assert hf_noise.attrs['noise_lower_name'] == self.noise_lower.__class__.__name__, 'incorrect noise lower name found in hdf5 file'
+        assert hf_noise.attrs['noise_instrument_name'] == self.noise_instrument.__class__.__name__, 'incorrect noise instrument name found in hdf5 file'
+        assert hf_noise.attrs['bgd_name'] == self.bgd.__class__.__name__, 'incorrect bgd name found in hdf5 file'
+        assert hf_noise.attrs['fit_state_name'] == self.fit_state.__class__.__name__, 'incorrect fit state name found in hdf5 file'
+        assert hf_noise.attrs['nt_lim_snr_name'] == self.nt_lim_snr.__class__.__name__, 'incorrect nt_lim_snr name found in hdf5 file'
+        instrument_random_seed_temp = hf_noise.attrs['instrument_random_seed']
+        assert isinstance(instrument_random_seed_temp, (int, np.integer))
+        self.instrument_random_seed = int(instrument_random_seed_temp)
+        assert hf_noise.attrs['wc_name'] == self.wc.__class__.__name__, 'incorrect wc name found in hdf5 file'
+        assert hf_noise.attrs['lc_name'] == self.lc.__class__.__name__, 'incorrect lc name found in hdf5 file'
+        assert hf_noise.attrs['ic_name'] == self.ic.__class__.__name__, 'incorrect ic name found in hdf5 file'
+
+        self.S_inst_m = np.asarray(hf_noise['S_inst_m'], dtype=np.float64)
+        self.idx_S_save = np.asarray(hf_noise['idx_S_save'], dtype=np.int64)
+        self.S_record_upper = np.zeros((self.idx_S_save.size, self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy))
+        self.S_record_lower = np.zeros((self.idx_S_save.size, self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy))
+        self.S_final = np.zeros((self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy))
+
+        if storage_mode in (1, 2):
+            self.S_record_final = np.asarray(hf_noise['S_record_final'], dtype=np.float64)
+
+        if storage_mode == 2:
+            self.S_record_upper = np.asarray(hf_noise['S_record_upper'], dtype=np.float64)
+            self.S_record_lower = np.asarray(hf_noise['S_record_lower'], dtype=np.float64)
+
+        self.bgd.load_hdf5(hf_noise)
+
+        hf_nt = hf_noise['nt_lim_snr']
+
+        if not isinstance(hf_nt, h5py.Group):
+            msg = 'Could not find group nt_lim_snr in hdf5 file'
+            raise TypeError(msg)
+
+        nx_min_temp = hf_nt.attrs['nx_min']
+        assert isinstance(nx_min_temp, (int, np.integer))
+        nx_max_temp = hf_nt.attrs['nx_max']
+        assert isinstance(nx_max_temp, (int, np.integer))
+        dx_temp = hf_nt.attrs['dx']
+        assert isinstance(dx_temp, (float, np.floating))
+        x_min_temp = hf_nt.attrs['x_min']
+        assert isinstance(x_min_temp, (float, np.floating))
+        self.nt_lim_snr = PixelGenericRange(int(nx_min_temp), int(nx_max_temp), float(dx_temp), float(x_min_temp))
+
+        hf_wc = hf_noise['wc']
+        if not isinstance(hf_wc, h5py.Group):
+            msg = 'Could not find group wc in hdf5 file'
+            raise TypeError(msg)
+
+        for key in self.wc._fields:
+            assert getattr(self.wc, key) == hf_wc.attrs[key], f'wc attribute {key} does not match saved value'
+
+        hf_lc = hf_noise['lc']
+        if not isinstance(hf_lc, h5py.Group):
+            msg = 'Could not find group lc in hdf5 file'
+            raise TypeError(msg)
+
+        for key in self.lc._fields:
+            assert getattr(self.lc, key) == hf_lc.attrs[key], f'lc attribute {key} does not match saved value'
+
+        hf_ic = hf_noise['ic']
+        if not isinstance(hf_ic, h5py.Group):
+            msg = 'Could not find group ic in hdf5 file'
+            raise TypeError(msg)
+
+        for key in self.ic._fields:
+            assert np.all(getattr(self.ic, key) == hf_ic.attrs[key]), f'ic attribute {key} does not match saved value'
+
+        # just make new noise models, don't try to load them
+        # TODO instead add assertions that the loaded models match the expected values stored in the files
+        if not self.stat_only:
+            period_list = self.ic.period_list
+        else:
+            period_list = ()
+
+        if self.itrn < self.ic.n_cyclo_switch:
+            filter_periods = False
+        else:
+            filter_periods = not self.stat_only
+
+        S_upper = self.bgd.get_S_below_high(
+            self.S_inst_m, self.ic.smooth_lengthf[self.itrn], filter_periods, period_list,
+        )
+        self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, self.wc, prune=1, nc_snr=self.lc.nc_snr)
+
+        filter_periods = not self.stat_only
+        S_lower = self.bgd.get_S_below_low(self.S_inst_m, self.ic.smooth_lengthf_fix, filter_periods, period_list)
+        S_lower = np.asarray(np.min([S_lower, self.noise_upper.get_S()], axis=0), dtype=np.float64)
+
+        self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, self.wc, prune=1, nc_snr=self.lc.nc_snr)
+        self.noise_instrument = DiagonalStationaryDenseNoiseModel(self.S_inst_m, self.wc, prune=1, nc_snr=self.lc.nc_snr, seed=self.instrument_random_seed)
+
     @override
     def log_state(self) -> None:
         """Perform any internal logging that should be done after advance_state is run."""

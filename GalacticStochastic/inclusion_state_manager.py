@@ -3,7 +3,9 @@ from __future__ import annotations
 
 from time import perf_counter
 from typing import TYPE_CHECKING, override
+from warnings import warn
 
+import h5py
 import numpy as np
 
 import GalacticStochastic.global_const as gc
@@ -12,7 +14,6 @@ from LisaWaveformTools.linear_frequency_source import LinearFrequencyIntrinsicPa
 from LisaWaveformTools.source_params import ExtrinsicParams, SourceParams
 
 if TYPE_CHECKING:
-    import h5py
     from numpy.typing import NDArray
 
     from GalacticStochastic.iteration_config import IterationConfig
@@ -199,6 +200,149 @@ class BinaryInclusionState(StateManager):
             hf_nt.attrs[key] = getattr(self._nt_lim_waveform, key)
 
         return hf_include
+
+    def load_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'inclusion_state', group_mode: int = 0) -> None:
+        """Load the object from an hdf5 group"""
+        if group_mode == 0:
+            hf_include = hf_in['inclusion_state']
+        elif group_mode == 1:
+            hf_include = hf_in
+        else:
+            msg = 'Unrecognized option for group mode'
+            raise NotImplementedError(msg)
+
+        if not isinstance(hf_include, h5py.Group):
+            msg = 'Could not find group ' + group_name + ' in hdf5 file'
+            raise TypeError(msg)
+
+        storage_mode_val = hf_include.attrs['storage_mode']
+        assert isinstance(storage_mode_val, (int, np.integer)), 'storage_mode must be int'
+        storage_mode = int(storage_mode_val)
+
+        itrn_val = hf_include.attrs['itrn']
+        assert isinstance(itrn_val, (int, np.integer)), 'itrn must be int'
+        self._itrn = int(itrn_val)
+
+        n_bin_use_val = hf_include.attrs['n_bin_use']
+        assert isinstance(n_bin_use_val, (int, np.integer)), 'n_bin_use must be int'
+        self._n_bin_use = int(n_bin_use_val)
+
+        n_tot_val = hf_include.attrs['n_tot']
+        assert isinstance(n_tot_val, (int, np.integer)), 'n_tot must be int'
+        self._n_tot = int(n_tot_val)
+
+        fmin_binary_val = hf_include.attrs['fmin_binary']
+        assert isinstance(fmin_binary_val, (float, np.floating, int, np.integer)), 'fmin_binary must be float'
+        self._fmin_binary = float(fmin_binary_val)
+
+        fmax_binary_val = hf_include.attrs['fmax_binary']
+        assert isinstance(fmax_binary_val, (float, np.floating, int, np.integer)), 'fmax_binary must be float'
+        self._fmax_binary = float(fmax_binary_val)
+
+        assert hf_include.attrs['noise_manager_name'] == self._noise_manager.__class__.__name__, 'incorrect noise manager name found in hdf5 file'
+        assert hf_include.attrs['fit_state_name'] == self._fit_state.__class__.__name__, 'incorrect fit state name found in hdf5 file'
+        assert hf_include.attrs['waveform_manager_name'] == self._waveform_manager.__class__.__name__, 'incorrect waveform manager name found in hdf5 file'
+        assert hf_include.attrs['wc_name'] == self._wc.__class__.__name__, 'incorrect wavelet constants name found in hdf5 file'
+        assert hf_include.attrs['lc_name'] == self._lc.__class__.__name__, 'incorrect lisa constants name found in hdf5 file'
+        assert hf_include.attrs['ic_name'] == self._ic.__class__.__name__, 'incorrect iteration config name found in hdf5 file'
+        assert hf_include.attrs['nt_lim_name'] == self._nt_lim_waveform.__class__.__name__, 'incorrect nt_lim_waveform name found in hdf5 file'
+        assert storage_mode == self._ic.inclusion_state_storage_mode, 'storage mode in hdf5 file does not match current config'
+
+        argbbinmap_temp = hf_include['argbinmap']
+        assert isinstance(argbbinmap_temp, h5py.Dataset)
+        self._argbinmap = argbbinmap_temp[()]
+        faints_old_temp = hf_include['faints_old']
+        assert isinstance(faints_old_temp, h5py.Dataset)
+        self._faints_old = faints_old_temp[()]
+        n_faints_cur_temp = hf_include['n_faints_cur']
+        assert isinstance(n_faints_cur_temp, h5py.Dataset)
+        self._n_faints_cur = n_faints_cur_temp[()]
+        n_brights_cur_temp = hf_include['n_brights_cur']
+        assert isinstance(n_brights_cur_temp, h5py.Dataset)
+        self._n_brights_cur = n_brights_cur_temp[()]
+        assert self._n_bin_use == self._argbinmap.size
+        assert self._n_bin_use == self._faints_old.size
+        assert self._n_faints_cur.size == self._fit_state.get_n_itr_cut() + 1
+        assert self._n_brights_cur.size == self._fit_state.get_n_itr_cut() + 1
+        self._faints_cur = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use), dtype=np.bool_)
+        self._decided = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use), dtype=np.bool_)
+        self._brights = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use), dtype=np.bool_)
+        self._snrs_upper = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use, self._lc.nc_snr))
+        self._snrs_lower = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use, self._lc.nc_snr))
+        self._snrs_tot_lower = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use))
+        self._snrs_tot_upper = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use))
+        self._params_gb = np.zeros((self._n_bin_use, N_PAR_GB))
+
+        try:
+            snrs_upper_temp = hf_include['snrs_upper']
+            assert isinstance(snrs_upper_temp, h5py.Dataset)
+            snrs_lower_temp = hf_include['snrs_lower']
+            assert isinstance(snrs_lower_temp, h5py.Dataset)
+            snrs_tot_upper_temp = hf_include['snrs_tot_upper']
+            assert isinstance(snrs_tot_upper_temp, h5py.Dataset)
+            snrs_tot_lower_temp = hf_include['snrs_tot_lower']
+            assert isinstance(snrs_tot_lower_temp, h5py.Dataset)
+            if storage_mode in (0, 2):
+                # store full snrs
+                self._snrs_upper[:self._itrn] = snrs_upper_temp[()]
+                self._snrs_lower[:self._itrn] = snrs_lower_temp[()]
+                self._snrs_tot_upper[:self._itrn] = snrs_tot_upper_temp[()]
+                self._snrs_tot_lower[:self._itrn] = snrs_tot_lower_temp[()]
+
+            if storage_mode in (1, 3):
+                # store last snrs
+                self._snrs_upper[self._itrn - 1:self._itrn] = snrs_upper_temp[()]
+                self._snrs_lower[self._itrn - 1:self._itrn] = snrs_lower_temp[()]
+                self._snrs_tot_upper[self._itrn - 1:self._itrn] = snrs_tot_upper_temp[()]
+                self._snrs_tot_lower[self._itrn - 1:self._itrn] = snrs_tot_lower_temp[()]
+
+            if storage_mode in (2, 4):
+                # store full params
+                params_gb_temp = hf_include['params_gb']
+                assert isinstance(params_gb_temp, h5py.Dataset)
+                self._params_gb[:] = params_gb_temp[()]
+                assert len(self._params_gb.shape) == 2
+                assert self._params_gb.shape[0] == self._n_bin_use
+                assert self._params_gb.shape[1] == N_PAR_GB
+            else:
+                msg = 'params_gb not stored in hdf5 file, cannot reconstruct without original file'
+                warn(msg, stacklevel=2)
+                # TODO: otherwise we should reconstruct the params from the argbinmap and a file
+        except KeyError:
+            assert storage_mode == 5, 'snrs_lower, snrs_tot_upper, and snrs_tot_lower datasets not found in hdf5 file'
+            # minimal storage
+            snrs_tot_upper_temp = hf_include['snrs_tot_upper']
+            assert isinstance(snrs_tot_upper_temp, h5py.Dataset)
+            snrs_tot_upper_last = snrs_tot_upper_temp[()]
+            assert len(snrs_tot_upper_last.shape) == 1
+            assert snrs_tot_upper_last.size == 1
+            self._snrs_tot_upper[self._itrn - 1, 0] = snrs_tot_upper_last[0]
+
+        faints_cur_temp = hf_include['faints_cur']
+        assert isinstance(faints_cur_temp, h5py.Dataset)
+        self._faints_cur[:self._itrn] = faints_cur_temp[()]
+
+        decided_temp = hf_include['decided']
+        assert isinstance(decided_temp, h5py.Dataset)
+        self._decided[:self._itrn] = decided_temp[()]
+
+        brights_temp = hf_include['brights']
+        assert isinstance(brights_temp, h5py.Dataset)
+        self._brights[:self._itrn] = brights_temp[()]
+
+        # shouldn't need to load the waveform manager, because it is reconstructed each time it is used, as long as the type is correct
+
+        for key in self._wc._fields:
+            assert getattr(self._wc, key) == hf_include['wc'].attrs[key], f'wavelet constant attribute {key} does not match saved value'
+
+        for key in self._lc._fields:
+            assert getattr(self._lc, key) == hf_include['lc'].attrs[key], f'lisa constant attribute {key} does not match saved value'
+
+        for key in self._ic._fields:
+            assert np.all(getattr(self._ic, key) == hf_include['ic'].attrs[key]), f'iteration config attribute {key} does not match saved value'
+
+        for key in self._nt_lim_waveform._fields:
+            assert getattr(self._nt_lim_waveform, key) == hf_include['nt_lim_waveform'].attrs[key], f'nt_lim_waveform attribute {key} does not match saved value'
 
     def sustain_snr_helper(self) -> None:
         """Helper to carry forward any other snr values we know from a previous iteration"""

@@ -139,9 +139,8 @@ def get_full_galactic_params(config: dict[str, Any]):
     params_got = []
     for itr, label in enumerate(categories):
         ns_got[itr], params_loc = _source_mask_read_helper(hf_sky, label, fmin, fmax)
-        if label == 'dgb':
-            if np.any(params_loc[:, 4] < 0.):
-                warn('Some binaries reported as detached have negative frequency derivatives', stacklevel=2)
+        if label == 'dgb' and np.any(params_loc[:, 4] < 0.):
+            warn('Some binaries reported as detached have negative frequency derivatives', stacklevel=2)
         params_got.append(params_loc)
         print(label, ns_got[itr])
 
@@ -173,6 +172,44 @@ def get_full_galactic_params(config: dict[str, Any]):
     assert np.all((params_gb[:, 6] >= 0.0) & (params_gb[:, 6] <= 2 * np.pi)), 'Initial phase not bounded in expected range'
     assert np.all((params_gb[:, 7] >= 0.0) & (params_gb[:, 7] <= 2 * np.pi)), 'Polarization phase not bounded in expected range'
     return params_gb, ns_got
+
+
+def load_processed_galactic_file_alt(
+    ifm: IterativeFitManager,
+    config: dict[str, Any],
+    ic: IterationConfig,
+    wc: WDMWaveletConstants,
+    nt_lim_snr: tuple[int, int] = (0, -1),
+    stat_only: bool = True,
+):
+    snr_thresh = ic.snr_thresh
+    filename_in = get_processed_gb_filename(config, wc)
+    if nt_lim_snr == (0, -1):
+        nt_range: tuple[int, int] = (0, wc.Nt)
+    else:
+        nt_range = nt_lim_snr
+
+    stat_key = str(stat_only)
+
+    hf_in = h5py.File(filename_in, 'r')
+    hf_itr = hf_in['iteration_results']
+    if not isinstance(hf_itr, h5py.Group):
+        msg = 'Unrecognized hdf5 file format'
+        raise TypeError(msg)
+    hf_snr = hf_itr[str(snr_thresh)]
+    if not isinstance(hf_snr, h5py.Group):
+        msg = 'Unrecognized hdf5 file format'
+        raise TypeError(msg)
+    hf_nt = hf_snr[str(nt_range)]
+    if not isinstance(hf_nt, h5py.Group):
+        msg = 'Unrecognized hdf5 file format'
+        raise TypeError(msg)
+    hf_run = hf_nt[stat_key]
+    if not isinstance(hf_run, h5py.Group):
+        msg = 'Unrecognized hdf5 file format'
+        raise TypeError(msg)
+
+    ifm.load_hdf5(hf_run)
 
 
 def load_preliminary_galactic_file_alt(

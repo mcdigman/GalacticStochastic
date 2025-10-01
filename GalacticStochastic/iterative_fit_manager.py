@@ -4,6 +4,7 @@ from time import perf_counter
 from typing import override
 
 import h5py
+import numpy as np
 
 from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
 from GalacticStochastic.iteration_config import IterationConfig
@@ -74,12 +75,54 @@ class IterativeFitManager(StateManager):
         hf_manager.attrs['noise_manager_name'] = self.noise_manager.__class__.__name__
         hf_manager.attrs['ic_name'] = self.ic.__class__.__name__
 
+        hf_ic = hf_manager.create_group('ic')
+        for key in self.ic._fields:
+            hf_ic.attrs[key] = getattr(self.ic, key)
+
         # save the objects this class uses
         _ = self.bis.store_hdf5(hf_manager, noise_recurse=0)
         _ = self.noise_manager.store_hdf5(hf_manager)
         _ = self.fit_state.store_hdf5(hf_manager)
 
         return hf_manager
+
+    def load_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'iterative_manager', group_mode: int = 0) -> None:
+        """Load the object from an hdf5 group"""
+        if group_mode == 0:
+            hf_manager = hf_in['iterative_manager']
+        elif group_mode == 1:
+            hf_manager = hf_in
+        else:
+            msg = 'Unrecognized option for group mode'
+            raise NotImplementedError(msg)
+        if not isinstance(hf_manager, h5py.Group):
+            msg = 'Could not find group ' + group_name + ' in hdf5 file'
+            raise TypeError(msg)
+
+        itrn_temp = hf_manager.attrs['itrn']
+        assert isinstance(itrn_temp, (int, np.integer))
+        self._itrn = int(itrn_temp)
+        n_full_converged_temp = hf_manager.attrs['n_full_converged']
+        assert isinstance(n_full_converged_temp, (int, np.integer))
+        self._n_full_converged = int(n_full_converged_temp)
+
+        assert hf_manager.attrs['creator_name'] == self.__class__.__name__, 'incorrect creator name found in hdf5 file'
+        assert hf_manager.attrs['inclusion_state_name'] == self.bis.__class__.__name__, 'incorrect inclusion state name found in hdf5 file'
+        assert hf_manager.attrs['fit_state_name'] == self.fit_state.__class__.__name__, 'incorrect fit state name found in hdf5 file'
+        assert hf_manager.attrs['noise_manager_name'] == self.noise_manager.__class__.__name__, 'incorrect noise manager name found in hdf5 file'
+        assert hf_manager.attrs['ic_name'] == self.ic.__class__.__name__, 'incorrect iteration config name found in hdf5 file'
+
+        hf_ic = hf_manager['ic']
+        if not isinstance(hf_ic, h5py.Group):
+            msg = 'Could not find group ic in hdf5 file'
+            raise TypeError(msg)
+
+        for key in self.ic._fields:
+            assert np.all(getattr(self.ic, key) == hf_ic.attrs[key]), f'ic attribute {key} does not match saved value'
+
+        self.bis.load_hdf5(hf_manager)
+        self.noise_manager.load_hdf5(hf_manager)
+        self.fit_state.load_hdf5(hf_manager)
 
     @override
     def advance_state(self) -> None:

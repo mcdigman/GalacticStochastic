@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import h5py
 import numpy as np
 from numpy.testing import assert_allclose
 
@@ -11,7 +12,6 @@ from GalacticStochastic.galactic_fit_helpers import get_S_cyclo
 from WaveletWaveforms.sparse_waveform_functions import SparseWaveletWaveform, sparse_addition_helper
 
 if TYPE_CHECKING:
-    import h5py
     from numpy.typing import NDArray
 
     from WaveletWaveforms.wdm_config import WDMWaveletConstants
@@ -98,10 +98,84 @@ class BGDecomposition:
         hf_background.attrs['shape2'] = self._shape2
 
         if self._storage_mode == 0:
-            hf_background.create_dataset('galactic_below_low', data=self.get_galactic_below_low(), compression='gzip')
-            hf_background.create_dataset('galactic_above', data=self.get_galactic_coadd_resolvable(), compression='gzip')
-            hf_background.create_dataset('galactic_undecided', data=self.get_galactic_coadd_undecided(), compression='gzip')
+            _ = hf_background.create_dataset('galactic_below_low', data=self.get_galactic_below_low(), compression='gzip')
+            _ = hf_background.create_dataset('galactic_above', data=self.get_galactic_coadd_resolvable(), compression='gzip')
+            _ = hf_background.create_dataset('galactic_undecided', data=self.get_galactic_coadd_undecided(), compression='gzip')
         return hf_background
+
+    def load_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'background', group_mode: int = 0) -> None:
+        """Load the background from an hdf5 file"""
+        if group_mode == 0:
+            hf_background = hf_in[group_name]
+        elif group_mode == 1:
+            hf_background = hf_in
+        else:
+            msg = 'Unrecognized option for group mode'
+            raise NotImplementedError(msg)
+        if not isinstance(hf_background, h5py.Group):
+            msg = 'Could not find group ' + group_name + ' in hdf5 file'
+            raise TypeError(msg)
+
+        assert hf_background.attrs['creator_name'] == self.__class__.__name__, 'incorrect creator name found in hdf5 file'
+
+        storage_mode_temp = hf_background.attrs['storage_mode']
+        assert isinstance(storage_mode_temp, (int, np.integer))
+        self._storage_mode = int(storage_mode_temp)
+        track_mode_temp = hf_background.attrs['track_mode']
+        assert isinstance(track_mode_temp, (int, np.integer))
+        self.track_mode = int(track_mode_temp)
+        nc_galaxy_temp = hf_background.attrs['nc_galaxy']
+        assert isinstance(nc_galaxy_temp, (int, np.integer))
+
+        nc_galaxy_loaded = int(nc_galaxy_temp)
+        if nc_galaxy_loaded != self.nc_galaxy:
+            msg = f'nc_galaxy does not match: {nc_galaxy_loaded} != {self.nc_galaxy}'
+            raise ValueError(msg)
+
+        shape1_temp = hf_background.attrs['shape1']
+        assert isinstance(shape1_temp, (tuple, list, np.ndarray))
+        shape1_loaded = tuple(int(x) for x in shape1_temp)
+
+        if shape1_loaded != self._shape1:
+            msg = f'shape1 does not match: {shape1_loaded} != {self._shape1}'
+            raise ValueError(msg)
+
+        shape2_temp = hf_background.attrs['shape2']
+        assert isinstance(shape2_temp, (tuple, list, np.ndarray))
+        shape2_loaded = tuple(int(x) for x in shape2_temp)
+
+        if shape2_loaded != self._shape2:
+            msg = f'shape2 does not match: {shape2_loaded} != {self._shape2}'
+            raise ValueError(msg)
+
+        if self._storage_mode == 0:
+            self.galactic_below[:] = 0.0  # reset to zero, since we cannot separate the two components
+
+            galactic_below_low_temp = hf_background['galactic_below_low']
+            assert isinstance(galactic_below_low_temp, h5py.Dataset)
+            galactic_below_low = np.asarray(galactic_below_low_temp)
+            assert galactic_below_low.shape == self._shape1, 'Incorrect shape for galactic_below_low in hdf5 file'
+            self.galactic_floor[:] = galactic_below_low
+
+            galactic_above_temp = hf_background['galactic_above']
+            assert isinstance(galactic_above_temp, h5py.Dataset)
+            galactic_above = np.asarray(galactic_above_temp)
+            assert galactic_above.shape == self._shape1, 'Incorrect shape for galactic_above in hdf5 file'
+            self.galactic_above[:] = galactic_above
+
+            galactic_undecided_temp = hf_background['galactic_undecided']
+            assert isinstance(galactic_undecided_temp, h5py.Dataset)
+            galactic_undecided = np.asarray(galactic_undecided_temp)
+            assert galactic_undecided.shape == self._shape1, 'Incorrect shape for galactic_undecided in hdf5 file'
+            self.galactic_undecided[:] = galactic_undecided
+
+            self.galactic_total_cache = None  # reset cache since we have new data
+            # reset diagnostics
+            self.power_galactic_above = []
+            self.power_galactic_undecided = []
+            self.power_galactic_below_low = []
+            self.power_galactic_below_high = []
+            self.power_galactic_total = []
 
     def get_galactic_total(self, *, bypass_check: bool = False) -> NDArray[np.floating]:
         """Get the sum of the entire galactic signal, including detectable binaries"""

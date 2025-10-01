@@ -26,35 +26,35 @@ class IterativeFitState(StateManager):
 
         if self._preprocess_mode == 0:
             # do not do preprocess mode
-            self.n_itr_cut: int = ic.max_iterations
+            self._n_itr_cut: int = ic.max_iterations
         elif self._preprocess_mode == 1:
             # do standard preprocessing
-            self.n_itr_cut = 1
+            self._n_itr_cut = 1
         elif self._preprocess_mode == 2:
             # reprocess a background that has already been process with a new snr
-            self.n_itr_cut = 1
+            self._n_itr_cut = 1
         else:
             msg = 'Unrecognized option for preprocessing mode'
             raise ValueError(msg)
 
         # for storing past states
-        self._bright_converged: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self._faint_converged: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self._do_faint_check: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self._force_converge: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self._bright_converged: NDArray[np.bool_] = np.zeros(self._n_itr_cut + 1, dtype=np.bool_)
+        self._faint_converged: NDArray[np.bool_] = np.zeros(self._n_itr_cut + 1, dtype=np.bool_)
+        self._do_faint_check: NDArray[np.bool_] = np.zeros(self._n_itr_cut + 1, dtype=np.bool_)
+        self._force_converge: NDArray[np.bool_] = np.zeros(self._n_itr_cut + 1, dtype=np.bool_)
 
-        self._bright_converged_bright: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self._faint_converged_bright: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self._do_faint_check_bright: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self._force_converge_bright: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self._bright_converged_bright: NDArray[np.bool_] = np.zeros(self._n_itr_cut + 1, dtype=np.bool_)
+        self._faint_converged_bright: NDArray[np.bool_] = np.zeros(self._n_itr_cut + 1, dtype=np.bool_)
+        self._do_faint_check_bright: NDArray[np.bool_] = np.zeros(self._n_itr_cut + 1, dtype=np.bool_)
+        self._force_converge_bright: NDArray[np.bool_] = np.zeros(self._n_itr_cut + 1, dtype=np.bool_)
 
-        self._bright_converged_faint: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self._faint_converged_faint: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self._do_faint_check_faint: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self._force_converge_faint: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self._bright_converged_faint: NDArray[np.bool_] = np.zeros(self._n_itr_cut + 1, dtype=np.bool_)
+        self._faint_converged_faint: NDArray[np.bool_] = np.zeros(self._n_itr_cut + 1, dtype=np.bool_)
+        self._do_faint_check_faint: NDArray[np.bool_] = np.zeros(self._n_itr_cut + 1, dtype=np.bool_)
+        self._force_converge_faint: NDArray[np.bool_] = np.zeros(self._n_itr_cut + 1, dtype=np.bool_)
 
-        self._noise_safe_lower_log: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
-        self._noise_safe_upper_log: NDArray[np.bool_] = np.zeros(self.n_itr_cut + 1, dtype=np.bool_)
+        self._noise_safe_lower_log: NDArray[np.bool_] = np.zeros(self._n_itr_cut + 1, dtype=np.bool_)
+        self._noise_safe_upper_log: NDArray[np.bool_] = np.zeros(self._n_itr_cut + 1, dtype=np.bool_)
 
         self._bright_state_request: tuple[bool, bool, bool, bool] = (False, False, False, False)
         self._faint_state_request: tuple[bool, bool, bool, bool] = (False, False, False, False)
@@ -95,7 +95,7 @@ class IterativeFitState(StateManager):
         hf_state.attrs['noise_safe_lower'] = self._noise_safe_lower
         hf_state.attrs['noise_safe_upper'] = self._noise_safe_upper
         hf_state.attrs['itrn'] = self._itrn
-        hf_state.attrs['n_itr_cut'] = self.n_itr_cut
+        hf_state.attrs['n_itr_cut'] = self._n_itr_cut
         hf_state.attrs['preprocess_mode'] = self._preprocess_mode
         hf_state.attrs['creator_name'] = self.__class__.__name__
         hf_state.attrs['ic_name'] = self._ic.__class__.__name__
@@ -106,6 +106,120 @@ class IterativeFitState(StateManager):
             hf_ic.attrs[key] = getattr(self._ic, key)
 
         return hf_state
+
+    def load_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'fit_state', group_mode: int = 0) -> None:
+        """Load the object from an hdf5 group"""
+        if group_mode == 0:
+            hf_state = hf_in[group_name]
+        elif group_mode == 1:
+            hf_state = hf_in
+        else:
+            msg = 'Unrecognized option for group mode'
+            raise NotImplementedError(msg)
+
+        if not isinstance(hf_state, h5py.Group):
+            msg = 'Could not find group ' + group_name + ' in hdf5 file'
+            raise TypeError(msg)
+
+        storage_mode_temp = hf_state.attrs['storage_mode']
+        assert isinstance(storage_mode_temp, (int, np.integer))
+        storage_mode = int(storage_mode_temp)
+        if storage_mode != self._ic.fit_state_storage_mode:
+            msg = 'fit state storage mode in hdf5 file does not match current configuration'
+            raise ValueError(msg)
+
+        assert hf_state.attrs['creator_name'] == self.__class__.__name__, 'incorrect creator name found in hdf5 file'
+        assert hf_state.attrs['ic_name'] == self._ic.__class__.__name__, 'incorrect iteration config name found in hdf5 file'
+
+        hf_ic = hf_state['ic']
+        if not isinstance(hf_ic, h5py.Group):
+            msg = 'Could not find group ic in hdf5 file'
+            raise TypeError(msg)
+
+        for key in self._ic._fields:
+            if not np.all(getattr(self._ic, key) == hf_ic.attrs[key]):
+                msg = 'iteration config in hdf5 file does not match current configuration'
+                raise ValueError(msg)
+
+        tmp_bright_converged = hf_state['bright_converged']
+        assert isinstance(tmp_bright_converged, h5py.Dataset)
+        self._bright_converged = tmp_bright_converged[()]
+
+        tmp_faint_converged = hf_state['faint_converged']
+        assert isinstance(tmp_faint_converged, h5py.Dataset)
+        self._faint_converged = tmp_faint_converged[()]
+
+        tmp_do_faint_check = hf_state['do_faint_check']
+        assert isinstance(tmp_do_faint_check, h5py.Dataset)
+        self._do_faint_check = tmp_do_faint_check[()]
+
+        tmp_force_converge = hf_state['force_converge']
+        assert isinstance(tmp_force_converge, h5py.Dataset)
+        self._force_converge = tmp_force_converge[()]
+
+        tmp_bright_converged_bright = hf_state['bright_converged_bright']
+        assert isinstance(tmp_bright_converged_bright, h5py.Dataset)
+        self._bright_converged_bright = tmp_bright_converged_bright[()]
+
+        tmp_faint_converged_bright = hf_state['faint_converged_bright']
+        assert isinstance(tmp_faint_converged_bright, h5py.Dataset)
+        self._faint_converged_bright = tmp_faint_converged_bright[()]
+
+        tmp_do_faint_check_bright = hf_state['do_faint_check_bright']
+        assert isinstance(tmp_do_faint_check_bright, h5py.Dataset)
+        self._do_faint_check_bright = tmp_do_faint_check_bright[()]
+
+        tmp_force_converge_bright = hf_state['force_converge_bright']
+        assert isinstance(tmp_force_converge_bright, h5py.Dataset)
+        self._force_converge_bright = tmp_force_converge_bright[()]
+
+        tmp_bright_converged_faint = hf_state['bright_converged_faint']
+        assert isinstance(tmp_bright_converged_faint, h5py.Dataset)
+        self._bright_converged_faint = tmp_bright_converged_faint[()]
+
+        tmp_faint_converged_faint = hf_state['faint_converged_faint']
+        assert isinstance(tmp_faint_converged_faint, h5py.Dataset)
+        self._faint_converged_faint = tmp_faint_converged_faint[()]
+
+        tmp_do_faint_check_faint = hf_state['do_faint_check_faint']
+        assert isinstance(tmp_do_faint_check_faint, h5py.Dataset)
+        self._do_faint_check_faint = tmp_do_faint_check_faint[()]
+
+        tmp_force_converge_faint = hf_state['force_converge_faint']
+        assert isinstance(tmp_force_converge_faint, h5py.Dataset)
+        self._force_converge_faint = tmp_force_converge_faint[()]
+
+        tmp_noise_safe_lower_log = hf_state['noise_safe_lower_log']
+        assert isinstance(tmp_noise_safe_lower_log, h5py.Dataset)
+        self._noise_safe_lower_log = tmp_noise_safe_lower_log[()]
+
+        tmp_noise_safe_upper_log = hf_state['noise_safe_upper_log']
+        assert isinstance(tmp_noise_safe_upper_log, h5py.Dataset)
+        self._noise_safe_upper_log = tmp_noise_safe_upper_log[()]
+
+        tmp_bright_state_request = hf_state['bright_state_request']
+        assert isinstance(tmp_bright_state_request, h5py.Dataset)
+        self.bright_state_request = tuple(tmp_bright_state_request[()])
+
+        tmp_faint_state_request = hf_state['faint_state_request']
+        assert isinstance(tmp_faint_state_request, h5py.Dataset)
+        self.faint_state_request = tuple(tmp_faint_state_request[()])
+
+        tmp_current_state = hf_state['current_state']
+        assert isinstance(tmp_current_state, h5py.Dataset)
+        self._current_state = tuple(tmp_current_state[()])
+
+        self._noise_safe_lower = bool(hf_state.attrs['noise_safe_lower'])
+        self._noise_safe_upper = bool(hf_state.attrs['noise_safe_upper'])
+        itrn_temp = hf_state.attrs['itrn']
+        assert isinstance(itrn_temp, (int, np.integer))
+        self._itrn = int(itrn_temp)
+        n_itr_cut_temp = hf_state.attrs['n_itr_cut']
+        assert isinstance(n_itr_cut_temp, (int, np.integer))
+        self._n_itr_cut = int(n_itr_cut_temp)
+        preprocess_mode_temp = hf_state.attrs['preprocess_mode']
+        assert isinstance(preprocess_mode_temp, (int, np.integer))
+        self._preprocess_mode = int(preprocess_mode_temp)
 
     @property
     def bright_state_request(self) -> tuple[bool, bool, bool, bool]:
@@ -139,7 +253,7 @@ class IterativeFitState(StateManager):
 
     def get_n_itr_cut(self) -> int:
         """Get the maximum number of iterations that are currently allowed"""
-        return self.n_itr_cut
+        return self._n_itr_cut
 
     def get_preprocess_mode(self) -> int:
         """Get whether we are currently in pre-processing mode"""
