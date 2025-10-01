@@ -1,5 +1,6 @@
 """index for loading the current versions of files"""
 
+import hashlib
 from pathlib import Path
 from typing import Any
 from warnings import warn
@@ -173,7 +174,7 @@ def load_preliminary_galactic_file(config: dict[str, Any], ic: IterationConfig, 
     if not isinstance(source_str_raw, h5py.Dataset):
         msg = 'Unrecognized hdf5 file format'
         raise TypeError(msg)
-    gb_file_source = source_str_raw[()].decode()
+    gb_file_source: str = source_str_raw[()].decode()
     full_galactic_params_filename = get_galaxy_filename(config)
     assert gb_file_source == full_galactic_params_filename
 
@@ -316,6 +317,44 @@ def store_processed_gb_file(
     if filename_source_gb in hf_out.attrs:
         assert hf_out.attrs['filename_source_gb'] == filename_source_gb
 
+    # Compute the sha256 checksum of the source galactic binary file and the pre-processed file.
+    # If they have been previously recorded in the hdf5 file, check they match.
+    # Otherwise, record them.
+
+    with Path(filename_source_gb).open('rb') as f:
+        digest = hashlib.file_digest(f, 'sha256')
+        sha256_hex_gb = digest.hexdigest()
+        print('Computed sha256 checksum of source galactic binary file', sha256_hex_gb)
+
+    if 'filename_source_gb_sha256' in hf_out.attrs:
+        assert hf_out.attrs['filename_source_gb_sha256'] == sha256_hex_gb, 'Processed file was generated from a different source galactic binary file than the one currently specified'
+        print('Processed file source galactic binary sha256 checksum matches current source galactic binary file')
+
+    hf_out.attrs['filename_source_gb_sha256'] = sha256_hex_gb
+
+    with h5py.File(filename_gb_init, 'r') as hf_prelim:
+        try:
+            sha256_hex_gb_prelim = hf_prelim.attrs['filename_source_gb_sha256']
+            assert sha256_hex_gb_prelim == sha256_hex_gb, 'Pre-processed file was generated from a different source galactic binary file than the one currently specified'
+            print('Pre-processed file source galactic binary sha256 checksum matches current source galactic binary file')
+            del sha256_hex_gb_prelim
+        except KeyError:
+            warn('Pre-processed file did not record a sha256 checksum, cannot verify it matches source galactic binary file', stacklevel=2)
+
+    del sha256_hex_gb
+
+    with Path(filename_gb_init).open('rb') as f:
+        digest = hashlib.file_digest(f, 'sha256')
+        sha256_hex_gb_init = digest.hexdigest()
+        print('Computed sha256 checksum of pre-processed file', sha256_hex_gb_init)
+
+    if 'filename_gb_init_sha256' in hf_out.attrs:
+        assert hf_out.attrs['filename_gb_init_sha256'] == sha256_hex_gb_init, 'Pre-processed file has changed since last recorded in processed file'
+        print('Pre-processed file sha256 checksum matches previously recorded value')
+
+    hf_out.attrs['filename_gb_init_sha256'] = sha256_hex_gb_init
+    del sha256_hex_gb_init
+
     hf_out.attrs['filename_gb_init'] = filename_gb_init
     hf_out.attrs['filename_config'] = filename_config
     hf_out.attrs['filename_source_gb'] = filename_source_gb
@@ -364,3 +403,8 @@ def store_processed_gb_file(
     ifm.store_hdf5(hf_run)
 
     hf_out.close()
+
+    with Path(filename_out).open('rb') as f:
+        digest = hashlib.file_digest(f, 'sha256')
+        sha256_hex_out = digest.hexdigest()
+    print(f'Wrote {filename_out} with sha256 checksum {sha256_hex_out}')
