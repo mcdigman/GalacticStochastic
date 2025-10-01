@@ -10,6 +10,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 from numpy.typing import NDArray
 
+import GalacticStochastic.global_const as gc
 from GalacticStochastic.background_decomposition import load_bgd_from_hdf5
 from GalacticStochastic.iteration_config import IterationConfig
 from GalacticStochastic.iterative_fit_manager import IterativeFitManager
@@ -37,6 +38,23 @@ def get_preliminary_filename(config: dict[str, Any], snr_thresh: float, Nf: int,
     return (
         galaxy_dir
         + preprocessed_prefix
+        + '=%.2f' % snr_thresh
+        + '_Nf='
+        + str(Nf)
+        + '_Nt='
+        + str(Nt)
+        + '_dt=%.2f.hdf5' % dt
+    )
+
+
+def get_preliminary_filename_alt(config: dict[str, Any], snr_thresh: float, Nf: int, Nt: int, dt: float) -> str:
+    config_files: dict[str, str] = config['files']
+    galaxy_dir = str(config_files['galaxy_dir'])
+    preprocessed_prefix = str(config_files.get('preprocessed_prefix', 'preprocessed_background'))
+    return (
+        galaxy_dir
+        + preprocessed_prefix
+        + '_alt'
         + '=%.2f' % snr_thresh
         + '_Nf='
         + str(Nf)
@@ -121,6 +139,9 @@ def get_full_galactic_params(config: dict[str, Any]):
     params_got = []
     for itr, label in enumerate(categories):
         ns_got[itr], params_loc = _source_mask_read_helper(hf_sky, label, fmin, fmax)
+        if label == 'dgb':
+            if np.any(params_loc[:, 4] < 0.):
+                warn('Some binaries reported as detached have negative frequency derivatives', stacklevel=2)
         params_got.append(params_loc)
         print(label, ns_got[itr])
 
@@ -134,9 +155,85 @@ def get_full_galactic_params(config: dict[str, Any]):
     for itr in range(len(categories)):
         n_cur = n_old + int(ns_got[itr])
         params_gb[n_old: n_cur, :] = params_got[itr]
+        n_old = n_cur
 
     hf_in.close()
+    assert np.all(np.isfinite(params_gb)), 'Some binaries have non-finite parameters'
+    assert not np.any(np.all(params_gb == 0., axis=1)), 'Some binaries have zero for all parameters'
+    if np.any(np.all(params_gb == 0., axis=0)):
+        warn('Some parameters are always zero', stacklevel=2)
+    assert np.all(params_gb[:, 0] > 0.), 'Some binaries have non-positive amplitudes'
+    assert np.all((-np.pi / 2 <= params_gb[:, 1]) & (params_gb[:, 1] <= np.pi / 2)), 'Ecliptic latitude not bounded in expected range'
+    assert np.all((params_gb[:, 2] >= 0.0) & (params_gb[:, 2] <= 2 * np.pi)), 'Ecliptic longitude not bounded in expected range'
+    assert np.all(params_gb[:, 3] > 0.), 'Some binaries have non-positive frequencies'
+    if np.any(np.abs(params_gb[:, 4]) * gc.SECSYEAR * 10 > 0.001):
+        warn('Some binaries have large frequency derivatives', stacklevel=2)
+    print('Largest frequency derivative', np.max(np.abs(params_gb[:, 4]) * gc.SECSYEAR * 10))
+    assert np.all((params_gb[:, 5] >= 0.0) & (params_gb[:, 5] <= np.pi)), 'Inclination not bounded in expected range'
+    assert np.all((params_gb[:, 6] >= 0.0) & (params_gb[:, 6] <= 2 * np.pi)), 'Initial phase not bounded in expected range'
+    assert np.all((params_gb[:, 7] >= 0.0) & (params_gb[:, 7] <= 2 * np.pi)), 'Polarization phase not bounded in expected range'
     return params_gb, ns_got
+
+
+def load_preliminary_galactic_file_alt(
+    config: dict[str, Any],
+    ic: IterationConfig,
+    wc: WDMWaveletConstants,
+):
+    snr_thresh = ic.snr_thresh
+    preliminary_gb_filename = get_preliminary_filename_alt(config, snr_thresh, wc.Nf, wc.Nt, wc.dt)
+
+    nt_range: tuple[int, int] = (0, wc.Nt)
+
+    stat_only = True
+    stat_key = str(stat_only)
+
+    hf_in = h5py.File(preliminary_gb_filename, 'r')
+    hf_itr = hf_in['iteration_results']
+    if not isinstance(hf_itr, h5py.Group):
+        msg = 'Unrecognized hdf5 file format'
+        raise TypeError(msg)
+    hf_snr = hf_itr[str(snr_thresh)]
+    if not isinstance(hf_snr, h5py.Group):
+        msg = 'Unrecognized hdf5 file format'
+        raise TypeError(msg)
+    hf_nt = hf_snr[str(nt_range)]
+    if not isinstance(hf_nt, h5py.Group):
+        msg = 'Unrecognized hdf5 file format'
+        raise TypeError(msg)
+    hf_run = hf_nt[stat_key]
+    if not isinstance(hf_run, h5py.Group):
+        msg = 'Unrecognized hdf5 file format'
+        raise TypeError(msg)
+    hf_ifm = hf_run['iterative_manager']
+    if not isinstance(hf_ifm, h5py.Group):
+        msg = 'Unrecognized hdf5 file format'
+        raise TypeError(msg)
+    hf_bis = hf_ifm['inclusion_state']
+    if not isinstance(hf_bis, h5py.Group):
+        msg = 'Unrecognized hdf5 file format'
+        raise TypeError(msg)
+
+    hf_snrs_data = hf_bis['snrs_tot_upper']
+    if not isinstance(hf_snrs_data, h5py.Dataset):
+        msg = 'Unrecognized hdf5 file format'
+        raise TypeError(msg)
+
+    snrs_tot_upper_in = np.asarray(hf_snrs_data)[-1]
+
+    hf_noise = hf_ifm['noise_model']
+    if not isinstance(hf_noise, h5py.Group):
+        msg = 'Unrecognized hdf5 file format'
+        raise TypeError(msg)
+    S_inst_m = np.asarray(hf_noise['S_inst_m'])
+
+    hf_bgd = hf_noise['background']
+    if not isinstance(hf_bgd, h5py.Group):
+        msg = 'Unrecognized hdf5 file format'
+        raise TypeError(msg)
+    galactic_below_in = np.asarray(hf_bgd['galactic_below_low'])
+
+    return galactic_below_in, snrs_tot_upper_in, S_inst_m
 
 
 def load_preliminary_galactic_file(config: dict[str, Any], ic: IterationConfig, wc: WDMWaveletConstants, lc: LISAConstants):
@@ -283,6 +380,110 @@ def store_preliminary_gb_file(
     hf_out.close()
 
 
+def store_preliminary_gb_file_alt(
+    config: dict[str, Any],
+    wc: WDMWaveletConstants,
+    ifm: IterativeFitManager,
+    *,
+    write_mode: int = 0,
+) -> None:
+    ic = ifm.ic
+    filename_out = get_preliminary_filename_alt(config, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
+
+    if write_mode in (0, 1):
+        hf_out = h5py.File(filename_out, 'a')
+    elif write_mode == 2:
+        hf_out = h5py.File(filename_out, 'w')
+    else:
+        msg = 'Unrecognized option for write_mode'
+        raise NotImplementedError(msg)
+
+    noise_manager = ifm.noise_manager
+    nt_lim_snr = noise_manager.nt_lim_snr
+    stat_only = noise_manager.stat_only
+
+    filename_source_gb = get_galaxy_filename(config)
+    filename_config = config.get('toml_filename', 'not_recorded')
+
+    # save the configuration filenames to the object and raise an error if they are already there but do not match
+    if filename_config in hf_out.attrs:
+        assert hf_out.attrs['filename_config'] == filename_config
+    if filename_source_gb in hf_out.attrs:
+        assert hf_out.attrs['filename_source_gb'] == filename_source_gb
+
+    # get the hdf5 group that corresponds to this snr threshold, nt range, and value for stat_only
+    # creating sub groups as necessary if they do not already exist
+
+    hf_itr = hf_out.require_group('iteration_results')
+
+    hf_snr = hf_itr.require_group(str(ic.snr_thresh))
+    del hf_itr
+
+    nt_range: tuple[int, int] = (nt_lim_snr.nx_min, nt_lim_snr.nx_max)
+
+    hf_nt = hf_snr.require_group(str(nt_range))
+    del hf_snr
+
+    stat_key = str(stat_only)
+    if stat_key in hf_nt:
+        # this exact group already exists
+        if write_mode == 0:
+            # delete the existing group and overwrite
+            del hf_nt[stat_key]
+            print('Overwriting exsting hdf5 object')
+        elif write_mode == 1:
+            warn('Requested hdf5 object already exists, aborting write to avoid overwriting', stacklevel=2)
+            hf_out.close()
+            return
+        else:
+            msg = 'Unexpected state when writing hdf5 file'
+            raise ValueError(msg)
+
+    hf_run = hf_nt.require_group(stat_key)
+
+    # Compute the sha256 checksum of the source galactic binary file and the pre-processed file.
+    # If they have been previously recorded in the hdf5 file, check they match.
+    # Otherwise, record them.
+
+    with Path(filename_source_gb).open('rb') as f:
+        digest = hashlib.file_digest(f, 'sha256')
+        sha256_hex_gb = digest.hexdigest()
+        print('Computed sha256 checksum of source galactic binary file', sha256_hex_gb)
+
+    if 'filename_source_gb_sha256' in hf_out.attrs:
+        assert hf_out.attrs[
+                   'filename_source_gb_sha256'] == sha256_hex_gb, 'Pre-processed output file was generated from a different source galactic binary file than the one currently specified'
+        print(
+            'Pre-processed output file source galactic binary sha256 checksum matches current source galactic binary file')
+
+    hf_out.attrs['filename_source_gb_sha256'] = sha256_hex_gb
+
+    del sha256_hex_gb
+
+    # store filenames at top level if they were not already there
+    hf_out.attrs['filename_config'] = filename_config
+    hf_out.attrs['filename_source_gb'] = filename_source_gb
+
+    # store the filenames again to this object
+    hf_run.attrs['filename_config'] = filename_config
+    hf_run.attrs['filename_source_gb'] = filename_source_gb
+
+    # archive the entire raw text of the configuration file to the hdf5 file as well
+    with Path(filename_config).open('rb') as file:
+        file_content = file.read()
+
+    hf_run.create_dataset('config_content', data=file_content)
+
+    ifm.store_hdf5(hf_run)
+
+    hf_out.close()
+
+    with Path(filename_out).open('rb') as f:
+        digest = hashlib.file_digest(f, 'sha256')
+        sha256_hex_out = digest.hexdigest()
+    print(f'Wrote {filename_out} with sha256 checksum {sha256_hex_out}')
+
+
 def store_processed_gb_file(
     config: dict[str, Any],
     wc: WDMWaveletConstants,
@@ -290,24 +491,24 @@ def store_processed_gb_file(
     *,
     write_mode: int = 0,
 ) -> None:
-    if write_mode not in (0, 1, 2):
-        msg = 'Unrecognized option for write_mode'
-        raise NotImplementedError(write_mode)
-
     ic = ifm.ic
-    noise_manager = ifm.noise_manager
-    nt_lim_snr = noise_manager.nt_lim_snr
-    stat_only = noise_manager.stat_only
-
     filename_gb_init = get_preliminary_filename(config, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
     filename_out = get_processed_gb_filename(config, wc)
-    filename_source_gb = get_galaxy_filename(config)
-    filename_config = config.get('toml_filename', 'not_recorded')
 
     if write_mode in (0, 1):
         hf_out = h5py.File(filename_out, 'a')
     elif write_mode == 2:
         hf_out = h5py.File(filename_out, 'w')
+    else:
+        msg = 'Unrecognized option for write_mode'
+        raise NotImplementedError(msg)
+
+    noise_manager = ifm.noise_manager
+    nt_lim_snr = noise_manager.nt_lim_snr
+    stat_only = noise_manager.stat_only
+
+    filename_source_gb = get_galaxy_filename(config)
+    filename_config = config.get('toml_filename', 'not_recorded')
 
     # save the configuration filenames to the object and raise an error if they are already there but do not match
     if filename_gb_init in hf_out.attrs:
@@ -317,8 +518,38 @@ def store_processed_gb_file(
     if filename_source_gb in hf_out.attrs:
         assert hf_out.attrs['filename_source_gb'] == filename_source_gb
 
+    # get the hdf5 group that corresponds to this snr threshold, nt range, and value for stat_only
+    # creating sub groups as necessary if they do not already exist
+
+    hf_itr = hf_out.require_group('iteration_results')
+
+    hf_snr = hf_itr.require_group(str(ic.snr_thresh))
+    del hf_itr
+
+    nt_range: tuple[int, int] = (nt_lim_snr.nx_min, nt_lim_snr.nx_max)
+
+    hf_nt = hf_snr.require_group(str(nt_range))
+    del hf_snr
+
+    stat_key = str(stat_only)
+    if stat_key in hf_nt:
+        # this exact group already exists
+        if write_mode == 0:
+            # delete the existing group and overwrite
+            del hf_nt[stat_key]
+            print('Overwriting exsting hdf5 object')
+        elif write_mode == 1:
+            warn('Requested hdf5 object already exists, aborting write to avoid overwriting', stacklevel=2)
+            hf_out.close()
+            return
+        else:
+            msg = 'Unexpected state when writing hdf5 file'
+            raise ValueError(msg)
+
+    hf_run = hf_nt.require_group(stat_key)
+
     # Compute the sha256 checksum of the source galactic binary file and the pre-processed file.
-    # If they have been previously recorded in the hdf5 file, check they match.
+    # If they have been previously recorded in the hdf5 file, check if they match.
     # Otherwise, record them.
 
     with Path(filename_source_gb).open('rb') as f:
@@ -358,36 +589,6 @@ def store_processed_gb_file(
     hf_out.attrs['filename_gb_init'] = filename_gb_init
     hf_out.attrs['filename_config'] = filename_config
     hf_out.attrs['filename_source_gb'] = filename_source_gb
-
-    # get the hdf5 group that corresponds to this snr threshold, nt range, and value for stat_only
-    # creating sub groups as necessary if they do not already exist
-
-    hf_itr = hf_out.require_group('iteration_results')
-
-    hf_snr = hf_itr.require_group(str(ic.snr_thresh))
-    del hf_itr
-
-    nt_range: tuple[int, int] = (nt_lim_snr.nx_min, nt_lim_snr.nx_max)
-
-    hf_nt = hf_snr.require_group(str(nt_range))
-    del hf_snr
-
-    stat_key = str(stat_only)
-    if stat_key in hf_nt:
-        # this exact group already exists
-        if write_mode == 0:
-            # delete the existing group and overwrite
-            del hf_nt[stat_key]
-            print('Overwriting exsting hdf5 object')
-        elif write_mode == 1:
-            warn('Requested hdf5 object already exists, aborting write to avoid overwriting', stacklevel=2)
-            hf_out.close()
-            return
-        else:
-            msg = 'Unexpected state when writing hdf5 file'
-            raise ValueError(msg)
-
-    hf_run = hf_nt.require_group(stat_key)
 
     # store the filenames again to this object
     hf_run.attrs['filename_gb_init'] = filename_gb_init

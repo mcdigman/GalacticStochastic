@@ -1,6 +1,8 @@
 """run iterative processing of galactic background"""
 
 
+from numpy.testing import assert_allclose, assert_array_equal
+
 import GalacticStochastic.global_file_index as gfi
 import GalacticStochastic.plot_creation_helpers as pch
 from GalacticStochastic.background_decomposition import BGDecomposition
@@ -19,9 +21,20 @@ def fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, instrument_r
 
     print(nt_lim_snr.nx_min, nt_lim_snr.nx_max, nt_lim_waveform.nx_min, nt_lim_waveform.nx_max, wc.Nt, wc.Nf, stat_only)
 
-    galactic_below_in, snrs_tot_in, _ = gfi.load_preliminary_galactic_file(
+    galactic_below_in_alt, snrs_tot_in_alt, ham = gfi.load_preliminary_galactic_file_alt(
+        config, ic, wc,
+    )
+
+    galactic_below_in, snrs_tot_in, ham_alt = gfi.load_preliminary_galactic_file(
         config, ic, wc, lc,
     )
+    assert_allclose(ham, ham_alt, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(galactic_below_in, galactic_below_in_alt, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(snrs_tot_in, snrs_tot_in_alt, atol=1.e-20, rtol=1.e-10)
+
+    assert_array_equal(ham, ham_alt)
+    assert_array_equal(galactic_below_in, galactic_below_in_alt)
+    assert_array_equal(snrs_tot_in, snrs_tot_in_alt)
 
     params_gb, _ = gfi.get_full_galactic_params(config)
 

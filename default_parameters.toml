@@ -7,7 +7,7 @@ galaxy_file = 'galaxy_binaries.hdf5'
 
 # prefix for final processed filename
 processed_prefix = 'processed_iterations'
-preprocessed_prefix = 'preprocessed_background'
+preprocessed_prefix = 'preprocessed_background1'
 
 [noise_realization]
 

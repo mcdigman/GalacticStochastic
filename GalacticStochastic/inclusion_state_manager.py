@@ -145,15 +145,15 @@ class BinaryInclusionState(StateManager):
             # store full snrs
             _ = hf_include.create_dataset('snrs_upper', data=self._snrs_upper[:self._itrn], compression='gzip')
             _ = hf_include.create_dataset('snrs_lower', data=self._snrs_lower[:self._itrn], compression='gzip')
-            _ = hf_include.create_dataset('snrs_tot_upper', data=self._snrs_tot_upper[self._itrn], compression='gzip')
-            _ = hf_include.create_dataset('snrs_tot_lower', data=self._snrs_tot_lower[self._itrn], compression='gzip')
+            _ = hf_include.create_dataset('snrs_tot_upper', data=self._snrs_tot_upper[:self._itrn], compression='gzip')
+            _ = hf_include.create_dataset('snrs_tot_lower', data=self._snrs_tot_lower[:self._itrn], compression='gzip')
 
         if storage_mode in (1, 3):
             # store last snrs
-            _ = hf_include.create_dataset('snrs_upper', data=np.array([self._snrs_upper[self._itrn - 1]]), compression='gzip')
-            _ = hf_include.create_dataset('snrs_lower', data=np.array([self._snrs_lower[self._itrn - 1]]), compression='gzip')
-            _ = hf_include.create_dataset('snrs_tot_upper', data=np.array([self._snrs_tot_upper[self._itrn - 1]]), compression='gzip')
-            _ = hf_include.create_dataset('snrs_tot_lower', data=np.array([self._snrs_tot_lower[self._itrn - 1]]), compression='gzip')
+            _ = hf_include.create_dataset('snrs_upper', data=self._snrs_upper[self._itrn - 1:self._itrn], compression='gzip')
+            _ = hf_include.create_dataset('snrs_lower', data=self._snrs_lower[self._itrn - 1:self._itrn], compression='gzip')
+            _ = hf_include.create_dataset('snrs_tot_upper', data=self._snrs_tot_upper[self._itrn - 1:self._itrn], compression='gzip')
+            _ = hf_include.create_dataset('snrs_tot_lower', data=self._snrs_tot_lower[self._itrn - 1:self._itrn], compression='gzip')
 
         if storage_mode in (2, 4):
             # store full params
