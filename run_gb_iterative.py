@@ -46,7 +46,6 @@ def fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, instrument_r
         gfi.store_processed_gb_file(
             config,
             wc,
-            ic,
             ifm,
         )
     elif output_mode == 0:

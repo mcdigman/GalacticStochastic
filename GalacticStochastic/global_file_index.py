@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from typing import Any
+from warnings import warn
 
 import h5py
 import numpy as np
@@ -13,7 +14,6 @@ from GalacticStochastic.iteration_config import IterationConfig
 from GalacticStochastic.iterative_fit_manager import IterativeFitManager
 from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
 from LisaWaveformTools.lisa_config import LISAConstants
-from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 n_par_gb = 8
@@ -30,10 +30,13 @@ labels_gb = [
 
 
 def get_preliminary_filename(config: dict[str, Any], snr_thresh: float, Nf: int, Nt: int, dt: float) -> str:
-    galaxy_dir = str(config['files']['galaxy_dir'])
+    config_files: dict[str, str] = config['files']
+    galaxy_dir = str(config_files['galaxy_dir'])
+    preprocessed_prefix = str(config_files.get('preprocessed_prefix', 'preprocessed_background'))
     return (
         galaxy_dir
-        + ('preprocessed_background=%.2f' % snr_thresh)
+        + preprocessed_prefix
+        + '=%.2f' % snr_thresh
         + '_Nf='
         + str(Nf)
         + '_Nt='
@@ -46,22 +49,18 @@ def get_galaxy_filename(config: dict[str, Any]) -> str:
     return str(config['files']['galaxy_dir']) + str(config['files']['galaxy_file'])
 
 
-def get_processed_gb_filename(config: dict[str, Any], stat_only, snr_thresh, wc: WDMWaveletConstants, nt_lim_snr: PixelGenericRange) -> str:
-    galaxy_dir = str(config['files']['galaxy_dir'])
+def get_processed_gb_filename(config: dict[str, Any], wc: WDMWaveletConstants) -> str:
+    config_files: dict[str, str] = config['files']
+    galaxy_dir = str(config_files['galaxy_dir'])
+    processed_prefix = str(config_files.get('processed_prefix', 'processed_iterations'))
     return (
         galaxy_dir
-        + ('gb9_processed_snr=%.2f' % snr_thresh)
+        + processed_prefix
         + '_Nf='
         + str(wc.Nf)
         + '_Nt='
         + str(wc.Nt)
         + ('_dt=%.2f' % (wc.dt))
-        + '_const='
-        + str(stat_only)
-        + '_nt_min='
-        + str(nt_lim_snr.nx_min)
-        + '_nt_max='
-        + str(nt_lim_snr.nx_max)
         + '.hdf5'
     )
 
@@ -194,10 +193,9 @@ def load_preliminary_galactic_file(config: dict[str, Any], ic: IterationConfig, 
 
 
 def load_processed_gb_file(
-    config: dict[str, Any], snr_thresh, wc: WDMWaveletConstants, nt_lim_snr: PixelGenericRange, *, stat_only,
-):
+    config: dict[str, Any], wc: WDMWaveletConstants):
     # TODO loading should produce a galactic background decomposition object
-    filename_in = get_processed_gb_filename(config, stat_only, snr_thresh, wc, nt_lim_snr)
+    filename_in = get_processed_gb_filename(config, wc)
     hf_in = h5py.File(filename_in, 'r')
 
     hf_S = hf_in['S']
@@ -287,75 +285,82 @@ def store_preliminary_gb_file(
 def store_processed_gb_file(
     config: dict[str, Any],
     wc: WDMWaveletConstants,
-    ic: IterationConfig,
     ifm: IterativeFitManager,
+    *,
+    write_mode: int = 0,
 ) -> None:
+    if write_mode not in (0, 1, 2):
+        msg = 'Unrecognized option for write_mode'
+        raise NotImplementedError(write_mode)
+
+    ic = ifm.ic
     noise_manager = ifm.noise_manager
-    # bgd = noise_manager.bgd
-    # n_full_converged = ifm.n_full_converged
-    # bis = ifm.bis
     nt_lim_snr = noise_manager.nt_lim_snr
-    # S_inst_m = noise_manager.S_inst_m
-    # S_final = noise_manager.S_final
     stat_only = noise_manager.stat_only
 
     filename_gb_init = get_preliminary_filename(config, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
-    filename_out = get_processed_gb_filename(config, stat_only, ic.snr_thresh, wc, nt_lim_snr)
+    filename_out = get_processed_gb_filename(config, wc)
     filename_source_gb = get_galaxy_filename(config)
     filename_config = config.get('toml_filename', 'not_recorded')
 
-    hf_out = h5py.File(filename_out, 'w')
-    hf_itr = hf_out.create_group('iteration_results')
+    if write_mode in (0, 1):
+        hf_out = h5py.File(filename_out, 'a')
+    elif write_mode == 2:
+        hf_out = h5py.File(filename_out, 'w')
+
+    # save the configuration filenames to the object and raise an error if they are already there but do not match
+    if filename_gb_init in hf_out.attrs:
+        assert hf_out.attrs['filename_gb_init'] == filename_gb_init
+    if filename_config in hf_out.attrs:
+        assert hf_out.attrs['filename_config'] == filename_config
+    if filename_source_gb in hf_out.attrs:
+        assert hf_out.attrs['filename_source_gb'] == filename_source_gb
+
     hf_out.attrs['filename_gb_init'] = filename_gb_init
     hf_out.attrs['filename_config'] = filename_config
-    hf_out.attrs['filename_out'] = filename_out
-    hf_out.attrs['filnemae_source_gb'] = filename_source_gb
-    ifm.store_hdf5(hf_itr)
+    hf_out.attrs['filename_source_gb'] = filename_source_gb
+
+    # get the hdf5 group that corresponds to this snr threshold, nt range, and value for stat_only
+    # creating sub groups as necessary if they do not already exist
+
+    hf_itr = hf_out.require_group('iteration_results')
+
+    hf_snr = hf_itr.require_group(str(ic.snr_thresh))
+    del hf_itr
+
+    nt_range: tuple[int, int] = (nt_lim_snr.nx_min, nt_lim_snr.nx_max)
+
+    hf_nt = hf_snr.require_group(str(nt_range))
+    del hf_snr
+
+    stat_key = str(stat_only)
+    if stat_key in hf_nt:
+        # this exact group already exists
+        if write_mode == 0:
+            # delete the existing group and overwrite
+            del hf_nt[stat_key]
+            print('Overwriting exsting hdf5 object')
+        elif write_mode == 1:
+            warn('Requested hdf5 object already exists, aborting write to avoid overwriting', stacklevel=2)
+            hf_out.close()
+            return
+        else:
+            msg = 'Unexpected state when writing hdf5 file'
+            raise ValueError(msg)
+
+    hf_run = hf_nt.require_group(stat_key)
+
+    # store the filenames again to this object
+    hf_run.attrs['filename_gb_init'] = filename_gb_init
+    hf_run.attrs['filename_config'] = filename_config
+    hf_run.attrs['filename_source_gb'] = filename_source_gb
+
+    # archive the entire raw text of the configuration file to the hdf5 file as well
+    with Path(filename_config).open('rb') as file:
+        file_content = file.read()
+
+    hf_run.create_dataset('config_content', data=file_content)
+
+    ifm.store_hdf5(hf_run)
+
     hf_out.close()
-
-    # period_list = ic.period_list
-
-    # n_bin_use = bis.n_bin_use
-    # snrs_tot_upper = bis.snrs_tot_upper
-    # argbinmap = bis.argbinmap
-    # faints_old = bis.faints_old
-    # faints_cur = bis.faints_cur
-    # brights = bis.brights
-
-    # hf_out = h5py.File(filename_out, 'w')
-    # hf_S = hf_out.create_group('S')
-    # hf_signal = hf_out.create_group('signal')
-    # _ = hf_signal.create_dataset('galactic_below', data=bgd.get_galactic_below_low(), compression='gzip')
-    # _ = hf_signal.create_dataset('galactic_above', data=bgd.get_galactic_coadd_resolvable(), compression='gzip')
-    # _ = hf_signal.create_dataset('galactic_undecided', data=bgd.get_galactic_coadd_undecided(), compression='gzip')
-
-    # _ = hf_S.create_dataset('period_list', data=period_list)
-    # hf_S.attrs['n_bin_use'] = n_bin_use
-    # _ = hf_S.create_dataset('S_stat_m', data=S_inst_m)
-    # _ = hf_S.create_dataset('snrs_tot_upper', data=snrs_tot_upper[n_full_converged], compression='gzip')
-    # _ = hf_S.create_dataset('argbinmap', data=argbinmap, compression='gzip')
-
-    # _ = hf_S.create_dataset('faints_old', data=faints_old, compression='gzip')
-    # _ = hf_S.create_dataset('faints_cur', data=faints_cur[n_full_converged], compression='gzip')
-
-    # _ = hf_S.create_dataset('brights', data=brights[n_full_converged], compression='gzip')
-    # _ = hf_S.create_dataset('S_final', data=S_final, compression='gzip')
-
-    # _ = hf_S.create_dataset('source_gb_file', data=get_galaxy_filename(config))
-    # _ = hf_S.create_dataset('preliminary_gb_file', data=filename_gb_init)  # TODO these are redundant as constructed
-    # _ = hf_S.create_dataset('init_gb_file', data=filename_gb_init)
-    # _ = hf_S.create_dataset('common_gb_noise_file', data=filename_gb_common)
-
-    # hf_wc = hf_out.create_group('_wc')
-    # for key in wc._fields:
-    #    hf_wc.attrs[key] = getattr(wc, key)
-
-    # hf_lc = hf_out.create_group('_lc')
-    # for key in lc._fields:
-    #    hf_lc.attrs[key] = getattr(lc, key)
-
-    # hf_ic = hf_out.create_group('ic')
-    # for key in ic._fields:
-    #    hf_ic.attrs[key] = getattr(ic, key)
-
-    # hf_out.close()

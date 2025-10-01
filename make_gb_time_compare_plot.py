@@ -58,7 +58,7 @@ if __name__ == '__main__':
     for itrk in range(nk):
         nt_lim = PixelGenericRange(nt_mins[itrk], nt_maxs[itrk], wc.DT, 0)
         _, galactic_below_high = gfi.load_processed_gb_file(
-            config, snr_thresh, wc, nt_lim, stat_only=stat_only,
+            config, wc,
         )
         S_stat_m[itrk] = np.mean(galactic_below_high, axis=0)
 
