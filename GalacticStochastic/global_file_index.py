@@ -7,15 +7,11 @@ from warnings import warn
 
 import h5py
 import numpy as np
-from numpy.testing import assert_allclose
 from numpy.typing import NDArray
 
 import GalacticStochastic.global_const as gc
-from GalacticStochastic.background_decomposition import load_bgd_from_hdf5
 from GalacticStochastic.iteration_config import IterationConfig
 from GalacticStochastic.iterative_fit_manager import IterativeFitManager
-from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
-from LisaWaveformTools.lisa_config import LISAConstants
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 n_par_gb = 8
@@ -38,23 +34,6 @@ def get_preliminary_filename(config: dict[str, Any], snr_thresh: float, Nf: int,
     return (
         galaxy_dir
         + preprocessed_prefix
-        + '=%.2f' % snr_thresh
-        + '_Nf='
-        + str(Nf)
-        + '_Nt='
-        + str(Nt)
-        + '_dt=%.2f.hdf5' % dt
-    )
-
-
-def get_preliminary_filename_alt(config: dict[str, Any], snr_thresh: float, Nf: int, Nt: int, dt: float) -> str:
-    config_files: dict[str, str] = config['files']
-    galaxy_dir = str(config_files['galaxy_dir'])
-    preprocessed_prefix = str(config_files.get('preprocessed_prefix', 'preprocessed_background'))
-    return (
-        galaxy_dir
-        + preprocessed_prefix
-        + '_alt'
         + '=%.2f' % snr_thresh
         + '_Nf='
         + str(Nf)
@@ -174,7 +153,7 @@ def get_full_galactic_params(config: dict[str, Any]):
     return params_gb, ns_got
 
 
-def load_processed_galactic_file_alt(
+def load_processed_galactic_file(
     ifm: IterativeFitManager,
     config: dict[str, Any],
     ic: IterationConfig,
@@ -216,13 +195,13 @@ def load_processed_galactic_file_alt(
     ifm.load_hdf5(hf_run)
 
 
-def load_preliminary_galactic_file_alt(
+def load_preliminary_galactic_file(
     config: dict[str, Any],
     ic: IterationConfig,
     wc: WDMWaveletConstants,
 ):
     snr_thresh = ic.snr_thresh
-    preliminary_gb_filename = get_preliminary_filename_alt(config, snr_thresh, wc.Nf, wc.Nt, wc.dt)
+    preliminary_gb_filename = get_preliminary_filename(config, snr_thresh, wc.Nf, wc.Nt, wc.dt)
 
     nt_range: tuple[int, int] = (0, wc.Nt)
 
@@ -277,151 +256,7 @@ def load_preliminary_galactic_file_alt(
     return galactic_below_in, snrs_tot_upper_in, S_inst_m
 
 
-def load_preliminary_galactic_file(config: dict[str, Any], ic: IterationConfig, wc: WDMWaveletConstants, lc: LISAConstants):
-    snr_thresh = ic.snr_thresh
-    preliminary_gb_filename = get_preliminary_filename(config, snr_thresh, wc.Nf, wc.Nt, wc.dt)
-
-    hf_in = h5py.File(preliminary_gb_filename, 'r')
-
-    hf_galaxy = hf_in['galaxy']
-
-    if not isinstance(hf_galaxy, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
-
-    hf_binary = hf_galaxy['binaries']
-
-    if not isinstance(hf_binary, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
-
-    hf_signal = hf_galaxy['signal']
-
-    if not isinstance(hf_signal, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
-
-    hf_noise = hf_in['noise_model']
-
-    if not isinstance(hf_noise, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
-
-    # check the galaxy filename matches
-    source_str_raw = hf_binary['galaxy_file']
-    if not isinstance(source_str_raw, h5py.Dataset):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
-    gb_file_source: str = source_str_raw[()].decode()
-    full_galactic_params_filename = get_galaxy_filename(config)
-    assert gb_file_source == full_galactic_params_filename
-
-    galactic_below_in = np.asarray(hf_signal['galactic_below'])
-
-    snrs_tot_upper_in = np.asarray(hf_binary['snrs_tot_upper'])
-
-    S_inst_m = np.asarray(hf_noise['S_instrument'])
-
-    # check input S makes sense, first value not checked as it may not be consistent
-    S_inst_m_alt = instrument_noise_AET_wdm_m(lc, wc)
-    assert_allclose(S_inst_m[1:], S_inst_m_alt[1:], atol=1.0e-80, rtol=1.0e-13)
-
-    hf_in.close()
-
-    return galactic_below_in, snrs_tot_upper_in, S_inst_m
-
-
-def load_processed_gb_file(
-    config: dict[str, Any], wc: WDMWaveletConstants):
-    # TODO loading should produce a galactic background decomposition object
-    filename_in = get_processed_gb_filename(config, wc)
-    hf_in = h5py.File(filename_in, 'r')
-
-    hf_S = hf_in['S']
-
-    if not isinstance(hf_S, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
-
-    hf_signal = hf_in['signal']
-
-    if not isinstance(hf_signal, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
-
-    bgd = load_bgd_from_hdf5(wc, hf_signal)
-
-    argbinmap = np.asarray(hf_S['argbinmap'])
-
-    hf_in.close()
-
-    return argbinmap, bgd.get_galactic_below_high().reshape((wc.Nt, wc.Nf, bgd.nc_galaxy))
-
-
 def store_preliminary_gb_file(
-    config_filename: str,
-    config: dict[str, Any],
-    wc: WDMWaveletConstants,
-    lc: LISAConstants,
-    ic: IterationConfig,
-    galactic_below,
-    S_inst_m,
-    snrs_tot_upper,
-) -> None:
-    filename_out = get_preliminary_filename(config, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
-    hf_out = h5py.File(filename_out, 'w')
-
-    # store results related to the input galaxy
-    galaxy_hf = hf_out.create_group('galaxy')
-
-    signal_hf = galaxy_hf.create_group('signal')
-    binary_hf = galaxy_hf.create_group('binaries')
-
-    # the faint part of the galactic signal
-    signal_hf.create_dataset('galactic_below', data=galactic_below, compression='gzip')
-
-    # the filename of the file with the galaxy in it
-    binary_hf.create_dataset('galaxy_file', data=get_galaxy_filename(config))
-
-    # the initial computed snr
-    binary_hf.create_dataset('snrs_tot_upper', data=snrs_tot_upper[0], compression='gzip')
-
-    # store parameters related to the noise model
-    noise_hf = hf_out.create_group('noise_model')
-
-    noise_hf.create_dataset('S_instrument', data=S_inst_m)
-
-    # store configuration parameters
-    config_hf = hf_out.create_group('configuration')
-    config_wc = config_hf.create_group('_wc')
-    config_ic = config_hf.create_group('ic')
-    config_lc = config_hf.create_group('_lc')
-    config_tx = config_hf.create_group('config_text')
-
-    # store all the configuration objects to the file
-
-    # the wavelet constants
-    for key in wc._fields:
-        config_wc.attrs[key] = getattr(wc, key)
-
-    # lisa related constants
-    for key in lc._fields:
-        config_lc.attrs[key] = getattr(lc, key)
-
-    # iterative fit related constants
-    for key in ic._fields:
-        config_ic.attrs[key] = getattr(ic, key)
-
-    # archive the entire raw text of the configuration file to the hdf5 file as well
-    with Path(config_filename).open('rb') as file:
-        file_content = file.read()
-
-    config_tx.create_dataset(config_filename, data=file_content)
-
-    hf_out.close()
-
-
-def store_preliminary_gb_file_alt(
     config: dict[str, Any],
     wc: WDMWaveletConstants,
     ifm: IterativeFitManager,
@@ -429,7 +264,7 @@ def store_preliminary_gb_file_alt(
     write_mode: int = 0,
 ) -> None:
     ic = ifm.ic
-    filename_out = get_preliminary_filename_alt(config, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
+    filename_out = get_preliminary_filename(config, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
 
     if write_mode in (0, 1):
         hf_out = h5py.File(filename_out, 'a')

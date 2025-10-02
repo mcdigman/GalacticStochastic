@@ -1,12 +1,14 @@
 """scratch to test processing of galactic background"""
 
+from typing import Any
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
-import GalacticStochastic.global_file_index as gfi
 from GalacticStochastic import config_helper
 from GalacticStochastic.galactic_fit_helpers import fit_gb_spectrum_evolve, get_S_cyclo
+from GalacticStochastic.iterative_fit import fetch_or_run_iterative_loop
 from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
@@ -24,6 +26,7 @@ mpl.rcParams['ytick.minor.width'] = 1.5
 if __name__ == '__main__':
     snr_thresh = 7.0
     smooth_targ_length = 0.25
+    _: Any
 
     config, wc, lc, ic, instrument_random_seed = config_helper.get_config_objects('default_parameters.toml')
 
@@ -57,9 +60,9 @@ if __name__ == '__main__':
 
     for itrk in range(nk):
         nt_lim = PixelGenericRange(nt_mins[itrk], nt_maxs[itrk], wc.DT, 0)
-        _, galactic_below_high = gfi.load_processed_gb_file(
-            config, wc,
-        )
+        ifm = fetch_or_run_iterative_loop(config, cyclo_mode, nt_range=(nt_lim.nx_min, nt_lim.nx_max), fetch_mode=1)
+        galactic_below_high = ifm.noise_manager.bgd.get_galactic_below_high()
+
         S_stat_m[itrk] = np.mean(galactic_below_high, axis=0)
 
         S_stat_smooth_m[itrk, 0, :] = S_stat_m[itrk, 0, :]

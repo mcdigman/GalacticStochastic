@@ -43,16 +43,11 @@ if __name__ == '__main__':
     do_hf_out = True
     if do_hf_out:
         gfi.store_preliminary_gb_file(
-            config_file,
             config,
             wc,
-            lc,
-            ic,
-            bgd.get_galactic_below_low(),
-            noise_manager.S_inst_m,
-            bis._snrs_tot_lower,
+            ifm,
+            write_mode=0,
         )
-
     do_plot_noise_spectrum_ambiguity = True
 
     if do_plot_noise_spectrum_ambiguity:

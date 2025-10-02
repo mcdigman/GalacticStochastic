@@ -43,16 +43,6 @@ if __name__ == '__main__':
     do_hf_out = True
     if do_hf_out:
         gfi.store_preliminary_gb_file(
-           config_file,
-           config,
-           wc,
-           lc,
-           ic,
-           bgd.get_galactic_below_low(),
-           noise_manager.S_inst_m,
-           bis._snrs_tot_lower,
-        )
-        gfi.store_preliminary_gb_file_alt(
             config,
             wc,
             ifm,

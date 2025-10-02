@@ -87,8 +87,8 @@ if __name__ == '__main__':
     nt_lim_report = PixelGenericRange(nt_min_report, nt_max_report, wc.DT, 0.)
     nt_range = (nt_min, nt_max)
 
-    ifm_cyclo = fetch_or_run_iterative_loop(config, cyclo_mode=0, nt_range=nt_range)
-    ifm_stat = fetch_or_run_iterative_loop(config, cyclo_mode=1, nt_range=nt_range)
+    ifm_cyclo = fetch_or_run_iterative_loop(config, cyclo_mode=0, nt_range=nt_range, fetch_mode=1)
+    ifm_stat = fetch_or_run_iterative_loop(config, cyclo_mode=1, nt_range=nt_range, fetch_mode=1)
 
     noise_realization = ifm_stat.noise_manager.get_instrument_realization()
 
