@@ -92,7 +92,7 @@ def fetch_or_run_iterative_loop(
         # assert_allclose(ifm_prelim.noise_manager.bgd.get_galactic_below_low(), galactic_below_in)
         # assert_allclose(ifm_prelim.bis._snrs_tot_upper[-1], snrs_tot_in)
         galactic_below_in = ifm_prelim.noise_manager.bgd.get_galactic_below_low()
-        snrs_tot_in = ifm_prelim.bis._snrs_tot_upper[-1]
+        snrs_tot_in = ifm_prelim.bis.get_final_snrs_tot_upper()
 
         bgd = BGDecomposition(
             wc, ic.nc_galaxy, galactic_floor=galactic_below_in.copy(), storage_mode=ic.background_storage_mode,

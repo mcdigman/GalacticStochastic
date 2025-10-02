@@ -185,66 +185,6 @@ def load_processed_galactic_file(
     ifm.load_hdf5(hf_run)
 
 
-def load_preliminary_galactic_file(
-    config: dict[str, Any],
-    ic: IterationConfig,
-    wc: WDMWaveletConstants,
-):
-    snr_thresh = ic.snr_thresh
-    preliminary_gb_filename = get_processed_galactic_filename(config, wc, preprocess_mode=1)
-
-    nt_range: tuple[int, int] = (0, wc.Nt)
-
-    cyclo_mode = 1
-    cyclo_key = str(cyclo_mode)
-
-    hf_in = h5py.File(preliminary_gb_filename, 'r')
-    hf_itr = hf_in['iteration_results']
-    if not isinstance(hf_itr, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
-    hf_snr = hf_itr[str(snr_thresh)]
-    if not isinstance(hf_snr, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
-    hf_nt = hf_snr[str(nt_range)]
-    if not isinstance(hf_nt, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
-    hf_run = hf_nt[cyclo_key]
-    if not isinstance(hf_run, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
-    hf_ifm = hf_run['iterative_manager']
-    if not isinstance(hf_ifm, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
-    hf_bis = hf_ifm['inclusion_state']
-    if not isinstance(hf_bis, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
-
-    hf_snrs_data = hf_bis['snrs_tot_upper']
-    if not isinstance(hf_snrs_data, h5py.Dataset):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
-
-    snrs_tot_upper_in = np.asarray(hf_snrs_data)[-1]
-
-    hf_noise = hf_ifm['noise_model']
-    if not isinstance(hf_noise, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
-
-    hf_bgd = hf_noise['background']
-    if not isinstance(hf_bgd, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
-    galactic_below_in = np.asarray(hf_bgd['galactic_below_low'])
-
-    return galactic_below_in, snrs_tot_upper_in
-
-
 def store_preliminary_gb_file(
     config: dict[str, Any],
     wc: WDMWaveletConstants,
@@ -268,7 +208,7 @@ def store_preliminary_gb_file(
     cyclo_mode = noise_manager.cyclo_mode
 
     filename_source_gb = get_galaxy_filename(config)
-    filename_config = config.get('toml_filename', 'not_recorded')
+    filename_config = str(config.get('toml_filename', 'not_recorded'))
 
     # save the configuration filenames to the object and raise an error if they are already there but do not match
     if filename_config in hf_out.attrs:
@@ -356,6 +296,7 @@ def store_processed_gb_file(
     *,
     write_mode: int = 0,
     preprocess_mode: int = 0,
+    hash_mode: int = 1,
 ) -> None:
     ic = ifm.ic
     filename_gb_init = get_processed_galactic_filename(config, wc, preprocess_mode=1)
@@ -423,20 +364,21 @@ def store_processed_gb_file(
         sha256_hex_gb = digest.hexdigest()
         print('Computed sha256 checksum of source galactic binary file', sha256_hex_gb)
 
-    if 'filename_source_gb_sha256' in hf_out.attrs:
+    if hash_mode == 1 and 'filename_source_gb_sha256' in hf_out.attrs:
         assert hf_out.attrs['filename_source_gb_sha256'] == sha256_hex_gb, 'Processed file was generated from a different source galactic binary file than the one currently specified'
         print('Processed file source galactic binary sha256 checksum matches current source galactic binary file')
 
     hf_out.attrs['filename_source_gb_sha256'] = sha256_hex_gb
 
-    with h5py.File(filename_gb_init, 'r') as hf_prelim:
-        try:
-            sha256_hex_gb_prelim = hf_prelim.attrs['filename_source_gb_sha256']
-            assert sha256_hex_gb_prelim == sha256_hex_gb, 'Pre-processed file was generated from a different source galactic binary file than the one currently specified'
-            print('Pre-processed file source galactic binary sha256 checksum matches current source galactic binary file')
-            del sha256_hex_gb_prelim
-        except KeyError:
-            warn('Pre-processed file did not record a sha256 checksum, cannot verify it matches source galactic binary file', stacklevel=2)
+    if hash_mode == 1:
+        with h5py.File(filename_gb_init, 'r') as hf_prelim:
+            try:
+                sha256_hex_gb_prelim = hf_prelim.attrs['filename_source_gb_sha256']
+                assert sha256_hex_gb_prelim == sha256_hex_gb, 'Pre-processed file was generated from a different source galactic binary file than the one currently specified'
+                print('Pre-processed file source galactic binary sha256 checksum matches current source galactic binary file')
+                del sha256_hex_gb_prelim
+            except KeyError:
+                warn('Pre-processed file did not record a sha256 checksum, cannot verify it matches source galactic binary file', stacklevel=2)
 
     del sha256_hex_gb
 
@@ -445,7 +387,7 @@ def store_processed_gb_file(
         sha256_hex_gb_init = digest.hexdigest()
         print('Computed sha256 checksum of pre-processed file', sha256_hex_gb_init)
 
-    if 'filename_gb_init_sha256' in hf_out.attrs:
+    if hash_mode == 1 and 'filename_gb_init_sha256' in hf_out.attrs:
         assert hf_out.attrs['filename_gb_init_sha256'] == sha256_hex_gb_init, 'Pre-processed file has changed since last recorded in processed file'
         print('Pre-processed file sha256 checksum matches previously recorded value')
 
@@ -465,7 +407,7 @@ def store_processed_gb_file(
     with Path(filename_config).open('rb') as file:
         file_content = file.read()
 
-    hf_run.create_dataset('config_content', data=file_content)
+    hf_run.attrs['config_content'] = file_content
 
     ifm.store_hdf5(hf_run)
 

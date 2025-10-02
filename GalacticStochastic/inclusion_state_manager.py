@@ -355,7 +355,7 @@ class BinaryInclusionState(StateManager):
             snrs_tot_upper_last = snrs_tot_upper_temp[()]
             assert len(snrs_tot_upper_last.shape) == 1
             assert snrs_tot_upper_last.size == 1
-            self._snrs_tot_upper[self._itrn - 1, 0] = snrs_tot_upper_last[0]
+            self._snrs_tot_upper[self._itrn - 1, :] = snrs_tot_upper_last[0]
 
         faints_cur_temp = hf_include['faints_cur']
         assert isinstance(faints_cur_temp, h5py.Dataset)
@@ -523,6 +523,9 @@ class BinaryInclusionState(StateManager):
             faint_loc = False
 
         return bright_loc, faint_loc
+
+    def get_final_snrs_tot_upper(self) -> NDArray[np.floating]:
+        return self._snrs_tot_upper[self._itrn - 1, :]
 
     def decide_coadd_helper(self, itrb: int) -> None:
         """Add each binary to the correct part of the galactic spectrum, depending on whether it is bright or faint"""
