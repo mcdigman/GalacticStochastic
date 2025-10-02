@@ -146,6 +146,7 @@ def load_processed_galactic_file(
     ic: IterationConfig,
     wc: WDMWaveletConstants,
     nt_lim_snr: tuple[int, int] = (0, -1),
+    *,
     cyclo_mode: int = 1,
     preprocess_mode: int = 0,
 ) -> None:
@@ -157,7 +158,6 @@ def load_processed_galactic_file(
         nt_range = nt_lim_snr
 
     cyclo_key = str(cyclo_mode)
-    assert cyclo_mode == ifm.noise_manager.cyclo_mode
 
     try:
         hf_in = h5py.File(filename_in, 'r')

@@ -120,7 +120,7 @@ def fetch_or_run_iterative_loop(
         ic, wc, lc, fit_state, bgd, cyclo_mode, nt_lim_snr, instrument_random_seed=instrument_random_seed,
     )
 
-    bis = BinaryInclusionState(wc, ic, lc, params_gb, noise_manager, fit_state, nt_lim_waveform, snrs_tot_in)
+    bis = BinaryInclusionState(wc, ic, lc, params_gb, noise_manager, fit_state, nt_lim_waveform, snrs_tot_in=snrs_tot_in)
 
     del snrs_tot_in
 
@@ -150,8 +150,6 @@ def fetch_or_run_iterative_loop(
         raise ValueError(msg)
 
     del params_gb
-
-    assert noise_manager.cyclo_mode == cyclo_mode
 
     if fetched:
         pass

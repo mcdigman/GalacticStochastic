@@ -37,34 +37,34 @@ class NoiseModelManager(StateManager):
             msg = 'Unrecognized option for storage mode'
             raise ValueError(msg)
 
-        self.ic: IterationConfig = ic
-        self.lc: LISAConstants = lc
+        self._ic: IterationConfig = ic
+        self._lc: LISAConstants = lc
         self.wc: WDMWaveletConstants = wc
         self.bgd: BGDecomposition = bgd
-        self.fit_state: IterativeFitState = fit_state
+        self._fit_state: IterativeFitState = fit_state
         self.cyclo_mode: int = cyclo_mode
         self.nt_lim_snr: PixelGenericRange = nt_lim_snr
-        self.instrument_random_seed: int = instrument_random_seed
+        self._instrument_random_seed: int = instrument_random_seed
 
         if ic.noise_model_mode == 0:
-            self.S_inst_m: NDArray[np.floating] = instrument_noise_AET_wdm_m(self.lc, self.wc)
+            self.S_inst_m: NDArray[np.floating] = instrument_noise_AET_wdm_m(self._lc, self.wc)
         else:
             msg = 'Unrecognized option for noise model mode'
             raise NotImplementedError(msg)
 
-        self.itrn: int = 0
+        self._itrn: int = 0
 
-        self.idx_S_save: NDArray[np.integer] = np.hstack(
+        self._idx_S_save: NDArray[np.integer] = np.hstack(
             [
-                np.arange(0, min(10, self.fit_state.get_n_itr_cut())),
-                np.arange(min(10, self.fit_state.get_n_itr_cut()), 4),
-                self.fit_state.get_n_itr_cut() - 1,
+                np.arange(0, min(10, self._fit_state.get_n_itr_cut())),
+                np.arange(min(10, self._fit_state.get_n_itr_cut()), 4),
+                self._fit_state.get_n_itr_cut() - 1,
             ],
         )
-        self.itr_save: int = 0
+        self._itr_save: int = 0
 
-        self.S_record_upper: NDArray[np.floating] = np.zeros((self.idx_S_save.size, wc.Nt, wc.Nf, self.bgd.nc_galaxy))
-        self.S_record_lower: NDArray[np.floating] = np.zeros((self.idx_S_save.size, wc.Nt, wc.Nf, self.bgd.nc_galaxy))
+        self.S_record_upper: NDArray[np.floating] = np.zeros((self._idx_S_save.size, wc.Nt, wc.Nf, self.bgd.nc_galaxy))
+        self.S_record_lower: NDArray[np.floating] = np.zeros((self._idx_S_save.size, wc.Nt, wc.Nf, self.bgd.nc_galaxy))
         self.S_final: NDArray[np.floating] = np.zeros((wc.Nt, wc.Nf, self.bgd.nc_galaxy))
 
         S_upper: NDArray[np.floating] = np.zeros((wc.Nt, wc.Nf, self.bgd.nc_galaxy))
@@ -72,16 +72,16 @@ class NoiseModelManager(StateManager):
 
         S_lower: NDArray[np.floating] = np.zeros((wc.Nt, wc.Nf, self.bgd.nc_galaxy))
         S_lower[:] = self.S_inst_m
-        if self.idx_S_save[self.itr_save] == 0:
+        if self._idx_S_save[self._itr_save] == 0:
             self.S_record_upper[0] = S_upper[:, :, :]
             self.S_record_lower[0] = S_lower[:, :, :]
-            self.itr_save += 1
+            self._itr_save += 1
         S_lower = np.asarray(np.min([S_lower, S_upper], axis=0), dtype=np.float64)
 
         # TODO must set seed here
-        self.noise_upper: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(S_upper, wc, prune=1, nc_snr=lc.nc_snr, seed=self.instrument_random_seed)
-        self.noise_lower: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(S_lower, wc, prune=1, nc_snr=lc.nc_snr, seed=self.instrument_random_seed)
-        self.noise_instrument: DiagonalStationaryDenseNoiseModel = DiagonalStationaryDenseNoiseModel(self.S_inst_m, wc, prune=1, nc_snr=lc.nc_snr, seed=self.instrument_random_seed)
+        self.noise_upper: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(S_upper, wc, prune=1, nc_snr=lc.nc_snr, seed=self._instrument_random_seed)
+        self.noise_lower: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(S_lower, wc, prune=1, nc_snr=lc.nc_snr, seed=self._instrument_random_seed)
+        self.noise_instrument: DiagonalStationaryDenseNoiseModel = DiagonalStationaryDenseNoiseModel(self.S_inst_m, wc, prune=1, nc_snr=lc.nc_snr, seed=self._instrument_random_seed)
 
         del S_upper
         del S_lower
@@ -96,25 +96,25 @@ class NoiseModelManager(StateManager):
             msg = 'Unrecognized option for group mode'
             raise NotImplementedError(msg)
 
-        storage_mode = self.ic.noise_model_storage_mode
+        storage_mode = self._ic.noise_model_storage_mode
         hf_noise.attrs['creator_name'] = self.__class__.__name__
         hf_noise.attrs['storage_mode'] = storage_mode
-        hf_noise.attrs['itrn'] = self.itrn
-        hf_noise.attrs['itr_save'] = self.itr_save
+        hf_noise.attrs['itrn'] = self._itrn
+        hf_noise.attrs['itr_save'] = self._itr_save
         hf_noise.attrs['cyclo_mode'] = self.cyclo_mode
         hf_noise.attrs['noise_upper_name'] = self.noise_upper.__class__.__name__
         hf_noise.attrs['noise_lower_name'] = self.noise_lower.__class__.__name__
         hf_noise.attrs['noise_instrument_name'] = self.noise_instrument.__class__.__name__
         hf_noise.attrs['bgd_name'] = self.bgd.__class__.__name__
-        hf_noise.attrs['fit_state_name'] = self.fit_state.__class__.__name__
+        hf_noise.attrs['fit_state_name'] = self._fit_state.__class__.__name__
         hf_noise.attrs['nt_lim_snr_name'] = self.nt_lim_snr.__class__.__name__
-        hf_noise.attrs['instrument_random_seed'] = self.instrument_random_seed
+        hf_noise.attrs['instrument_random_seed'] = self._instrument_random_seed
         hf_noise.attrs['wc_name'] = self.wc.__class__.__name__
-        hf_noise.attrs['lc_name'] = self.lc.__class__.__name__
-        hf_noise.attrs['ic_name'] = self.ic.__class__.__name__
+        hf_noise.attrs['lc_name'] = self._lc.__class__.__name__
+        hf_noise.attrs['ic_name'] = self._ic.__class__.__name__
 
         _ = hf_noise.create_dataset('S_inst_m', data=self.S_inst_m, compression='gzip')
-        _ = hf_noise.create_dataset('idx_S_save', data=self.idx_S_save, compression='gzip')
+        _ = hf_noise.create_dataset('idx_S_save', data=self._idx_S_save, compression='gzip')
 
         # at least store the history of the mean spectrum
         _ = hf_noise.create_dataset('S_record_upper_mean', data=np.mean(self.S_record_upper, axis=1), compression='gzip')
@@ -133,7 +133,7 @@ class NoiseModelManager(StateManager):
 
         # storing the fit state will probably be done more than once, but it shouldn't be very large
         # and it is possibly more self-descriptive that way
-        _ = self.fit_state.store_hdf5(hf_noise)
+        _ = self._fit_state.store_hdf5(hf_noise)
 
         _ = self.noise_upper.store_hdf5(hf_noise, group_name='noise_upper')
         _ = self.noise_lower.store_hdf5(hf_noise, group_name='noise_lower')
@@ -152,13 +152,13 @@ class NoiseModelManager(StateManager):
 
         # lisa related constants
         hf_lc = hf_noise.create_group('lc')
-        for key in self.lc._fields:
-            hf_lc.attrs[key] = getattr(self.lc, key)
+        for key in self._lc._fields:
+            hf_lc.attrs[key] = getattr(self._lc, key)
 
         # iterative fit related constants
         hf_ic = hf_noise.create_group('ic')
-        for key in self.ic._fields:
-            hf_ic.attrs[key] = getattr(self.ic, key)
+        for key in self._ic._fields:
+            hf_ic.attrs[key] = getattr(self._ic, key)
 
         return hf_noise
 
@@ -181,10 +181,10 @@ class NoiseModelManager(StateManager):
         storage_mode = int(storage_mode_temp)
         itrn_temp = hf_noise.attrs['itrn']
         assert isinstance(itrn_temp, (int, np.integer))
-        self.itrn = int(itrn_temp)
+        self._itrn = int(itrn_temp)
         itr_save_temp = hf_noise.attrs['itr_save']
         assert isinstance(itr_save_temp, (int, np.integer))
-        self.itr_save = int(itr_save_temp)
+        self._itr_save = int(itr_save_temp)
         cyclo_mode_temp = hf_noise.attrs['cyclo_mode']
         assert isinstance(cyclo_mode_temp, (int, np.integer))
         self.cyclo_mode = int(cyclo_mode_temp)
@@ -192,19 +192,19 @@ class NoiseModelManager(StateManager):
         assert hf_noise.attrs['noise_lower_name'] == self.noise_lower.__class__.__name__, 'incorrect noise lower name found in hdf5 file'
         assert hf_noise.attrs['noise_instrument_name'] == self.noise_instrument.__class__.__name__, 'incorrect noise instrument name found in hdf5 file'
         assert hf_noise.attrs['bgd_name'] == self.bgd.__class__.__name__, 'incorrect bgd name found in hdf5 file'
-        assert hf_noise.attrs['fit_state_name'] == self.fit_state.__class__.__name__, 'incorrect fit state name found in hdf5 file'
+        assert hf_noise.attrs['fit_state_name'] == self._fit_state.__class__.__name__, 'incorrect fit state name found in hdf5 file'
         assert hf_noise.attrs['nt_lim_snr_name'] == self.nt_lim_snr.__class__.__name__, 'incorrect nt_lim_snr name found in hdf5 file'
         instrument_random_seed_temp = hf_noise.attrs['instrument_random_seed']
         assert isinstance(instrument_random_seed_temp, (int, np.integer))
-        self.instrument_random_seed = int(instrument_random_seed_temp)
+        self._instrument_random_seed = int(instrument_random_seed_temp)
         assert hf_noise.attrs['wc_name'] == self.wc.__class__.__name__, 'incorrect wc name found in hdf5 file'
-        assert hf_noise.attrs['lc_name'] == self.lc.__class__.__name__, 'incorrect lc name found in hdf5 file'
-        assert hf_noise.attrs['ic_name'] == self.ic.__class__.__name__, 'incorrect ic name found in hdf5 file'
+        assert hf_noise.attrs['lc_name'] == self._lc.__class__.__name__, 'incorrect lc name found in hdf5 file'
+        assert hf_noise.attrs['ic_name'] == self._ic.__class__.__name__, 'incorrect ic name found in hdf5 file'
 
         self.S_inst_m = np.asarray(hf_noise['S_inst_m'], dtype=np.float64)
-        self.idx_S_save = np.asarray(hf_noise['idx_S_save'], dtype=np.int64)
-        self.S_record_upper = np.zeros((self.idx_S_save.size, self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy))
-        self.S_record_lower = np.zeros((self.idx_S_save.size, self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy))
+        self._idx_S_save = np.asarray(hf_noise['idx_S_save'], dtype=np.int64)
+        self.S_record_upper = np.zeros((self._idx_S_save.size, self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy))
+        self.S_record_lower = np.zeros((self._idx_S_save.size, self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy))
         self.S_final = np.zeros((self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy))
 
         if storage_mode in (1, 2):
@@ -245,48 +245,48 @@ class NoiseModelManager(StateManager):
             msg = 'Could not find group lc in hdf5 file'
             raise TypeError(msg)
 
-        for key in self.lc._fields:
-            assert getattr(self.lc, key) == hf_lc.attrs[key], f'lc attribute {key} does not match saved value'
+        for key in self._lc._fields:
+            assert getattr(self._lc, key) == hf_lc.attrs[key], f'lc attribute {key} does not match saved value'
 
         hf_ic = hf_noise['ic']
         if not isinstance(hf_ic, h5py.Group):
             msg = 'Could not find group ic in hdf5 file'
             raise TypeError(msg)
 
-        for key in self.ic._fields:
-            assert np.all(getattr(self.ic, key) == hf_ic.attrs[key]), f'ic attribute {key} does not match saved value'
+        for key in self._ic._fields:
+            assert np.all(getattr(self._ic, key) == hf_ic.attrs[key]), f'ic attribute {key} does not match saved value'
 
         # just make new noise models, don't try to load them
         # TODO instead add assertions that the loaded models match the expected values stored in the files
         if not self.cyclo_mode:
-            period_list = self.ic.period_list
+            period_list = self._ic.period_list
         else:
             period_list = ()
 
-        if self.itrn < self.ic.n_cyclo_switch:
+        if self._itrn < self._ic.n_cyclo_switch:
             filter_periods = False
         else:
             filter_periods = not self.cyclo_mode
 
         S_upper = self.bgd.get_S_below_high(
-            self.S_inst_m, self.ic.smooth_lengthf[self.itrn], filter_periods, period_list,
+            self.S_inst_m, self._ic.smooth_lengthf[self._itrn], filter_periods, period_list,
         )
-        self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, self.wc, prune=1, nc_snr=self.lc.nc_snr)
+        self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, self.wc, prune=1, nc_snr=self._lc.nc_snr)
 
         filter_periods = not self.cyclo_mode
-        S_lower = self.bgd.get_S_below_low(self.S_inst_m, self.ic.smooth_lengthf_fix, filter_periods, period_list)
+        S_lower = self.bgd.get_S_below_low(self.S_inst_m, self._ic.smooth_lengthf_fix, filter_periods, period_list)
         S_lower = np.asarray(np.min([S_lower, self.noise_upper.get_S()], axis=0), dtype=np.float64)
 
-        self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, self.wc, prune=1, nc_snr=self.lc.nc_snr)
-        self.noise_instrument = DiagonalStationaryDenseNoiseModel(self.S_inst_m, self.wc, prune=1, nc_snr=self.lc.nc_snr, seed=self.instrument_random_seed)
+        self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, self.wc, prune=1, nc_snr=self._lc.nc_snr)
+        self.noise_instrument = DiagonalStationaryDenseNoiseModel(self.S_inst_m, self.wc, prune=1, nc_snr=self._lc.nc_snr, seed=self._instrument_random_seed)
 
     @override
     def log_state(self) -> None:
         """Perform any internal logging that should be done after advance_state is run."""
-        if self.itr_save < self.idx_S_save.size and self.itrn - 1 == self.idx_S_save[self.itr_save]:
-            self.S_record_upper[self.itr_save] = self.noise_upper.get_S()[:, :, :]
-            self.S_record_lower[self.itr_save] = self.noise_lower.get_S()[:, :, :]
-            self.itr_save += 1
+        if self._itr_save < self._idx_S_save.size and self._itrn - 1 == self._idx_S_save[self._itr_save]:
+            self.S_record_upper[self._itr_save] = self.noise_upper.get_S()[:, :, :]
+            self.S_record_lower[self._itr_save] = self.noise_lower.get_S()[:, :, :]
+            self._itr_save += 1
         self.bgd.log_state(self.S_inst_m)
 
     @override
@@ -303,16 +303,16 @@ class NoiseModelManager(StateManager):
     def print_report(self) -> None:
         """Do any printing desired after convergence has been achieved and the loop ends"""
         res_mask = np.asarray(((self.noise_upper.get_S()[:, :, 0] - self.S_inst_m[:, 0]).mean(axis=0) > 0.1 * self.S_inst_m[:, 0]) & (
-            self.S_inst_m[:, 0] > 0.0
+                self.S_inst_m[:, 0] > 0.0
         ), dtype=np.bool_)
         galactic_below_high = self.bgd.get_galactic_below_high()
         noise_divide = np.sqrt(
             self.noise_upper.get_S()[self.nt_lim_snr.nx_min:self.nt_lim_snr.nx_max, res_mask, :2] - self.S_inst_m[res_mask, :2],
         )
         points_res = (
-            galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy)[
+                galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy)[
                 self.nt_lim_snr.nx_min:self.nt_lim_snr.nx_max, res_mask, :2,
-            ]
+                ]
             / noise_divide
         )
         n_points = points_res.size
@@ -338,11 +338,11 @@ class NoiseModelManager(StateManager):
     @override
     def advance_state(self) -> None:
         """Handle any logic necessary to advance the state of the object to the next iteration"""
-        noise_safe_upper = self.fit_state.get_noise_safe_upper()
-        noise_safe_lower = self.fit_state.get_noise_safe_lower()
+        noise_safe_upper = self._fit_state.get_noise_safe_upper()
+        noise_safe_lower = self._fit_state.get_noise_safe_lower()
 
         if not self.cyclo_mode:
-            period_list = self.ic.period_list
+            period_list = self._ic.period_list
         else:
             period_list = ()
 
@@ -350,16 +350,16 @@ class NoiseModelManager(StateManager):
             # assert not noise_safe_lower
 
             # don't use cyclostationary model until specified iteration
-            if self.itrn < self.ic.n_cyclo_switch:
+            if self._itrn < self._ic.n_cyclo_switch:
                 filter_periods = False
             else:
                 filter_periods = not self.cyclo_mode
 
             # use higher estimate of galactic bg
             S_upper = self.bgd.get_S_below_high(
-                self.S_inst_m, self.ic.smooth_lengthf[self.itrn], filter_periods, period_list,
+                self.S_inst_m, self._ic.smooth_lengthf[self._itrn], filter_periods, period_list,
             )
-            self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, self.wc, prune=1, nc_snr=self.lc.nc_snr)
+            self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, self.wc, prune=1, nc_snr=self._lc.nc_snr)
 
             del S_upper
 
@@ -367,11 +367,11 @@ class NoiseModelManager(StateManager):
             # make sure this will always predict >= snrs to the actual spectrum in use
             # use lower estimate of galactic bg
             filter_periods = not self.cyclo_mode
-            S_lower = self.bgd.get_S_below_low(self.S_inst_m, self.ic.smooth_lengthf_fix, filter_periods, period_list)
+            S_lower = self.bgd.get_S_below_low(self.S_inst_m, self._ic.smooth_lengthf_fix, filter_periods, period_list)
             S_lower = np.asarray(np.min([S_lower, self.noise_upper.get_S()], axis=0), dtype=np.float64)
-            self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, self.wc, prune=1, nc_snr=self.lc.nc_snr)
+            self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, self.wc, prune=1, nc_snr=self._lc.nc_snr)
             del S_lower
-        self.itrn += 1
+        self._itrn += 1
 
     def get_instrument_realization(self, white_mode: int = 1) -> NDArray[np.floating]:
         return self.noise_instrument.generate_dense_noise(white_mode=white_mode)
