@@ -34,7 +34,7 @@ def get_galaxy_filename(config: dict[str, Any]) -> str:
 def get_processed_galactic_filename(config: dict[str, Any], wc: WDMWaveletConstants, *, preprocess_mode: int = 2) -> str:
     config_files: dict[str, str] = config['files']
     galaxy_dir = str(config_files['galaxy_dir'])
-    if preprocess_mode == 2:
+    if preprocess_mode == 0:
         file_prefix = str(config_files.get('processed_prefix', 'processed_iterations'))
     else:
         file_prefix = str(config_files.get('preprocessed_prefix', 'preprocessed_background'))
@@ -147,15 +147,17 @@ def load_processed_galactic_file(
     wc: WDMWaveletConstants,
     nt_lim_snr: tuple[int, int] = (0, -1),
     cyclo_mode: int = 1,
+    preprocess_mode: int = 0,
 ) -> None:
     snr_thresh = ic.snr_thresh
-    filename_in = get_processed_galactic_filename(config, wc)
+    filename_in = get_processed_galactic_filename(config, wc, preprocess_mode=preprocess_mode)
     if nt_lim_snr == (0, -1):
         nt_range: tuple[int, int] = (0, wc.Nt)
     else:
         nt_range = nt_lim_snr
 
     cyclo_key = str(cyclo_mode)
+    assert cyclo_mode == ifm.noise_manager.cyclo_mode
 
     try:
         hf_in = h5py.File(filename_in, 'r')
@@ -167,6 +169,7 @@ def load_processed_galactic_file(
         if not isinstance(hf_snr, h5py.Group):
             msg = 'Unrecognized hdf5 file format'
             raise TypeError(msg)
+        print(filename_in, preprocess_mode, nt_range, cyclo_key)
         hf_nt = hf_snr[str(nt_range)]
         if not isinstance(hf_nt, h5py.Group):
             msg = 'Unrecognized hdf5 file format'
@@ -188,7 +191,7 @@ def load_preliminary_galactic_file(
     wc: WDMWaveletConstants,
 ):
     snr_thresh = ic.snr_thresh
-    preliminary_gb_filename = get_processed_galactic_filename(config, wc, preprocess_mode=2)
+    preliminary_gb_filename = get_processed_galactic_filename(config, wc, preprocess_mode=1)
 
     nt_range: tuple[int, int] = (0, wc.Nt)
 
@@ -250,7 +253,7 @@ def store_preliminary_gb_file(
     write_mode: int = 0,
 ) -> None:
     ic = ifm.ic
-    filename_out = get_processed_galactic_filename(config, wc, preprocess_mode=2)
+    filename_out = get_processed_galactic_filename(config, wc, preprocess_mode=1)
 
     if write_mode in (0, 1):
         hf_out = h5py.File(filename_out, 'a')
@@ -352,10 +355,11 @@ def store_processed_gb_file(
     ifm: IterativeFitManager,
     *,
     write_mode: int = 0,
+    preprocess_mode: int = 0,
 ) -> None:
     ic = ifm.ic
-    filename_gb_init = get_processed_galactic_filename(config, wc, preprocess_mode=2)
-    filename_out = get_processed_galactic_filename(config, wc, preprocess_mode=0)
+    filename_gb_init = get_processed_galactic_filename(config, wc, preprocess_mode=1)
+    filename_out = get_processed_galactic_filename(config, wc, preprocess_mode=preprocess_mode)
 
     if write_mode in (0, 1):
         hf_out = h5py.File(filename_out, 'a')

@@ -8,8 +8,11 @@ if __name__ == '__main__':
     config_filename = 'default_parameters.toml'
     config = get_config_dict_from_file(config_filename)
     cyclo_mode = 0
-    ifm_alt = fetch_or_run_iterative_loop(config, cyclo_mode=cyclo_mode, fetch_mode=0, output_mode=1)
-    ifm = fetch_or_run_iterative_loop(config, cyclo_mode=cyclo_mode, fetch_mode=1, output_mode=1)
+    ifm_alt4 = fetch_or_run_iterative_loop(config, cyclo_mode=cyclo_mode, fetch_mode=4, output_mode=1)
+    ifm = fetch_or_run_iterative_loop(config, cyclo_mode=cyclo_mode, fetch_mode=0, output_mode=1)
+    ifm_alt1 = fetch_or_run_iterative_loop(config, cyclo_mode=cyclo_mode, fetch_mode=1, output_mode=1)
+    ifm_alt2 = fetch_or_run_iterative_loop(config, cyclo_mode=cyclo_mode, fetch_mode=2, output_mode=1)
+    ifm_alt3 = fetch_or_run_iterative_loop(config, cyclo_mode=cyclo_mode, fetch_mode=3, output_mode=1)
 
     # for itrm in [0, 1, 3, 7]:
     # for itrm in [0]:

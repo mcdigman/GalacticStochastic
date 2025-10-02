@@ -343,8 +343,9 @@ class BinaryInclusionState(StateManager):
                 assert self._params_gb.shape[0] == self._n_bin_use
                 assert self._params_gb.shape[1] == N_PAR_GB
             else:
-                msg = 'params_gb not stored in hdf5 file, cannot reconstruct without original file'
-                warn(msg, stacklevel=2)
+                if self._fit_state.get_preprocess_mode() == 0:
+                    msg = 'params_gb not stored in hdf5 file, cannot reconstruct without original file'
+                    warn(msg, stacklevel=2)
                 # TODO: otherwise we should reconstruct the params from the argbinmap and a file
         except KeyError:
             assert storage_mode == 5, 'snrs_lower, snrs_tot_upper, and snrs_tot_lower datasets not found in hdf5 file'

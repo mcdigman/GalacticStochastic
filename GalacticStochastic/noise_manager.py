@@ -186,8 +186,8 @@ class NoiseModelManager(StateManager):
         assert isinstance(itr_save_temp, (int, np.integer))
         self.itr_save = int(itr_save_temp)
         cyclo_mode_temp = hf_noise.attrs['cyclo_mode']
-        assert isinstance(cyclo_mode_temp, (int, np.integer, bool, np.bool_))
-        self.cyclo_mode = bool(cyclo_mode_temp)
+        assert isinstance(cyclo_mode_temp, (int, np.integer))
+        self.cyclo_mode = int(cyclo_mode_temp)
         assert hf_noise.attrs['noise_upper_name'] == self.noise_upper.__class__.__name__, 'incorrect noise upper name found in hdf5 file'
         assert hf_noise.attrs['noise_lower_name'] == self.noise_lower.__class__.__name__, 'incorrect noise lower name found in hdf5 file'
         assert hf_noise.attrs['noise_instrument_name'] == self.noise_instrument.__class__.__name__, 'incorrect noise instrument name found in hdf5 file'
