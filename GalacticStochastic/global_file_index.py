@@ -27,33 +27,20 @@ labels_gb = [
 ]
 
 
-def get_preliminary_filename(config: dict[str, Any], snr_thresh: float, Nf: int, Nt: int, dt: float) -> str:
-    config_files: dict[str, str] = config['files']
-    galaxy_dir = str(config_files['galaxy_dir'])
-    preprocessed_prefix = str(config_files.get('preprocessed_prefix', 'preprocessed_background'))
-    return (
-        galaxy_dir
-        + preprocessed_prefix
-        + '=%.2f' % snr_thresh
-        + '_Nf='
-        + str(Nf)
-        + '_Nt='
-        + str(Nt)
-        + '_dt=%.2f.hdf5' % dt
-    )
-
-
 def get_galaxy_filename(config: dict[str, Any]) -> str:
     return str(config['files']['galaxy_dir']) + str(config['files']['galaxy_file'])
 
 
-def get_processed_gb_filename(config: dict[str, Any], wc: WDMWaveletConstants) -> str:
+def get_processed_galactic_filename(config: dict[str, Any], wc: WDMWaveletConstants, *, preprocess_mode: int = 2) -> str:
     config_files: dict[str, str] = config['files']
     galaxy_dir = str(config_files['galaxy_dir'])
-    processed_prefix = str(config_files.get('processed_prefix', 'processed_iterations'))
+    if preprocess_mode == 2:
+        file_prefix = str(config_files.get('processed_prefix', 'processed_iterations'))
+    else:
+        file_prefix = str(config_files.get('preprocessed_prefix', 'preprocessed_background'))
     return (
         galaxy_dir
-        + processed_prefix
+        + file_prefix
         + '_Nf='
         + str(wc.Nf)
         + '_Nt='
@@ -96,7 +83,7 @@ def _source_mask_read_helper(hf_sky: h5py.Group, key: str, fmin: float, fmax: fl
     return n_loc, params
 
 
-def get_full_galactic_params(config: dict[str, Any]):
+def get_full_galactic_params(config: dict[str, Any]) -> tuple[NDArray[np.floating], NDArray[np.integer]]:
     """Get the galaxy dataset binaries"""
     # dgb is detached galactic binaries, igb is interacting galactic binaries, vgb is verification
     categories = config['iterative_fit_constants'].get('component_list', ['dgb', 'igb', 'vgb'])
@@ -160,9 +147,9 @@ def load_processed_galactic_file(
     wc: WDMWaveletConstants,
     nt_lim_snr: tuple[int, int] = (0, -1),
     cyclo_mode: int = 1,
-):
+) -> None:
     snr_thresh = ic.snr_thresh
-    filename_in = get_processed_gb_filename(config, wc)
+    filename_in = get_processed_galactic_filename(config, wc)
     if nt_lim_snr == (0, -1):
         nt_range: tuple[int, int] = (0, wc.Nt)
     else:
@@ -201,7 +188,7 @@ def load_preliminary_galactic_file(
     wc: WDMWaveletConstants,
 ):
     snr_thresh = ic.snr_thresh
-    preliminary_gb_filename = get_preliminary_filename(config, snr_thresh, wc.Nf, wc.Nt, wc.dt)
+    preliminary_gb_filename = get_processed_galactic_filename(config, wc, preprocess_mode=2)
 
     nt_range: tuple[int, int] = (0, wc.Nt)
 
@@ -245,7 +232,6 @@ def load_preliminary_galactic_file(
     if not isinstance(hf_noise, h5py.Group):
         msg = 'Unrecognized hdf5 file format'
         raise TypeError(msg)
-    S_inst_m = np.asarray(hf_noise['S_inst_m'])
 
     hf_bgd = hf_noise['background']
     if not isinstance(hf_bgd, h5py.Group):
@@ -253,7 +239,7 @@ def load_preliminary_galactic_file(
         raise TypeError(msg)
     galactic_below_in = np.asarray(hf_bgd['galactic_below_low'])
 
-    return galactic_below_in, snrs_tot_upper_in, S_inst_m
+    return galactic_below_in, snrs_tot_upper_in
 
 
 def store_preliminary_gb_file(
@@ -264,7 +250,7 @@ def store_preliminary_gb_file(
     write_mode: int = 0,
 ) -> None:
     ic = ifm.ic
-    filename_out = get_preliminary_filename(config, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
+    filename_out = get_processed_galactic_filename(config, wc, preprocess_mode=2)
 
     if write_mode in (0, 1):
         hf_out = h5py.File(filename_out, 'a')
@@ -368,8 +354,8 @@ def store_processed_gb_file(
     write_mode: int = 0,
 ) -> None:
     ic = ifm.ic
-    filename_gb_init = get_preliminary_filename(config, ic.snr_thresh, wc.Nf, wc.Nt, wc.dt)
-    filename_out = get_processed_gb_filename(config, wc)
+    filename_gb_init = get_processed_galactic_filename(config, wc, preprocess_mode=2)
+    filename_out = get_processed_galactic_filename(config, wc, preprocess_mode=0)
 
     if write_mode in (0, 1):
         hf_out = h5py.File(filename_out, 'a')

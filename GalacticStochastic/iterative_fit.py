@@ -17,7 +17,19 @@ if TYPE_CHECKING:
     from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
-def fetch_or_run_iterative_loop(config: dict[str, Any], cyclo_mode: int, *, nt_range: tuple[int, int] = (0, -1), fetch_mode: int = 0, output_mode: int = 1, wc_in: WDMWaveletConstants | None = None, lc_in: LISAConstants | None = None, ic_in: IterationConfig | None = None, instrument_random_seed_in: int | None = None):
+def fetch_or_run_iterative_loop(
+    config: dict[str, Any],
+    cyclo_mode: int,
+    *,
+    nt_range: tuple[int, int] = (0, -1),
+    fetch_mode: int = 0,
+    output_mode: int = 1,
+    wc_in: WDMWaveletConstants | None = None,
+    lc_in: LISAConstants | None = None,
+    ic_in: IterationConfig | None = None,
+    instrument_random_seed_in: int | None = None,
+    preprocess_mode: int = 2,
+) -> IterativeFitManager:
     config, wc, lc, ic, instrument_random_seed = get_config_objects_from_dict(config)
     if wc_in is not None:
         wc = wc_in
@@ -37,24 +49,45 @@ def fetch_or_run_iterative_loop(config: dict[str, Any], cyclo_mode: int, *, nt_r
 
     assert 0 <= nt_min < nt_max <= wc.Nt
 
-    assert fetch_mode in (0, 1)
-    nt_lim_snr = PixelGenericRange(nt_min, nt_max, wc.DT, 0.)
-    nt_lim_waveform = PixelGenericRange(0, wc.Nt, wc.DT, 0.)
+    assert fetch_mode in (0, 1, 2), 'Unrecognized option for fetch_mode'
 
-    print(nt_lim_snr.nx_min, nt_lim_snr.nx_max, nt_lim_waveform.nx_min, nt_lim_waveform.nx_max, wc.Nt, wc.Nf, cyclo_mode)
+    nt_lim_snr = PixelGenericRange(nt_min, nt_max, wc.DT, 0.0)
+    nt_lim_waveform = PixelGenericRange(0, wc.Nt, wc.DT, 0.0)
 
-    galactic_below_in, snrs_tot_in, _ = gfi.load_preliminary_galactic_file(
-        config, ic, wc,
+    print(
+        nt_lim_snr.nx_min, nt_lim_snr.nx_max, nt_lim_waveform.nx_min, nt_lim_waveform.nx_max, wc.Nt, wc.Nf, cyclo_mode,
     )
+
+    if preprocess_mode in (0, 1):
+        assert cyclo_mode == 1, 'Pre-processing is only compatible with cyclo_mode = 1'
+
+    if preprocess_mode in (1, 2):
+        galactic_below_in, snrs_tot_in = gfi.load_preliminary_galactic_file(
+            config,
+            ic,
+            wc,
+        )
+
+        bgd = BGDecomposition(
+            wc, ic.nc_galaxy, galactic_floor=galactic_below_in.copy(), storage_mode=ic.background_storage_mode,
+        )
+        del galactic_below_in
+    elif preprocess_mode == 0:
+        bgd = BGDecomposition(
+            wc, ic.nc_galaxy, storage_mode=ic.background_storage_mode,
+        )
+        snrs_tot_in = None
+    else:
+        msg = 'Unrecognized option for preprocess_mode'
+        raise NotImplementedError(msg)
 
     params_gb, _ = gfi.get_full_galactic_params(config)
 
-    fit_state = IterativeFitState(ic)
+    fit_state = IterativeFitState(ic, preprocess_mode=preprocess_mode)
 
-    bgd = BGDecomposition(wc, ic.nc_galaxy, galactic_floor=galactic_below_in.copy(), storage_mode=ic.background_storage_mode)
-    del galactic_below_in
-
-    noise_manager = NoiseModelManager(ic, wc, lc, fit_state, bgd, cyclo_mode, nt_lim_snr, instrument_random_seed=instrument_random_seed)
+    noise_manager = NoiseModelManager(
+        ic, wc, lc, fit_state, bgd, cyclo_mode, nt_lim_snr, instrument_random_seed=instrument_random_seed,
+    )
 
     bis = BinaryInclusionState(wc, ic, lc, params_gb, noise_manager, fit_state, nt_lim_waveform, snrs_tot_in)
 
@@ -63,13 +96,18 @@ def fetch_or_run_iterative_loop(config: dict[str, Any], cyclo_mode: int, *, nt_r
     ifm = IterativeFitManager(ic, fit_state, noise_manager, bis)
 
     fetched = False
-    if fetch_mode == 1:
+    if fetch_mode in (1, 2):
         try:
-            gfi.load_processed_galactic_file(ifm, config, ic, wc, (nt_lim_snr.nx_min, nt_lim_snr.nx_max), cyclo_mode=cyclo_mode)
+            gfi.load_processed_galactic_file(
+                ifm, config, ic, wc, (nt_lim_snr.nx_min, nt_lim_snr.nx_max), cyclo_mode=cyclo_mode,
+            )
             ifm.bis.set_select_params(params_gb)
             fetched = True
         except FileNotFoundError as e:
             # loading did not work because either the file does not exist or the key does not exist in the file
+            if fetch_mode == 2:
+                msg = 'File or entry not found: aborting'
+                raise FileNotFoundError(msg) from e
             print(e)
             print('Running loop')
             ifm.do_loop()
