@@ -1,4 +1,5 @@
 """Class to store information about the binaries in the galactic background"""
+
 from __future__ import annotations
 
 from time import perf_counter
@@ -58,7 +59,7 @@ class BinaryInclusionState(StateManager):
         params_gb_in: NDArray[np.floating],
         noise_manager: NoiseModelManager,
         fit_state: IterativeFitState,
-        nt_lim_waveform:  PixelGenericRange,
+        nt_lim_waveform: PixelGenericRange,
         *,
         snrs_tot_in: NDArray[np.floating] | None = None,
     ) -> None:
@@ -85,11 +86,7 @@ class BinaryInclusionState(StateManager):
         self._fmax_binary: float = min((self._wc.Nf - 1) * self._wc.DF, self._ic.fmax_binary)
 
         if snrs_tot_in is not None:
-            faints_in = (
-                (snrs_tot_in < self._ic.snr_min_preprocess)
-                | (params_gb_in[:, 3] >= self._fmax_binary)
-                | (params_gb_in[:, 3] < self._fmin_binary)
-            )
+            faints_in = (snrs_tot_in < self._ic.snr_min_preprocess) | (params_gb_in[:, 3] >= self._fmax_binary) | (params_gb_in[:, 3] < self._fmin_binary)
         else:
             faints_in = (params_gb_in[:, 3] >= self._fmax_binary) | (params_gb_in[:, 3] < self._fmin_binary)
 
@@ -165,23 +162,23 @@ class BinaryInclusionState(StateManager):
         _ = hf_include.create_dataset('n_faints_cur', data=self._n_faints_cur, compression='gzip')
         _ = hf_include.create_dataset('n_brights_cur', data=self._n_brights_cur, compression='gzip')
 
-        _ = hf_include.create_dataset('faints_cur', data=self._faints_cur[:self._itrn], compression='gzip')
-        _ = hf_include.create_dataset('decided', data=self._decided[:self._itrn], compression='gzip')
-        _ = hf_include.create_dataset('brights', data=self._brights[:self._itrn], compression='gzip')
+        _ = hf_include.create_dataset('faints_cur', data=self._faints_cur[: self._itrn], compression='gzip')
+        _ = hf_include.create_dataset('decided', data=self._decided[: self._itrn], compression='gzip')
+        _ = hf_include.create_dataset('brights', data=self._brights[: self._itrn], compression='gzip')
 
         if storage_mode in (0, 2):
             # store full snrs
-            _ = hf_include.create_dataset('snrs_upper', data=self._snrs_upper[:self._itrn], compression='gzip')
-            _ = hf_include.create_dataset('snrs_lower', data=self._snrs_lower[:self._itrn], compression='gzip')
-            _ = hf_include.create_dataset('snrs_tot_upper', data=self._snrs_tot_upper[:self._itrn], compression='gzip')
-            _ = hf_include.create_dataset('snrs_tot_lower', data=self._snrs_tot_lower[:self._itrn], compression='gzip')
+            _ = hf_include.create_dataset('snrs_upper', data=self._snrs_upper[: self._itrn], compression='gzip')
+            _ = hf_include.create_dataset('snrs_lower', data=self._snrs_lower[: self._itrn], compression='gzip')
+            _ = hf_include.create_dataset('snrs_tot_upper', data=self._snrs_tot_upper[: self._itrn], compression='gzip')
+            _ = hf_include.create_dataset('snrs_tot_lower', data=self._snrs_tot_lower[: self._itrn], compression='gzip')
 
         if storage_mode in (1, 3):
             # store last snrs
-            _ = hf_include.create_dataset('snrs_upper', data=self._snrs_upper[self._itrn - 1:self._itrn], compression='gzip')
-            _ = hf_include.create_dataset('snrs_lower', data=self._snrs_lower[self._itrn - 1:self._itrn], compression='gzip')
-            _ = hf_include.create_dataset('snrs_tot_upper', data=self._snrs_tot_upper[self._itrn - 1:self._itrn], compression='gzip')
-            _ = hf_include.create_dataset('snrs_tot_lower', data=self._snrs_tot_lower[self._itrn - 1:self._itrn], compression='gzip')
+            _ = hf_include.create_dataset('snrs_upper', data=self._snrs_upper[self._itrn - 1 : self._itrn], compression='gzip')
+            _ = hf_include.create_dataset('snrs_lower', data=self._snrs_lower[self._itrn - 1 : self._itrn], compression='gzip')
+            _ = hf_include.create_dataset('snrs_tot_upper', data=self._snrs_tot_upper[self._itrn - 1 : self._itrn], compression='gzip')
+            _ = hf_include.create_dataset('snrs_tot_lower', data=self._snrs_tot_lower[self._itrn - 1 : self._itrn], compression='gzip')
 
         if storage_mode in (2, 4):
             # store full params
@@ -324,17 +321,17 @@ class BinaryInclusionState(StateManager):
             assert isinstance(snrs_tot_lower_temp, h5py.Dataset)
             if storage_mode in (0, 2):
                 # store full snrs
-                self._snrs_upper[:self._itrn] = snrs_upper_temp[()]
-                self._snrs_lower[:self._itrn] = snrs_lower_temp[()]
-                self._snrs_tot_upper[:self._itrn] = snrs_tot_upper_temp[()]
-                self._snrs_tot_lower[:self._itrn] = snrs_tot_lower_temp[()]
+                self._snrs_upper[: self._itrn] = snrs_upper_temp[()]
+                self._snrs_lower[: self._itrn] = snrs_lower_temp[()]
+                self._snrs_tot_upper[: self._itrn] = snrs_tot_upper_temp[()]
+                self._snrs_tot_lower[: self._itrn] = snrs_tot_lower_temp[()]
 
             if storage_mode in (1, 3):
                 # store last snrs
-                self._snrs_upper[self._itrn - 1:self._itrn] = snrs_upper_temp[()]
-                self._snrs_lower[self._itrn - 1:self._itrn] = snrs_lower_temp[()]
-                self._snrs_tot_upper[self._itrn - 1:self._itrn] = snrs_tot_upper_temp[()]
-                self._snrs_tot_lower[self._itrn - 1:self._itrn] = snrs_tot_lower_temp[()]
+                self._snrs_upper[self._itrn - 1 : self._itrn] = snrs_upper_temp[()]
+                self._snrs_lower[self._itrn - 1 : self._itrn] = snrs_lower_temp[()]
+                self._snrs_tot_upper[self._itrn - 1 : self._itrn] = snrs_tot_upper_temp[()]
+                self._snrs_tot_lower[self._itrn - 1 : self._itrn] = snrs_tot_lower_temp[()]
 
             if storage_mode in (2, 4):
                 # store full params
@@ -360,15 +357,15 @@ class BinaryInclusionState(StateManager):
 
         faints_cur_temp = hf_include['faints_cur']
         assert isinstance(faints_cur_temp, h5py.Dataset)
-        self._faints_cur[:self._itrn] = faints_cur_temp[()]
+        self._faints_cur[: self._itrn] = faints_cur_temp[()]
 
         decided_temp = hf_include['decided']
         assert isinstance(decided_temp, h5py.Dataset)
-        self._decided[:self._itrn] = decided_temp[()]
+        self._decided[: self._itrn] = decided_temp[()]
 
         brights_temp = hf_include['brights']
         assert isinstance(brights_temp, h5py.Dataset)
-        self._brights[:self._itrn] = brights_temp[()]
+        self._brights[: self._itrn] = brights_temp[()]
 
         # shouldn't need to load the waveform manager, because it is reconstructed each time it is used, as long as the type is correct
 
@@ -389,7 +386,7 @@ class BinaryInclusionState(StateManager):
         params_gb_sel = params_gb_in[self._argbinmap]
         assert self._params_gb.shape == params_gb_sel.shape
         assert np.all((params_gb_in[:, 3] < self._fmax_binary) & (params_gb_in[:, 3] >= self._fmin_binary))
-        if np.all(self._params_gb == 0.):
+        if np.all(self._params_gb == 0.0):
             self._params_gb[:] = params_gb_sel
         else:
             assert_allclose(self._params_gb, params_gb_sel)
@@ -461,7 +458,8 @@ class BinaryInclusionState(StateManager):
 
         if not self._fit_state.get_faint_converged():
             self._snrs_lower[itrn, itrb] = self._noise_manager.noise_lower.get_sparse_snrs(
-                wavelet_waveform, self._noise_manager.nt_lim_snr,
+                wavelet_waveform,
+                self._noise_manager.nt_lim_snr,
             )
             self._snrs_tot_lower[itrn, itrb] = np.linalg.norm(self._snrs_lower[itrn, itrb])
         else:
@@ -471,7 +469,8 @@ class BinaryInclusionState(StateManager):
 
         if not self._fit_state.get_bright_converged():
             self._snrs_upper[itrn, itrb] = self._noise_manager.noise_upper.get_sparse_snrs(
-                wavelet_waveform, self._noise_manager.nt_lim_snr,
+                wavelet_waveform,
+                self._noise_manager.nt_lim_snr,
             )
             self._snrs_tot_upper[itrn, itrb] = np.linalg.norm(self._snrs_upper[itrn, itrb])
         else:
@@ -586,8 +585,7 @@ class BinaryInclusionState(StateManager):
             if itrb % 10000 == 0:
                 tcb = perf_counter()
                 print(
-                    'Starting binary # %11d of %11d to consider at t=%9.2f s of iteration %4d'
-                    % (itrb, idxbs.size, (tcb - tib), self._itrn),
+                    'Starting binary # %11d of %11d to consider at t=%9.2f s of iteration %4d' % (itrb, idxbs.size, (tcb - tib), self._itrn),
                 )
 
             self.run_binary_coadd(int(itrb))
@@ -622,12 +620,10 @@ class BinaryInclusionState(StateManager):
         n_bright = int(self._brights[self._itrn - 1].sum())
         n_ambiguous = int((~(self._faints_old | self._brights[self._itrn - 1] | self._faints_cur[self._itrn - 1])).sum())
         print(
-            'Out of %10d total binaries, %10d were deemed undetectable by a previous run, %10d were considered here.'
-            % (self._n_tot, self._n_tot - n_consider, n_consider),
+            'Out of %10d total binaries, %10d were deemed undetectable by a previous run, %10d were considered here.' % (self._n_tot, self._n_tot - n_consider, n_consider),
         )
         print(
-            'The iterative procedure deemed (%5.3f yr observation at threshold snr=%5.3f):'
-            % (Tobs_consider_yr, self._ic.snr_thresh),
+            'The iterative procedure deemed (%5.3f yr observation at threshold snr=%5.3f):' % (Tobs_consider_yr, self._ic.snr_thresh),
         )
         print('       %10d undetectable due to instrument noise' % n_faint)
         print('       %10d undetectable due to galactic confusion' % n_faint2)

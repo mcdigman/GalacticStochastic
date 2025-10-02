@@ -1,4 +1,4 @@
-"""State machine that handles the state of the iterator, deciding whether it has converged or not"""
+"""State machine that handles the state of the iterator, deciding whether it has converged or not."""
 
 from typing import TYPE_CHECKING, override
 
@@ -13,10 +13,28 @@ if TYPE_CHECKING:
 
 
 class IterativeFitState(StateManager):
-    """State machine that handles the state of the iterator"""
+    """Class to manage the overall state of the iterative fitting process."""
 
     def __init__(self, ic: IterationConfig, preprocess_mode: int = 0) -> None:
-        """Create the state machine object"""
+        """
+        Initialize the IterativeFitState state machine for managing the overall state of the iterative fitting process.
+
+        Parameters
+        ----------
+        ic : IterationConfig
+            Configuration object specifying the parameters for the iterative fit, including maximum iterations and storage mode.
+        preprocess_mode : int, optional
+            Mode for preprocessing:
+            - 0: No preprocessing (default, use full number of iterations).
+            - 1: Standard preprocessing (single iteration).
+            - 2: Reprocess a background with a new SNR (single iteration).
+            Any other value raises a ValueError.
+
+        Raises
+        ------
+        ValueError
+            If an unrecognized fit state storage mode or preprocessing mode is provided.
+        """
         self._ic: IterationConfig = ic
         self._preprocess_mode: int = preprocess_mode
 
@@ -67,6 +85,7 @@ class IterativeFitState(StateManager):
 
     @override
     def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'fit_state', group_mode: int = 0) -> h5py.Group:
+        """Store the object in an hdf5 group."""
         if group_mode == 0:
             hf_state = hf_in.create_group(group_name)
         elif group_mode == 1:
@@ -109,7 +128,7 @@ class IterativeFitState(StateManager):
 
     @override
     def load_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'fit_state', group_mode: int = 0) -> None:
-        """Load the object from an hdf5 group"""
+        """Load the object from an hdf5 group."""
         if group_mode == 0:
             hf_state = hf_in[group_name]
         elif group_mode == 1:
@@ -224,75 +243,76 @@ class IterativeFitState(StateManager):
 
     @property
     def preprocess_mode(self) -> int:
+        """Get the preprocessing mode."""
         return self._preprocess_mode
 
     @property
     def bright_state_request(self) -> tuple[bool, bool, bool, bool]:
-        """Get what we wanted the state to be after bright_convergence_decision"""
+        """Get what we wanted the state to be after bright_convergence_decision."""
         return self._bright_state_request
 
     @bright_state_request.setter
     def bright_state_request(self, value: tuple[bool, bool, bool, bool]) -> None:
-        """Set what we want the state to be after bright_convergence_decision"""
+        """Set what we want the state to be after bright_convergence_decision."""
         (do_faint_check, bright_converged, faint_converged, force_converge) = value
         self._bright_state_request = (do_faint_check, bright_converged, faint_converged, force_converge)
 
     @property
     def faint_state_request(self) -> tuple[bool, bool, bool, bool]:
-        """Get what we want the state to be after faint_convergence_decision"""
+        """Get what we want the state to be after faint_convergence_decision."""
         return self._faint_state_request
 
     @faint_state_request.setter
     def faint_state_request(self, value: tuple[bool, bool, bool, bool]) -> None:
-        """Set what we want the state to be after faint_convergence_decision"""
+        """Set what we want the state to be after faint_convergence_decision."""
         (do_faint_check, bright_converged, faint_converged, force_converge) = value
         self._faint_state_request = (do_faint_check, bright_converged, faint_converged, force_converge)
 
     def get_noise_safe_lower(self) -> bool:
-        """Get whether the lower noise background would need to be updated to handle the most recent state change"""
+        """Get whether the lower noise background would need to be updated to handle the most recent state change."""
         return self._noise_safe_lower
 
     def get_noise_safe_upper(self) -> bool:
-        """Get whether the upper noise background would need to be updated to handle the most recent state change"""
+        """Get whether the upper noise background would need to be updated to handle the most recent state change."""
         return self._noise_safe_upper
 
     def get_n_itr_cut(self) -> int:
-        """Get the maximum number of iterations that are currently allowed"""
+        """Get the maximum number of iterations that are currently allowed."""
         return self._n_itr_cut
 
     def get_preprocess_mode(self) -> int:
-        """Get whether we are currently in pre-processing mode"""
+        """Get whether we are currently in pre-processing mode."""
         return self._preprocess_mode
 
     @override
     def advance_state(self) -> None:
-        """Set the current state for the next iteration to be the state requested after faint_convergence_decision"""
+        """Set the current state for the next iteration to be the state requested after faint_convergence_decision."""
         self._current_state = self.faint_state_request
         self._itrn += 1
 
     def get_state(self) -> tuple[bool, bool, bool, bool]:
-        """Get the current state of the state machine"""
+        """Get the current state of the state machine."""
         return self._current_state
 
     def get_faint_converged(self) -> bool:
-        """Get whether the faint binaries are converged"""
+        """Get whether the faint binaries are converged."""
         return self._current_state[2]
 
     def get_bright_converged(self) -> bool:
-        """Get whether the bright binaries are converged"""
+        """Get whether the bright binaries are converged."""
         return self._current_state[1]
 
     def get_do_faint_check(self) -> bool:
-        """Get whether the next iteration is a check iteration for the faint background"""
+        """Get whether the next iteration is a check iteration for the faint background."""
         return self._current_state[0]
 
     def get_force_converge(self) -> bool:
-        """Get whether we are trying to force convergence"""
+        """Get whether we are trying to force convergence."""
         return self._current_state[3]
 
     @override
     def log_state(self) -> None:
-        """Store the state in arrays for diagnostic purposes"""
+        """Store the state in arrays for diagnostic purposes."""
         (do_faint_check, bright_converged, faint_converged, force_converge) = self.get_state()
 
         self._bright_converged[self._itrn] = bright_converged
@@ -318,7 +338,10 @@ class IterativeFitState(StateManager):
         self._noise_safe_upper_log[self._itrn] = self._noise_safe_lower
 
     def bright_convergence_decision(self, inclusion_data: tuple[tuple[bool, bool, bool], int, int]) -> bool:
-        """Make a decision about whether the bright binaries are converged; needs a BinaryInclusionState object"""
+        """Make a decision about whether the bright binaries are converged.
+
+        Needs outputs from a BinaryInclusionState object.
+        """
         (do_faint_check_in, bright_converged_in, faint_converged_in, _force_converge_in) = self.get_state()
         ((cycling, converged_or_cycling, old_match), _, delta_brights) = inclusion_data
         noise_safe = True
@@ -343,9 +366,7 @@ class IterativeFitState(StateManager):
                 else:
                     force_converge_loc = False
                 print(
-                    'bright adaptation predicted initial converged at '
-                    + str(self._itrn)
-                    + ' next iteration will be check iteration',
+                    'bright adaptation predicted initial converged at ' + str(self._itrn) + ' next iteration will be check iteration',
                 )
                 self.bright_state_request = (True, False, faint_converged_in, force_converge_loc)
 
@@ -359,7 +380,10 @@ class IterativeFitState(StateManager):
         return noise_safe
 
     def faint_convergence_decision(self, inclusion_data: tuple[tuple[bool, bool, bool], int, int]) -> bool:
-        """Make a decision about whether the faint binaries are converged; needs a BinaryInclusionState object"""
+        """Make a decision about whether the faint binaries are converged.
+
+        Needs outputs from a BinaryInclusionState object.
+        """
         (_, delta_faints, _) = inclusion_data
         (do_faint_check_in, bright_converged_in, faint_converged_in, force_converge_in) = self.bright_state_request
 
@@ -436,7 +460,7 @@ class IterativeFitState(StateManager):
 
     @override
     def state_check(self) -> None:
-        """Check some things we expect to be true about the state given current rules"""
+        """Check some things we expect to be true about the state given current rules."""
         assert self.get_do_faint_check() == self._do_faint_check[self._itrn]
         assert self.get_bright_converged() == self._bright_converged[self._itrn]
         if self._do_faint_check[self._itrn]:
@@ -444,18 +468,20 @@ class IterativeFitState(StateManager):
 
     @override
     def loop_finalize(self) -> None:
-        """Perform any logic desired after convergence has been achieved and the loop ends"""
+        """Perform any logic desired after convergence has been achieved and the loop ends."""
         return
 
     @override
     def print_report(self) -> None:
-        """Do any printing desired after convergence has been achieved and the loop ends"""
+        """Do any printing desired after convergence has been achieved and the loop ends."""
         return
 
     def get_bright_converged_old(self) -> bool:
+        """Get whether the bright binaries were marked converged in the previous iteration."""
         assert self._itrn > 0
         return self._bright_converged[self._itrn - 1]
 
     def get_faint_converged_old(self) -> bool:
+        """Get whether the faint binaries were marked converged in the previous iteration."""
         assert self._itrn > 0
         return self._faint_converged[self._itrn - 1]

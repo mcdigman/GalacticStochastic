@@ -1,4 +1,4 @@
-"""abstract class for storing an object that the iteration manager can run the iterative procedure on"""
+"""Abstract based class for storing the state of a component of the iterative procedure."""
 
 from abc import ABC, abstractmethod
 

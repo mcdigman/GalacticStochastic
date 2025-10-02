@@ -34,13 +34,7 @@ def S_gal_model(
     alpha: NDArray[np.floating] | float,
 ) -> NDArray[np.floating] | float:
     """Model from arXiv:2103.14598 for galactic binary confusion noise amplitude"""
-    return (
-        10**log10A
-        / 2
-        * f ** (5 / 3)
-        * np.exp(-((f / 10**log10f1) ** alpha))
-        * (1 + np.tanh((10**log10fknee - f) / 10**log10f2))
-    )
+    return 10**log10A / 2 * f ** (5 / 3) * np.exp(-((f / 10**log10f1) ** alpha)) * (1 + np.tanh((10**log10fknee - f) / 10**log10f2))
 
 
 def S_gal_model_alt(
@@ -106,8 +100,7 @@ def filter_periods_fft(
             idx = int(wc.Tobs / gc.SECSYEAR * k)
             if np.abs(idx - wc.Tobs / gc.SECSYEAR * k) > period_tolerance:
                 warn(
-                    'fft filtering expects periods to be integer fraction of total time: got %10.8f for %10.8f'
-                    % (wc.Tobs / gc.SECSYEAR * k, k),
+                    'fft filtering expects periods to be integer fraction of total time: got %10.8f for %10.8f' % (wc.Tobs / gc.SECSYEAR * k, k),
                     stacklevel=2,
                 )
             if k == 0:
@@ -307,11 +300,7 @@ def fit_gb_spectrum_evolve(
             log10f1 = a1 * np.log10(TobsYEAR_locs[itry]) + b1
             log10fknee = ak * np.log10(TobsYEAR_locs[itry]) + bk
             resid += np.sum(
-                (
-                    np.log10(np.abs(S_gal_model(fs, log10A, log10f2, log10f1, log10fknee, alpha)) + offset)
-                    - log_S_goals[itry, :, :].T
-                ).flatten()
-                ** 2,
+                (np.log10(np.abs(S_gal_model(fs, log10A, log10f2, log10f1, log10fknee, alpha)) + offset) - log_S_goals[itry, :, :].T).flatten() ** 2,
             )
         return resid
 

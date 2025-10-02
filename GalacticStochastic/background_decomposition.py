@@ -19,17 +19,18 @@ if TYPE_CHECKING:
 
 class BGDecomposition:
     """Handle the internal decomposition of the galactic background."""
+
     def __init__(
-            self,
-            wc: WDMWaveletConstants,
-            nc_galaxy: int,
-            *,
-            galactic_floor: NDArray[np.floating] | None = None,
-            galactic_below: NDArray[np.floating] | None = None,
-            galactic_undecided: NDArray[np.floating] | None = None,
-            galactic_above: NDArray[np.floating] | None = None,
-            track_mode: int = 1,
-            storage_mode: int = 0,
+        self,
+        wc: WDMWaveletConstants,
+        nc_galaxy: int,
+        *,
+        galactic_floor: NDArray[np.floating] | None = None,
+        galactic_below: NDArray[np.floating] | None = None,
+        galactic_undecided: NDArray[np.floating] | None = None,
+        galactic_above: NDArray[np.floating] | None = None,
+        track_mode: int = 1,
+        storage_mode: int = 0,
     ) -> None:
         """
         Initialize a BGDecomposition object for handling the galactic background decomposition.
@@ -98,7 +99,7 @@ class BGDecomposition:
             assert galactic_above.shape == self._shape1
             self.galactic_above = galactic_above
 
-        self.galactic_total_cache:  NDArray[np.floating] | None = None
+        self.galactic_total_cache: NDArray[np.floating] | None = None
 
         self.track_mode: int = track_mode
 
@@ -260,33 +261,50 @@ class BGDecomposition:
             else:
                 # check all contributions to the total signal are tracked accurately
                 assert_allclose(
-                    self.galactic_total_cache, self.get_galactic_total(bypass_check=True), atol=1.0e-300, rtol=1.0e-6,
+                    self.galactic_total_cache,
+                    self.get_galactic_total(bypass_check=True),
+                    atol=1.0e-300,
+                    rtol=1.0e-6,
                 )
 
     def log_state(self, S_mean: NDArray[np.floating]) -> None:
         """Record any diagnostics we want to track about this iteration."""
-        power_undecided = np.asarray(np.sum(
-            np.sum((self.galactic_undecided**2).reshape(self._shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0,
-        ), dtype=np.float64)
-        power_above = np.asarray(np.sum(
-            np.sum((self.galactic_above**2).reshape(self._shape2)[:, 1:, :], axis=0) / S_mean[1:, :], axis=0,
-        ), dtype=np.float64)
+        power_undecided = np.asarray(
+            np.sum(
+                np.sum((self.galactic_undecided**2).reshape(self._shape2)[:, 1:, :], axis=0) / S_mean[1:, :],
+                axis=0,
+            ),
+            dtype=np.float64,
+        )
+        power_above = np.asarray(
+            np.sum(
+                np.sum((self.galactic_above**2).reshape(self._shape2)[:, 1:, :], axis=0) / S_mean[1:, :],
+                axis=0,
+            ),
+            dtype=np.float64,
+        )
 
-        power_total = np.asarray(np.sum(
-            np.sum((self.get_galactic_total(bypass_check=True) ** 2).reshape(self._shape2)[:, 1:, :], axis=0)
-            / S_mean[1:, :],
-            axis=0,
-        ), dtype=np.float64)
-        power_below_high = np.asarray(np.sum(
-            np.sum((self.get_galactic_below_high(bypass_check=True) ** 2).reshape(self._shape2)[:, 1:, :], axis=0)
-            / S_mean[1:, :],
-            axis=0,
-        ), dtype=np.float64)
-        power_below_low = np.asarray(np.sum(
-            np.sum((self.get_galactic_below_low(bypass_check=True) ** 2).reshape(self._shape2)[:, 1:, :], axis=0)
-            / S_mean[1:, :],
-            axis=0,
-        ), dtype=np.float64)
+        power_total = np.asarray(
+            np.sum(
+                np.sum((self.get_galactic_total(bypass_check=True) ** 2).reshape(self._shape2)[:, 1:, :], axis=0) / S_mean[1:, :],
+                axis=0,
+            ),
+            dtype=np.float64,
+        )
+        power_below_high = np.asarray(
+            np.sum(
+                np.sum((self.get_galactic_below_high(bypass_check=True) ** 2).reshape(self._shape2)[:, 1:, :], axis=0) / S_mean[1:, :],
+                axis=0,
+            ),
+            dtype=np.float64,
+        )
+        power_below_low = np.asarray(
+            np.sum(
+                np.sum((self.get_galactic_below_low(bypass_check=True) ** 2).reshape(self._shape2)[:, 1:, :], axis=0) / S_mean[1:, :],
+                axis=0,
+            ),
+            dtype=np.float64,
+        )
 
         self.power_galactic_undecided.append(power_undecided)
         self.power_galactic_above.append(power_above)
@@ -311,7 +329,12 @@ class BGDecomposition:
         """Get the upper estimate of the galactic power spectrum."""
         galactic_loc = self.get_galactic_below_high(bypass_check=True)
         S, _, _, _, _ = get_S_cyclo(
-            galactic_loc, S_mean, self._wc, smooth_lengthf, filter_periods, period_list=period_list,
+            galactic_loc,
+            S_mean,
+            self._wc,
+            smooth_lengthf,
+            filter_periods,
+            period_list=period_list,
         )
         return S
 
@@ -319,7 +342,12 @@ class BGDecomposition:
         """Get the lower estimate of the galactic power spectrum."""
         galactic_loc = self.get_galactic_below_low(bypass_check=True)
         S, _, _, _, _ = get_S_cyclo(
-            galactic_loc, S_mean, self._wc, smooth_lengthf, filter_periods, period_list=period_list,
+            galactic_loc,
+            S_mean,
+            self._wc,
+            smooth_lengthf,
+            filter_periods,
+            period_list=period_list,
         )
         return S
 

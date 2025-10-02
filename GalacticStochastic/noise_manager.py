@@ -32,7 +32,35 @@ class NoiseModelManager(StateManager):
         nt_lim_snr: PixelGenericRange,
         instrument_random_seed: int,
     ) -> None:
-        """Create the noise model manager"""
+        """
+        Initialize a NoiseModelManager to manage noise models for the iterative fit.
+
+        Parameters
+        ----------
+        ic : IterationConfig
+            Configuration object for the iterative fit.
+        wc : WDMWaveletConstants
+            Wavelet constants describing the time-frequency grid.
+        lc : LISAConstants
+            LISA instrument configuration constants.
+        fit_state : IterativeFitState
+            Object tracking the current state of the iterative fit.
+        bgd : BGDecomposition
+            Galactic background decomposition object.
+        cyclo_mode : int
+            Cyclostationary mode flag. If nonzero, enables cyclostationary noise modeling.
+        nt_lim_snr : PixelGenericRange
+            Range of time-frequency pixels used for SNR calculations.
+        instrument_random_seed : int
+            Random seed for instrument noise realizations.
+
+        Raises
+        ------
+        ValueError
+            If an unrecognized storage mode or noise model mode is provided.
+        NotImplementedError
+            If a noise model mode other than 0 is requested.
+        """
         if ic.noise_model_storage_mode not in (0, 1, 2):
             msg = 'Unrecognized option for storage mode'
             raise ValueError(msg)
@@ -88,6 +116,7 @@ class NoiseModelManager(StateManager):
 
     @override
     def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'noise_model', group_mode: int = 0) -> h5py.Group:
+        """Store the object to an hdf5 group."""
         if group_mode == 0:
             hf_noise = hf_in.create_group(group_name)
         elif group_mode == 1:
@@ -163,7 +192,7 @@ class NoiseModelManager(StateManager):
         return hf_noise
 
     def load_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'noise_model', group_mode: int = 0) -> None:
-        """Load the object from an hdf5 group"""
+        """Load the object from an hdf5 group."""
         if group_mode == 0:
             hf_noise = hf_in['noise_model']
         elif group_mode == 1:
@@ -269,7 +298,10 @@ class NoiseModelManager(StateManager):
             filter_periods = not self.cyclo_mode
 
         S_upper = self.bgd.get_S_below_high(
-            self.S_inst_m, self._ic.smooth_lengthf[self._itrn], filter_periods, period_list,
+            self.S_inst_m,
+            self._ic.smooth_lengthf[self._itrn],
+            filter_periods,
+            period_list,
         )
         self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, self.wc, prune=1, nc_snr=self._lc.nc_snr)
 
@@ -291,28 +323,28 @@ class NoiseModelManager(StateManager):
 
     @override
     def loop_finalize(self) -> None:
-        """Perform any logic desired after convergence has been achieved and the loop ends"""
+        """Perform any logic desired after convergence has been achieved and the loop ends."""
         self.S_final[:] = self.noise_upper.get_S()[:, :, :]
 
     @override
     def state_check(self) -> None:
-        """Perform any sanity checks that should be performed at the end of each iteration"""
+        """Perform any sanity checks that should be performed at the end of each iteration."""
         self.bgd.state_check()
 
     @override
     def print_report(self) -> None:
-        """Do any printing desired after convergence has been achieved and the loop ends"""
-        res_mask = np.asarray(((self.noise_upper.get_S()[:, :, 0] - self.S_inst_m[:, 0]).mean(axis=0) > 0.1 * self.S_inst_m[:, 0]) & (
-                self.S_inst_m[:, 0] > 0.0
-        ), dtype=np.bool_)
+        """Do any printing desired after convergence has been achieved and the loop ends."""
+        res_mask = np.asarray(((self.noise_upper.get_S()[:, :, 0] - self.S_inst_m[:, 0]).mean(axis=0) > 0.1 * self.S_inst_m[:, 0]) & (self.S_inst_m[:, 0] > 0.0), dtype=np.bool_)
         galactic_below_high = self.bgd.get_galactic_below_high()
         noise_divide = np.sqrt(
-            self.noise_upper.get_S()[self.nt_lim_snr.nx_min:self.nt_lim_snr.nx_max, res_mask, :2] - self.S_inst_m[res_mask, :2],
+            self.noise_upper.get_S()[self.nt_lim_snr.nx_min : self.nt_lim_snr.nx_max, res_mask, :2] - self.S_inst_m[res_mask, :2],
         )
         points_res = (
-                galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy)[
-                self.nt_lim_snr.nx_min:self.nt_lim_snr.nx_max, res_mask, :2,
-                ]
+            galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy)[
+                self.nt_lim_snr.nx_min : self.nt_lim_snr.nx_max,
+                res_mask,
+                :2,
+            ]
             / noise_divide
         )
         n_points = points_res.size
@@ -321,23 +353,24 @@ class NoiseModelManager(StateManager):
         del galactic_below_high
         del res_mask
         unit_normal_res, a2score, mean_rat, std_rat = unit_normal_battery(
-            points_res.flatten(), A2_cut=2.28, sig_thresh=5.0, do_assert=False,
+            points_res.flatten(),
+            A2_cut=2.28,
+            sig_thresh=5.0,
+            do_assert=False,
         )
         del points_res
         if unit_normal_res:
             print(
-                'Background PASSES normality: points=%12d A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f'
-                % (n_points, a2score, mean_rat, std_rat),
+                'Background PASSES normality: points=%12d A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f' % (n_points, a2score, mean_rat, std_rat),
             )
         else:
             print(
-                'Background FAILS  normality: points=%12d A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f'
-                % (n_points, a2score, mean_rat, std_rat),
+                'Background FAILS  normality: points=%12d A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f' % (n_points, a2score, mean_rat, std_rat),
             )
 
     @override
     def advance_state(self) -> None:
-        """Handle any logic necessary to advance the state of the object to the next iteration"""
+        """Handle any logic necessary to advance the state of the object to the next iteration."""
         noise_safe_upper = self._fit_state.get_noise_safe_upper()
         noise_safe_lower = self._fit_state.get_noise_safe_lower()
 
@@ -357,7 +390,10 @@ class NoiseModelManager(StateManager):
 
             # use higher estimate of galactic bg
             S_upper = self.bgd.get_S_below_high(
-                self.S_inst_m, self._ic.smooth_lengthf[self._itrn], filter_periods, period_list,
+                self.S_inst_m,
+                self._ic.smooth_lengthf[self._itrn],
+                filter_periods,
+                period_list,
             )
             self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, self.wc, prune=1, nc_snr=self._lc.nc_snr)
 
@@ -374,4 +410,5 @@ class NoiseModelManager(StateManager):
         self._itrn += 1
 
     def get_instrument_realization(self, white_mode: int = 1) -> NDArray[np.floating]:
+        """Get the realization of the instrument noise model based on the current random seed."""
         return self.noise_instrument.generate_dense_noise(white_mode=white_mode)

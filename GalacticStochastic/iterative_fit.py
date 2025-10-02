@@ -55,14 +55,19 @@ def fetch_or_run_iterative_loop(
     nt_lim_waveform = PixelGenericRange(0, wc.Nt, wc.DT, 0.0)
 
     print(
-        nt_lim_snr.nx_min, nt_lim_snr.nx_max, nt_lim_waveform.nx_min, nt_lim_waveform.nx_max, wc.Nt, wc.Nf, cyclo_mode,
+        nt_lim_snr.nx_min,
+        nt_lim_snr.nx_max,
+        nt_lim_waveform.nx_min,
+        nt_lim_waveform.nx_max,
+        wc.Nt,
+        wc.Nf,
+        cyclo_mode,
     )
 
     if preprocess_mode in (1, 2):
         assert cyclo_mode == 1, 'Pre-processing is only compatible with cyclo_mode = 1'
 
     if preprocess_mode in (0, 2):
-
         # galactic_below_in, snrs_tot_in = gfi.load_preliminary_galactic_file(
         #    config,
         #    ic,
@@ -85,9 +90,7 @@ def fetch_or_run_iterative_loop(
             raise ValueError(msg)
 
         nt_range_prelim = (0, wc.Nt)
-        ifm_prelim = fetch_or_run_iterative_loop(config, cyclo_mode=1, nt_range=nt_range_prelim, fetch_mode=fetch_mode_prelim,
-                                                 preprocess_mode=1, output_mode=output_mode, wc_in=wc_in, lc_in=lc,
-                                                 ic_in=ic_in, instrument_random_seed_in=instrument_random_seed_in)
+        ifm_prelim = fetch_or_run_iterative_loop(config, cyclo_mode=1, nt_range=nt_range_prelim, fetch_mode=fetch_mode_prelim, preprocess_mode=1, output_mode=output_mode, wc_in=wc_in, lc_in=lc, ic_in=ic_in, instrument_random_seed_in=instrument_random_seed_in)
 
         # assert_allclose(ifm_prelim.noise_manager.bgd.get_galactic_below_low(), galactic_below_in)
         # assert_allclose(ifm_prelim.bis._snrs_tot_upper[-1], snrs_tot_in)
@@ -95,7 +98,10 @@ def fetch_or_run_iterative_loop(
         snrs_tot_in = ifm_prelim.bis.get_final_snrs_tot_upper()
 
         bgd = BGDecomposition(
-            wc, ic.nc_galaxy, galactic_floor=galactic_below_in.copy(), storage_mode=ic.background_storage_mode,
+            wc,
+            ic.nc_galaxy,
+            galactic_floor=galactic_below_in.copy(),
+            storage_mode=ic.background_storage_mode,
         )
         del galactic_below_in
     elif preprocess_mode == 1:
@@ -105,7 +111,9 @@ def fetch_or_run_iterative_loop(
         # 2: try to fetch the final file, if it does not exist abort
 
         bgd = BGDecomposition(
-            wc, ic.nc_galaxy, storage_mode=ic.background_storage_mode,
+            wc,
+            ic.nc_galaxy,
+            storage_mode=ic.background_storage_mode,
         )
         snrs_tot_in = None
     else:
@@ -117,7 +125,14 @@ def fetch_or_run_iterative_loop(
     fit_state = IterativeFitState(ic, preprocess_mode=preprocess_mode)
 
     noise_manager = NoiseModelManager(
-        ic, wc, lc, fit_state, bgd, cyclo_mode, nt_lim_snr, instrument_random_seed=instrument_random_seed,
+        ic,
+        wc,
+        lc,
+        fit_state,
+        bgd,
+        cyclo_mode,
+        nt_lim_snr,
+        instrument_random_seed=instrument_random_seed,
     )
 
     bis = BinaryInclusionState(wc, ic, lc, params_gb, noise_manager, fit_state, nt_lim_waveform, snrs_tot_in=snrs_tot_in)
@@ -131,7 +146,13 @@ def fetch_or_run_iterative_loop(
     if fetch_mode in (1, 2, 3):
         try:
             gfi.load_processed_galactic_file(
-                ifm, config, ic, wc, (nt_lim_snr.nx_min, nt_lim_snr.nx_max), cyclo_mode=cyclo_mode, preprocess_mode=preprocess_mode,
+                ifm,
+                config,
+                ic,
+                wc,
+                (nt_lim_snr.nx_min, nt_lim_snr.nx_max),
+                cyclo_mode=cyclo_mode,
+                preprocess_mode=preprocess_mode,
             )
             ifm.bis.set_select_params(params_gb)
             fetched = True

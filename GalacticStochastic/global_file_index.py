@@ -38,16 +38,7 @@ def get_processed_galactic_filename(config: dict[str, Any], wc: WDMWaveletConsta
         file_prefix = str(config_files.get('processed_prefix', 'processed_iterations'))
     else:
         file_prefix = str(config_files.get('preprocessed_prefix', 'preprocessed_background'))
-    return (
-        galaxy_dir
-        + file_prefix
-        + '_Nf='
-        + str(wc.Nf)
-        + '_Nt='
-        + str(wc.Nt)
-        + ('_dt=%.2f' % (wc.dt))
-        + '.hdf5'
-    )
+    return galaxy_dir + file_prefix + '_Nf=' + str(wc.Nf) + '_Nt=' + str(wc.Nt) + ('_dt=%.2f' % (wc.dt)) + '.hdf5'
 
 
 def _source_mask_read_helper(hf_sky: h5py.Group, key: str, fmin: float, fmax: float) -> tuple[int, NDArray[np.floating]]:
@@ -87,8 +78,8 @@ def get_full_galactic_params(config: dict[str, Any]) -> tuple[NDArray[np.floatin
     """Get the galaxy dataset binaries"""
     # dgb is detached galactic binaries, igb is interacting galactic binaries, vgb is verification
     categories = config['iterative_fit_constants'].get('component_list', ['dgb', 'igb', 'vgb'])
-    fmin: float = float(config['iterative_fit_constants'].get('fmin_binary', 1.e-8))
-    fmax: float = float(config['iterative_fit_constants'].get('fmax_binary', 1.e0))
+    fmin: float = float(config['iterative_fit_constants'].get('fmin_binary', 1.0e-8))
+    fmax: float = float(config['iterative_fit_constants'].get('fmax_binary', 1.0e0))
     assert fmin <= fmax
     full_galactic_params_filename = get_galaxy_filename(config)
     filename = full_galactic_params_filename
@@ -105,7 +96,7 @@ def get_full_galactic_params(config: dict[str, Any]) -> tuple[NDArray[np.floatin
     params_got = []
     for itr, label in enumerate(categories):
         ns_got[itr], params_loc = _source_mask_read_helper(hf_sky, label, fmin, fmax)
-        if label == 'dgb' and np.any(params_loc[:, 4] < 0.):
+        if label == 'dgb' and np.any(params_loc[:, 4] < 0.0):
             warn('Some binaries reported as detached have negative frequency derivatives', stacklevel=2)
         params_got.append(params_loc)
         print(label, ns_got[itr])
@@ -119,18 +110,18 @@ def get_full_galactic_params(config: dict[str, Any]) -> tuple[NDArray[np.floatin
     n_old = 0
     for itr in range(len(categories)):
         n_cur = n_old + int(ns_got[itr])
-        params_gb[n_old: n_cur, :] = params_got[itr]
+        params_gb[n_old:n_cur, :] = params_got[itr]
         n_old = n_cur
 
     hf_in.close()
     assert np.all(np.isfinite(params_gb)), 'Some binaries have non-finite parameters'
-    assert not np.any(np.all(params_gb == 0., axis=1)), 'Some binaries have zero for all parameters'
-    if np.any(np.all(params_gb == 0., axis=0)):
+    assert not np.any(np.all(params_gb == 0.0, axis=1)), 'Some binaries have zero for all parameters'
+    if np.any(np.all(params_gb == 0.0, axis=0)):
         warn('Some parameters are always zero', stacklevel=2)
-    assert np.all(params_gb[:, 0] > 0.), 'Some binaries have non-positive amplitudes'
+    assert np.all(params_gb[:, 0] > 0.0), 'Some binaries have non-positive amplitudes'
     assert np.all((-np.pi / 2 <= params_gb[:, 1]) & (params_gb[:, 1] <= np.pi / 2)), 'Ecliptic latitude not bounded in expected range'
     assert np.all((params_gb[:, 2] >= 0.0) & (params_gb[:, 2] <= 2 * np.pi)), 'Ecliptic longitude not bounded in expected range'
-    assert np.all(params_gb[:, 3] > 0.), 'Some binaries have non-positive frequencies'
+    assert np.all(params_gb[:, 3] > 0.0), 'Some binaries have non-positive frequencies'
     if np.any(np.abs(params_gb[:, 4]) * gc.SECSYEAR * 10 > 0.001):
         warn('Some binaries have large frequency derivatives', stacklevel=2)
     print('Largest frequency derivative', np.max(np.abs(params_gb[:, 4]) * gc.SECSYEAR * 10))
@@ -256,10 +247,8 @@ def store_preliminary_gb_file(
         print('Computed sha256 checksum of source galactic binary file', sha256_hex_gb)
 
     if 'filename_source_gb_sha256' in hf_out.attrs:
-        assert hf_out.attrs[
-                   'filename_source_gb_sha256'] == sha256_hex_gb, 'Pre-processed output file was generated from a different source galactic binary file than the one currently specified'
-        print(
-            'Pre-processed output file source galactic binary sha256 checksum matches current source galactic binary file')
+        assert hf_out.attrs['filename_source_gb_sha256'] == sha256_hex_gb, 'Pre-processed output file was generated from a different source galactic binary file than the one currently specified'
+        print('Pre-processed output file source galactic binary sha256 checksum matches current source galactic binary file')
 
     hf_out.attrs['filename_source_gb_sha256'] = sha256_hex_gb
 

@@ -1,4 +1,4 @@
-"""object to run everything related to the iterative processing of galactic background"""
+"""Object to run everything related to the iterative processing of galactic background."""
 
 from time import perf_counter
 from typing import override
@@ -14,7 +14,7 @@ from GalacticStochastic.state_manager import StateManager
 
 
 class IterativeFitManager(StateManager):
-    """Iterative fit object that runs the iterative fitting procedure"""
+    """Iterative fit object that runs the iterative fitting procedure."""
 
     def __init__(
         self,
@@ -23,7 +23,7 @@ class IterativeFitManager(StateManager):
         noise_manager: NoiseModelManager,
         bis: BinaryInclusionState,
     ) -> None:
-        """Create the iterative fit object"""
+        """Create the iterative fit object."""
         self.ic: IterationConfig = ic
         self.fit_state: IterativeFitState = fit_state
         self.noise_manager: NoiseModelManager = noise_manager
@@ -34,7 +34,7 @@ class IterativeFitManager(StateManager):
         self._n_full_converged: int = self.fit_state.get_n_itr_cut() - 1
 
     def do_loop(self) -> None:
-        """Do the entire iterative fitting loop"""
+        """Do the entire iterative fitting loop."""
         print('entered loop')
         ti = perf_counter()
         for _ in range(self.fit_state.get_n_itr_cut()):
@@ -53,13 +53,14 @@ class IterativeFitManager(StateManager):
         self.print_report()
 
     def do_iteration(self) -> None:
-        """Advance everything one full iteration"""
+        """Advance everything one full iteration."""
         self.advance_state()
         self.log_state()
         self.state_check()
 
     @override
     def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'iterative_manager', group_mode: int = 0) -> h5py.Group:
+        """Store the object as a group in an hdf5 file."""
         if group_mode == 0:
             hf_manager = hf_in.create_group(group_name)
         elif group_mode == 1:
@@ -88,7 +89,7 @@ class IterativeFitManager(StateManager):
 
     @override
     def load_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'iterative_manager', group_mode: int = 0) -> None:
-        """Load the object from an hdf5 group"""
+        """Load the object from an hdf5 group."""
         if group_mode == 0:
             hf_manager = hf_in['iterative_manager']
         elif group_mode == 1:
@@ -127,7 +128,7 @@ class IterativeFitManager(StateManager):
 
     @override
     def advance_state(self) -> None:
-        """Advance the state of the iteration and determine whether convergence is achieved"""
+        """Advance the state of the iteration and determine whether convergence is achieved."""
         t0n = perf_counter()
 
         self.bis.advance_state()
@@ -144,8 +145,7 @@ class IterativeFitManager(StateManager):
 
         t2n = perf_counter()
 
-        print('made bg %3d in time %7.3fs fit time %7.3fs'
-              % (self._itrn, t1n - t0n, t2n - t1n))
+        print('made bg %3d in time %7.3fs fit time %7.3fs' % (self._itrn, t1n - t0n, t2n - t1n))
 
     @override
     def log_state(self) -> None:
@@ -156,13 +156,13 @@ class IterativeFitManager(StateManager):
 
     @override
     def loop_finalize(self) -> None:
-        """Perform any logic desired after convergence has been achieved and the loop ends"""
+        """Perform any logic desired after convergence has been achieved and the loop ends."""
         self.bis.loop_finalize()
         self.fit_state.loop_finalize()
         self.noise_manager.loop_finalize()
 
     def check_done(self) -> bool:
-        """Check whether the fitting procedure can bet stopped"""
+        """Check whether the fitting procedure can bet stopped."""
         if self.fit_state.get_bright_converged() and self.fit_state.get_faint_converged():
             print('result fully converged at ' + str(self._itrn) + ', no further iterations needed')
             self._n_full_converged = self._itrn
@@ -171,14 +171,14 @@ class IterativeFitManager(StateManager):
 
     @override
     def print_report(self) -> None:
-        """Do any printing desired after convergence has been achieved and the loop ends"""
+        """Do any printing desired after convergence has been achieved and the loop ends."""
         self.bis.print_report()
         self.fit_state.print_report()
         self.noise_manager.print_report()
 
     @override
     def state_check(self) -> None:
-        """Perform any sanity checks that should be performed at the end of each iteration"""
+        """Perform any sanity checks that should be performed at the end of each iteration."""
         self.bis.state_check()
         self.fit_state.state_check()
         self.noise_manager.state_check()
