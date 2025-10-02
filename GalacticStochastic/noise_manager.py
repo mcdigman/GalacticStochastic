@@ -1,4 +1,4 @@
-"""object to manage noise models for the iterative_fit_manager"""
+"""Object to manage the noise models used in the iterative fit."""
 
 from typing import override
 
@@ -19,7 +19,7 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 class NoiseModelManager(StateManager):
-    """object to manage the noise models used in the iterative fit"""
+    """Manage the noise models used in the iterative fit."""
 
     def __init__(
         self,

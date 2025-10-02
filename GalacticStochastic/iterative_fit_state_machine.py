@@ -107,6 +107,7 @@ class IterativeFitState(StateManager):
 
         return hf_state
 
+    @override
     def load_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'fit_state', group_mode: int = 0) -> None:
         """Load the object from an hdf5 group"""
         if group_mode == 0:
