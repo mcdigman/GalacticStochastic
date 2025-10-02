@@ -11,8 +11,8 @@ from numpy.typing import NDArray
 import GalacticStochastic.global_const as gc
 from GalacticStochastic import config_helper
 from GalacticStochastic.galactic_fit_helpers import get_S_cyclo
+from GalacticStochastic.iterative_fit import fetch_or_run_iterative_loop
 from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
-from run_gb_iterative import fetch_or_run_iterative_loop
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 mpl.rcParams['axes.linewidth'] = 1.2
@@ -85,9 +85,10 @@ if __name__ == '__main__':
     nt_min_report = 0
     nt_max_report = nt_max - nt_min
     nt_lim_report = PixelGenericRange(nt_min_report, nt_max_report, wc.DT, 0.)
+    nt_range = (nt_min, nt_max)
 
-    ifm_cyclo = fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, instrument_random_seed, stat_only=False)
-    ifm_stat = fetch_or_run_iterative_loop(nt_min, nt_max, config, wc, lc, ic, instrument_random_seed, stat_only=True)
+    ifm_cyclo = fetch_or_run_iterative_loop(config, stat_only=False, nt_range=nt_range)
+    ifm_stat = fetch_or_run_iterative_loop(config, stat_only=True, nt_range=nt_range)
 
     noise_realization = ifm_stat.noise_manager.get_instrument_realization()
 

@@ -191,23 +191,27 @@ def load_processed_galactic_file_alt(
 
     stat_key = str(stat_only)
 
-    hf_in = h5py.File(filename_in, 'r')
-    hf_itr = hf_in['iteration_results']
-    if not isinstance(hf_itr, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
-    hf_snr = hf_itr[str(snr_thresh)]
-    if not isinstance(hf_snr, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
-    hf_nt = hf_snr[str(nt_range)]
-    if not isinstance(hf_nt, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
-    hf_run = hf_nt[stat_key]
-    if not isinstance(hf_run, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
+    try:
+        hf_in = h5py.File(filename_in, 'r')
+        hf_itr = hf_in['iteration_results']
+        if not isinstance(hf_itr, h5py.Group):
+            msg = 'Unrecognized hdf5 file format'
+            raise TypeError(msg)
+        hf_snr = hf_itr[str(snr_thresh)]
+        if not isinstance(hf_snr, h5py.Group):
+            msg = 'Unrecognized hdf5 file format'
+            raise TypeError(msg)
+        hf_nt = hf_snr[str(nt_range)]
+        if not isinstance(hf_nt, h5py.Group):
+            msg = 'Unrecognized hdf5 file format'
+            raise TypeError(msg)
+        hf_run = hf_nt[stat_key]
+        if not isinstance(hf_run, h5py.Group):
+            msg = 'Unrecognized hdf5 file format'
+            raise TypeError(msg)
+    except (OSError, KeyError) as e:
+        msg = f'Could not find processed galactic binary file {filename_in} with snr_thresh={snr_thresh}, nt_range={nt_range}, stat_only={stat_only}'
+        raise FileNotFoundError(msg) from e
 
     ifm.load_hdf5(hf_run)
 

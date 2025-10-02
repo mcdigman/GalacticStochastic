@@ -68,16 +68,23 @@ class BinaryInclusionState(StateManager):
         self._noise_manager: NoiseModelManager = noise_manager
         self._fit_state: IterativeFitState = fit_state
 
+        del wc
+        del ic
+        del lc
+        del noise_manager
+        del fit_state
+        del nt_lim_waveform
+
         assert len(params_gb_in.shape) == 2
         assert params_gb_in.shape[1] == N_PAR_GB
 
         self._n_tot: int = params_gb_in.shape[0]
-        self._fmin_binary: float = max(0.0, ic.fmin_binary)
-        self._fmax_binary: float = min((wc.Nf - 1) * wc.DF, ic.fmax_binary)
+        self._fmin_binary: float = max(0.0, self._ic.fmin_binary)
+        self._fmax_binary: float = min((self._wc.Nf - 1) * self._wc.DF, self._ic.fmax_binary)
 
         if snrs_tot_in is not None:
             faints_in = (
-                (snrs_tot_in < ic.snr_min_preprocess)
+                (snrs_tot_in < self._ic.snr_min_preprocess)
                 | (params_gb_in[:, 3] >= self._fmax_binary)
                 | (params_gb_in[:, 3] < self._fmin_binary)
             )
@@ -90,11 +97,17 @@ class BinaryInclusionState(StateManager):
         self._params_gb: NDArray[np.floating] = params_gb_in[self._argbinmap]
         self._n_bin_use: int = self._argbinmap.size
 
+        if snrs_tot_in is not None:
+            self._snrs_old: NDArray[np.floating] = snrs_tot_in[self._argbinmap]
+        else:
+            self._snrs_old = np.full(self._n_bin_use, -1.0)
+
+        del snrs_tot_in
         del params_gb_in
         del faints_in
 
-        self._snrs_upper: NDArray[np.floating] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use, lc.nc_snr))
-        self._snrs_lower: NDArray[np.floating] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use, lc.nc_snr))
+        self._snrs_upper: NDArray[np.floating] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use, self._lc.nc_snr))
+        self._snrs_lower: NDArray[np.floating] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use, self._lc.nc_snr))
         self._snrs_tot_lower: NDArray[np.floating] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use))
         self._snrs_tot_upper: NDArray[np.floating] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use))
         self._brights: NDArray[np.bool_] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use), dtype=np.bool_)
@@ -103,7 +116,7 @@ class BinaryInclusionState(StateManager):
 
         params0_sel: NDArray[np.floating] = self._params_gb[0]
         params0: SourceParams = unpack_params_gb(params0_sel)
-        self._waveform_manager: LinearFrequencyWaveletWaveformTime = LinearFrequencyWaveletWaveformTime(params0, wc, self._lc, self._nt_lim_waveform)
+        self._waveform_manager: LinearFrequencyWaveletWaveformTime = LinearFrequencyWaveletWaveformTime(params0, self._wc, self._lc, self._nt_lim_waveform)
 
         del params0
         del params0_sel
@@ -135,6 +148,7 @@ class BinaryInclusionState(StateManager):
 
         _ = hf_include.create_dataset('argbinmap', data=self._argbinmap, compression='gzip')
         _ = hf_include.create_dataset('faints_old', data=self._faints_old, compression='gzip')
+        _ = hf_include.create_dataset('snrs_old', data=self._snrs_old, compression='gzip')
         _ = hf_include.create_dataset('n_faints_cur', data=self._n_faints_cur, compression='gzip')
         _ = hf_include.create_dataset('n_brights_cur', data=self._n_brights_cur, compression='gzip')
 
@@ -251,19 +265,28 @@ class BinaryInclusionState(StateManager):
         argbbinmap_temp = hf_include['argbinmap']
         assert isinstance(argbbinmap_temp, h5py.Dataset)
         self._argbinmap = argbbinmap_temp[()]
+
         faints_old_temp = hf_include['faints_old']
         assert isinstance(faints_old_temp, h5py.Dataset)
         self._faints_old = faints_old_temp[()]
+
+        snrs_old_temp = hf_include['snrs_old']
+        assert isinstance(snrs_old_temp, h5py.Dataset)
+        self._snrs_old = snrs_old_temp[()]
+
         n_faints_cur_temp = hf_include['n_faints_cur']
         assert isinstance(n_faints_cur_temp, h5py.Dataset)
         self._n_faints_cur = n_faints_cur_temp[()]
+
         n_brights_cur_temp = hf_include['n_brights_cur']
         assert isinstance(n_brights_cur_temp, h5py.Dataset)
         self._n_brights_cur = n_brights_cur_temp[()]
+
         assert self._n_bin_use == self._argbinmap.size
         assert self._n_bin_use == self._faints_old.size
         assert self._n_faints_cur.size == self._fit_state.get_n_itr_cut() + 1
         assert self._n_brights_cur.size == self._fit_state.get_n_itr_cut() + 1
+
         self._faints_cur = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use), dtype=np.bool_)
         self._decided = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use), dtype=np.bool_)
         self._brights = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use), dtype=np.bool_)
@@ -343,6 +366,13 @@ class BinaryInclusionState(StateManager):
 
         for key in self._nt_lim_waveform._fields:
             assert getattr(self._nt_lim_waveform, key) == hf_include['nt_lim_waveform'].attrs[key], f'nt_lim_waveform attribute {key} does not match saved value'
+
+    def set_select_params(self, params_gb_in: NDArray[np.floating]) -> None:
+        assert params_gb_in.shape == (self._n_tot, N_PAR_GB)
+        params_gb_sel = params_gb_in[self._argbinmap]
+        assert self._params_gb.shape == params_gb_sel.shape
+        assert np.all((params_gb_in[:, 3] < self._fmax_binary) & (params_gb_in[:, 3] >= self._fmin_binary))
+        self._params_gb[:] = params_gb_sel
 
     def sustain_snr_helper(self) -> None:
         """Helper to carry forward any other snr values we know from a previous iteration"""
