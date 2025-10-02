@@ -24,6 +24,7 @@ class IterationConfig(NamedTuple):
     noise_model_storage_mode: int
     background_storage_mode: int
     fit_state_storage_mode: int
+    inclusion_state_storage_mode_prelim: int
     inclusion_state_storage_mode: int
     manager_storage_mode: int
     noise_model_mode: int
@@ -134,7 +135,8 @@ def get_iteration_config(config: dict[str, Any]) -> IterationConfig:
     noise_model_storage_mode = int(config_ic.get('noise_model_storage_mode', 0))
     background_storage_mode = int(config_ic.get('background_storage_mode', 0))
     fit_state_storage_mode = int(config_ic.get('fit_state_storage_mode', 0))
-    inclusion_state_storage_mode = int(config_ic.get('inclusion_state_storage_mode', 0))
+    inclusion_state_storage_mode_prelim = int(config_ic.get('inclusion_state_storage_mode_prelim', 0))
+    inclusion_state_storage_mode = int(config_ic.get('inclusion_state_storage_mode', 2))
     manager_storage_mode = int(config_ic.get('manager_storage_mode', 0))
 
     # select mode for getting the instrument noise model
@@ -160,6 +162,7 @@ def get_iteration_config(config: dict[str, Any]) -> IterationConfig:
         noise_model_storage_mode,
         background_storage_mode,
         fit_state_storage_mode,
+        inclusion_state_storage_mode_prelim,
         inclusion_state_storage_mode,
         manager_storage_mode,
         noise_model_mode,

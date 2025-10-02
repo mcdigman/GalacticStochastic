@@ -222,6 +222,10 @@ class IterativeFitState(StateManager):
         self._preprocess_mode = int(preprocess_mode_temp)
 
     @property
+    def preprocess_mode(self) -> int:
+        return self._preprocess_mode
+
+    @property
     def bright_state_request(self) -> tuple[bool, bool, bool, bool]:
         """Get what we wanted the state to be after bright_convergence_decision"""
         return self._bright_state_request

@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
     fs = np.arange(0, wc.Nf) * wc.DF
 
-    stat_only = False
+    cyclo_mode = 0
     idx_use = [0, 1, 3, 7]
     nt_mins = np.array([256 * 7, 256 * 6, 256 * 5, 256 * 4, 256 * 3, 256 * 2, 256 * 1, 256 * 0])[idx_use]
     nt_maxs = np.array([512 * 1, 512 * 2, 512 * 3, 512 * 4, 512 * 5, 512 * 6, 512 * 7, 512 * 8])[idx_use] + nt_mins
@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     itrl_fit = 0
 
-    if not stat_only:
+    if not cyclo_mode:
         filter_periods = 1
         period_list: tuple[int, ...] = (1, 2, 3, 4, 5)
     else:

@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     galaxy_file = config['files']['galaxy_file']
 
-    stat_only = True
+    cyclo_mode = 1
     preprocess_mode = 2
     nt_min = 0
     nt_max = wc.Nt
@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
     bgd = BGDecomposition(wc, ic.nc_galaxy, storage_mode=ic.background_storage_mode)
 
-    noise_manager = NoiseModelManager(ic, wc, lc, fit_state, bgd, stat_only, nt_lim_snr, instrument_random_seed)
+    noise_manager = NoiseModelManager(ic, wc, lc, fit_state, bgd, cyclo_mode, nt_lim_snr, instrument_random_seed)
 
     bis = BinaryInclusionState(wc, ic, lc, params_gb, noise_manager, fit_state, nt_lim_waveform)
 

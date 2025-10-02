@@ -7,6 +7,7 @@ from warnings import warn
 
 import h5py
 import numpy as np
+from numpy.testing import assert_allclose
 
 import GalacticStochastic.global_const as gc
 from GalacticStochastic.state_manager import StateManager
@@ -94,13 +95,19 @@ class BinaryInclusionState(StateManager):
         self._argbinmap: NDArray[np.integer] = np.argwhere(~faints_in).flatten()
         self._faints_old: NDArray[np.bool_] = faints_in[self._argbinmap]
         assert self._faints_old.sum() == 0.0
-        self._params_gb: NDArray[np.floating] = params_gb_in[self._argbinmap]
         self._n_bin_use: int = self._argbinmap.size
 
+        # ensure we are making a copy of the parameters
+        self._params_gb: NDArray[np.floating] = np.zeros((self._n_bin_use, N_PAR_GB))
+        self._params_gb[:] = params_gb_in[self._argbinmap]
+
+        self._snrs_old: NDArray[np.floating] = np.zeros(self._n_bin_use)
+
+        # record old snrs if available
         if snrs_tot_in is not None:
-            self._snrs_old: NDArray[np.floating] = snrs_tot_in[self._argbinmap]
+            self._snrs_old[:] = snrs_tot_in[self._argbinmap]
         else:
-            self._snrs_old = np.full(self._n_bin_use, -1.0)
+            self._snrs_old[:] = -1.0
 
         del snrs_tot_in
         del params_gb_in
@@ -128,7 +135,12 @@ class BinaryInclusionState(StateManager):
 
     @override
     def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'inclusion_state', group_mode: int = 0, noise_recurse: int = 1) -> h5py.Group:
-        storage_mode = self._ic.inclusion_state_storage_mode
+        # can store different things depending on whether we are in preprocessing mode or not
+        if self._fit_state.preprocess_mode == 0:
+            storage_mode = self._ic.inclusion_state_storage_mode
+        else:
+            storage_mode = self._ic.inclusion_state_storage_mode_prelim
+
         if group_mode == 0:
             hf_include = hf_in.create_group(group_name)
         elif group_mode == 1:
@@ -260,7 +272,10 @@ class BinaryInclusionState(StateManager):
         assert hf_include.attrs['lc_name'] == self._lc.__class__.__name__, 'incorrect lisa constants name found in hdf5 file'
         assert hf_include.attrs['ic_name'] == self._ic.__class__.__name__, 'incorrect iteration config name found in hdf5 file'
         assert hf_include.attrs['nt_lim_name'] == self._nt_lim_waveform.__class__.__name__, 'incorrect nt_lim_waveform name found in hdf5 file'
-        assert storage_mode == self._ic.inclusion_state_storage_mode, 'storage mode in hdf5 file does not match current config'
+        if self._fit_state.preprocess_mode == 0:
+            assert storage_mode == self._ic.inclusion_state_storage_mode, 'storage mode in hdf5 file does not match current config'
+        else:
+            assert storage_mode == self._ic.inclusion_state_storage_mode_prelim, 'storage mode in hdf5 file does not match current config'
 
         argbbinmap_temp = hf_include['argbinmap']
         assert isinstance(argbbinmap_temp, h5py.Dataset)
@@ -372,7 +387,10 @@ class BinaryInclusionState(StateManager):
         params_gb_sel = params_gb_in[self._argbinmap]
         assert self._params_gb.shape == params_gb_sel.shape
         assert np.all((params_gb_in[:, 3] < self._fmax_binary) & (params_gb_in[:, 3] >= self._fmin_binary))
-        self._params_gb[:] = params_gb_sel
+        if np.all(self._params_gb == 0.):
+            self._params_gb[:] = params_gb_sel
+        else:
+            assert_allclose(self._params_gb, params_gb_sel)
 
     def sustain_snr_helper(self) -> None:
         """Helper to carry forward any other snr values we know from a previous iteration"""

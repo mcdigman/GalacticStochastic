@@ -180,7 +180,7 @@ def load_processed_galactic_file_alt(
     ic: IterationConfig,
     wc: WDMWaveletConstants,
     nt_lim_snr: tuple[int, int] = (0, -1),
-    stat_only: bool = True,
+    cyclo_mode: int = 1,
 ):
     snr_thresh = ic.snr_thresh
     filename_in = get_processed_gb_filename(config, wc)
@@ -189,7 +189,7 @@ def load_processed_galactic_file_alt(
     else:
         nt_range = nt_lim_snr
 
-    stat_key = str(stat_only)
+    cyclo_key = str(cyclo_mode)
 
     try:
         hf_in = h5py.File(filename_in, 'r')
@@ -205,12 +205,12 @@ def load_processed_galactic_file_alt(
         if not isinstance(hf_nt, h5py.Group):
             msg = 'Unrecognized hdf5 file format'
             raise TypeError(msg)
-        hf_run = hf_nt[stat_key]
+        hf_run = hf_nt[cyclo_key]
         if not isinstance(hf_run, h5py.Group):
             msg = 'Unrecognized hdf5 file format'
             raise TypeError(msg)
     except (OSError, KeyError) as e:
-        msg = f'Could not find processed galactic binary file {filename_in} with snr_thresh={snr_thresh}, nt_range={nt_range}, stat_only={stat_only}'
+        msg = f'Could not find processed galactic binary file {filename_in} with snr_thresh={snr_thresh}, nt_range={nt_range}, cyclo_mode={cyclo_mode}'
         raise FileNotFoundError(msg) from e
 
     ifm.load_hdf5(hf_run)
@@ -226,8 +226,8 @@ def load_preliminary_galactic_file_alt(
 
     nt_range: tuple[int, int] = (0, wc.Nt)
 
-    stat_only = True
-    stat_key = str(stat_only)
+    cyclo_mode = 1
+    cyclo_key = str(cyclo_mode)
 
     hf_in = h5py.File(preliminary_gb_filename, 'r')
     hf_itr = hf_in['iteration_results']
@@ -242,7 +242,7 @@ def load_preliminary_galactic_file_alt(
     if not isinstance(hf_nt, h5py.Group):
         msg = 'Unrecognized hdf5 file format'
         raise TypeError(msg)
-    hf_run = hf_nt[stat_key]
+    hf_run = hf_nt[cyclo_key]
     if not isinstance(hf_run, h5py.Group):
         msg = 'Unrecognized hdf5 file format'
         raise TypeError(msg)
@@ -441,7 +441,7 @@ def store_preliminary_gb_file_alt(
 
     noise_manager = ifm.noise_manager
     nt_lim_snr = noise_manager.nt_lim_snr
-    stat_only = noise_manager.stat_only
+    cyclo_mode = noise_manager.cyclo_mode
 
     filename_source_gb = get_galaxy_filename(config)
     filename_config = config.get('toml_filename', 'not_recorded')
@@ -452,7 +452,7 @@ def store_preliminary_gb_file_alt(
     if filename_source_gb in hf_out.attrs:
         assert hf_out.attrs['filename_source_gb'] == filename_source_gb
 
-    # get the hdf5 group that corresponds to this snr threshold, nt range, and value for stat_only
+    # get the hdf5 group that corresponds to this snr threshold, nt range, and value for cyclo_mode
     # creating sub groups as necessary if they do not already exist
 
     hf_itr = hf_out.require_group('iteration_results')
@@ -465,12 +465,12 @@ def store_preliminary_gb_file_alt(
     hf_nt = hf_snr.require_group(str(nt_range))
     del hf_snr
 
-    stat_key = str(stat_only)
-    if stat_key in hf_nt:
+    cyclo_key = str(cyclo_mode)
+    if cyclo_key in hf_nt:
         # this exact group already exists
         if write_mode == 0:
             # delete the existing group and overwrite
-            del hf_nt[stat_key]
+            del hf_nt[cyclo_key]
             print('Overwriting exsting hdf5 object')
         elif write_mode == 1:
             warn('Requested hdf5 object already exists, aborting write to avoid overwriting', stacklevel=2)
@@ -480,7 +480,7 @@ def store_preliminary_gb_file_alt(
             msg = 'Unexpected state when writing hdf5 file'
             raise ValueError(msg)
 
-    hf_run = hf_nt.require_group(stat_key)
+    hf_run = hf_nt.require_group(cyclo_key)
 
     # Compute the sha256 checksum of the source galactic binary file and the pre-processed file.
     # If they have been previously recorded in the hdf5 file, check they match.
@@ -546,7 +546,7 @@ def store_processed_gb_file(
 
     noise_manager = ifm.noise_manager
     nt_lim_snr = noise_manager.nt_lim_snr
-    stat_only = noise_manager.stat_only
+    cyclo_mode = noise_manager.cyclo_mode
 
     filename_source_gb = get_galaxy_filename(config)
     filename_config = config.get('toml_filename', 'not_recorded')
@@ -559,7 +559,7 @@ def store_processed_gb_file(
     if filename_source_gb in hf_out.attrs:
         assert hf_out.attrs['filename_source_gb'] == filename_source_gb
 
-    # get the hdf5 group that corresponds to this snr threshold, nt range, and value for stat_only
+    # get the hdf5 group that corresponds to this snr threshold, nt range, and value for cyclo_mode
     # creating sub groups as necessary if they do not already exist
 
     hf_itr = hf_out.require_group('iteration_results')
@@ -572,12 +572,12 @@ def store_processed_gb_file(
     hf_nt = hf_snr.require_group(str(nt_range))
     del hf_snr
 
-    stat_key = str(stat_only)
-    if stat_key in hf_nt:
+    cyclo_key = str(cyclo_mode)
+    if cyclo_key in hf_nt:
         # this exact group already exists
         if write_mode == 0:
             # delete the existing group and overwrite
-            del hf_nt[stat_key]
+            del hf_nt[cyclo_key]
             print('Overwriting exsting hdf5 object')
         elif write_mode == 1:
             warn('Requested hdf5 object already exists, aborting write to avoid overwriting', stacklevel=2)
@@ -587,7 +587,7 @@ def store_processed_gb_file(
             msg = 'Unexpected state when writing hdf5 file'
             raise ValueError(msg)
 
-    hf_run = hf_nt.require_group(stat_key)
+    hf_run = hf_nt.require_group(cyclo_key)
 
     # Compute the sha256 checksum of the source galactic binary file and the pre-processed file.
     # If they have been previously recorded in the hdf5 file, check if they match.

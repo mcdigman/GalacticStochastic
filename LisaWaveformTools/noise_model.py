@@ -96,7 +96,7 @@ class DenseNoiseModel(ABC):
         return self._prune
 
     @property
-    def seed(self):
+    def seed(self) -> int:
         """Get the random seed for generating noise realizations"""
         return self._seed
 

@@ -1,9 +1,10 @@
 """object to manage noise models for the iterative_fit_manager"""
 
-from typing import TYPE_CHECKING, override
+from typing import override
 
 import h5py
 import numpy as np
+from numpy.typing import NDArray
 
 from GalacticStochastic.background_decomposition import BGDecomposition
 from GalacticStochastic.iteration_config import IterationConfig
@@ -16,9 +17,6 @@ from LisaWaveformTools.noise_model import DiagonalNonstationaryDenseNoiseModel, 
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
-if TYPE_CHECKING:
-    from numpy.typing import NDArray
-
 
 class NoiseModelManager(StateManager):
     """object to manage the noise models used in the iterative fit"""
@@ -30,7 +28,7 @@ class NoiseModelManager(StateManager):
         lc: LISAConstants,
         fit_state: IterativeFitState,
         bgd: BGDecomposition,
-        stat_only: int,
+        cyclo_mode: int,
         nt_lim_snr: PixelGenericRange,
         instrument_random_seed: int,
     ) -> None:
@@ -44,7 +42,7 @@ class NoiseModelManager(StateManager):
         self.wc: WDMWaveletConstants = wc
         self.bgd: BGDecomposition = bgd
         self.fit_state: IterativeFitState = fit_state
-        self.stat_only: int = stat_only
+        self.cyclo_mode: int = cyclo_mode
         self.nt_lim_snr: PixelGenericRange = nt_lim_snr
         self.instrument_random_seed: int = instrument_random_seed
 
@@ -103,7 +101,7 @@ class NoiseModelManager(StateManager):
         hf_noise.attrs['storage_mode'] = storage_mode
         hf_noise.attrs['itrn'] = self.itrn
         hf_noise.attrs['itr_save'] = self.itr_save
-        hf_noise.attrs['stat_only'] = self.stat_only
+        hf_noise.attrs['cyclo_mode'] = self.cyclo_mode
         hf_noise.attrs['noise_upper_name'] = self.noise_upper.__class__.__name__
         hf_noise.attrs['noise_lower_name'] = self.noise_lower.__class__.__name__
         hf_noise.attrs['noise_instrument_name'] = self.noise_instrument.__class__.__name__
@@ -187,9 +185,9 @@ class NoiseModelManager(StateManager):
         itr_save_temp = hf_noise.attrs['itr_save']
         assert isinstance(itr_save_temp, (int, np.integer))
         self.itr_save = int(itr_save_temp)
-        stat_only_temp = hf_noise.attrs['stat_only']
-        assert isinstance(stat_only_temp, (int, np.integer, bool, np.bool_))
-        self.stat_only = bool(stat_only_temp)
+        cyclo_mode_temp = hf_noise.attrs['cyclo_mode']
+        assert isinstance(cyclo_mode_temp, (int, np.integer, bool, np.bool_))
+        self.cyclo_mode = bool(cyclo_mode_temp)
         assert hf_noise.attrs['noise_upper_name'] == self.noise_upper.__class__.__name__, 'incorrect noise upper name found in hdf5 file'
         assert hf_noise.attrs['noise_lower_name'] == self.noise_lower.__class__.__name__, 'incorrect noise lower name found in hdf5 file'
         assert hf_noise.attrs['noise_instrument_name'] == self.noise_instrument.__class__.__name__, 'incorrect noise instrument name found in hdf5 file'
@@ -260,7 +258,7 @@ class NoiseModelManager(StateManager):
 
         # just make new noise models, don't try to load them
         # TODO instead add assertions that the loaded models match the expected values stored in the files
-        if not self.stat_only:
+        if not self.cyclo_mode:
             period_list = self.ic.period_list
         else:
             period_list = ()
@@ -268,14 +266,14 @@ class NoiseModelManager(StateManager):
         if self.itrn < self.ic.n_cyclo_switch:
             filter_periods = False
         else:
-            filter_periods = not self.stat_only
+            filter_periods = not self.cyclo_mode
 
         S_upper = self.bgd.get_S_below_high(
             self.S_inst_m, self.ic.smooth_lengthf[self.itrn], filter_periods, period_list,
         )
         self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, self.wc, prune=1, nc_snr=self.lc.nc_snr)
 
-        filter_periods = not self.stat_only
+        filter_periods = not self.cyclo_mode
         S_lower = self.bgd.get_S_below_low(self.S_inst_m, self.ic.smooth_lengthf_fix, filter_periods, period_list)
         S_lower = np.asarray(np.min([S_lower, self.noise_upper.get_S()], axis=0), dtype=np.float64)
 
@@ -343,7 +341,7 @@ class NoiseModelManager(StateManager):
         noise_safe_upper = self.fit_state.get_noise_safe_upper()
         noise_safe_lower = self.fit_state.get_noise_safe_lower()
 
-        if not self.stat_only:
+        if not self.cyclo_mode:
             period_list = self.ic.period_list
         else:
             period_list = ()
@@ -355,7 +353,7 @@ class NoiseModelManager(StateManager):
             if self.itrn < self.ic.n_cyclo_switch:
                 filter_periods = False
             else:
-                filter_periods = not self.stat_only
+                filter_periods = not self.cyclo_mode
 
             # use higher estimate of galactic bg
             S_upper = self.bgd.get_S_below_high(
@@ -368,12 +366,12 @@ class NoiseModelManager(StateManager):
         if not noise_safe_lower:
             # make sure this will always predict >= snrs to the actual spectrum in use
             # use lower estimate of galactic bg
-            filter_periods = not self.stat_only
+            filter_periods = not self.cyclo_mode
             S_lower = self.bgd.get_S_below_low(self.S_inst_m, self.ic.smooth_lengthf_fix, filter_periods, period_list)
             S_lower = np.asarray(np.min([S_lower, self.noise_upper.get_S()], axis=0), dtype=np.float64)
             self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, self.wc, prune=1, nc_snr=self.lc.nc_snr)
             del S_lower
         self.itrn += 1
 
-    def get_instrument_realization(self, white_mode: int = 1):
+    def get_instrument_realization(self, white_mode: int = 1) -> NDArray[np.floating]:
         return self.noise_instrument.generate_dense_noise(white_mode=white_mode)

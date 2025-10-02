@@ -87,15 +87,15 @@ if __name__ == '__main__':
     nt_lim_report = PixelGenericRange(nt_min_report, nt_max_report, wc.DT, 0.)
     nt_range = (nt_min, nt_max)
 
-    ifm_cyclo = fetch_or_run_iterative_loop(config, stat_only=False, nt_range=nt_range)
-    ifm_stat = fetch_or_run_iterative_loop(config, stat_only=True, nt_range=nt_range)
+    ifm_cyclo = fetch_or_run_iterative_loop(config, cyclo_mode=0, nt_range=nt_range)
+    ifm_stat = fetch_or_run_iterative_loop(config, cyclo_mode=1, nt_range=nt_range)
 
     noise_realization = ifm_stat.noise_manager.get_instrument_realization()
 
     bgd_cyclo = ifm_cyclo.noise_manager.bgd
     bgd_stat = ifm_stat.noise_manager.bgd
-    # _, bgd_cyclo = gfi.load_processed_gb_file(config, snr_thresh, wc, nt_lim, stat_only=False)
-    # _, bgd_stat = gfi.load_processed_gb_file(config, snr_thresh, wc, nt_lim, stat_only=True)
+    # _, bgd_cyclo = gfi.load_processed_gb_file(config, snr_thresh, wc, nt_lim, cyclo_mode=0)
+    # _, bgd_stat = gfi.load_processed_gb_file(config, snr_thresh, wc, nt_lim, cyclo_mode=1)
 
     galactic_cyclo = bgd_cyclo.get_galactic_below_high().reshape((wc.Nt, wc.Nf, bgd_cyclo.nc_galaxy))
     galactic_stat = bgd_stat.get_galactic_below_high().reshape((wc.Nt, wc.Nf, bgd_stat.nc_galaxy))
