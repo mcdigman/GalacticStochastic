@@ -437,7 +437,7 @@ class BinaryInclusionState(StateManager):
                 assert len(self._params_gb.shape) == 2
                 assert self._params_gb.shape[0] == self._n_bin_use
                 assert self._params_gb.shape[1] == N_PAR_GB
-            elif self._fit_state.get_preprocess_mode() == 0:
+            elif self._fit_state.preprocess_mode == 0:
                 msg = 'params_gb not stored in hdf5 file, cannot reconstruct without original file'
                 warn(msg, stacklevel=2)
             # TODO: otherwise we should reconstruct the params from the argbinmap and a file
@@ -578,9 +578,9 @@ class BinaryInclusionState(StateManager):
     def _decision_helper(self, itrb: int) -> tuple[bool, bool]:
         """Decide whether a binary is bright or faint by the current noise spectrum."""
         itrn = self._itrn
-        if self._fit_state.get_preprocess_mode() == 1:
+        if self._fit_state.preprocess_mode == 1:
             snr_cut_faint_loc = self._ic.snr_min_preprocess
-        elif self._fit_state.get_preprocess_mode() == 2:
+        elif self._fit_state.preprocess_mode == 2:
             snr_cut_faint_loc = self._ic.snr_min_reprocess
         else:
             snr_cut_faint_loc = self._ic.snr_min[itrn]
