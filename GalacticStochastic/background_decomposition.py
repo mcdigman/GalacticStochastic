@@ -76,38 +76,38 @@ class BGDecomposition:
         self._shape2: tuple[int, int, int] = (wc.Nt, wc.Nf, self.nc_galaxy)
 
         if galactic_floor is None:
-            self.galactic_floor: NDArray[np.floating] = np.zeros(self._shape1, dtype=np.float64)
+            self._galactic_floor: NDArray[np.floating] = np.zeros(self._shape1, dtype=np.float64)
         else:
             assert galactic_floor.shape == self._shape1
-            self.galactic_floor = galactic_floor
+            self._galactic_floor = galactic_floor
 
         if galactic_below is None:
-            self.galactic_below: NDArray[np.floating] = np.zeros(self._shape1)
+            self._galactic_below: NDArray[np.floating] = np.zeros(self._shape1)
         else:
             assert galactic_below.shape == self._shape1
-            self.galactic_below = galactic_below
+            self._galactic_below = galactic_below
 
         if galactic_undecided is None:
-            self.galactic_undecided: NDArray[np.floating] = np.zeros(self._shape1, dtype=np.float64)
+            self._galactic_undecided: NDArray[np.floating] = np.zeros(self._shape1, dtype=np.float64)
         else:
             assert galactic_undecided.shape == self._shape1
-            self.galactic_undecided = galactic_undecided
+            self._galactic_undecided = galactic_undecided
 
         if galactic_above is None:
-            self.galactic_above: NDArray[np.floating] = np.zeros(self._shape1, dtype=np.float64)
+            self._galactic_above: NDArray[np.floating] = np.zeros(self._shape1, dtype=np.float64)
         else:
             assert galactic_above.shape == self._shape1
-            self.galactic_above = galactic_above
+            self._galactic_above = galactic_above
 
-        self.galactic_total_cache: NDArray[np.floating] | None = None
+        self._galactic_total_cache: NDArray[np.floating] | None = None
 
-        self.track_mode: int = track_mode
+        self._track_mode: int = track_mode
 
-        self.power_galactic_undecided: list[NDArray[np.floating]] = []
-        self.power_galactic_above: list[NDArray[np.floating]] = []
-        self.power_galactic_below_low: list[NDArray[np.floating]] = []
-        self.power_galactic_below_high: list[NDArray[np.floating]] = []
-        self.power_galactic_total: list[NDArray[np.floating]] = []
+        self._power_galactic_undecided: list[NDArray[np.floating]] = []
+        self._power_galactic_above: list[NDArray[np.floating]] = []
+        self._power_galactic_below_low: list[NDArray[np.floating]] = []
+        self._power_galactic_below_high: list[NDArray[np.floating]] = []
+        self._power_galactic_total: list[NDArray[np.floating]] = []
 
     @property
     def nc_galaxy(self) -> int:
@@ -125,15 +125,21 @@ class BGDecomposition:
             raise NotImplementedError(msg)
         hf_background.attrs['creator_name'] = self.__class__.__name__
         hf_background.attrs['storage_mode'] = self._storage_mode
-        hf_background.attrs['track_mode'] = self.track_mode
+        hf_background.attrs['track_mode'] = self._track_mode
         hf_background.attrs['nc_galaxy'] = self.nc_galaxy
         hf_background.attrs['shape1'] = self._shape1
         hf_background.attrs['shape2'] = self._shape2
 
         if self._storage_mode == 0:
-            _ = hf_background.create_dataset('galactic_below_low', data=self.get_galactic_below_low(), compression='gzip')
-            _ = hf_background.create_dataset('galactic_above', data=self.get_galactic_coadd_resolvable(), compression='gzip')
-            _ = hf_background.create_dataset('galactic_undecided', data=self.get_galactic_coadd_undecided(), compression='gzip')
+            _ = hf_background.create_dataset(
+                'galactic_below_low', data=self.get_galactic_below_low(), compression='gzip',
+            )
+            _ = hf_background.create_dataset(
+                'galactic_above', data=self.get_galactic_coadd_resolvable(), compression='gzip',
+            )
+            _ = hf_background.create_dataset(
+                'galactic_undecided', data=self.get_galactic_coadd_undecided(), compression='gzip',
+            )
         return hf_background
 
     def load_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'background', group_mode: int = 0) -> None:
@@ -149,14 +155,16 @@ class BGDecomposition:
             msg = 'Could not find group ' + group_name + ' in hdf5 file'
             raise TypeError(msg)
 
-        assert hf_background.attrs['creator_name'] == self.__class__.__name__, 'incorrect creator name found in hdf5 file'
+        assert hf_background.attrs['creator_name'] == self.__class__.__name__, (
+            'incorrect creator name found in hdf5 file'
+        )
 
         storage_mode_temp = hf_background.attrs['storage_mode']
         assert isinstance(storage_mode_temp, (int, np.integer))
         self._storage_mode = int(storage_mode_temp)
         track_mode_temp = hf_background.attrs['track_mode']
         assert isinstance(track_mode_temp, (int, np.integer))
-        self.track_mode = int(track_mode_temp)
+        self._track_mode = int(track_mode_temp)
         nc_galaxy_temp = hf_background.attrs['nc_galaxy']
         assert isinstance(nc_galaxy_temp, (int, np.integer))
 
@@ -182,101 +190,233 @@ class BGDecomposition:
             raise ValueError(msg)
 
         if self._storage_mode == 0:
-            self.galactic_below[:] = 0.0  # reset to zero, since we cannot separate the two components
+            self._galactic_below[:] = 0.0  # reset to zero, since we cannot separate the two components
 
             galactic_below_low_temp = hf_background['galactic_below_low']
             assert isinstance(galactic_below_low_temp, h5py.Dataset)
             galactic_below_low = np.asarray(galactic_below_low_temp)
             assert galactic_below_low.shape == self._shape1, 'Incorrect shape for galactic_below_low in hdf5 file'
-            self.galactic_floor[:] = galactic_below_low
+            self._galactic_floor[:] = galactic_below_low
 
             galactic_above_temp = hf_background['galactic_above']
             assert isinstance(galactic_above_temp, h5py.Dataset)
             galactic_above = np.asarray(galactic_above_temp)
             assert galactic_above.shape == self._shape1, 'Incorrect shape for galactic_above in hdf5 file'
-            self.galactic_above[:] = galactic_above
+            self._galactic_above[:] = galactic_above
 
             galactic_undecided_temp = hf_background['galactic_undecided']
             assert isinstance(galactic_undecided_temp, h5py.Dataset)
             galactic_undecided = np.asarray(galactic_undecided_temp)
             assert galactic_undecided.shape == self._shape1, 'Incorrect shape for galactic_undecided in hdf5 file'
-            self.galactic_undecided[:] = galactic_undecided
+            self._galactic_undecided[:] = galactic_undecided
 
-            self.galactic_total_cache = None  # reset cache since we have new data
+            self._galactic_total_cache = None  # reset cache since we have new data
             # reset diagnostics
-            self.power_galactic_above = []
-            self.power_galactic_undecided = []
-            self.power_galactic_below_low = []
-            self.power_galactic_below_high = []
-            self.power_galactic_total = []
+            self._power_galactic_above = []
+            self._power_galactic_undecided = []
+            self._power_galactic_below_low = []
+            self._power_galactic_below_high = []
+            self._power_galactic_total = []
 
-    def _output_shape_select(self, representation: NDArray[np.floating], *, shape_mode: int = 0) -> NDArray[np.floating]:
-        """Select the output shape from the available output options"""
+    def _output_shape_select(
+        self, representation: NDArray[np.floating], *, shape_mode: int = 0,
+    ) -> NDArray[np.floating]:
+        r"""
+        Select and reshape the output array to the desired shape for galactic background components.
+
+        This function reshapes the input array representing a galactic background component
+        to one of the supported output shapes, depending on the specified `shape_mode`.
+
+        Parameters
+        ----------
+        representation : NDArray[np.floating]
+            Input array containing the galactic background component data.
+            Must have a size compatible with the expected shapes.
+        shape_mode : int, optional
+            Output shape mode:
+            - 0: Reshape to (Nt \* Nf, nc_galaxy)
+            - 1: Reshape to (Nt, Nf, nc_galaxy)
+            Any other value raises NotImplementedError.
+            Default is 0.
+
+        Returns
+        -------
+        NDArray[np.floating]
+            The reshaped array in the selected output format.
+
+        Raises
+        ------
+        NotImplementedError
+            If an unsupported `shape_mode` is provided.
+        """
         if shape_mode == 0:
             return representation.reshape(self._shape1)
         if shape_mode == 1:
             return representation.reshape(self._shape2)
         msg = 'No implementation for given shape mode'
-        return NotImplementedError(msg)
+        raise NotImplementedError(msg)
 
     def get_galactic_total(self, *, bypass_check: bool = False, shape_mode: int = 0) -> NDArray[np.floating]:
-        """Get the sum of the entire galactic signal, including detectable binaries."""
+        r"""
+        Get the sum of the entire galactic signal, including detectable binaries.
+
+        Parameters
+        ----------
+        bypass_check : bool, optional
+            If True, skip the internal state consistency check. Default is False.
+        shape_mode : int, optional
+            Output shape mode:
+            - 0: Reshape to (Nt \* Nf, nc_galaxy)
+            - 1: Reshape to (Nt, Nf, nc_galaxy)
+            Default is 0.
+
+        Returns
+        -------
+        NDArray[np.floating]
+            Array containing the total galactic signal in the selected output shape.
+        """
         if not bypass_check:
             self.state_check()
-        res = self.get_galactic_below_high(bypass_check=True) + self.galactic_above
+        res = self.get_galactic_below_high(bypass_check=True) + self._galactic_above
         return self._output_shape_select(res, shape_mode=shape_mode)
 
     def get_galactic_below_high(self, *, bypass_check: bool = False, shape_mode: int = 0) -> NDArray[np.floating]:
-        """Get the upper estimate of the unresolvable signal from the galactic background.
+        r"""
+        Get the upper estimate of the unresolvable signal from the galactic background.
+
         Assume that the undecided part of the signal *is* part of the unresolvable background
+
+        Parameters
+        ----------
+        bypass_check : bool, optional
+            If True, skip the internal state consistency check. Default is False.
+        shape_mode : int, optional
+            Output shape mode:
+            - 0: Reshape to (Nt \* Nf, nc_galaxy)
+            - 1: Reshape to (Nt, Nf, nc_galaxy)
+            Default is 0.
+
+        Returns
+        -------
+        NDArray[np.floating]
+            Array containing the total galactic signal in the selected output shape.
         """
         if not bypass_check:
             self.state_check()
-        res = self.get_galactic_below_low(bypass_check=True) + self.galactic_undecided
+        res = self.get_galactic_below_low(bypass_check=True) + self._galactic_undecided
         return self._output_shape_select(res, shape_mode=shape_mode)
 
     def get_galactic_below_low(self, *, bypass_check: bool = False, shape_mode: int = 0) -> NDArray[np.floating]:
-        """Get the lower estimate of the unresolvable signal from the galactic background.
-        Assume that the undecided part of the signal *is not* part of the unresolvable background.
+        r"""
+        Get the lower estimate of the unresolvable signal from the galactic background.
+
+        Assume that the undecided part of the signal is *not* part of the unresolvable background
+
+        Parameters
+        ----------
+        bypass_check : bool, optional
+            If True, skip the internal state consistency check. Default is False.
+        shape_mode : int, optional
+            Output shape mode:
+            - 0: Reshape to (Nt \* Nf, nc_galaxy)
+            - 1: Reshape to (Nt, Nf, nc_galaxy)
+            Default is 0.
+
+        Returns
+        -------
+        NDArray[np.floating]
+            Array containing the total galactic signal in the selected output shape.
         """
         if not bypass_check:
             self.state_check()
-        res = self.galactic_floor + self.galactic_below
+        res = self._galactic_floor + self._galactic_below
         return self._output_shape_select(res, shape_mode=shape_mode)
 
     def get_galactic_coadd_resolvable(self, *, bypass_check: bool = False, shape_mode: int = 0) -> NDArray[np.floating]:
-        """Get the coadded signal from only bright/resolvable galactic binaries."""
+        r"""
+        Get coadded signal from the resolvable (bright) galactic binaries.
+
+        Parameters
+        ----------
+        bypass_check : bool, optional
+            If True, skip the internal state consistency check. Default is False.
+        shape_mode : int, optional
+            Output shape mode:
+            - 0: Reshape to (Nt \* Nf, nc_galaxy)
+            - 1: Reshape to (Nt, Nf, nc_galaxy)
+            Default is 0.
+
+        Returns
+        -------
+        NDArray[np.floating]
+            Array containing the total galactic signal in the selected output shape.
+        """
         if not bypass_check:
             self.state_check()
-        res = self.galactic_above
+        res = self._galactic_above
         return self._output_shape_select(res, shape_mode=shape_mode)
 
     def get_galactic_coadd_undecided(self, *, bypass_check: bool = False, shape_mode: int = 0) -> NDArray[np.floating]:
-        """Get the coadded signal from galactic binaries whose status as bright or faint has not yet been decided."""
+        r"""
+        Get coadded signal from binaries whose status as bright or faint has not yet been decided.
+
+        Parameters
+        ----------
+        bypass_check : bool, optional
+            If True, skip the internal state consistency check. Default is False.
+        shape_mode : int, optional
+            Output shape mode:
+            - 0: Reshape to (Nt \* Nf, nc_galaxy)
+            - 1: Reshape to (Nt, Nf, nc_galaxy)
+            Default is 0.
+
+        Returns
+        -------
+        NDArray[np.floating]
+            Array containing the total galactic signal in the selected output shape.
+        """
         if not bypass_check:
             self.state_check()
-        res = self.galactic_undecided
+        res = self._galactic_undecided
         return self._output_shape_select(res, shape_mode=shape_mode)
 
     def get_galactic_coadd_floor(self, *, bypass_check: bool = False, shape_mode: int = 0) -> NDArray[np.floating]:
-        """Get the coadded signal from the faintest set of galactic binaries."""
+        r"""
+        Get coadded signal from the faintest set of galactic binaries.
+
+        Parameters
+        ----------
+        bypass_check : bool, optional
+            If True, skip the internal state consistency check. Default is False.
+        shape_mode : int, optional
+            Output shape mode:
+            - 0: Reshape to (Nt \* Nf, nc_galaxy)
+            - 1: Reshape to (Nt, Nf, nc_galaxy)
+            Default is 0.
+
+        Returns
+        -------
+        NDArray[np.floating]
+            Array containing the total galactic signal in the selected output shape.
+        """
         if not bypass_check:
             self.state_check()
-        res = self.galactic_floor
+        res = self._galactic_floor
         return self._output_shape_select(res, shape_mode=shape_mode)
 
     def state_check(self) -> None:
         """If the total recorded galactic signal is cached, check that the total not changed much.
+
         Otherwise, cache the current total so future runs can check if it has changed.
         """
-        if self.track_mode:
-            if self.galactic_total_cache is None:
-                assert np.all(self.galactic_below == 0.0)
-                self.galactic_total_cache = self.get_galactic_total(bypass_check=True)
+        if self._track_mode:
+            if self._galactic_total_cache is None:
+                assert np.all(self._galactic_below == 0.0)
+                self._galactic_total_cache = self.get_galactic_total(bypass_check=True)
             else:
                 # check all contributions to the total signal are tracked accurately
                 assert_allclose(
-                    self.galactic_total_cache,
+                    self._galactic_total_cache,
                     self.get_galactic_total(bypass_check=True),
                     atol=1.0e-300,
                     rtol=1.0e-6,
@@ -284,94 +424,109 @@ class BGDecomposition:
 
     def log_state(self, S_mean: NDArray[np.floating]) -> None:
         """Record any diagnostics we want to track about this iteration."""
-        power_undecided = np.asarray(
-            np.sum(
-                np.sum((self.galactic_undecided**2).reshape(self._shape2)[:, 1:, :], axis=0) / S_mean[1:, :],
-                axis=0,
-            ),
-            dtype=np.float64,
+        power_undecided = np.sum(
+            np.sum((self.get_galactic_coadd_undecided(bypass_check=True, shape_mode=1) ** 2)[:, 1:, :], axis=0)
+            / S_mean[1:, :],
+            axis=0,
         )
-        power_above = np.asarray(
-            np.sum(
-                np.sum((self.galactic_above**2).reshape(self._shape2)[:, 1:, :], axis=0) / S_mean[1:, :],
-                axis=0,
-            ),
-            dtype=np.float64,
+        power_above = np.sum(
+            np.sum((self.get_galactic_coadd_resolvable(bypass_check=True, shape_mode=1) ** 2)[:, 1:, :], axis=0)
+            / S_mean[1:, :],
+            axis=0,
         )
 
-        power_total = np.asarray(
-            np.sum(
-                np.sum((self.get_galactic_total(bypass_check=True) ** 2).reshape(self._shape2)[:, 1:, :], axis=0) / S_mean[1:, :],
-                axis=0,
-            ),
-            dtype=np.float64,
+        power_total = np.sum(
+            np.sum((self.get_galactic_total(bypass_check=True, shape_mode=1) ** 2)[:, 1:, :], axis=0) / S_mean[1:, :],
+            axis=0,
         )
-        power_below_high = np.asarray(
-            np.sum(
-                np.sum((self.get_galactic_below_high(bypass_check=True) ** 2).reshape(self._shape2)[:, 1:, :], axis=0) / S_mean[1:, :],
-                axis=0,
-            ),
-            dtype=np.float64,
+        power_below_high = np.sum(
+            np.sum((self.get_galactic_below_high(bypass_check=True, shape_mode=1) ** 2)[:, 1:, :], axis=0)
+            / S_mean[1:, :],
+            axis=0,
         )
-        power_below_low = np.asarray(
-            np.sum(
-                np.sum((self.get_galactic_below_low(bypass_check=True) ** 2).reshape(self._shape2)[:, 1:, :], axis=0) / S_mean[1:, :],
-                axis=0,
-            ),
-            dtype=np.float64,
+        power_below_low = np.sum(
+            np.sum((self.get_galactic_below_low(bypass_check=True, shape_mode=1) ** 2)[:, 1:, :], axis=0)
+            / S_mean[1:, :],
+            axis=0,
         )
 
-        self.power_galactic_undecided.append(power_undecided)
-        self.power_galactic_above.append(power_above)
+        self._power_galactic_undecided.append(power_undecided.asarray(np.float64))
+        self._power_galactic_above.append(power_above.asarray(np.float64))
 
-        self.power_galactic_total.append(power_total)
-        self.power_galactic_below_high.append(power_below_high)
-        self.power_galactic_below_low.append(power_below_low)
+        self._power_galactic_total.append(power_total.asarray(np.float64))
+        self._power_galactic_below_high.append(power_below_high.asarray(np.float64))
+        self._power_galactic_below_low.append(power_below_low.asarray(np.float64))
 
     def clear_undecided(self) -> None:
         """Clear the undecided part of the galactic spectrum."""
-        self.galactic_undecided[:] = 0.0
+        self._galactic_undecided[:] = 0.0
 
     def clear_above(self) -> None:
         """Clear the bright part of the galactic spectrum."""
-        self.galactic_above[:] = 0.0
+        self._galactic_above[:] = 0.0
 
     def clear_below(self) -> None:
         """Clear the faint part of the galactic spectrum."""
-        self.galactic_below[:] = 0.0
+        self._galactic_below[:] = 0.0
 
-    def get_S_below_high(self, S_mean: NDArray[np.floating], smooth_lengthf: float, filter_periods: int, period_list: tuple[int, ...] | tuple[np.floating, ...]) -> NDArray[np.floating]:
+    def get_S_below_high(
+        self,
+        S_mean: NDArray[np.floating],
+        smooth_lengthf: float,
+        filter_periods: int,
+        period_list: tuple[int, ...] | tuple[np.floating, ...],
+    ) -> NDArray[np.floating]:
         """Get the upper estimate of the galactic power spectrum."""
         galactic_loc = self.get_galactic_below_high(bypass_check=True)
-        S, _, _, _, _ = get_S_cyclo(galactic_loc.reshape(self._shape2), S_mean, self._wc.DT, smooth_lengthf, filter_periods,
-                                    period_list=period_list)
+        S, _, _, _, _ = get_S_cyclo(
+            galactic_loc.reshape(self._shape2),
+            S_mean,
+            self._wc.DT,
+            smooth_lengthf,
+            filter_periods,
+            period_list=period_list,
+        )
         return S
 
-    def get_S_below_low(self, S_mean: NDArray[np.floating], smooth_lengthf: float, filter_periods: int, period_list: tuple[int, ...] | tuple[np.floating, ...]) -> NDArray[np.floating]:
+    def get_S_below_low(
+        self,
+        S_mean: NDArray[np.floating],
+        smooth_lengthf: float,
+        filter_periods: int,
+        period_list: tuple[int, ...] | tuple[np.floating, ...],
+    ) -> NDArray[np.floating]:
         """Get the lower estimate of the galactic power spectrum."""
         galactic_loc = self.get_galactic_below_low(bypass_check=True)
-        S, _, _, _, _ = get_S_cyclo(galactic_loc.reshape(self._shape2), S_mean, self._wc.DT, smooth_lengthf, filter_periods,
-                                    period_list=period_list)
+        S, _, _, _, _ = get_S_cyclo(
+            galactic_loc.reshape(self._shape2),
+            S_mean,
+            self._wc.DT,
+            smooth_lengthf,
+            filter_periods,
+            period_list=period_list,
+        )
         return S
 
     def add_undecided(self, wavelet_waveform: SparseWaveletWaveform) -> None:
         """Add a binary to the undecided component of the galactic background."""
-        sparse_addition_helper(wavelet_waveform, self.galactic_undecided)
+        sparse_addition_helper(wavelet_waveform, self._galactic_undecided)
 
     def add_floor(self, wavelet_waveform: SparseWaveletWaveform) -> None:
         """Add a binary to the floor component of the galactic background."""
-        sparse_addition_helper(wavelet_waveform, self.galactic_floor)
+        sparse_addition_helper(wavelet_waveform, self._galactic_floor)
 
     def add_faint(self, wavelet_waveform: SparseWaveletWaveform) -> None:
         """Add a binary to the faint component of the galactic background."""
-        sparse_addition_helper(wavelet_waveform, self.galactic_below)
+        sparse_addition_helper(wavelet_waveform, self._galactic_below)
 
     def add_bright(self, wavelet_waveform: SparseWaveletWaveform) -> None:
         """Add a binary to the bright component of the galactic background."""
-        sparse_addition_helper(wavelet_waveform, self.galactic_above)
+        sparse_addition_helper(wavelet_waveform, self._galactic_above)
 
 
-def _check_correct_component_shape(nc: int, wc: WDMWaveletConstants, galactic_component: NDArray[np.floating], *, shape_mode: int = 0) -> NDArray[np.floating]:
+def _check_correct_component_shape(
+    nc: int, wc: WDMWaveletConstants, galactic_component: NDArray[np.floating], *, shape_mode: int = 0,
+) -> NDArray[np.floating]:
     """Check that the galactic component has the correct shape, and reshape if needed."""
     assert galactic_component.size == wc.Nt * wc.Nf * nc, 'Incorrectly sized galaxy component'
 
