@@ -24,7 +24,6 @@ mpl.rcParams['ytick.minor.width'] = 1.5
 
 
 if __name__ == '__main__':
-    snr_thresh = 7.0
     smooth_targ_length = 0.25
     _: Any
 

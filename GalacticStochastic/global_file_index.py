@@ -112,11 +112,11 @@ def _source_mask_read_helper(hf_sky: h5py.Group, key: str, fmin: float, fmax: fl
 
     hf_cat = hf_loc['cat']
 
-    if not isinstance(hf_cat, h5py.Group):
+    if not isinstance(hf_cat, (h5py.Group, h5py.Dataset)):
         msg = 'Unrecognized hdf5 file format'
         raise TypeError(msg)
 
-    freqs = np.asarray(hf_cat['Frequency'])
+    freqs = np.asarray(hf_cat['Frequency'])  # pyright: ignore[reportArgumentType]
 
     if not np.issubdtype(freqs.dtype, np.floating):
         msg = 'Unrecognized hdf5 file format'
@@ -127,8 +127,8 @@ def _source_mask_read_helper(hf_sky: h5py.Group, key: str, fmin: float, fmax: fl
     n_loc = int(np.sum(1 * mask))
     params = np.zeros((n_loc, n_par_gb), dtype=np.float64)
     for itrl in range(n_par_gb):
-        hf_param = hf_cat[labels_gb[itrl]]
-        if not isinstance(hf_param, h5py.Dataset):
+        hf_param = hf_cat[labels_gb[itrl]]  # pyright: ignore[reportArgumentType]
+        if not isinstance(hf_param, (h5py.Dataset, np.ndarray)):
             msg = 'Unrecognized hdf5 file format'
             raise TypeError(msg)
         params[:, itrl] = hf_param[mask]
@@ -277,7 +277,12 @@ def load_processed_galactic_file(
     The function expects the HDF5 file to be organized by SNR threshold, time-frequency range, and cyclostationary mode.
     The loaded data is passed to the `load_hdf5` method of the provided IterativeFitManager.
     """
-    snr_thresh = ic.snr_thresh
+    if preprocess_mode == 1:
+        snr_thresh = ic.snr_min_preprocess
+    elif preprocess_mode == 2:
+        snr_thresh = ic.snr_min_reprocess
+    else:
+        snr_thresh = ic.snr_thresh
     filename_in = get_processed_galactic_filename(config, wc, preprocess_mode=preprocess_mode)
     if nt_lim_snr == (0, -1):
         nt_range: tuple[int, int] = (0, wc.Nt)
@@ -366,13 +371,16 @@ def store_processed_gb_file(
 
     if preprocess_mode == 1:
         assert filename_gb_init == filename_out
+        snr_thresh: float = ic.snr_min_preprocess
         if write_mode != 2:
             msg = 'Modifying pre-processed file without overwriting will break checksums'
             warn(msg, stacklevel=2)
         skip_init = True
     elif preprocess_mode == 2:
+        snr_thresh = ic.snr_min_reprocess
         skip_init = True
     else:
+        snr_thresh = ic.snr_thresh
         skip_init = False
 
     if preprocess_mode == 2:
@@ -416,7 +424,7 @@ def store_processed_gb_file(
 
     hf_itr = hf_out.require_group('iteration_results')
 
-    hf_snr = hf_itr.require_group(str(ic.snr_thresh))
+    hf_snr = hf_itr.require_group(str(snr_thresh))
     del hf_itr
 
     nt_range: tuple[int, int] = (nt_lim_snr.nx_min, nt_lim_snr.nx_max)

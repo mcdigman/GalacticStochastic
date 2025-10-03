@@ -75,9 +75,6 @@ def get_iteration_config(config: dict[str, Any]) -> IterationConfig:
     faint_converge_change_thresh = int(config_ic['faint_converge_change_thresh'])
     assert faint_converge_change_thresh >= 0
 
-    snr_thresh = float(config_ic['snr_thresh'])
-    assert snr_thresh >= 0.0
-
     # starting faint cutoff snr
     snr_low_initial = float(config_ic['snr_low_initial'])
     assert snr_low_initial >= 0.0
@@ -122,6 +119,8 @@ def get_iteration_config(config: dict[str, Any]) -> IterationConfig:
     # final bright snr cutoff
     snr_high_fix = float(config_ic['snr_high_fix'])
     assert snr_high_fix >= 0.0
+
+    snr_thresh = snr_high_fix
 
     # phase in bright snr cutoff gradually
     snr_high_settle_mult = float(config_ic['snr_high_settle_mult'])

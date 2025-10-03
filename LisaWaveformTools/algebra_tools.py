@@ -23,11 +23,6 @@ def gradient_uniform_inplace(ys: NDArray[np.floating], result: NDArray[np.floati
     dx : float
         Step size between x-values (uniform grid spacing)
 
-    Returns
-    -------
-    None
-        Results are stored in-place in the result array
-
     Notes
     -----
     - Uses second-order central differences: (y[i+1] - y[i-1])/(2*dx) for interior points
@@ -86,11 +81,10 @@ def stabilized_gradient_uniform_inplace(
         2D array of same shape as y where the computed gradients will be stored
     dt : float
         Time step size for gradient calculation
-
-    Returns
-    -------
-    None
-        Results are stored in-place in dydt array
+    nx_min : int
+        Minimum index along second axis to compute gradient (inclusive, default=0)
+    nx_max : int
+        Maximum index along second axis to compute gradient (exclusive, default=-1 means n_t)
 
     Notes
     -----

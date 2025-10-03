@@ -2,7 +2,7 @@
 # values related to file io
 
 
-galaxy_dir = 'Galaxies/Galaxy1/'
+galaxy_dir = 'Galaxies/Galaxy5/'
 galaxy_file = 'galaxy_binaries.hdf5'
 
 # prefix for final processed filename
@@ -46,9 +46,7 @@ n_min_faint_adapt = 5
 # of the faint background to avoid oscillation
 faint_converge_change_thresh = 3
 
-snr_thresh = 7.0
-
-# for first iteration set the faint snr cutoff to snr_thresh because spectrum is just instrument noise
+# for first iteration set the faint snr cutoff to threshold because spectrum is just instrument noise
 snr_low_initial = 7.0
 # for subsequent, choose faint snr cutoff to ensure almost nothing gets decided as constant because of its own power alone
 # using snr_min = snr_low_mult * snr_low_initial

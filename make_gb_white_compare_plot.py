@@ -94,8 +94,6 @@ if __name__ == '__main__':
 
     bgd_cyclo = ifm_cyclo.noise_manager.bgd
     bgd_stat = ifm_stat.noise_manager.bgd
-    # _, bgd_cyclo = gfi.load_processed_gb_file(config, snr_thresh, wc, nt_lim, cyclo_mode=0)
-    # _, bgd_stat = gfi.load_processed_gb_file(config, snr_thresh, wc, nt_lim, cyclo_mode=1)
 
     galactic_cyclo = bgd_cyclo.get_galactic_below_high().reshape((wc.Nt, wc.Nf, bgd_cyclo.nc_galaxy))
     galactic_stat = bgd_stat.get_galactic_below_high().reshape((wc.Nt, wc.Nf, bgd_stat.nc_galaxy))
