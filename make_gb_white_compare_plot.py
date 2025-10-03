@@ -106,9 +106,8 @@ if __name__ == '__main__':
     S_inst_m = instrument_noise_AET_wdm_m(lc, wc)
 
     filter_periods = 1
-    S_cyclo_model, _, _, _, _ = get_S_cyclo(
-        galactic_cyclo, S_inst_m, wc, 0, filter_periods, period_list=(1, 2, 3, 4, 5),
-    )
+    S_cyclo_model, _, _, _, _ = get_S_cyclo(galactic_cyclo, S_inst_m, wc.DT, 0, filter_periods,
+                                            period_list=(1, 2, 3, 4, 5))
 
     fs = np.arange(1, wc.Nf) * wc.DF
 

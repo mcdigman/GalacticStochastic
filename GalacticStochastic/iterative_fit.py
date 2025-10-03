@@ -1,3 +1,4 @@
+"""Run or fetch the iterative fit loop for the binaries in the galactic background."""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any

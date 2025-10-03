@@ -1,4 +1,4 @@
-"""read wavelet transform constants in from config file and compute derived parameters"""
+"""Read iteration configuration constants from config file and compute derived parameters."""
 
 from typing import Any, NamedTuple
 
@@ -6,6 +6,8 @@ import numpy as np
 
 
 class IterationConfig(NamedTuple):
+    """Immutable configuration for the iterative fitting process."""
+
     max_iterations: int
     snr_thresh: float
     snr_min: tuple[float, ...]
@@ -31,7 +33,31 @@ class IterationConfig(NamedTuple):
 
 
 def get_iteration_config(config: dict[str, Any]) -> IterationConfig:
-    """Get lisa constant object from config file"""
+    """
+    Get an IterationConfig object from a configuration dictionary.
+
+    This function reads the iterative fit constants from the provided configuration
+    dictionary, performs validation, computes derived parameters, and returns an
+    immutable IterationConfig named tuple containing all necessary parameters for
+    controlling the iterative fitting process.
+
+    Parameters
+    ----------
+    config : dict of str to Any
+        Configuration dictionary containing the 'iterative_fit_constants' section
+        with all required keys and values for the iterative fit.
+
+    Returns
+    -------
+    IterationConfig
+        Immutable named tuple containing all parameters and derived arrays for
+        the iterative fitting process.
+
+    Raises
+    ------
+    AssertionError
+        If any required parameter is missing or has an invalid value.
+    """
     config_ic: dict[str, int | float | str] = config['iterative_fit_constants']
     # maximum number of iterations to allow
     max_iterations = int(config_ic['max_iterations'])

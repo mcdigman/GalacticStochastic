@@ -67,9 +67,9 @@ if __name__ == '__main__':
 
         S_stat_smooth_m[itrk, 0, :] = S_stat_m[itrk, 0, :]
 
-        (_, r_tots[itrk], S_stat_smooth_m[itrk], _, _) = get_S_cyclo(
-            galactic_below_high, S_inst_m, wc, smooth_targ_length, filter_periods, period_list=period_list, Nt_loc=wc.Nt,
-        )
+        (_, r_tots[itrk], S_stat_smooth_m[itrk], _, _) = get_S_cyclo(galactic_below_high, S_inst_m, wc.DT,
+                                                                     smooth_targ_length, filter_periods,
+                                                                     period_list=period_list)
 
         for itrc in range(2):
             S_stat_smooth_m[itrk, :, itrc] += S_stat_offset
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     fit_mask = (fs > 1.0e-5) & (fs < fs[arg_cut])
 
     S_fit_evolve_m, _ = fit_gb_spectrum_evolve(
-        S_stat_smooth_m[itrl_fit:, fit_mask, :], fs[fit_mask], fs[1:], nt_ranges[itrl_fit:], S_stat_offset[fit_mask], wc,
+        S_stat_smooth_m[itrl_fit:, fit_mask, :], fs[fit_mask], fs[1:], nt_ranges[itrl_fit:], S_stat_offset[fit_mask], wc.DT,
     )
 
     fig = plt.figure(figsize=(5.4, 3.5))

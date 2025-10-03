@@ -328,27 +328,15 @@ class BGDecomposition:
     def get_S_below_high(self, S_mean: NDArray[np.floating], smooth_lengthf: float, filter_periods: int, period_list: tuple[int, ...] | tuple[np.floating, ...]) -> NDArray[np.floating]:
         """Get the upper estimate of the galactic power spectrum."""
         galactic_loc = self.get_galactic_below_high(bypass_check=True)
-        S, _, _, _, _ = get_S_cyclo(
-            galactic_loc,
-            S_mean,
-            self._wc,
-            smooth_lengthf,
-            filter_periods,
-            period_list=period_list,
-        )
+        S, _, _, _, _ = get_S_cyclo(galactic_loc, S_mean, self._wc.DT, smooth_lengthf, filter_periods,
+                                    period_list=period_list)
         return S
 
     def get_S_below_low(self, S_mean: NDArray[np.floating], smooth_lengthf: float, filter_periods: int, period_list: tuple[int, ...] | tuple[np.floating, ...]) -> NDArray[np.floating]:
         """Get the lower estimate of the galactic power spectrum."""
         galactic_loc = self.get_galactic_below_low(bypass_check=True)
-        S, _, _, _, _ = get_S_cyclo(
-            galactic_loc,
-            S_mean,
-            self._wc,
-            smooth_lengthf,
-            filter_periods,
-            period_list=period_list,
-        )
+        S, _, _, _, _ = get_S_cyclo(galactic_loc, S_mean, self._wc.DT, smooth_lengthf, filter_periods,
+                                    period_list=period_list)
         return S
 
     def add_undecided(self, wavelet_waveform: SparseWaveletWaveform) -> None:

@@ -1,4 +1,4 @@
-"""Class to store information about the binaries in the galactic background"""
+"""Class to track which galactic binaries are included in the galactic background."""
 
 from __future__ import annotations
 
@@ -29,6 +29,24 @@ N_PAR_GB = 8
 
 
 def unpack_params_gb(params_in: NDArray[np.floating]) -> SourceParams:
+    """Unpack a single galactic binary parameter array into a SourceParams object.
+
+    Parameters
+    ----------
+    params_in : NDArray[np.floating]
+        Array of shape (N_PAR_GB,) containing the parameters of a single galactic binary.
+        The parameters are assumed to be in the order:
+        [amp0_t, l, phi, F0, FTd0, i, phi0, psi]
+        where l is the ecliptic latitude, phi is the ecliptic longitude,
+        F0 is the initial frequency in Hz, FTd0 is the initial frequency derivative in Hz/s,
+        i is the inclination angle, phi0 is the initial phase minus pi, and psi is the polarization angle.
+        All angles are in radians.
+
+    Returns
+    -------
+    SourceParams
+        A SourceParams object containing the unpacked intrinsic and extrinsic parameters.
+    """
     assert len(params_in.shape) == 1
     assert params_in.size == N_PAR_GB
     # Ecliptic latitude to cosine of ecliptic colatitude
@@ -49,7 +67,7 @@ def unpack_params_gb(params_in: NDArray[np.floating]) -> SourceParams:
 
 
 class BinaryInclusionState(StateManager):
-    """Stores all the binaries under consideration in the galaxy"""
+    """Stores the states of binaries under consideration in the galaxy and track their snrs."""
 
     def __init__(
         self,
@@ -63,7 +81,33 @@ class BinaryInclusionState(StateManager):
         *,
         snrs_tot_in: NDArray[np.floating] | None = None,
     ) -> None:
-        """Class that stores information about which component of the galactic signal binaries belong to."""
+        """
+        Initialize a BinaryInclusionState to manage whether galactic binaries are included in the galactic background.
+
+        Parameters
+        ----------
+        wc : WDMWaveletConstants
+            Wavelet constants describing the time-frequency grid.
+        ic : IterationConfig
+            Configuration object for the iterative fit.
+        lc : LISAConstants
+            LISA instrument configuration constants.
+        params_gb_in : NDArray[np.floating]
+            Array of shape (n_binaries, N_PAR_GB) containing the parameters of all galactic binaries.
+        noise_manager : NoiseModelManager
+            Manager for instrument and background noise models.
+        fit_state : IterativeFitState
+            Object tracking the current state of the iterative fit.
+        nt_lim_waveform : PixelGenericRange
+            Range of time-frequency pixels for waveform generation.
+        snrs_tot_in : NDArray[np.floating], optional
+            Array of precomputed total SNRs for each binary. If provided, used to filter faint binaries.
+
+        Raises
+        ------
+        AssertionError
+            If input arrays have inconsistent shapes or required conditions are not met.
+        """
         self._wc: WDMWaveletConstants = wc
         self._ic: IterationConfig = ic
         self._lc: LISAConstants = lc
@@ -227,7 +271,7 @@ class BinaryInclusionState(StateManager):
 
     @override
     def load_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'inclusion_state', group_mode: int = 0) -> None:
-        """Load the object from an hdf5 group"""
+        """Load the object from an hdf5 group."""
         if group_mode == 0:
             hf_include = hf_in['inclusion_state']
         elif group_mode == 1:
@@ -382,6 +426,10 @@ class BinaryInclusionState(StateManager):
             assert getattr(self._nt_lim_waveform, key) == hf_include['nt_lim_waveform'].attrs[key], f'nt_lim_waveform attribute {key} does not match saved value'
 
     def set_select_params(self, params_gb_in: NDArray[np.floating]) -> None:
+        """Set the parameters of the binaries we are considering.
+
+        If they have already been set, check that they are consistent with the input.
+        """
         assert params_gb_in.shape == (self._n_tot, N_PAR_GB)
         params_gb_sel = params_gb_in[self._argbinmap]
         assert self._params_gb.shape == params_gb_sel.shape
@@ -391,8 +439,8 @@ class BinaryInclusionState(StateManager):
         else:
             assert_allclose(self._params_gb, params_gb_sel)
 
-    def sustain_snr_helper(self) -> None:
-        """Helper to carry forward any other snr values we know from a previous iteration"""
+    def _sustain_snr_helper(self) -> None:
+        """Carry forward any other snr values we know from a previous iteration."""
         itrn = self._itrn
         if self._fit_state.get_faint_converged():
             assert itrn > 1
@@ -404,8 +452,8 @@ class BinaryInclusionState(StateManager):
             self._snrs_tot_upper[itrn, self._decided[itrn]] = self._snrs_tot_upper[itrn - 1, self._decided[itrn]]
             self._snrs_upper[itrn, self._decided[itrn]] = self._snrs_upper[itrn - 1, self._decided[itrn]]
 
-    def oscillation_check_helper(self) -> tuple[bool, bool, bool]:
-        """Helper used by fit_state to decide if the bright binaries are oscillating without converging"""
+    def _oscillation_check_helper(self) -> tuple[bool, bool, bool]:
+        """Help ecide if the bright binaries are oscillating without converging."""
         osc1 = False
         osc2 = False
         osc3 = False
@@ -422,16 +470,16 @@ class BinaryInclusionState(StateManager):
         cycling = old_match and not osc1
         return cycling, converged_or_cycling, old_match
 
-    def delta_faint_check_helper(self) -> int:
-        """Get the difference in the number of faint binaries between the last two iterations"""
+    def _delta_faint_check_helper(self) -> int:
+        """Get the difference in the number of faint binaries between the last two iterations."""
         if self._itrn - 1 == 0:
             delta_faints = int(self._n_faints_cur[self._itrn - 1])
         else:
             delta_faints = int(self._n_faints_cur[self._itrn - 1] - self._n_faints_cur[self._itrn - 2])
         return delta_faints
 
-    def delta_bright_check_helper(self) -> int:
-        """Get the difference in the number of bright binaries between the last two iterations"""
+    def _delta_bright_check_helper(self) -> int:
+        """Get the difference in the number of bright binaries between the last two iterations."""
         if self._itrn - 1 == 0:
             delta_brights = int(self._n_brights_cur[self._itrn - 1])
         else:
@@ -439,20 +487,11 @@ class BinaryInclusionState(StateManager):
         return delta_brights
 
     def convergence_decision_helper(self) -> tuple[tuple[bool, bool, bool], int, int]:
-        return (self.oscillation_check_helper(), self.delta_faint_check_helper(), self.delta_bright_check_helper())
+        """Decide if the bright binaries are oscillating without converging, and get the change in number of bright and faint binaries."""
+        return (self._oscillation_check_helper(), self._delta_faint_check_helper(), self._delta_bright_check_helper())
 
-    def run_binary_coadd(self, itrb: int) -> None:
-        """Get the intrinsic_waveform for a binary, store its snr, and decide which spectrum to add it to."""
-        itrn = self._itrn
-        params_loc = unpack_params_gb(self._params_gb[itrb])
-        self._waveform_manager.update_params(params_loc)
-
-        self.snr_storage_helper(itrb)
-        self._brights[itrn, itrb], self._faints_cur[itrn, itrb] = self.decision_helper(itrb)
-        self.decide_coadd_helper(itrb)
-
-    def snr_storage_helper(self, itrb: int) -> None:
-        """Helper to store the snrs of the current binary"""
+    def _snr_storage_helper(self, itrb: int) -> None:
+        """Store the snrs of the current binary."""
         itrn = self._itrn
         wavelet_waveform = self._waveform_manager.get_unsorted_coeffs()
 
@@ -484,8 +523,8 @@ class BinaryInclusionState(StateManager):
         if ~np.isfinite(self._snrs_tot_upper[itrn, itrb]) or ~np.isfinite(self._snrs_tot_lower[itrn, itrb]):
             raise ValueError('Non-finite value detected in snr at ' + str(itrn) + ', ' + str(itrb))
 
-    def decision_helper(self, itrb: int) -> tuple[bool, bool]:
-        """Helper to decide whether a binary is bright or faint by the current noise spectrum"""
+    def _decision_helper(self, itrb: int) -> tuple[bool, bool]:
+        """Decide whether a binary is bright or faint by the current noise spectrum."""
         itrn = self._itrn
         if self._fit_state.get_preprocess_mode() == 1:
             snr_cut_faint_loc = self._ic.snr_min_preprocess
@@ -524,11 +563,8 @@ class BinaryInclusionState(StateManager):
 
         return bright_loc, faint_loc
 
-    def get_final_snrs_tot_upper(self) -> NDArray[np.floating]:
-        return self._snrs_tot_upper[self._itrn - 1, :]
-
-    def decide_coadd_helper(self, itrb: int) -> None:
-        """Add each binary to the correct part of the galactic spectrum, depending on whether it is bright or faint"""
+    def _decide_coadd_helper(self, itrb: int) -> None:
+        """Add each binary to the correct part of the galactic spectrum, depending on whether it is bright or faint."""
         itrn = self._itrn
         # the same binary cannot be decided as both bright and faint
         assert not (self._brights[itrn, itrb] and self._faints_cur[itrn, itrb])
@@ -554,9 +590,23 @@ class BinaryInclusionState(StateManager):
         else:
             self._noise_manager.bgd.add_faint(wavelet_waveform)
 
+    def run_binary_coadd(self, itrb: int) -> None:
+        """Get the intrinsic_waveform for a binary, store its snr, and decide which spectrum to add it to."""
+        itrn = self._itrn
+        params_loc = unpack_params_gb(self._params_gb[itrb])
+        self._waveform_manager.update_params(params_loc)
+
+        self._snr_storage_helper(itrb)
+        self._brights[itrn, itrb], self._faints_cur[itrn, itrb] = self._decision_helper(itrb)
+        self._decide_coadd_helper(itrb)
+
+    def get_final_snrs_tot_upper(self) -> NDArray[np.floating]:
+        """Get the most recently stored snrs in the upper noise model for all binaries under consideration."""
+        return self._snrs_tot_upper[self._itrn - 1, :]
+
     @override
     def advance_state(self) -> None:
-        """Handle any logic necessary to advance the state of the object to the next iteration"""
+        """Handle any logic necessary to advance the state of the object to the next iteration."""
         if self._itrn == 0:
             self._faints_cur[self._itrn] = False
             self._brights[self._itrn] = False
@@ -591,7 +641,7 @@ class BinaryInclusionState(StateManager):
             self.run_binary_coadd(int(itrb))
 
         # copy forward prior calculations of snr calculations that were skipped in this loop iteration
-        self.sustain_snr_helper()
+        self._sustain_snr_helper()
 
         self._n_brights_cur[self._itrn] = int(self._brights[self._itrn].sum())
         self._n_faints_cur[self._itrn] = int(self._faints_cur[self._itrn].sum())
@@ -600,7 +650,7 @@ class BinaryInclusionState(StateManager):
 
     @override
     def state_check(self) -> None:
-        """Do any self consistency checks based on the current state"""
+        """Do any self consistency checks based on the current state."""
         if self._itrn > 0:
             if self._fit_state.get_bright_converged_old():
                 assert self._itrn > 1
@@ -612,7 +662,7 @@ class BinaryInclusionState(StateManager):
 
     @override
     def print_report(self) -> None:
-        """Do any printing desired after convergence has been achieved and the loop ends"""
+        """Do any printing desired after convergence has been achieved and the loop ends."""
         Tobs_consider_yr = (self._noise_manager.nt_lim_snr.nx_max - self._noise_manager.nt_lim_snr.nx_min) * self._wc.DT / gc.SECSYEAR
         n_consider = self._n_bin_use
         n_faint = int(self._faints_old.sum())
@@ -640,5 +690,5 @@ class BinaryInclusionState(StateManager):
 
     @override
     def loop_finalize(self) -> None:
-        """Perform any logic desired after convergence has been achieved and the loop ends"""
+        """Perform any logic desired after convergence has been achieved and the loop ends."""
         return

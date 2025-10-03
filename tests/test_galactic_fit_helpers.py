@@ -11,7 +11,8 @@ from numpy.typing import NDArray
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 import GalacticStochastic.global_const as gc
-from GalacticStochastic.galactic_fit_helpers import filter_periods_fft, get_S_cyclo
+from GalacticStochastic.galactic_fit_helpers import S_gal_model_5param, S_gal_model_7param, filter_periods_fft, get_S_cyclo
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
 toml_filename = 'tests/galactic_fit_test_config1.toml'
@@ -27,6 +28,61 @@ nc_galaxy = 3
 seed = 3141592
 rng_in = np.random.default_rng(seed)
 bg_base = rng_in.normal(0.0, 1.0, (wc.Nt, wc.Nf, nc_galaxy))
+
+
+def test_S_gal_fit_consistency() -> None:
+    """Test that the two fitting formulas for the galactic background can produce consistent results"""
+    # parameters present in both models
+    A = 4
+    alpha = 0.1
+    f2 = 0.02
+    fknee = 0.03
+
+    f1 = 0.1
+    beta = 0.  # parameter not present in first fit model, so must be set to 0 to match exactly
+    kappa = 0.  # parameter not present in first fit model, irrelevant if beta is 0
+
+    # derived parameters
+    log10A = np.log10(A)
+    log10f1 = np.log10(f1)
+    log10f2 = np.log10(f2)
+    log10fknee = np.log10(fknee)
+
+    n_f = 10000
+    f_min = 0.
+    f_max = 10.
+    f = np.linspace(f_min, f_max, n_f)
+
+    # check vector scalar
+    res10 = 2 * f ** (2.0 / 3.0) * S_gal_model_5param(f, log10A, log10f2, log10f1, log10fknee, alpha)
+    res20 = S_gal_model_7param(f, log10A, log10f2, log10f1, log10fknee, alpha, beta, kappa)
+
+    assert_allclose(res10, res20, atol=1.e-20, rtol=1.e-10)
+
+    # check vector vector
+    res11 = 2 * f ** (2.0 / 3.0) * S_gal_model_5param(f, np.full(n_f, log10A), np.full(n_f, log10f2), np.full(n_f, log10f1), np.full(n_f, log10fknee), np.full(n_f, alpha))
+    res21 = S_gal_model_7param(f, np.full(n_f, log10A), np.full(n_f, log10f2), np.full(n_f, log10f1),
+                               np.full(n_f, log10fknee), np.full(n_f, alpha), np.full(n_f, beta), np.full(n_f, kappa))
+
+    assert_allclose(res11, res21, atol=1.e-20, rtol=1.e-10)
+
+    # check scalar scalar
+    res12 = np.zeros(n_f)
+    res22 = np.zeros(n_f)
+    for itrf in range(n_f):
+        res12[itrf] = 2 * f[itrf] ** (2.0 / 3.0) * S_gal_model_5param(f[itrf], log10A, log10f2, log10f1, log10fknee, alpha)
+        res22[itrf] = S_gal_model_7param(f[itrf], log10A, log10f2, log10f1, log10fknee, alpha, beta, kappa)
+
+    assert_allclose(res12, res22, atol=1.e-20, rtol=1.e-10)
+
+    # check cross consistent
+    assert_allclose(res10, res11, atol=1.e-20, rtol=1.e-14)
+    assert_allclose(res10, res12, atol=1.e-20, rtol=1.e-14)
+    assert_allclose(res11, res12, atol=1.e-20, rtol=1.e-14)
+
+    assert_allclose(res20, res21, atol=1.e-20, rtol=1.e-14)
+    assert_allclose(res20, res22, atol=1.e-20, rtol=1.e-14)
+    assert_allclose(res21, res22, atol=1.e-20, rtol=1.e-14)
 
 
 @pytest.mark.parametrize('sign_high', [1, -1])
@@ -73,7 +129,8 @@ def test_filter_periods_fft_full(sign_low: int, sign_high: int) -> None:
 
     xs += 1.0
 
-    r_fft1, amp_got, angle_got = filter_periods_fft(xs, wc.Nt, period_list, wc)
+    nt_lim = PixelGenericRange(0, wc.Nt, wc.DT, 0)
+    r_fft1, amp_got, angle_got = filter_periods_fft(xs, period_list, nt_lim)
 
     assert_allclose(amp_got, amp_exp, atol=1.0e-12, rtol=1.0e-12)
     assert_allclose(
@@ -101,7 +158,8 @@ def test_filter_periods_fft_full2() -> None:
 
     xs += 1.0
 
-    r_fft1, _, _ = filter_periods_fft(xs, wc.Nt, period_list, wc)
+    nt_lim = PixelGenericRange(0, wc.Nt, wc.DT, 0)
+    r_fft1, _, _ = filter_periods_fft(xs, period_list, nt_lim)
 
     assert_allclose(r_fft1, xs, atol=1.0e-10, rtol=1.0e-10)
 
@@ -120,12 +178,14 @@ def test_filter_periods_fft1(itrk: float) -> None:
 
     xs += 1.0
 
+    nt_lim = PixelGenericRange(0, wc.Nt, wc.DT, 0)
+
     if np.abs(np.int64(wc.Tobs / gc.SECSYEAR * itrk) - wc.Tobs / gc.SECSYEAR * itrk) > 0.01:
         with pytest.warns(UserWarning, match='fft filtering expects periods to be integer fraction of total time:'):
-            _ = filter_periods_fft(xs, wc.Nt, period_list, wc)
+            _ = filter_periods_fft(xs, period_list, nt_lim)
         return
 
-    r_fft1, amp_got, _ = filter_periods_fft(xs, wc.Nt, period_list, wc)
+    r_fft1, amp_got, _ = filter_periods_fft(xs, period_list, nt_lim)
 
     assert_allclose(amp_got, amp_exp, atol=1.0e-12, rtol=1.0e-12)
     assert_allclose(angle_exp, angle_exp, atol=1.0e-12, rtol=1.0e-12)
@@ -150,8 +210,8 @@ def test_stationary_mean_scramble_invariance() -> None:
     S_inst_m = np.full((wc.Nf, nc_galaxy), 1.0)
 
     # get both S matrices
-    S_got1, _, _, _, _ = get_S_cyclo(bg_here1, S_inst_m, wc, 1.0, 0, period_list=())
-    S_got2, _, _, _, _ = get_S_cyclo(bg_here2, S_inst_m, wc, 1.0, 0, period_list=())
+    S_got1, _, _, _, _ = get_S_cyclo(bg_here1, S_inst_m, wc.DT, 1.0, 0, period_list=())
+    S_got2, _, _, _, _ = get_S_cyclo(bg_here2, S_inst_m, wc.DT, 1.0, 0, period_list=())
 
     # check for expected invariance
     assert_allclose(S_got1, S_got2, atol=1.0e-14, rtol=1.0e-13)
@@ -204,7 +264,7 @@ def stationary_mean_smooth_helper(bg_models: list[str], noise_models: list[str],
     for itrc in range(nc_galaxy):
         S_inst_m[:, itrc] = get_noise_model_helper(noise_models[itrc])
 
-    S_got, _, _, _, _ = get_S_cyclo(bg_here, S_inst_m, wc, smooth_lengthf, filter_periods, period_list=())
+    S_got, _, _, _, _ = get_S_cyclo(bg_here, S_inst_m, wc.DT, smooth_lengthf, filter_periods, period_list=())
 
     # replicate expected smoothed multiplier
     f_mult_smooth = np.zeros_like(f_mult)
@@ -294,9 +354,10 @@ def test_nonstationary_mean_faint_alternate(amp2_mult: float) -> None:
     for itrc in range(nc_galaxy):
         S_inst_m[:, itrc] = get_noise_model_helper('white_equal')
 
-    _, _, _, amp_got, _ = get_S_cyclo(bg_here, S_inst_m, wc, smooth_lengthf, filter_periods, period_list=None)
+    _, _, _, amp_got, _ = get_S_cyclo(bg_here, S_inst_m, wc.DT, smooth_lengthf, filter_periods, period_list=None)
 
-    _, amp_got1, _ = filter_periods_fft(t_mult1**2 + 1.0, wc.Nt, period_list, wc)
+    nt_lim = PixelGenericRange(0, wc.Nt, wc.DT, 0)
+    _, amp_got1, _ = filter_periods_fft(t_mult1 ** 2 + 1.0, period_list, nt_lim)
 
     if amp2**2 < 0.1 * amp1**2:
         assert_allclose(amp_got[2 * int(wc.Tobs / gc.SECSYEAR) * itrk1, :], 1.0, atol=1.0e-10, rtol=1.0e-10)
@@ -354,7 +415,7 @@ def test_nonstationary_mean_zero_case() -> None:
     for itrc in range(nc_galaxy):
         S_inst_m[:, itrc] = get_noise_model_helper('white_faint')
 
-    S_got, rec_got, _, _, _ = get_S_cyclo(bg_here, S_inst_m, wc, smooth_lengthf, filter_periods, period_list=None)
+    S_got, rec_got, _, _, _ = get_S_cyclo(bg_here, S_inst_m, wc.DT, smooth_lengthf, filter_periods, period_list=None)
 
     assert np.all(rec_got > 0.0)
 
@@ -438,9 +499,8 @@ def nonstationary_mean_smooth_helper(
     for itrc in range(nc_galaxy):
         S_inst_m[:, itrc] = get_noise_model_helper(noise_models[itrc])
 
-    S_got, rec_got, _, amp_got, angle_got = get_S_cyclo(
-        bg_here, S_inst_m, wc, smooth_lengthf, filter_periods, period_list=period_list2,
-    )
+    S_got, rec_got, _, amp_got, angle_got = get_S_cyclo(bg_here, S_inst_m, wc.DT, smooth_lengthf, filter_periods,
+                                                        period_list=period_list2)
 
     assert np.all(rec_got > 0.0)
 

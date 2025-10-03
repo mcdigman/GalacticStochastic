@@ -1,4 +1,4 @@
-"""index for loading the current versions of files"""
+"""Functions for reading and writing galactic binary parameter files and iterative fit results."""
 
 import hashlib
 from pathlib import Path
@@ -28,10 +28,12 @@ labels_gb = [
 
 
 def get_galaxy_filename(config: dict[str, Any]) -> str:
+    """Get the filename where the binaries in the galaxy are stored."""
     return str(config['files']['galaxy_dir']) + str(config['files']['galaxy_file'])
 
 
 def get_processed_galactic_filename(config: dict[str, Any], wc: WDMWaveletConstants, *, preprocess_mode: int = 2) -> str:
+    """Get the filename where the iterative fit results are stored."""
     config_files: dict[str, str] = config['files']
     galaxy_dir = str(config_files['galaxy_dir'])
     if preprocess_mode == 0:
@@ -42,6 +44,7 @@ def get_processed_galactic_filename(config: dict[str, Any], wc: WDMWaveletConsta
 
 
 def _source_mask_read_helper(hf_sky: h5py.Group, key: str, fmin: float, fmax: float) -> tuple[int, NDArray[np.floating]]:
+    """Read the sources from a given category in the hdf5 file, applying a frequency mask."""
     hf_loc = hf_sky[key]
 
     if not isinstance(hf_loc, h5py.Group):
@@ -75,7 +78,44 @@ def _source_mask_read_helper(hf_sky: h5py.Group, key: str, fmin: float, fmax: fl
 
 
 def get_full_galactic_params(config: dict[str, Any]) -> tuple[NDArray[np.floating], NDArray[np.integer]]:
-    """Get the galaxy dataset binaries"""
+    """
+    Retrieve the full set of galactic binary parameters from the galaxy file.
+
+    This function reads the galactic binary parameters from an HDF5 file, applying frequency range
+    filtering and combining multiple binary categories (e.g., detached, interacting, verification)
+    into a single parameter array. It performs validation checks on the parameter values and
+    issues warnings for unexpected or suspicious data.
+
+    The parameter array in the input file is assumed to be ordered as follows:
+        (Amplitude, EclipticLatitude, EclipticLongitude, Frequency,
+         FrequencyDerivative, Inclination, InitialPhase, Polarization)
+
+    Parameters
+    ----------
+    config : dict of str to Any
+        Configuration dictionary containing file paths, frequency limits, and component list.
+
+    Returns
+    -------
+    params_gb : NDArray[np.floating]
+        Array of shape (n_binaries, n_par_gb) containing the parameters for all selected galactic binaries.
+    ns_got : NDArray[np.integer]
+        Array containing the number of binaries found in each category.
+
+    Raises
+    ------
+    AssertionError
+        If parameter values are out of expected bounds or contain non-finite values.
+    TypeError
+        If the HDF5 file structure does not match the expected format.
+    UserWarning
+        If some parameters are always zero or have suspicious values (issued as warnings).
+
+    Notes
+    -----
+    The function expects the HDF5 file to contain groups for each binary category under the 'sky' group,
+    with datasets for each parameter. Frequency filtering is applied based on the configuration.
+    """
     # dgb is detached galactic binaries, igb is interacting galactic binaries, vgb is verification
     categories = config['iterative_fit_constants'].get('component_list', ['dgb', 'igb', 'vgb'])
     fmin: float = float(config['iterative_fit_constants'].get('fmin_binary', 1.0e-8))
@@ -141,6 +181,42 @@ def load_processed_galactic_file(
     cyclo_mode: int = 1,
     preprocess_mode: int = 0,
 ) -> None:
+    """
+    Load the results of a previous iterative fit procedure from an HDF5 file.
+
+    This function locates and opens the HDF5 file containing the results of a previous iterative fit,
+    navigates to the appropriate group based on the SNR threshold, time-frequency range, and cyclostationary mode,
+    and loads the results into the provided IterativeFitManager instance.
+
+    Parameters
+    ----------
+    ifm : IterativeFitManager
+        The manager object into which the loaded results will be stored.
+    config : dict of str to Any
+        Configuration dictionary containing file paths and iterative fit settings.
+    ic : IterationConfig
+        Configuration object specifying the parameters for the iterative fit.
+    wc : WDMWaveletConstants
+        Wavelet constants describing the time-frequency grid.
+    nt_lim_snr : tuple of int, optional
+        Tuple specifying the time-frequency pixel range to use. Defaults to (0, -1), which uses the full range.
+    cyclo_mode : int, optional
+        Cyclostationary mode key used to select the correct HDF5 group (default is 1).
+    preprocess_mode : int, optional
+        Preprocessing mode used to determine the input filename (default is 0).
+
+    Raises
+    ------
+    FileNotFoundError
+        If the specified HDF5 file or group cannot be found.
+    TypeError
+        If the HDF5 file structure does not match the expected format.
+
+    Notes
+    -----
+    The function expects the HDF5 file to be organized by SNR threshold, time-frequency range, and cyclostationary mode.
+    The loaded data is passed to the `load_hdf5` method of the provided IterativeFitManager.
+    """
     snr_thresh = ic.snr_thresh
     filename_in = get_processed_galactic_filename(config, wc, preprocess_mode=preprocess_mode)
     if nt_lim_snr == (0, -1):
@@ -287,6 +363,42 @@ def store_processed_gb_file(
     preprocess_mode: int = 0,
     hash_mode: int = 1,
 ) -> None:
+    """
+    Store the results of an iterative fit to an HDF5 file.
+
+    This function writes the results of the iterative fit, including configuration and provenance information,
+    to an HDF5 file. It manages file versioning, verifies file integrity using SHA256 checksums, and archives
+    relevant metadata for reproducibility.
+
+    Parameters
+    ----------
+    config : dict of str to Any
+        Configuration dictionary containing file paths and iterative fit settings.
+    wc : WDMWaveletConstants
+        Wavelet constants describing the time-frequency grid.
+    ifm : IterativeFitManager
+        Manager object containing the results of the iterative fit to be stored.
+    write_mode : int, optional
+        File writing mode:
+        - 0: Overwrite existing group if present (default).
+        - 1: Abort if group exists to avoid overwriting.
+        - 2: Create a new file, entirely overwriting any existing file.
+    preprocess_mode : int, optional
+        Preprocessing mode used to determine the output filename (default is 0).
+    hash_mode : int, optional
+        Hash verification mode:
+        - 1: Perform SHA256 checksum verification and recording (default).
+        - 0: Skip hash verification, but still record checksums.
+
+    Raises
+    ------
+    NotImplementedError
+        If an unrecognized write_mode is provided.
+    ValueError
+        If an unexpected state is encountered when writing the HDF5 file.
+    AssertionError
+        If file integrity checks fail (e.g., mismatched SHA256 checksums).
+    """
     ic = ifm.ic
     filename_gb_init = get_processed_galactic_filename(config, wc, preprocess_mode=1)
     filename_out = get_processed_galactic_filename(config, wc, preprocess_mode=preprocess_mode)
