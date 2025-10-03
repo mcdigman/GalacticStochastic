@@ -43,10 +43,10 @@ def test_S_gal_fit_consistency() -> None:
     kappa = 0.  # parameter not present in first fit model, irrelevant if beta is 0
 
     # derived parameters
-    log10A = np.log10(A)
-    log10f1 = np.log10(f1)
-    log10f2 = np.log10(f2)
-    log10fknee = np.log10(fknee)
+    log10_A = np.log10(A)
+    log10_f1 = np.log10(f1)
+    log10_f2 = np.log10(f2)
+    log10_fknee = np.log10(fknee)
 
     n_f = 10000
     f_min = 0.
@@ -54,15 +54,15 @@ def test_S_gal_fit_consistency() -> None:
     f = np.linspace(f_min, f_max, n_f)
 
     # check vector scalar
-    res10 = 2 * f ** (2.0 / 3.0) * S_gal_model_5param(f, log10A, log10f2, log10f1, log10fknee, alpha)
-    res20 = S_gal_model_7param(f, log10A, log10f2, log10f1, log10fknee, alpha, beta, kappa)
+    res10 = 2 * f ** (2.0 / 3.0) * S_gal_model_5param(f, log10_A, log10_f2, log10_f1, log10_fknee, alpha)
+    res20 = S_gal_model_7param(f, log10_A, log10_f2, log10_f1, log10_fknee, alpha, beta, kappa)
 
     assert_allclose(res10, res20, atol=1.e-20, rtol=1.e-10)
 
     # check vector vector
-    res11 = 2 * f ** (2.0 / 3.0) * S_gal_model_5param(f, np.full(n_f, log10A), np.full(n_f, log10f2), np.full(n_f, log10f1), np.full(n_f, log10fknee), np.full(n_f, alpha))
-    res21 = S_gal_model_7param(f, np.full(n_f, log10A), np.full(n_f, log10f2), np.full(n_f, log10f1),
-                               np.full(n_f, log10fknee), np.full(n_f, alpha), np.full(n_f, beta), np.full(n_f, kappa))
+    res11 = 2 * f ** (2.0 / 3.0) * S_gal_model_5param(f, np.full(n_f, log10_A), np.full(n_f, log10_f2), np.full(n_f, log10_f1), np.full(n_f, log10_fknee), np.full(n_f, alpha))
+    res21 = S_gal_model_7param(f, np.full(n_f, log10_A), np.full(n_f, log10_f2), np.full(n_f, log10_f1),
+                               np.full(n_f, log10_fknee), np.full(n_f, alpha), np.full(n_f, beta), np.full(n_f, kappa))
 
     assert_allclose(res11, res21, atol=1.e-20, rtol=1.e-10)
 
@@ -70,8 +70,8 @@ def test_S_gal_fit_consistency() -> None:
     res12 = np.zeros(n_f)
     res22 = np.zeros(n_f)
     for itrf in range(n_f):
-        res12[itrf] = 2 * f[itrf] ** (2.0 / 3.0) * S_gal_model_5param(f[itrf], log10A, log10f2, log10f1, log10fknee, alpha)
-        res22[itrf] = S_gal_model_7param(f[itrf], log10A, log10f2, log10f1, log10fknee, alpha, beta, kappa)
+        res12[itrf] = 2 * f[itrf] ** (2.0 / 3.0) * S_gal_model_5param(f[itrf], log10_A, log10_f2, log10_f1, log10_fknee, alpha)
+        res22[itrf] = S_gal_model_7param(f[itrf], log10_A, log10_f2, log10_f1, log10_fknee, alpha, beta, kappa)
 
     assert_allclose(res12, res22, atol=1.e-20, rtol=1.e-10)
 

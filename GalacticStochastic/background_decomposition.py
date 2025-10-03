@@ -210,45 +210,60 @@ class BGDecomposition:
             self.power_galactic_below_high = []
             self.power_galactic_total = []
 
-    def get_galactic_total(self, *, bypass_check: bool = False) -> NDArray[np.floating]:
+    def _output_shape_select(self, representation: NDArray[np.floating], *, shape_mode: int = 0) -> NDArray[np.floating]:
+        """Select the output shape from the available output options"""
+        if shape_mode == 0:
+            return representation.reshape(self._shape1)
+        if shape_mode == 1:
+            return representation.reshape(self._shape2)
+        msg = 'No implementation for given shape mode'
+        return NotImplementedError(msg)
+
+    def get_galactic_total(self, *, bypass_check: bool = False, shape_mode: int = 0) -> NDArray[np.floating]:
         """Get the sum of the entire galactic signal, including detectable binaries."""
         if not bypass_check:
             self.state_check()
-        return self.get_galactic_below_high(bypass_check=True) + self.galactic_above
+        res = self.get_galactic_below_high(bypass_check=True) + self.galactic_above
+        return self._output_shape_select(res, shape_mode=shape_mode)
 
-    def get_galactic_below_high(self, *, bypass_check: bool = False) -> NDArray[np.floating]:
+    def get_galactic_below_high(self, *, bypass_check: bool = False, shape_mode: int = 0) -> NDArray[np.floating]:
         """Get the upper estimate of the unresolvable signal from the galactic background.
         Assume that the undecided part of the signal *is* part of the unresolvable background
         """
         if not bypass_check:
             self.state_check()
-        return self.get_galactic_below_low(bypass_check=True) + self.galactic_undecided
+        res = self.get_galactic_below_low(bypass_check=True) + self.galactic_undecided
+        return self._output_shape_select(res, shape_mode=shape_mode)
 
-    def get_galactic_below_low(self, *, bypass_check: bool = False) -> NDArray[np.floating]:
+    def get_galactic_below_low(self, *, bypass_check: bool = False, shape_mode: int = 0) -> NDArray[np.floating]:
         """Get the lower estimate of the unresolvable signal from the galactic background.
         Assume that the undecided part of the signal *is not* part of the unresolvable background.
         """
         if not bypass_check:
             self.state_check()
-        return self.galactic_floor + self.galactic_below
+        res = self.galactic_floor + self.galactic_below
+        return self._output_shape_select(res, shape_mode=shape_mode)
 
-    def get_galactic_coadd_resolvable(self, *, bypass_check: bool = False) -> NDArray[np.floating]:
+    def get_galactic_coadd_resolvable(self, *, bypass_check: bool = False, shape_mode: int = 0) -> NDArray[np.floating]:
         """Get the coadded signal from only bright/resolvable galactic binaries."""
         if not bypass_check:
             self.state_check()
-        return self.galactic_above
+        res = self.galactic_above
+        return self._output_shape_select(res, shape_mode=shape_mode)
 
-    def get_galactic_coadd_undecided(self, *, bypass_check: bool = False) -> NDArray[np.floating]:
+    def get_galactic_coadd_undecided(self, *, bypass_check: bool = False, shape_mode: int = 0) -> NDArray[np.floating]:
         """Get the coadded signal from galactic binaries whose status as bright or faint has not yet been decided."""
         if not bypass_check:
             self.state_check()
-        return self.galactic_undecided
+        res = self.galactic_undecided
+        return self._output_shape_select(res, shape_mode=shape_mode)
 
-    def get_galactic_coadd_floor(self, *, bypass_check: bool = False) -> NDArray[np.floating]:
+    def get_galactic_coadd_floor(self, *, bypass_check: bool = False, shape_mode: int = 0) -> NDArray[np.floating]:
         """Get the coadded signal from the faintest set of galactic binaries."""
         if not bypass_check:
             self.state_check()
-        return self.galactic_floor
+        res = self.galactic_floor
+        return self._output_shape_select(res, shape_mode=shape_mode)
 
     def state_check(self) -> None:
         """If the total recorded galactic signal is cached, check that the total not changed much.
@@ -328,14 +343,14 @@ class BGDecomposition:
     def get_S_below_high(self, S_mean: NDArray[np.floating], smooth_lengthf: float, filter_periods: int, period_list: tuple[int, ...] | tuple[np.floating, ...]) -> NDArray[np.floating]:
         """Get the upper estimate of the galactic power spectrum."""
         galactic_loc = self.get_galactic_below_high(bypass_check=True)
-        S, _, _, _, _ = get_S_cyclo(galactic_loc, S_mean, self._wc.DT, smooth_lengthf, filter_periods,
+        S, _, _, _, _ = get_S_cyclo(galactic_loc.reshape(self._shape2), S_mean, self._wc.DT, smooth_lengthf, filter_periods,
                                     period_list=period_list)
         return S
 
     def get_S_below_low(self, S_mean: NDArray[np.floating], smooth_lengthf: float, filter_periods: int, period_list: tuple[int, ...] | tuple[np.floating, ...]) -> NDArray[np.floating]:
         """Get the lower estimate of the galactic power spectrum."""
         galactic_loc = self.get_galactic_below_low(bypass_check=True)
-        S, _, _, _, _ = get_S_cyclo(galactic_loc, S_mean, self._wc.DT, smooth_lengthf, filter_periods,
+        S, _, _, _, _ = get_S_cyclo(galactic_loc.reshape(self._shape2), S_mean, self._wc.DT, smooth_lengthf, filter_periods,
                                     period_list=period_list)
         return S
 
