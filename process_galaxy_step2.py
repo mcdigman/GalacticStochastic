@@ -42,11 +42,12 @@ if __name__ == '__main__':
 
     do_hf_out = True
     if do_hf_out:
-        gfi.store_preliminary_gb_file(
+        gfi.store_processed_gb_file(
             config,
             wc,
             ifm,
             write_mode=0,
+            preprocess_mode=preprocess_mode,
         )
     do_plot_noise_spectrum_ambiguity = True
 
