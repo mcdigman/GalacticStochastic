@@ -405,7 +405,7 @@ class NoiseModelManager(StateManager):
         del res_mask
         unit_normal_res, a2score, mean_rat, std_rat = unit_normal_battery(
             points_res.flatten(),
-            A2_cut=2.28,
+            a2_cut=2.28,
             sig_thresh=5.0,
             do_assert=False,
         )

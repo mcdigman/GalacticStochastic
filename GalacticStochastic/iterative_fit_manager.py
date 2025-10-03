@@ -23,7 +23,24 @@ class IterativeFitManager(StateManager):
         noise_manager: NoiseModelManager,
         bis: BinaryInclusionState,
     ) -> None:
-        """Create the iterative fit object."""
+        """
+        Initialize the IterativeFitManager.
+
+        This constructor sets up the iterative fit manager with the provided configuration,
+        fit state, noise model manager, and binary inclusion state. It prepares the object
+        for running the iterative fitting procedure.
+
+        Parameters
+        ----------
+        ic : IterationConfig
+            Configuration object specifying iteration parameters.
+        fit_state : IterativeFitState
+            State machine managing the iterative fit state.
+        noise_manager : NoiseModelManager
+            Manager for the noise model used in the fitting process.
+        bis : BinaryInclusionState
+            Object managing the inclusion state of binaries in the analysis.
+        """
         self.ic: IterationConfig = ic
         self.fit_state: IterativeFitState = fit_state
         self.noise_manager: NoiseModelManager = noise_manager
@@ -138,8 +155,6 @@ class IterativeFitManager(StateManager):
             If the method is not implemented in a subclass.
         TypeError
             If the format is not as expected.
-        ValueError
-            If loaded attributes do not match the current object's attributes.
         """
         if group_mode == 0:
             hf_manager = hf_in['iterative_manager']
@@ -213,7 +228,13 @@ class IterativeFitManager(StateManager):
         self.noise_manager.loop_finalize()
 
     def check_done(self) -> bool:
-        """Check whether the fitting procedure can bet stopped."""
+        """Check whether the fitting procedure can bet stopped.
+
+        Returns
+        -------
+        bool
+            True if the fitting procedure has fully converged and can be stopped, False otherwise.
+        """
         if self.fit_state.get_bright_converged() and self.fit_state.get_faint_converged():
             print('result fully converged at ' + str(self._itrn) + ', no further iterations needed')
             self._n_full_converged = self._itrn

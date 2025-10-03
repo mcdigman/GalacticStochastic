@@ -140,9 +140,9 @@ def filter_periods_fft(
         Periods (in multiples of `t_obs/gc.SECSYEAR`) to retain in the filtered signal.
     nt_lim : PixelGenericRange
         Time range object defining the time sampling and limits of the input time series.
-    period_tolerance : float, optional
+    period_tolerance : float
         Allowed tolerance for matching requested periods to FFT bins (default is 0.01).
-    angle_small : float, optional
+    angle_small : float
         Threshold for determining the sign of the DC and Nyquist components (default is -0.1).
 
     Returns
@@ -343,18 +343,18 @@ def get_S_cyclo(
         Smoothing length (standard deviation) in log-frequency space.
     filter_periods : int
         If nonzero, apply FFT-based filtering to restrict to specific periods.
-    period_list : tuple of int or float, optional
+    period_list : tuple of int or float
         Periods (in multiples of observation time in years) to retain in the filtered signal.
         If None and filtering is enabled, all possible periods are used.
-    faint_cutoff_thresh : float, optional
+    faint_cutoff_thresh : float
         Threshold (fraction of max) for masking faint frequencies in envelope modulation (default 0.1).
-    t_stabilizer_mult : float, optional
+    t_stabilizer_mult : float
         Multiplier for numerical stabilizer added to avoid division by zero (default 1.0e-13).
-    r_cutoff_mult : float, optional
+    r_cutoff_mult : float
         Multiplier for minimum allowed value of the demodulation ratio (default 1.0e-6).
-    log_stabilizer : float, optional
+    log_stabilizer : float
         Small positive value added before taking logarithms to avoid log(0) (default 1.0e-50).
-    interp_mult : int, optional
+    interp_mult : int
         Interpolation factor for increasing the resolution of the log-frequency grid (default 10).
 
     Returns
