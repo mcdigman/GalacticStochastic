@@ -468,6 +468,50 @@ def fit_gb_spectrum_evolve(
     offset: NDArray[np.floating],
     dt: float,
 ) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
+    """
+    Fit an evolving galactic binary spectrum model to a set of target spectra.
+
+    This function fits a parametric model for the galactic binary confusion noise spectrum
+    (see `S_gal_model_5param`) to a set of target spectra at different observation times.
+    The model parameters are allowed to evolve with observation time, and the fit is performed
+    by minimizing the squared residuals in log-amplitude space using dual annealing optimization.
+
+    Parameters
+    ----------
+    S_goals : NDArray[np.floating]
+        Array of target spectra to fit, shape (n_spectra, n_freq, n_channels).
+    fs : NDArray[np.floating]
+        Frequency grid (Hz) corresponding to the input spectra.
+    fs_report : NDArray[np.floating]
+        Frequency grid (Hz) for reporting the fitted model spectra.
+    nt_ranges : NDArray[np.integer]
+        Array of time indices (number of time steps) for each target spectrum.
+    offset : NDArray[np.floating]
+        Static offset to add to the model spectra before taking the logarithm, shape (n_freq,).
+    dt : float
+        Time step between sample indices reported by nt_ranges (seconds).
+
+    Returns
+    -------
+    S_res : NDArray[np.floating]
+        Array of fitted model spectra evaluated at `fs_report`, shape (n_spectra, len(fs_report)).
+    res : NDArray[np.floating]
+        Array of best-fit model parameters.
+
+    Notes
+    -----
+    The model parameters for the frequency cutoffs and knee are allowed to vary with observation time
+    as linear functions of log10(time). The fit is performed in log-amplitude space for numerical stability.
+    The function uses the `dual_annealing` optimizer from `scipy.optimize` to find the best-fit parameters.
+    """
+    assert len(S_goals.shape) == 3
+    assert len(fs.shape) == 1
+    assert len(offset.shape) == 1
+    assert offset.shape[0] == fs.shape[0]
+    assert len(nt_ranges.shape) == 1
+    assert nt_ranges.shape[0] == S_goals.shape[0]
+    assert S_goals.shape[1] == fs.size
+    assert len(fs_report.shape) == 1
 
     t_obs_yrs = nt_ranges * dt / gc.SECSYEAR
     n_spect = S_goals.shape[0]

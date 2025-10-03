@@ -106,7 +106,6 @@ class NoiseModelManager(StateManager):
             self._itr_save += 1
         S_lower = np.asarray(np.min([S_lower, S_upper], axis=0), dtype=np.float64)
 
-        # TODO must set seed here
         self.noise_upper: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(S_upper, wc, prune=1, nc_snr=lc.nc_snr, seed=self._instrument_random_seed)
         self.noise_lower: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(S_lower, wc, prune=1, nc_snr=lc.nc_snr, seed=self._instrument_random_seed)
         self.noise_instrument: DiagonalStationaryDenseNoiseModel = DiagonalStationaryDenseNoiseModel(self.S_inst_m, wc, prune=1, nc_snr=lc.nc_snr, seed=self._instrument_random_seed)
@@ -241,8 +240,6 @@ class NoiseModelManager(StateManager):
             If the method is not implemented in a subclass.
         TypeError
             If the format is not as expected.
-        ValueError
-            If loaded attributes do not match the current object's attributes.
         """
         if group_mode == 0:
             hf_noise = hf_in['noise_model']
@@ -337,7 +334,6 @@ class NoiseModelManager(StateManager):
             assert np.all(getattr(self._ic, key) == hf_ic.attrs[key]), f'ic attribute {key} does not match saved value'
 
         # just make new noise models, don't try to load them
-        # TODO instead add assertions that the loaded models match the expected values stored in the files
         if not self.cyclo_mode:
             period_list = self._ic.period_list
         else:
@@ -461,5 +457,17 @@ class NoiseModelManager(StateManager):
         self._itrn += 1
 
     def get_instrument_realization(self, white_mode: int = 1) -> NDArray[np.floating]:
-        """Get the realization of the instrument noise model based on the current random seed."""
+        """Get the realization of the instrument noise model based on the current random seed.
+
+        Parameters
+        ----------
+        white_mode : int
+            If white_mode == 0, return colored noise.
+            If white_mode == 1, return white noise (default).
+
+        Returns
+        -------
+        NDArray[np.floating]
+            Realization of the instrument noise model.
+        """
         return self.noise_instrument.generate_dense_noise(white_mode=white_mode)

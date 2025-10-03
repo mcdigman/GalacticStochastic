@@ -295,6 +295,7 @@ class IterativeFitState(StateManager):
     @property
     def preprocess_mode(self) -> int:
         """Get the preprocessing mode.
+
         Returns
         -------
         int
@@ -466,6 +467,14 @@ class IterativeFitState(StateManager):
 
         Needs outputs from a BinaryInclusionState object.
 
+        Parameters
+        ----------
+        inclusion_data : tuple[tuple[bool, bool, bool], int, int]
+            A tuple containing:
+            - A tuple of three booleans: (cycling, converged_or_cycling, old_match).
+            - An integer delta_brights: the change in the number of bright binaries.
+            - An integer delta_faints: the change in the number of faint binaries.
+
         Returns
         -------
         bool
@@ -512,6 +521,14 @@ class IterativeFitState(StateManager):
         """Make a decision about whether the faint binaries are converged.
 
         Needs outputs from a BinaryInclusionState object.
+
+        Parameters
+        ----------
+        inclusion_data : tuple[tuple[bool, bool, bool], int, int]
+            A tuple containing:
+            - A tuple of three booleans: (cycling, converged_or_cycling, old_match).
+            - An integer delta_brights: the change in the number of bright binaries.
+            - An integer delta_faints: the change in the number of faint binaries.
 
         Returns
         -------

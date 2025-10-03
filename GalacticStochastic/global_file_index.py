@@ -28,13 +28,42 @@ labels_gb = [
 
 
 def get_galaxy_filename(config: dict[str, Any]) -> str:
-    """Get the filename where the binaries in the galaxy are stored."""
+    """Get the filename where the binaries in the galaxy are stored.
+
+    Parameters
+    ----------
+    config : dict of str to Any
+        Configuration dictionary containing file paths.
+
+    Returns
+    -------
+    str
+        Full path to the galaxy file.
+    """
     config_files: dict[str, str] = config['files']
     return str(config_files['galaxy_dir']) + str(config_files['galaxy_file'])
 
 
 def get_processed_galactic_filename(config: dict[str, Any], wc: WDMWaveletConstants, *, preprocess_mode: int = 2) -> str:
-    """Get the filename where the iterative fit results are stored."""
+    """Get the filename where the iterative fit results are stored.
+
+    Parameters
+    ----------
+    config : dict of str to Any
+        Configuration dictionary containing file paths.
+    wc : WDMWaveletConstants
+        Wavelet constants describing the time-frequency grid.
+    preprocess_mode : int
+        Preprocessing mode used to determine the filename:
+        - 0: Processed file (default).
+        - 1: Pre-processed file.
+        - 2: Re-processed file.
+
+    Returns
+    -------
+    str
+        Full path to the processed galactic binary file.
+    """
     config_files: dict[str, str] = config['files']
     galaxy_dir = str(config_files['galaxy_dir'])
     if preprocess_mode == 0:
@@ -229,11 +258,11 @@ def load_processed_galactic_file(
         Configuration object specifying the parameters for the iterative fit.
     wc : WDMWaveletConstants
         Wavelet constants describing the time-frequency grid.
-    nt_lim_snr : tuple of int, optional
+    nt_lim_snr : tuple of int
         Tuple specifying the time-frequency pixel range to use. Defaults to (0, -1), which uses the full range.
-    cyclo_mode : int, optional
+    cyclo_mode : int
         Cyclostationary mode key used to select the correct HDF5 group (default is 1).
-    preprocess_mode : int, optional
+    preprocess_mode : int
         Preprocessing mode used to determine the input filename (default is 0).
 
     Raises
@@ -307,14 +336,14 @@ def store_processed_gb_file(
         Wavelet constants describing the time-frequency grid.
     ifm : IterativeFitManager
         Manager object containing the results of the iterative fit to be stored.
-    write_mode : int, optional
+    write_mode : int
         File writing mode:
         - 0: Overwrite existing group if present (default).
         - 1: Abort if group exists to avoid overwriting.
         - 2: Create a new file, entirely overwriting any existing file.
-    preprocess_mode : int, optional
+    preprocess_mode : int
         Preprocessing mode used to determine the output filename (default is 0).
-    hash_mode : int, optional
+    hash_mode : int
         Hash verification mode:
         - 1: Perform SHA256 checksum verification and recording (default).
         - 0: Skip hash verification, but still record checksums.
@@ -327,6 +356,8 @@ def store_processed_gb_file(
         If an unexpected state is encountered when writing the HDF5 file.
     AssertionError
         If file integrity checks fail (e.g., mismatched SHA256 checksums).
+    TypeError
+        If the HDF5 file structure does not match the expected format.
     """
     ic = ifm.ic
 

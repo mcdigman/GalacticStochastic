@@ -480,7 +480,13 @@ class BGDecomposition:
                 )
 
     def log_state(self, S_mean: NDArray[np.floating]) -> None:
-        """Record any diagnostics we want to track about this iteration."""
+        """Record any diagnostics we want to track about this iteration.
+
+        Parameters
+        ----------
+        S_mean : NDArray[np.floating]
+            Mean power spectrum used for normalization.
+        """
         power_undecided = np.sum(
             np.sum((self.get_galactic_coadd_undecided(bypass_check=True, shape_mode=1) ** 2)[:, 1:, :], axis=0)
             / S_mean[1:, :],

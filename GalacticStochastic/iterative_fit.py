@@ -31,6 +31,63 @@ def fetch_or_run_iterative_loop(
     instrument_random_seed_in: int | None = None,
     preprocess_mode: int = 0,
 ) -> IterativeFitManager:
+    """
+    Run or fetch the iterative fit loop for galactic binary background analysis.
+
+    This function either runs a new iterative fit loop or fetches results from a previously
+    stored file, depending on the specified fetch and preprocess modes. It sets up all
+    necessary configuration objects, background decomposition, noise models, and binary
+    inclusion states, and manages the logic for pre-processing and file I/O.
+
+    Parameters
+    ----------
+    config : dict of str to Any
+        Configuration dictionary containing file paths and fit settings.
+    cyclo_mode : int
+        Cyclostationary mode key for the fit.
+    nt_range : tuple of int
+        Time-frequency pixel range as (min, max) indices. Defaults to (0, -1) for full range.
+    fetch_mode : int
+        Mode for fetching or running the fit:
+        0: run from scratch, stop if preliminary file missing;
+        1: try to fetch, else run, stop if preliminary missing;
+        2: try to fetch, else abort, stop if preliminary missing;
+        3: try to fetch, else run, create preliminary if missing;
+        4: run from scratch, do not check for preliminary file.
+        Default is 0.
+    output_mode : int
+        Output mode for storing results:
+        0: do not store;
+        1: store results (default).
+    wc_in : WDMWaveletConstants, optional
+        Optional override for wavelet constants.
+    lc_in : LISAConstants, optional
+        Optional override for LISA instrument constants.
+    ic_in : IterationConfig, optional
+        Optional override for iteration configuration.
+    instrument_random_seed_in : int, optional
+        Optional override for instrument random seed.
+    preprocess_mode : int
+        Preprocessing mode:
+        0: use preliminary file;
+        1: do not use preliminary file;
+        2: other modes (not implemented).
+        Default is 0.
+
+    Returns
+    -------
+    IterativeFitManager
+        The manager object containing the results of the iterative fit.
+
+    Raises
+    ------
+    ValueError
+        If an unrecognized fetch_mode, output_mode, or preprocess_mode is provided.
+    FileNotFoundError
+        If required files or entries are missing and fetch_mode is set to abort.
+    NotImplementedError
+        If an unsupported preprocess_mode is specified.
+    """
     config, wc, lc, ic, instrument_random_seed = get_config_objects_from_dict(config)
     if wc_in is not None:
         wc = wc_in
@@ -170,7 +227,6 @@ def fetch_or_run_iterative_loop(
         pass
     elif output_mode == 1:
         if preprocess_mode == 0:
-            # TODO if fetch_mode==4, we will have an inconsistent hash in the pre-processed file
             # if pre-processing in mode 2 has happened we will have an inconsistent hash for any re-pre-processed files
             write_mode = 0
         else:
