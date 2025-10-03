@@ -9,8 +9,7 @@ from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams, Linea
 
 # TODO do consistency checks
 class LinearChirpletSourceWaveformFreq(StationarySourceWaveformFreq[LinearChirpletIntrinsicParams, ExtrinsicParams]):
-    """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain.
-    """
+    """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain."""
 
     @override
     def _create_intrinsic_params_manager(self, params_intrinsic: LinearChirpletIntrinsicParams) -> LinearChirpletParamsManager:

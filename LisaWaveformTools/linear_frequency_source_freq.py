@@ -58,8 +58,7 @@ def linear_frequency_intrinsic_freq(waveform: StationaryWaveformFreq, intrinsic_
 
 # TODO do consistency checks
 class LinearFrequencySourceWaveformFreq(StationarySourceWaveformFreq[LinearFrequencyIntrinsicParams, ExtrinsicParams]):
-    """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain.
-    """
+    """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain."""
 
     @override
     def _create_intrinsic_params_manager(self, params_intrinsic: LinearFrequencyIntrinsicParams) -> LinearFrequencyParamsManager:

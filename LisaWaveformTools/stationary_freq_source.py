@@ -1,4 +1,4 @@
-"""functions to compute rigid adiabatic response in frequency domain"""
+"""Stationary source waveform in frequency domain."""
 
 from abc import ABC
 from typing import TYPE_CHECKING, Generic, override
@@ -18,9 +18,10 @@ if TYPE_CHECKING:
 
 
 class StationarySourceWaveformFreq(Generic[IntrinsicParamsType, ExtrinsicParamsType], StationarySourceWaveform[StationaryWaveformFreq, IntrinsicParamsType, ExtrinsicParamsType], ABC):
-    """class to store a binary waveform in frequency domain and update for search"""
+    """Class to store a binary waveform in frequency domain and update for search."""
+
     def __init__(self, params: SourceParams, lc: LISAConstants, nf_lim_absolute: PixelGenericRange, freeze_limits: int, T_obs: float, n_pad_F: int = 10, response_mode: int = 0) -> None:
-        """Construct a binary wavelet object"""
+        """Construct a binary wavelet object."""
         self._lc: LISAConstants = lc
         self._nc_waveform: int = self._lc.nc_waveform
         self._consistent_extrinsic: bool = False
@@ -150,7 +151,7 @@ class StationarySourceWaveformFreq(Generic[IntrinsicParamsType, ExtrinsicParamsT
         return hf_source
 
     def _update_bounds(self) -> None:
-        """Update the boundaries to calculate extrinsic parameters at"""
+        """Update the boundaries to calculate extrinsic parameters at."""
         # TODO something is malfunctioning here, trap the case where itrFCutOld would segfault?
         # TODO should handle nonmonotonic time from searchsorted
         # TODO need to handle bounds edge correctly
@@ -207,8 +208,9 @@ class StationarySourceWaveformFreq(Generic[IntrinsicParamsType, ExtrinsicParamsT
     @override
     def _update_extrinsic(self) -> None:
         """
-        Update waveform to match the extrinsic parameters of spacecraft response
-        if abbreviated, don't get AET_TFs or AET_TFps, and don't track modulus of AET_PPFs
+        Update waveform to match the extrinsic parameters of spacecraft response.
+
+        If abbreviated, don't get AET_TFs or AET_TFps, and don't track modulus of AET_PPFs
         """
         rigid_adiabatic_antenna(self._spacecraft_channels, self.params.extrinsic, self.intrinsic_waveform.TF, self.FFs, self.nf_lim, self.kdotx, self._lc)
 
@@ -217,8 +219,10 @@ class StationarySourceWaveformFreq(Generic[IntrinsicParamsType, ExtrinsicParamsT
 
     @override
     def update_params(self, params: SourceParams) -> None:
-        """Recompute the waveform with updated parameters,
-            if abbreviated skip getting AET_TFs and AET_TFps
+        """
+        Recompute the waveform with updated parameters.
+
+        Ff abbreviated skip getting AET_TFs and AET_TFps
         """
         self.params: SourceParams = params
         self._update_intrinsic()
@@ -230,5 +234,11 @@ class StationarySourceWaveformFreq(Generic[IntrinsicParamsType, ExtrinsicParamsT
     @property
     @override
     def nc_waveform(self) -> int:
-        """Return the number of channels in the waveform."""
+        """Return the number of channels in the waveform.
+
+        Returns
+        -------
+        int
+            Number of channels in the waveform.
+        """
         return self._nc_waveform

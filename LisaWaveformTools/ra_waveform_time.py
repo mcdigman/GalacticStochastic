@@ -1,4 +1,4 @@
-"""subroutines for running lisa code"""
+"""Time domain TDI waveform generation using the rigid adiabatic approximation."""
 
 
 import numpy as np
@@ -16,7 +16,8 @@ from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 def phase_wrap_helper(
     AET_waveform: StationaryWaveformTime, waveform: StationaryWaveformTime, wrap_thresh: float = 6.0,
 ) -> None:
-    """Wrap the tdi perturbations to the phases by appropriate factors of 2 pi.
+    """
+    Wrap the tdi perturbations to the phases by appropriate factors of 2 pi.
 
     Parameters
     ----------
@@ -99,7 +100,7 @@ def spacecraft_channel_deriv_helper(spacecraft_channels: AntennaResponseChannels
 
 @njit(fastmath=True)
 def edge_rise_multiplier_helper(t: float, er: EdgeRiseModel, lc: LISAConstants) -> float:
-    """Helper for getting LISA response in frequency domain"""
+    """Apply the edge rise model to the amplitude of a waveform."""
     x: float = 1.0
     Tstart: float = er.Tstart
     Tend: float = er.Tend

@@ -29,6 +29,7 @@ class ExtrinsicParams(NamedTuple):
     psi : float
         Source polarization angle in radians
     """
+
     costh: float
     phi: float
     cosi: float
@@ -46,6 +47,7 @@ class SourceParams(NamedTuple):
     extrinsic: LisaWaveformTools.source_params.ExtrinsicParams
         The extrinsic parameters for the source
     """
+
     intrinsic: NamedTuple
     extrinsic: ExtrinsicParams
 
@@ -60,7 +62,18 @@ def _load_extrinsic_from_packed_helper(params_packed: NDArray[np.floating]) -> E
 
 
 def _packed_from_extrinsic_helper(params_extrinsic: ExtrinsicParams) -> NDArray[np.floating]:
-    """Store the minimum parameters required to reconstruct the object to an array."""
+    """Store the minimum parameters required to reconstruct the object to an array.
+
+    Parameters
+    ----------
+    params_extrinsic : ExtrinsicParams
+        The extrinsic parameters to pack.
+
+    Returns
+    -------
+    NDArray[np.floating]
+        The packed array of extrinsic parameters.
+    """
     costh = params_extrinsic.costh
     phi = params_extrinsic.phi
     cosi = params_extrinsic.cosi
@@ -69,7 +82,19 @@ def _packed_from_extrinsic_helper(params_extrinsic: ExtrinsicParams) -> NDArray[
 
 
 def _validate_extrinsic_helper(params_extrinsic: ExtrinsicParams) -> bool:
-    """Check if the given set of extrinsic parameters can be interpreted as valid"""
+    """
+    Check if the given set of extrinsic parameters can be interpreted as valid.
+
+    Parameters
+    ----------
+    params_extrinsic : ExtrinsicParams
+        The extrinsic parameters to validate.
+
+    Returns
+    -------
+    bool
+        True if the parameters are valid, False otherwise.
+    """
     if not -1. <= params_extrinsic.costh <= 1.:
         return False
     return -1.0 <= params_extrinsic.cosi <= 1.0
@@ -83,9 +108,8 @@ ParamsType = TypeVar('ParamsType', bound=NamedTuple)
 
 
 class AbstractParamsManager(Generic[ParamsType], ABC):
-    """
-    Manage creation, translation, and handling of ExtrinsicParams objects.
-    """
+    """Manage creation, translation, and handling of ExtrinsicParams objects."""
+
     def __init__(self, params: ParamsType) -> None:
         self._params: ParamsType = params
 
@@ -117,7 +141,7 @@ class AbstractParamsManager(Generic[ParamsType], ABC):
         pass
 
     def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'params', group_mode: int = 0) -> h5py.Group:
-        """Store the object as a group in an hdf5 file"""
+        """Store the object as a group in an hdf5 file."""
         if group_mode == 0:
             hf_params = hf_in.create_group(group_name)
         elif group_mode == 1:
@@ -144,9 +168,8 @@ class AbstractExtrinsicParamsManager(AbstractParamsManager[ExtrinsicParamsType],
 
 # TODO write default methods for AbstractIntrinsicParamsManager that reads names of packed parameter fields from a list, to make subclassing easier
 class AbstractIntrinsicParamsManager(AbstractParamsManager[IntrinsicParamsType], ABC):
-    """
-    Manage creation, translation, and handling of IntrinsicParamsType objects.
-    """
+    """Manage creation, translation, and handling of IntrinsicParamsType objects."""
+
     def __init__(self, params_load: IntrinsicParamsType) -> None:
         super().__init__(params_load)
 
@@ -191,9 +214,8 @@ class SourceParamsManager(Generic[ExtrinsicParamsType, IntrinsicParamsType], Abs
 
 
 class ExtrinsicParamsManager(AbstractExtrinsicParamsManager[ExtrinsicParams]):
-    """
-    Manage creation, translation, and handling of ExtrinsicParams objects.
-    """
+    """Manage creation, translation, and handling of ExtrinsicParams objects."""
+
     def __init__(self, params: ExtrinsicParams) -> None:
         self._n_packed: int = N_EXTRINSIC_PACKED
         super().__init__(params)

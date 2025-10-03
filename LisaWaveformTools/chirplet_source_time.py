@@ -14,8 +14,7 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 # TODO do consistency checks
 class LinearChirpletSourceWaveformTime(StationarySourceWaveformTime[LinearChirpletIntrinsicParams, ExtrinsicParams]):
-    """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain.
-    """
+    """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain."""
 
     @override
     def _create_intrinsic_params_manager(self, params_intrinsic: LinearChirpletIntrinsicParams) -> LinearChirpletParamsManager:
@@ -34,9 +33,7 @@ class LinearChirpletSourceWaveformTime(StationarySourceWaveformTime[LinearChirpl
 
 
 class LinearChirpletWaveletTaylorTime(BinaryWaveletTaylorTime[LinearChirpletIntrinsicParams, ExtrinsicParams]):
-    """Store a sparse wavelet intrinsic_waveform for a source with linearly increasing frequency and constant amplitude,
-    using the Taylor time method.
-    """
+    """Store a wavelet waveform for a chirplet using the Taylor time method."""
 
     def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, *, wavelet_mode: int = 1, response_mode: int = 0) -> None:
         """Construct a binary wavelet object."""
@@ -49,9 +46,7 @@ class LinearChirpletWaveletTaylorTime(BinaryWaveletTaylorTime[LinearChirpletIntr
 
 
 class LinearChirpletWaveletSparseTime(BinaryWaveletSparseTime[LinearChirpletIntrinsicParams, ExtrinsicParams]):
-    """Store a sparse wavelet intrinsic_waveform for a source with linearly increasing frequency and constant amplitude,
-    using the Taylor time method.
-    """
+    """Store a wavelet waveform for a chirplet, using the Taylor time method."""
 
     def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, *, response_mode: int = 0) -> None:
         """Construct a binary wavelet object."""

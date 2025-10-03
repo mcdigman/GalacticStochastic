@@ -1,4 +1,4 @@
-"""get the instrument noise profile"""
+"""Manage noise models in the time-frequency wavelet domain."""
 
 from abc import ABC, abstractmethod
 from typing import override
@@ -22,7 +22,8 @@ def get_sparse_snr_helper(
     inv_chol_S: NDArray[np.floating],
     nc_snr: int,
 ) -> NDArray[np.floating]:
-    """Calculates the S/N ratio for each TDI channel for a given intrinsic_waveform.
+    """
+    Calculate the S/N ratio for each TDI channel for a given intrinsic_waveform.
 
     Parameters
     ----------
@@ -37,6 +38,8 @@ def get_sparse_snr_helper(
 
     Returns
     -------
+    snr : numpy.ndarray
+        an array of shape (nc_noise) which is the S/N for each TDI channel represented.
 
     """
     snr2s = np.zeros(nc_snr)
@@ -84,37 +87,39 @@ class DenseNoiseModel(ABC):
 
     @abstractmethod
     def get_inv_chol_S(self) -> NDArray[np.floating]:
-        """Get the inverse cholesky decomposition of the dense noise covariance matrix"""
+        """Get the inverse cholesky decomposition of the dense noise covariance matrix."""
 
     @abstractmethod
     def get_S(self) -> NDArray[np.floating]:
-        """Get the dense noise covariance matrix"""
+        """Get the dense noise covariance matrix."""
 
     @property
     def prune(self) -> int:
-        """Get the number of lowest frequency bins that are being pruned"""
+        """Get the number of lowest frequency bins that are being pruned."""
         return self._prune
 
     @property
     def seed(self) -> int:
-        """Get the random seed for generating noise realizations"""
+        """Get the random seed for generating noise realizations."""
         return self._seed
 
     def get_inv_S(self) -> NDArray[np.floating]:
-        """Get the inverse of the dense noise covariance matrix"""
+        """Get the inverse of the dense noise covariance matrix."""
         res = self.get_inv_chol_S()**2
         res[:, :self.prune, :] = 0.
         return res
 
     def get_chol_S(self) -> NDArray[np.floating]:
-        """Get the cholesky decomposition of the dense noise covariance matrix"""
+        """Get the cholesky decomposition of the dense noise covariance matrix."""
         # make sure pruned bins are zero
         res: NDArray[np.floating] = np.sqrt(self.get_S())
         res[:, :self.prune, :] = 0.
         return res
 
     def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_lim_snr: PixelGenericRange) -> NDArray[np.floating]:
-        """Get s/n of intrinsic_waveform in each TDI channel. Parameters usually come from
+        """Get S/N of intrinsic_waveform in each TDI channel.
+
+        Parameters usually come from
         LinearFrequencyWaveletWaveformTime.get_unsorted_coeffs() from
         wavelet_detector_waveforms.
 
@@ -129,7 +134,6 @@ class DenseNoiseModel(ABC):
         -------
         snr : numpy.ndarray
             an array of shape (nc_noise) which is the S/N for each TDI channel represented.
-
         """
         return get_sparse_snr_helper(wavelet_waveform, nt_lim_snr, self._wc, self.get_inv_chol_S(), self._nc_snr)
 
@@ -163,15 +167,16 @@ class DenseNoiseModel(ABC):
         return hf_noise
 
     def get_nc_snr(self) -> int:
-        """Get the number of S/N channels"""
+        """Get the number of S/N channels."""
         return self._nc_snr
 
     def get_nc_noise(self) -> int:
-        """Get the number of noise channels"""
+        """Get the number of noise channels."""
         return self._nc_noise
 
     def generate_dense_noise(self, white_mode: int = 0) -> NDArray[np.floating]:
-        """Generate random noise for full matrix
+        """
+        Generate random noise for full matrix.
 
         Parameters
         ----------
@@ -206,17 +211,15 @@ class DenseNoiseModel(ABC):
         return noise_res
 
     def get_S_stat_m(self) -> NDArray[np.floating]:
-        """Get the mean noise covariance matrix as a function of time"""
+        """Get the mean noise covariance matrix as a function of time."""
         return np.mean(self.get_S(), axis=0)
 
 
 class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
-    """a class to handle the fully diagonal nonstationary
-    instrument noise model to feed to snr and fisher matrix calculations
-    """
+    """Handle the full nonstationary noise model."""
 
     def __init__(self, S: NDArray[np.floating], wc: WDMWaveletConstants, prune: int, nc_snr: int, seed: int = -1, storage_mode: int = 0) -> None:
-        """Initialize the fully diagonal, nonstationary noise model
+        """Initialize the fully diagonal, nonstationary noise model.
 
         Parameters
         ----------
@@ -260,22 +263,20 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
 
     @override
     def get_inv_chol_S(self) -> NDArray[np.floating]:
-        """Get the inverse cholesky decomposition of the dense noise covariance matrix"""
+        """Get the inverse cholesky decomposition of the dense noise covariance matrix."""
         return self._inv_chol_S
 
     @override
     def get_S(self) -> NDArray[np.floating]:
-        """Get the dense noise covariance matrix"""
+        """Get the dense noise covariance matrix."""
         return self._S
 
 
 class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
-    """a class to handle the a diagonal stationary
-    noise model to feed to snr and fisher matrix calculations
-    """
+    """Handle a noise model that is diagonal and stationary in time."""
 
     def __init__(self, S_stat_m: NDArray[np.floating], wc: WDMWaveletConstants, prune: int, nc_snr: int, seed: int = -1, storage_mode: int = 0) -> None:
-        """Initialize the stationary instrument noise model
+        """Initialize the stationary instrument noise model.
 
         Parameters
         ----------
@@ -348,10 +349,10 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
 
     @override
     def get_inv_chol_S(self) -> NDArray[np.floating]:
-        """Get the inverse cholesky decomposition of the dense noise covariance matrix"""
+        """Get the inverse cholesky decomposition of the dense noise covariance matrix."""
         return self._inv_chol_S
 
     @override
     def get_S(self) -> NDArray[np.floating]:
-        """Get the dense noise covariance matrix"""
+        """Get the dense noise covariance matrix."""
         return self._S

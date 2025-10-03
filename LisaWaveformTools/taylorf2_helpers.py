@@ -1,4 +1,5 @@
-"""functions to compute rigid adiabatic response in frequency domain"""
+"""Functions to compute rigid adiabatic response in frequency domain."""
+
 from typing import NamedTuple
 
 import numpy as np
@@ -16,6 +17,8 @@ GAMMA = 0.57721566490153286060651209008240243104215933593992  # Euler-Mascheroni
 
 
 class TaylorF2BasicParams(NamedTuple):
+    """Basic TaylorF2 parameters without spin or eccentricity."""
+
     Mt: float
     Mc: float
     FI: float
@@ -24,6 +27,8 @@ class TaylorF2BasicParams(NamedTuple):
 
 
 class TaylorF2AlignedSpinParams(NamedTuple):
+    """TaylorF2 parameters with aligned spin but no eccentricity."""
+
     Mt: float
     Mc: float
     FI: float
@@ -35,6 +40,8 @@ class TaylorF2AlignedSpinParams(NamedTuple):
 
 
 class TaylorF2EccParams(NamedTuple):
+    """TaylorF2 parameters with eccentricity but no spin."""
+
     Mt: float
     Mc: float
     FI: float
@@ -45,7 +52,10 @@ class TaylorF2EccParams(NamedTuple):
 
 @njit()
 def TaylorF2_inplace(intrinsic_waveform: StationaryWaveformFreq, params_intrinsic: TaylorF2BasicParams, nf_lim: PixelGenericRange, t_offset: float = 0., tc_mode: int = 0) -> float:
-    """This is the TaylorF2 model to 2PN order. DOI: 10.1103/PhysRevD.80.084043"""
+    """Compute TaylorF2 model to 2PN order.
+
+    DOI: 10.1103/PhysRevD.80.084043
+    """
     # TODO enforce keeping frequency below lso
     FS = intrinsic_waveform.F
     PSI = intrinsic_waveform.PF
@@ -115,7 +125,10 @@ def TaylorF2_inplace(intrinsic_waveform: StationaryWaveformFreq, params_intrinsi
 
 @njit()
 def TaylorF2_eccentric_inplace(intrinsic_waveform: StationaryWaveformFreq, params_intrinsic: TaylorF2EccParams, nf_lim: PixelGenericRange, amplitude_pn: int = 0, t_offset: float = 0., tc_mode: int = 0) -> float:
-    """This is the TaylorF2 model with eccentricity but no spin from DOI: 10.1103/PhysRevD.93.124061"""
+    """Compute TaylorF2 model with eccentricity but no spin.
+
+    From DOI: 10.1103/PhysRevD.93.124061
+    """
     Mc = float(params_intrinsic.Mc)
     Mt = float(params_intrinsic.Mt)
     FI = float(params_intrinsic.FI)
@@ -381,7 +394,7 @@ def TaylorF2_eccentric_inplace(intrinsic_waveform: StationaryWaveformFreq, param
 
 @njit()
 def TaylorF2_eccentricity_solve(params_intrinsic: TaylorF2EccParams, FI2: float) -> float:
-    """Get an inferred eccentricity at a later frequency based on the taylorf2 eccentricity model"""
+    """Get an inferred eccentricity at a later frequency based on the taylorf2 eccentricity model."""
     e01 = params_intrinsic.e0
     Mt = float(params_intrinsic.Mt)
     Mc = float(params_intrinsic.Mc)
@@ -518,7 +531,11 @@ def TaylorF2_eccentricity_solve(params_intrinsic: TaylorF2EccParams, FI2: float)
 
 @njit()
 def TaylorF2_eccentric_TTRef(params_intrinsic: TaylorF2EccParams) -> float:
-    """Get just TTRef for input parameters DOI: 10.1103/PhysRevD.93.124061"""
+    """
+    Get just TTRef for input parameters.
+
+    DOI: 10.1103/PhysRevD.93.124061
+    """
     Mt = float(params_intrinsic.Mt)
     Mc = float(params_intrinsic.Mc)
     FI = float(params_intrinsic.FI)
@@ -628,9 +645,9 @@ def TaylorF2_eccentric_TTRef(params_intrinsic: TaylorF2EccParams) -> float:
 
 @njit()
 def TaylorF2_time_fix_helper(params_intrinsic: TaylorF2AlignedSpinParams, delta: float) -> float:
-    """This is the TaylorF2 model to 2PN order. DOI: 10.1103/PhysRevD.80.084043
-    helper for a proposal that proposes jumps in final time and delta instead of Mt and Mc
-    this is a heuristic for SOBHBs, so doesn't need the 3PN spin terms (or the full IMRPhenomD model)
+    """Compute the reference time in the TaylorF2 model to 2PN order.
+
+    DOI: 10.1103/PhysRevD.80.084043
     """
     eta = float((1 - delta**2) / 4)
     chis = float(params_intrinsic.chis)
@@ -665,7 +682,11 @@ def TaylorF2_time_fix_helper(params_intrinsic: TaylorF2AlignedSpinParams, delta:
 
 @njit()
 def TaylorF2_ref_time_match(params_intrinsic: TaylorF2AlignedSpinParams, include_pn_SS3: int = 0) -> float:
-    """This is the TaylorF2 model to 2PN order. DOI: 10.1103/PhysRevD.80.084043"""
+    """
+    Compute the reference time in the TaylorF2 model to 2PN order.
+
+    DOI: 10.1103/PhysRevD.80.084043
+    """
     # TODO need to use imrphenomd instead
     Mt = float(params_intrinsic.Mt)
     Mc = float(params_intrinsic.Mc)
@@ -713,7 +734,10 @@ def TaylorF2_ref_time_match(params_intrinsic: TaylorF2AlignedSpinParams, include
 
 @njit()
 def TaylorF2_aligned_inplace(intrinsic_waveform: StationaryWaveformFreq, params_intrinsic: TaylorF2AlignedSpinParams, nf_lim: PixelGenericRange, *, include_phenom_amp: int = 1, include_pn_SS3: int = 0, t_offset: float = 0., tc_mode: int = 0) -> float:
-    """This is the TaylorF2 model to 3.5PN order. DOI: 10.1103/PhysRevD.80.084043, matching IMRPhenom phenomenological coefficents, see
+    """
+    Compute the TaylorF2 model to 3.5PN order.
+
+    DOI: 10.1103/PhysRevD.80.084043, matching IMRPhenom phenomenological coefficents, see
     for reference AmpInsAnsatz and TaylorF2AlignedPhasing from IMRPhenomD_internals.c
     if include_phenom_amp, include the 3 phenomenilogical coefficients in the amplitude beyond 3.5PN.
     if include_pn_SS3 is true include the 3PN spin-spin term, which was not known when the phenomonelogical amplitude coefficients set by phenom_amp were fit so may not be compatible

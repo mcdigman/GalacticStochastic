@@ -1,4 +1,4 @@
-"""get the instrument noise profile"""
+"""LISA instrument noise curves."""
 
 import numpy as np
 from numpy.typing import NDArray
@@ -29,7 +29,7 @@ def instrument_noise1(f: NDArray[np.float64], lc: LISAConstants) -> NDArray[np.f
 
 
 def instrument_noise_AET(f: NDArray[np.float64], lc: LISAConstants) -> NDArray[np.float64]:
-    """Get power spectral density in all 3 channels, assuming identical in all arms"""
+    """Get power spectral density in all 3 channels, assuming identical in all arms."""
     # see arXiv:2005.03610
     # see arXiv:1002.1291
 
@@ -54,7 +54,7 @@ def instrument_noise_AET(f: NDArray[np.float64], lc: LISAConstants) -> NDArray[n
 def instrument_noise_AET_wdm_loop(
     phif: NDArray[np.float64], lc: LISAConstants, wc: WDMWaveletConstants,
 ) -> NDArray[np.float64]:
-    """Helper to get the instrument noise for wdm"""
+    """Help get the the instrument noise in the wdm wavelet basis."""
     # realistically this really only needs run once and is fast enough without jit
     # TODO check normalization
     # TODO get first and last bins correct
@@ -80,8 +80,7 @@ def instrument_noise_AET_wdm_loop(
 
 
 def instrument_noise_AET_wdm_m(lc: LISAConstants, wc: WDMWaveletConstants) -> NDArray[np.float64]:
-    """Get the instrument noise curve as a function of frequency for the wdm
-    wavelet decomposition
+    """Get the tdi instrument noise curve as a function of frequency for the wdm wavelet basis.
 
     Parameters
     ----------

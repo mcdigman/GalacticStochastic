@@ -1,4 +1,4 @@
-"""Functions to compute rigid adiabatic detector response."""
+"""Functions to compute rigid adiabatic detector response in the frequency domain."""
 
 import numpy as np
 from numba import njit, prange
@@ -35,7 +35,8 @@ from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 @njit()
 def get_tensor_basis(params_extrinsic: ExtrinsicParams) -> TensorBasis:
-    """Compute the gravitational-wave tensor basis vectors for LISA observations.
+    """
+    Compute the gravitational-wave tensor basis vectors for LISA observations.
 
     This function calculates:
     1. The wave propagation direction unit vector (kv)
@@ -104,7 +105,8 @@ def get_tensor_basis(params_extrinsic: ExtrinsicParams) -> TensorBasis:
 
 @njit()
 def get_oribtal_phase_constants(lc: LISAConstants, n_sc: int) -> SpacecraftRelativePhases:
-    """Calculate the initial orbital phase offsets and their sine and cosine values for each spacecraft in the LISA constellation.
+    """
+    Calculate the initial orbital phase offsets and their sine and cosine values for each spacecraft in the LISA constellation.
 
     This function determines the relative phase angles at which each spacecraft orbits with respect to a fixed reference,
     according to the geometric configuration of the LISA constellation. These phase offsets are needed to compute the
@@ -149,7 +151,8 @@ def get_oribtal_phase_constants(lc: LISAConstants, n_sc: int) -> SpacecraftRelat
 
 @njit()
 def get_detector_amplitude_phase_combinations(params_extrinsic: ExtrinsicParams) -> DetectorAmplitudePhaseCombinations:
-    """Compute the amplitude and phase factors required for the detector's response to a gravitational-wave signal.
+    """
+    Compute the amplitude and phase factors required for the detector's response to a gravitational-wave signal.
 
     This function uses the the binary inclination and polarization angles
     to calculate the coefficients that scale the plus and cross polarizations as seen by the detector.
@@ -194,7 +197,8 @@ def get_detector_amplitude_phase_combinations(params_extrinsic: ExtrinsicParams)
 
 @njit()
 def get_aet_combinations(tdi_xyz: TDIComplexAntennaPattern, tdi_aet: TDIComplexAntennaPattern) -> None:
-    """Convert the Michelson TDI channel responses (X, Y, Z) into the noise orthogonal A, E, and T combinations.
+    """
+    Convert the Michelson TDI channel responses (X, Y, Z) into the noise orthogonal A, E, and T combinations.
 
     This function transforms the complex antenna pattern components for the standard TDI Michelson channels into the
     noise-orthogonal AET basis. The A, E, and T channels are constructed as specific linear combinations of X, Y, and Z,
@@ -255,7 +259,8 @@ def get_michelson_combinations(
     A_psi: DetectorAmplitudePhaseCombinations,
     tdi_xyz: TDIComplexAntennaPattern,
 ) -> None:
-    """Construct the standard Michelson Time-Delay Interferometry (TDI) X, Y, and Z channel response combinations.
+    """
+    Construct the standard Michelson Time-Delay Interferometry (TDI) X, Y, and Z channel response combinations.
 
     This function computes the frequency-domain antenna pattern for each Michelson interferometer channel (X, Y, Z),
     accounting for polarization, transfer function, and amplitude-phase modulation. It projects the polarization responses,
@@ -343,7 +348,8 @@ def get_michelson_combinations(
 def get_projected_detector_response(
     tb: TensorBasis, sc_sep: SpacecraftSeparationVectors, polarization_response: DetectorPolarizationResponse,
 ) -> None:
-    """Compute the projected detector response of the LISA constellation to a gravitational wave.
+    """
+    Compute the projected detector response of the LISA constellation to a gravitational wave.
 
     This function evaluates the response of the detector arms to an incoming gravitational wave,
     by projecting the polarization basis tensors onto the direction of the separation vectors between spacecraft.
@@ -408,7 +414,8 @@ def get_projected_detector_response(
 def get_separation_wave_projection(
     tb: TensorBasis, sc_sep: SpacecraftSeparationVectors, sc_wave_proj: SpacecraftSeparationWaveProjection,
 ) -> None:
-    """Project the gravitational-wave propagation vector onto the separation vectors.
+    """
+    Project the gravitational-wave propagation vector onto the separation vectors.
 
     This function calculates:
         - The dot products between the wave vector and the separation vectors connecting each
@@ -466,7 +473,8 @@ def get_separation_wave_projection(
 def get_transfer_function(
     fr: float, sc_wave_proj: SpacecraftSeparationWaveProjection, transfer_function: ComplexTransferFunction,
 ) -> None:
-    """Compute the complex transfer function (real and imaginary parts) for the LISA TDI channels.
+    """
+    Compute the complex transfer function (real and imaginary parts) for the LISA TDI channels.
 
     This function calculates the frequency response of the LISA constellation arms to a passing
     gravitational wave, taking into account the time-varying separations between spacecraft and
@@ -522,7 +530,8 @@ def get_transfer_function(
 def compute_separation_vectors(
     lc: LISAConstants, tb: TensorBasis, sc_pos: SpacecraftScalarPosition, sc_sep: SpacecraftSeparationVectors,
 ) -> float:
-    """Compute the separation vectors between LISA spacecraft and between each spacecraft and the guiding center.
+    """
+    Compute the separation vectors between LISA spacecraft and between each spacecraft and the guiding center.
 
     Return the dot product of the gravitational-wave propagation direction with the guiding center position.
 
@@ -599,7 +608,8 @@ def compute_separation_vectors(
 def get_sc_scalar_pos(
     lc: LISAConstants, t: float, sc_phasing: SpacecraftRelativePhases, sc_pos: SpacecraftScalarPosition,
 ) -> None:
-    """Compute the Cartesian positions of the LISA spacecraft at a given time.
+    """
+    Compute the Cartesian positions of the LISA spacecraft at a given time.
 
     This function calculates the (x, y, z) positions for each spacecraft in units scaled by the LISA arm length,
     given the current time, orbital, and phasing parameters. The spacecraft orbits are constructed analytically using
@@ -737,7 +747,8 @@ def get_wavefront_time(
     sv: SpacecraftOrbits,
     wavefront_time: NDArray[np.floating],
 ) -> None:
-    """Compute, in place, the wavefront time coordinate for each spacecraft in the LISA constellation.
+    """
+    Compute, in place, the wavefront time coordinate for each spacecraft in the LISA constellation.
 
     This function calculates the time at which a surface of constant gravitational-wave phase, defined by
     t - (k · x), is reached at each spacecraft. The calculation accounts for the projected position of each spacecraft
@@ -797,7 +808,6 @@ def get_spacecraft_vec(ts: NDArray[np.floating], lc: LISAConstants) -> Spacecraf
         - The positions are normalized such that the arm length scaling (Larm) is explicit in the expressions.
         - The model assumes three spacecraft arranged in a near-equilateral triangle orbiting the Sun with fixed geometry.
         - This function is suitable for generating the nominal orbits for intrinsic_waveform simulation and TDI calculation.
-
     """
     n_sc = 3  # number of spacecraft (currently must be 3)
 
@@ -832,7 +842,7 @@ def phase_wrap_freq(
     kdotx: NDArray[np.floating],
     wrap_thresh: float = np.pi,
 ) -> None:
-    """Helper for getting LISA response in frequency domain."""
+    """Wrap the phase perturbations in frequency domain consistently across channels."""
     tdi_PF = tdi_waveform.PF
     tdi_TF = tdi_waveform.TF
     PF = waveform.PF
@@ -889,7 +899,7 @@ def get_freq_tdi_amp_phase(
     kdotx: NDArray[np.floating],
     er: EdgeRiseModel,
 ) -> None:
-    """Helper for getting LISA response in frequency domain"""
+    """Get the frequency domain TDI response."""
     # TODO figure out how to set Tend properly
     tdi_AF = tdi_waveform.AF
     tdi_PF = tdi_waveform.PF

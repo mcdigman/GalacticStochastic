@@ -1,4 +1,4 @@
-"""functions to compute rigid adiabatic response in frequency domain"""
+"""TaylorF2 waveform model in the frequency domain."""
 from typing import override
 
 from LisaWaveformTools.lisa_config import LISAConstants
@@ -9,7 +9,8 @@ from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 
 class StationaryTaylorF2WaveformFreq(StationarySourceWaveformFreq[TaylorF2AlignedSpinParams, ExtrinsicParams]):
-    """class to store a taylorf2 waveform in the frequency domain and update it."""
+    """Store a taylorf2 waveform in the frequency domain and update it."""
+
     @override
     def __init__(self, params: SourceParams, lc: LISAConstants, nf_lim_absolute: PixelGenericRange, freeze_limits: int, T_obs: float,
                  n_pad_F: int = 10, *, mf_taylor_anchor: float = 1.e-5) -> None:
@@ -19,7 +20,7 @@ class StationaryTaylorF2WaveformFreq(StationarySourceWaveformFreq[TaylorF2Aligne
 
     @override
     def _update_intrinsic(self) -> None:
-        """Update the waveform to match intrinsic parameters"""
+        """Update the waveform to match intrinsic parameters."""
         # TODO check consistency of sign and factor of 2 on phic
         if not isinstance(self.params.intrinsic, TaylorF2AlignedSpinParams):
             msg = 'Intrinsic parameters must be of type TaylorF2AlignedSpinParams.'

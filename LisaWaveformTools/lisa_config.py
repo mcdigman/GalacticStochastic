@@ -1,4 +1,4 @@
-"""read wavelet transform constants in from config file and compute derived parameters"""
+"""Read wavelet transform constants in from config file and compute derived parameters."""
 
 from typing import Any, NamedTuple
 from warnings import warn
@@ -28,7 +28,7 @@ class LISAConstants(NamedTuple):
 
 
 def get_lisa_constants(config: dict[str, Any]) -> LISAConstants:
-    """Get lisa constant object from config file"""
+    """Get lisa constant object from config file."""
     config_lc: dict[str, float | int] = config['lisa_constants']
 
     # Mean arm length of the LISA detector (meters)

@@ -35,6 +35,7 @@ class LinearFrequencyIntrinsicParams(NamedTuple):
     FTd0: float
         The frequency derivative with respect to time dF/dt at t=0
     """
+
     amp0_t: float
     phi0: float
     F0: float
@@ -64,9 +65,8 @@ def _validate_intrinsic_linear_frequency_helper(params: LinearFrequencyIntrinsic
 
 
 class LinearFrequencyParamsManager(AbstractIntrinsicParamsManager[LinearFrequencyIntrinsicParams]):
-    """
-    Manage creation, translation, and handling of ExtrinsicParams objects.
-    """
+    """Manage creation, translation, and handling of ExtrinsicParams objects."""
+
     def __init__(self, params_load: LinearFrequencyIntrinsicParams) -> None:
         self._n_packed: int = N_LINEAR_FREQUENCY_PACKED
         super().__init__(params_load)
@@ -134,8 +134,7 @@ def linear_frequency_intrinsic(waveform: StationaryWaveformTime, intrinsic_param
 
 # TODO do consistency checks
 class LinearFrequencySourceWaveformTime(StationarySourceWaveformTime[LinearFrequencyIntrinsicParams, ExtrinsicParams]):
-    """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain.
-    """
+    """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain."""
 
     @override
     def _update_intrinsic(self) -> None:
@@ -154,8 +153,9 @@ class LinearFrequencySourceWaveformTime(StationarySourceWaveformTime[LinearFrequ
 
 
 class LinearFrequencyWaveletWaveformTime(BinaryWaveletTaylorTime[LinearFrequencyIntrinsicParams, ExtrinsicParams]):
-    """Store a sparse wavelet intrinsic_waveform for a source with linearly increasing frequency and constant amplitude,
-    using the Taylor time method.
+    """Store a wavelet waveform for a source with linearly increasing frequency and constant amplitude.
+
+    Uses the Taylor time method.
     """
 
     def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, *, wavelet_mode: int = 1, response_mode: int = 0) -> None:

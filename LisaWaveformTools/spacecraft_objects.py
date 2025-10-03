@@ -6,6 +6,23 @@ from numpy.typing import NDArray
 
 
 class AntennaResponseChannels(NamedTuple):
+    """
+    Store the antenna response channels for the detector.
+
+    Attributes
+    ----------
+    x : numpy.ndarray
+        Frequency or time grid corresponding to the response values.
+    RR : numpy.ndarray
+        Real part of the antenna response.
+    II : numpy.ndarray
+        Imaginary part of the antenna response.
+    dRR : numpy.ndarray
+        Derivative of the real part of the antenna response.
+    dII : numpy.ndarray
+        Derivative of the imaginary part of the antenna response.
+    """
+
     x: NDArray[np.floating]
     RR: NDArray[np.floating]
     II: NDArray[np.floating]
@@ -15,6 +32,9 @@ class AntennaResponseChannels(NamedTuple):
 
 class TensorBasis(NamedTuple):
     """Store the tensor basis vectors.
+
+    Attributes
+    ----------
     kv : numpy.ndarray
         The unit vector in the direction of the source
     e_plus : numpy.ndarray
@@ -22,6 +42,7 @@ class TensorBasis(NamedTuple):
     e_cross : numpy.ndarray
         The cross polarization tensor basis vector
     """
+
     kv: NDArray[np.floating]
     e_plus: NDArray[np.floating]
     e_cross: NDArray[np.floating]
@@ -30,7 +51,8 @@ class TensorBasis(NamedTuple):
 class SpacecraftOrbits(NamedTuple):
     """
     Store the spacecraft positions and guiding center coordinates.
-    Parameters
+
+    Attributes
     ----------
     x : numpy.ndarray
         2D array of spacecraft x coordinates, shape (3, n_t)
@@ -45,6 +67,7 @@ class SpacecraftOrbits(NamedTuple):
     za : numpy.ndarray
         1D array of guiding center z coordinates, shape (n_t,)
     """
+
     x: NDArray[np.floating]
     y: NDArray[np.floating]
     z: NDArray[np.floating]
@@ -60,7 +83,7 @@ class TDIComplexAntennaPattern(NamedTuple):
     Each field is a NumPy ndarray of shape (nc,) for a single time slice or (nc, nt) for multiple time steps,
     where nc is the number of TDI channels and nt is the number of time steps.
 
-    Parameters
+    Attributes
     ----------
         FpR : numpy.ndarray:
             Real part of the plus-polarization antenna pattern, shape (nc,) or (nc, nt).
@@ -71,6 +94,7 @@ class TDIComplexAntennaPattern(NamedTuple):
         FcI : numpy.ndarray:
             Imaginary part of the cross-polarization antenna pattern, shape (nc,) or (nc, nt).
     """
+
     FpR: NDArray[np.floating]
     FpI: NDArray[np.floating]
     FcR: NDArray[np.floating]
@@ -87,7 +111,7 @@ class SpacecraftSeparationVectors(NamedTuple):
     r12, r13, r23 are the separation vectors between spacecraft pairs, and are unit vectors.
     r10, r20, r30 are the separation vectors from each spacecraft to the guiding center, and are not unit vectors.
 
-    Parameters
+    Attributes
     ----------
     r12 : numpy.ndarray
         Separation vector from spacecraft 1 to spacecraft 2, shape (3,) or (3, nt)
@@ -102,6 +126,7 @@ class SpacecraftSeparationVectors(NamedTuple):
     r30 : numpy.ndarray
         Separation vector from spacecraft 3 to the guiding center, shape (3,) or (3, nt)
     """
+
     r12: NDArray[np.floating]
     r13: NDArray[np.floating]
     r23: NDArray[np.floating]
@@ -114,13 +139,14 @@ class DetectorPolarizationResponse(NamedTuple):
     """
     Store the detector response for the plus and cross polarizations.
 
-    Parameters
+    Attributes
     ----------
     d_plus : numpy.ndarray
         The detector response for the plus polarization, shape (n_arm, n_arm)
     d_cross : numpy.ndarray
         The detector response for the cross polarization, shape (n_arm, n_arm)
     """
+
     d_plus: NDArray[np.floating]
     d_cross: NDArray[np.floating]
 
@@ -128,13 +154,15 @@ class DetectorPolarizationResponse(NamedTuple):
 class ComplexTransferFunction(NamedTuple):
     """
     Store the complex transfer function for the TDI channels.
-    Parameters
+
+    Attributes
     ----------
     TR : numpy.ndarray
         Real part of the transfer function, shape (n_arm, n_arm)
     TI : numpy.ndarray
         Imaginary part of the transfer function, shape (n_arm, n_arm)
     """
+
     TR: NDArray[np.floating]
     TI: NDArray[np.floating]
 
@@ -142,7 +170,8 @@ class ComplexTransferFunction(NamedTuple):
 class DetectorAmplitudePhaseCombinations(NamedTuple):
     """
     Store the amplitude and phase combinations need to compute the detector response.
-    Parameters
+
+    Attributes
     ----------
     A_plus : float
         Amplitude multiplier for the plus polarization
@@ -153,6 +182,7 @@ class DetectorAmplitudePhaseCombinations(NamedTuple):
     sin_psi : float
         Sine of the polarization angle
     """
+
     A_plus: float
     A_cross: float
     cos_psi: float
@@ -162,7 +192,8 @@ class DetectorAmplitudePhaseCombinations(NamedTuple):
 class SpacecraftScalarPosition(NamedTuple):
     """
     Store the positions of the spacecraft in the LISA constellation as a single time slice.
-    Parameters
+
+    Attributes
     ----------
     x : numpy.ndarray
         1D array of spacecraft x coordinates, shape (n_sc,)
@@ -171,6 +202,7 @@ class SpacecraftScalarPosition(NamedTuple):
     z : numpy.ndarray
         1D array of spacecraft z coordinates, shape (n_sc,)
     """
+
     x: NDArray[np.floating]
     y: NDArray[np.floating]
     z: NDArray[np.floating]
@@ -185,7 +217,7 @@ class SpacecraftRelativePhases(NamedTuple):
     the guiding center orbit (lambda0 is the initial orientation of the constellation).
     Also includes the sine and cosine of these phase offsets, which are used to compute the spacecraft positions.
 
-    Parameters
+    Attributes
     ----------
     sin_beta : numpy.ndarray
         1D array of sine of the spacecraft orbital phase offsets, shape (n_sc,)
@@ -194,6 +226,7 @@ class SpacecraftRelativePhases(NamedTuple):
     beta : numpy.ndarray
         1D array of spacecraft orbital phases offset, shape (n_sc,)
     """
+
     sin_beta: NDArray[np.floating]
     cos_beta: NDArray[np.floating]
     beta: NDArray[np.floating]
@@ -203,17 +236,28 @@ class SpacecraftSeparationWaveProjection(NamedTuple):
     """
     Store the dot products of the wave vector with the separation vectors.
 
-    Parameters
+    Attributes
     ----------
     k_sc_sc_sep : numpy.ndarray
         Dot products of the wave vector with the separation vectors between each spacecraft pair, shape (n_arm, n_arm)
     k_sc_gc_sep : numpy.ndarray
         Dot products of the wave vector with the separation vectors between spacecraft and the guiding center, shape (n_arm,)
     """
+
     k_sc_sc_sep: NDArray[np.floating]
     k_sc_gc_sep: NDArray[np.floating]
 
 
 class EdgeRiseModel(NamedTuple):
+    """Store the parameters for the model to use at the edges of the time series.
+
+    Attributes
+    ----------
+    Tstart : float
+        Start time of the model.
+    Tend : float
+        End time of the model.
+    """
+
     Tstart: float
     Tend: float

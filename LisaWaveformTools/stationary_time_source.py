@@ -16,11 +16,10 @@ from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 
 class StationarySourceWaveformTime(Generic[IntrinsicParamsType, ExtrinsicParamsType], StationarySourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType], ABC):
-    """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain.
-    """
+    """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain."""
 
     def __init__(self, params: SourceParams, nt_lim_waveform: PixelGenericRange, lc: LISAConstants, *, response_mode: int = 0) -> None:
-        """Initalize the object"""
+        """Initialize the object."""
         self._nt_lim_waveform: PixelGenericRange = nt_lim_waveform
         self._nt_range: int = int(self._nt_lim_waveform.nx_max - self._nt_lim_waveform.nx_min)
         self._lc: LISAConstants = lc

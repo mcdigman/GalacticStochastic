@@ -47,10 +47,10 @@ class StationarySourceWaveform(Generic[StationaryWaveformType, IntrinsicParamsTy
 
     @abstractmethod
     def _create_intrinsic_params_manager(self, params_intrinsic: IntrinsicParamsType) -> AbstractIntrinsicParamsManager[IntrinsicParamsType]:
-        """Get an intrinsic parameter manager object"""
+        """Get an intrinsic parameter manager object."""
 
     def _create_extrinsic_params_manager(self, params_extrinsic: ExtrinsicParamsType) -> AbstractExtrinsicParamsManager[ExtrinsicParamsType] | ExtrinsicParamsManager:
-        """Get an intrinsic parameter manager object"""
+        """Get an intrinsic parameter manager object."""
         if not isinstance(params_extrinsic, ExtrinsicParams):
             msg = """No implementation for input type"""
             raise NotImplementedError(msg)
@@ -157,48 +157,58 @@ class StationarySourceWaveform(Generic[StationaryWaveformType, IntrinsicParamsTy
 
     @property
     def consistent(self) -> bool:
-        """Check if the internal representation is consistent with the input parameters.
+        """
+        Check if the internal representation is consistent with the input parameters.
 
         Returns
-        ----------
+        -------
         consistent : bool
             Whether the internal representation is consistent with the input parameters.
-
         """
         return self._consistent and self._consistent_intrinsic and self._consistent_extrinsic
 
     @property
     def consistent_instrinsic(self) -> bool:
-        """Check if the intrinsic representation is consistent with the input parameters.
+        """
+        Check if the intrinsic representation is consistent with the input parameters.
 
         Returns
-        ----------
+        -------
         consistent : bool
             Whether the internal representation is consistent with the intrinsic parameters.
-
         """
         return self._consistent_intrinsic
 
     @property
     def consistent_extrinsic(self) -> bool:
-        """Check if the extrinsic representation is consistent with the input parameters.
+        """
+        Check if the extrinsic representation is consistent with the input parameters.
 
         Returns
-        ----------
+        -------
         consistent : bool
             Whether the internal representation is consistent with the extrinsic parameters.
-
         """
         return self._consistent_extrinsic
 
     @property
     def params(self) -> SourceParams:
-        """Get the current source parameters."""
+        """
+        Get the current source parameters.
+
+        Returns
+        -------
+        params : SourceParams
+            The current source parameters.
+        """
         return SourceParams(self._intrinsic_params_manager.params, self._extrinsic_params_manager.params)
 
     @params.setter
     def params(self, params_in: SourceParams) -> None:
-        """Set the source parameters without updating the waveform. If called directly without
+        """
+        Set the source parameters without updating the waveform.
+
+        If called directly without
         calling `update_params`, the internal representation will not be consistent.
         """
         self._consistent_intrinsic = False
@@ -242,4 +252,10 @@ class StationarySourceWaveform(Generic[StationaryWaveformType, IntrinsicParamsTy
     @property
     @abstractmethod
     def nc_waveform(self) -> int:
-        """Get the number of channels in the waveform."""
+        """Get the number of channels in the waveform.
+
+        Returns
+        -------
+        nc_waveform : int
+            The number of channels in the waveform.
+        """
