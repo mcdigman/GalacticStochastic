@@ -69,11 +69,6 @@ def fetch_or_run_iterative_loop(
         assert cyclo_mode == 1, 'Pre-processing is only compatible with cyclo_mode = 1'
 
     if preprocess_mode in (0, 2):
-        # galactic_below_in, snrs_tot_in = gfi.load_preliminary_galactic_file(
-        #    config,
-        #    ic,
-        #    wc,
-        # )
         # fetch mode options if we are in a state where the preliminary file is needed
         # 0: run the loop from scratch, stop if the preliminary file does not exist
         # 1: try to fetch the final file, if it does not exist run the loop, stop if the preliminary file does not exist
@@ -93,8 +88,6 @@ def fetch_or_run_iterative_loop(
         nt_range_prelim = (0, wc.Nt)
         ifm_prelim = fetch_or_run_iterative_loop(config, cyclo_mode=1, nt_range=nt_range_prelim, fetch_mode=fetch_mode_prelim, preprocess_mode=1, output_mode=output_mode, wc_in=wc_in, lc_in=lc, ic_in=ic_in, instrument_random_seed_in=instrument_random_seed_in)
 
-        # assert_allclose(ifm_prelim.noise_manager.bgd.get_galactic_below_low(), galactic_below_in)
-        # assert_allclose(ifm_prelim.bis._snrs_tot_upper[-1], snrs_tot_in)
         galactic_below_in = ifm_prelim.noise_manager.bgd.get_galactic_below_low()
         snrs_tot_in = ifm_prelim.bis.get_final_snrs_tot_upper()
 
@@ -179,23 +172,19 @@ def fetch_or_run_iterative_loop(
         if preprocess_mode == 0:
             # TODO if fetch_mode==4, we will have an inconsistent hash in the pre-processed file
             # if pre-processing in mode 2 has happened we will have an inconsistent hash for any re-pre-processed files
-            gfi.store_processed_gb_file(
-                config,
-                wc,
-                ifm,
-            )
+            write_mode = 0
         else:
             if preprocess_mode == 1:
                 write_mode = 2
             else:
                 write_mode = 0
-
-            gfi.store_preliminary_gb_file(
-                config,
-                wc,
-                ifm,
-                write_mode=write_mode,
-            )
+        gfi.store_processed_gb_file(
+            config,
+            wc,
+            ifm,
+            write_mode=write_mode,
+            preprocess_mode=preprocess_mode,
+        )
 
     elif output_mode == 0:
         pass

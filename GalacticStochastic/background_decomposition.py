@@ -507,12 +507,12 @@ class BGDecomposition:
             axis=0,
         )
 
-        self._power_galactic_undecided.append(power_undecided.asarray(np.float64))
-        self._power_galactic_above.append(power_above.asarray(np.float64))
+        self._power_galactic_undecided.append(np.asarray(power_undecided, dtype=np.float64))
+        self._power_galactic_above.append(np.asarray(power_above, dtype=np.float64))
 
-        self._power_galactic_total.append(power_total.asarray(np.float64))
-        self._power_galactic_below_high.append(power_below_high.asarray(np.float64))
-        self._power_galactic_below_low.append(power_below_low.asarray(np.float64))
+        self._power_galactic_total.append(np.asarray(power_total, dtype=np.float64))
+        self._power_galactic_below_high.append(np.asarray(power_below_high, dtype=np.float64))
+        self._power_galactic_below_low.append(np.asarray(power_below_low, dtype=np.float64))
 
     def clear_undecided(self) -> None:
         """Clear the undecided part of the galactic spectrum."""
