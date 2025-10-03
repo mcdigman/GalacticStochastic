@@ -522,7 +522,6 @@ def fit_gb_spectrum_evolve(
 
     res = res_found['x']
     print(res_found)
-    print(res_found.dtype)
 
     a1_res = float(res[0])
     ak_res = float(res[1])

@@ -67,8 +67,6 @@ if __name__ == '__main__':
 
         S_stat_smooth_m[itrk, 0, :] = S_stat_m[itrk, 0, :]
 
-        print(galactic_below_high.shape)
-        print(np.mean(galactic_below_high, axis=0))
         (_, r_tots[itrk], S_stat_smooth_m[itrk], _, _) = get_S_cyclo(galactic_below_high, S_inst_m, wc.DT,
                                                                      smooth_targ_length, filter_periods,
                                                                      period_list=period_list)

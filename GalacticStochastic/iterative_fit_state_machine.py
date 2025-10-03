@@ -85,7 +85,33 @@ class IterativeFitState(StateManager):
 
     @override
     def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'fit_state', group_mode: int = 0) -> h5py.Group:
-        """Store the object in an hdf5 group."""
+        """
+        Store attributes, configuration, and results to an HDF5 file.
+
+        This method saves the current state, including relevant attributes and results,
+        to the specified HDF5 group. The data can be organized under a specific group name
+        and with a chosen storage mode.
+
+        Parameters
+        ----------
+        hf_in : h5py.Group
+            The HDF5 group where the state will be stored.
+        group_name : str
+            Name of the group under which to store the state (default is 'state_manager').
+        group_mode : int
+            If group_mode == 1, do not create a new group, and write directly to hf_in.
+            If group_mode == 0, create a new group under hf_in with name group_name (default is 0).
+
+        Returns
+        -------
+        h5py.Group
+            The HDF5 group containing the stored state.
+
+        Raises
+        ------
+        NotImplementedError
+            If the method is not implemented in a subclass.
+        """
         if group_mode == 0:
             hf_state = hf_in.create_group(group_name)
         elif group_mode == 1:
@@ -128,7 +154,32 @@ class IterativeFitState(StateManager):
 
     @override
     def load_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'fit_state', group_mode: int = 0) -> None:
-        """Load the object from an hdf5 group."""
+        """
+        Load attributes, configuration, and results from an HDF5 file.
+
+        This method loads the current state, including relevant attributes and results,
+        from the specified HDF5 group, as well as possible. The data can be organized under a specific group name
+        and with a chosen storage mode.
+
+        Parameters
+        ----------
+        hf_in : h5py.Group
+            The HDF5 group where the state was stored.
+        group_name : str
+            Name of the group under which to store the state (default is 'state_manager').
+        group_mode : int
+            If group_mode == 1, assume no new group was created, and read directly from hf_in.
+            If group_mode == 0, assume a new group was created under hf_in with name group_name (default is 0).
+
+        Raises
+        ------
+        NotImplementedError
+            If the method is not implemented in a subclass.
+        TypeError
+            If the format is not as expected.
+        ValueError
+            If loaded attributes do not match the current object's attributes.
+        """
         if group_mode == 0:
             hf_state = hf_in[group_name]
         elif group_mode == 1:

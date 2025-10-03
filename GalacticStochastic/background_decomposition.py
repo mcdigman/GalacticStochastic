@@ -53,9 +53,9 @@ class BGDecomposition:
         galactic_above : ndarray of float, optional
             Array containing the bright (above threshold) component of the galactic background.
             If None, initialized to zeros.
-        track_mode : int, optional
+        track_mode : int
             If nonzero, enables internal consistency checks and diagnostics. Default is 1.
-        storage_mode : int, optional
+        storage_mode : int
             Storage mode for the background. Only 0 is supported. Default is 0.
 
         Raises
@@ -111,11 +111,43 @@ class BGDecomposition:
 
     @property
     def nc_galaxy(self) -> int:
-        """Number of tdi channels in the galactic background."""
+        """Number of tdi channels in the galactic background.
+
+        Returns
+        -------
+        int
+            The number of channels being tracked in the galactic background
+        """
         return self._nc_galaxy
 
     def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'background', group_mode: int = 0) -> h5py.Group:
-        """Store the background to an hdf5 file."""
+        """
+        Store attributes, configuration, and results to an HDF5 file.
+
+        This method saves the current state, including relevant attributes and results,
+        to the specified HDF5 group. The data can be organized under a specific group name
+        and with a chosen storage mode.
+
+        Parameters
+        ----------
+        hf_in : h5py.Group
+            The HDF5 group where the state will be stored.
+        group_name : str
+            Name of the group under which to store the state (default is 'state_manager').
+        group_mode : int
+            If group_mode == 1, do not create a new group, and write directly to hf_in.
+            If group_mode == 0, create a new group under hf_in with name group_name (default is 0).
+
+        Returns
+        -------
+        h5py.Group
+            The HDF5 group containing the stored state.
+
+        Raises
+        ------
+        NotImplementedError
+            If the method is not implemented in a subclass.
+        """
         if group_mode == 0:
             hf_background = hf_in.create_group(group_name)
         elif group_mode == 1:
@@ -143,7 +175,32 @@ class BGDecomposition:
         return hf_background
 
     def load_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'background', group_mode: int = 0) -> None:
-        """Load the background from an hdf5 file."""
+        """
+        Load attributes, configuration, and results from an HDF5 file.
+
+        This method loads the current state, including relevant attributes and results,
+        from the specified HDF5 group, as well as possible. The data can be organized under a specific group name
+        and with a chosen storage mode.
+
+        Parameters
+        ----------
+        hf_in : h5py.Group
+            The HDF5 group where the state was stored.
+        group_name : str
+            Name of the group under which to store the state (default is 'state_manager').
+        group_mode : int
+            If group_mode == 1, assume no new group was created, and read directly from hf_in.
+            If group_mode == 0, assume a new group was created under hf_in with name group_name (default is 0).
+
+        Raises
+        ------
+        NotImplementedError
+            If the method is not implemented in a subclass.
+        TypeError
+            If the format is not as expected.
+        ValueError
+            If loaded attributes do not match the current object's attributes.
+        """
         if group_mode == 0:
             hf_background = hf_in[group_name]
         elif group_mode == 1:
@@ -232,7 +289,7 @@ class BGDecomposition:
         representation : NDArray[np.floating]
             Input array containing the galactic background component data.
             Must have a size compatible with the expected shapes.
-        shape_mode : int, optional
+        shape_mode : int
             Output shape mode:
             - 0: Reshape to (Nt \* Nf, nc_galaxy)
             - 1: Reshape to (Nt, Nf, nc_galaxy)
@@ -262,9 +319,9 @@ class BGDecomposition:
 
         Parameters
         ----------
-        bypass_check : bool, optional
+        bypass_check : bool
             If True, skip the internal state consistency check. Default is False.
-        shape_mode : int, optional
+        shape_mode : int
             Output shape mode:
             - 0: Reshape to (Nt \* Nf, nc_galaxy)
             - 1: Reshape to (Nt, Nf, nc_galaxy)
@@ -288,9 +345,9 @@ class BGDecomposition:
 
         Parameters
         ----------
-        bypass_check : bool, optional
+        bypass_check : bool
             If True, skip the internal state consistency check. Default is False.
-        shape_mode : int, optional
+        shape_mode : int
             Output shape mode:
             - 0: Reshape to (Nt \* Nf, nc_galaxy)
             - 1: Reshape to (Nt, Nf, nc_galaxy)
@@ -314,9 +371,9 @@ class BGDecomposition:
 
         Parameters
         ----------
-        bypass_check : bool, optional
+        bypass_check : bool
             If True, skip the internal state consistency check. Default is False.
-        shape_mode : int, optional
+        shape_mode : int
             Output shape mode:
             - 0: Reshape to (Nt \* Nf, nc_galaxy)
             - 1: Reshape to (Nt, Nf, nc_galaxy)
@@ -338,9 +395,9 @@ class BGDecomposition:
 
         Parameters
         ----------
-        bypass_check : bool, optional
+        bypass_check : bool
             If True, skip the internal state consistency check. Default is False.
-        shape_mode : int, optional
+        shape_mode : int
             Output shape mode:
             - 0: Reshape to (Nt \* Nf, nc_galaxy)
             - 1: Reshape to (Nt, Nf, nc_galaxy)
@@ -362,9 +419,9 @@ class BGDecomposition:
 
         Parameters
         ----------
-        bypass_check : bool, optional
+        bypass_check : bool
             If True, skip the internal state consistency check. Default is False.
-        shape_mode : int, optional
+        shape_mode : int
             Output shape mode:
             - 0: Reshape to (Nt \* Nf, nc_galaxy)
             - 1: Reshape to (Nt, Nf, nc_galaxy)
@@ -386,9 +443,9 @@ class BGDecomposition:
 
         Parameters
         ----------
-        bypass_check : bool, optional
+        bypass_check : bool
             If True, skip the internal state consistency check. Default is False.
-        shape_mode : int, optional
+        shape_mode : int
             Output shape mode:
             - 0: Reshape to (Nt \* Nf, nc_galaxy)
             - 1: Reshape to (Nt, Nf, nc_galaxy)
@@ -476,7 +533,29 @@ class BGDecomposition:
         filter_periods: int,
         period_list: tuple[int, ...] | tuple[np.floating, ...],
     ) -> NDArray[np.floating]:
-        """Get the upper estimate of the galactic power spectrum."""
+        """
+        Get the upper estimate of the galactic power spectrum.
+
+        This method computes the power spectral density (PSD) for the upper estimate of the unresolvable
+        galactic background, assuming the undecided component is included as part of the unresolvable signal.
+        The PSD is computed using the provided mean spectrum, smoothing length, and filter parameters.
+
+        Parameters
+        ----------
+        S_mean : NDArray[np.floating]
+            Mean power spectrum used for normalization.
+        smooth_lengthf : float
+            Smoothing length in the frequency domain.
+        filter_periods : int
+            Number of periods to use for filtering.
+        period_list : tuple of int or float
+            List of periods to consider in the cyclostationary analysis.
+
+        Returns
+        -------
+        NDArray[np.floating]
+            The estimated power spectral density for the upper bound of the unresolvable galactic background.
+        """
         galactic_loc = self.get_galactic_below_high(bypass_check=True)
         S, _, _, _, _ = get_S_cyclo(
             galactic_loc.reshape(self._shape2),
@@ -495,7 +574,29 @@ class BGDecomposition:
         filter_periods: int,
         period_list: tuple[int, ...] | tuple[np.floating, ...],
     ) -> NDArray[np.floating]:
-        """Get the lower estimate of the galactic power spectrum."""
+        """
+        Get the lower estimate of the galactic power spectrum.
+
+        This method computes the power spectral density (PSD) for the lower estimate of the unresolvable
+        galactic background, assuming the undecided component is excluded from the unresolvable signal.
+        The PSD is computed using the provided mean spectrum, smoothing length, and filter parameters.
+
+        Parameters
+        ----------
+        S_mean : NDArray[np.floating]
+            Mean power spectrum used for normalization.
+        smooth_lengthf : float
+            Smoothing length in the frequency domain.
+        filter_periods : int
+            Number of periods to use for filtering.
+        period_list : tuple of int or float
+            List of periods to consider in the cyclostationary analysis.
+
+        Returns
+        -------
+        NDArray[np.floating]
+            The estimated power spectral density for the lower bound of the unresolvable galactic background.
+        """
         galactic_loc = self.get_galactic_below_low(bypass_check=True)
         S, _, _, _, _ = get_S_cyclo(
             galactic_loc.reshape(self._shape2),
@@ -508,26 +609,85 @@ class BGDecomposition:
         return S
 
     def add_undecided(self, wavelet_waveform: SparseWaveletWaveform) -> None:
-        """Add a binary to the undecided component of the galactic background."""
+        """
+        Add a binary to the undecided component of the galactic background.
+
+        Parameters
+        ----------
+        wavelet_waveform : SparseWaveletWaveform
+            The sparse wavelet waveform representing the binary to be added.
+        """
         sparse_addition_helper(wavelet_waveform, self._galactic_undecided)
 
     def add_floor(self, wavelet_waveform: SparseWaveletWaveform) -> None:
-        """Add a binary to the floor component of the galactic background."""
+        """Add a binary to the floor component of the galactic background.
+
+        Parameters
+        ----------
+        wavelet_waveform : SparseWaveletWaveform
+            The sparse wavelet waveform representing the binary to be added.
+        """
         sparse_addition_helper(wavelet_waveform, self._galactic_floor)
 
     def add_faint(self, wavelet_waveform: SparseWaveletWaveform) -> None:
-        """Add a binary to the faint component of the galactic background."""
+        """Add a binary to the faint component of the galactic background.
+
+        Parameters
+        ----------
+        wavelet_waveform : SparseWaveletWaveform
+            The sparse wavelet waveform representing the binary to be added.
+        """
         sparse_addition_helper(wavelet_waveform, self._galactic_below)
 
     def add_bright(self, wavelet_waveform: SparseWaveletWaveform) -> None:
-        """Add a binary to the bright component of the galactic background."""
+        """Add a binary to the bright component of the galactic background.
+
+        Parameters
+        ----------
+        wavelet_waveform : SparseWaveletWaveform
+            The sparse wavelet waveform representing the binary to be added.
+        """
         sparse_addition_helper(wavelet_waveform, self._galactic_above)
 
 
 def _check_correct_component_shape(
     nc: int, wc: WDMWaveletConstants, galactic_component: NDArray[np.floating], *, shape_mode: int = 0,
 ) -> NDArray[np.floating]:
-    """Check that the galactic component has the correct shape, and reshape if needed."""
+    """
+    Check and reshape a galactic background component to the correct shape.
+
+    This function verifies that the input galactic component array has a size compatible
+    with the expected shapes based on the wavelet constants and number of channels.
+    If necessary, it reshapes the array to the desired output shape specified by `shape_mode`.
+
+    Parameters
+    ----------
+    nc : int
+        Number of galactic background channels.
+    wc : WDMWaveletConstants
+        Wavelet constants describing the time-frequency grid.
+    galactic_component : NDArray[np.floating]
+        Input array representing a galactic background component.
+        Must have a size of `wc.Nt * wc.Nf * nc`.
+    shape_mode : int
+        Output shape mode:
+        - 0: Reshape to (Nt * Nf, nc)
+        - 1: Reshape to (Nt, Nf, nc)
+        - 2: Reshape to (Nt * Nf * nc,)
+        Default is 0.
+
+    Returns
+    -------
+    NDArray[np.floating]
+        The galactic component array reshaped to the selected output format.
+
+    Raises
+    ------
+    AssertionError
+        If the input array does not have the expected size or an allowed shape.
+    ValueError
+        If an invalid `shape_mode` is provided.
+    """
     assert galactic_component.size == wc.Nt * wc.Nf * nc, 'Incorrectly sized galaxy component'
 
     shape1 = (wc.Nt * wc.Nf, nc)
