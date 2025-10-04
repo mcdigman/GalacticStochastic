@@ -2,7 +2,7 @@
 # values related to file io
 
 
-galaxy_dir = 'Galaxies/Galaxy5/'
+galaxy_dir = 'Galaxies/Galaxy1/'
 galaxy_file = 'galaxy_binaries.hdf5'
 
 # prefix for final processed filename

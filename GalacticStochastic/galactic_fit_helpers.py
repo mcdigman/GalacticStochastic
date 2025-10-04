@@ -282,6 +282,7 @@ def _mean_smooth_helper(
 
     # interpolate from the evenly spaced input frequency bins to a finer set of log frequency bins
     # so we can apply the smoothing in log frequency instead of frequency
+    assert nf_loc > 1
     n_f_interp = interp_mult * nf_loc
     log_f_interp = np.linspace(0.0, np.log10(nf_loc - 1), n_f_interp)
 
@@ -312,7 +313,7 @@ def get_S_cyclo(
     period_list: tuple[int, ...] | tuple[np.floating, ...] | None = None,
     faint_cutoff_thresh: float = 0.1,
     t_stabilizer_mult: float = 1.0e-13,
-    r_cutoff_mult: float = 1.0e-6,
+    r_cutoff: float = 1.0e-6,
     log_stabilizer: float = 1.0e-50,
     interp_mult: int = 10,
 ) -> tuple[
@@ -350,7 +351,7 @@ def get_S_cyclo(
         Threshold (fraction of max) for masking faint frequencies in envelope modulation (default 0.1).
     t_stabilizer_mult : float
         Multiplier for numerical stabilizer added to avoid division by zero (default 1.0e-13).
-    r_cutoff_mult : float
+    r_cutoff : float
         Multiplier for minimum allowed value of the demodulation ratio (default 1.0e-6).
     log_stabilizer : float
         Small positive value added before taking logarithms to avoid log(0) (default 1.0e-50).
@@ -380,7 +381,9 @@ def get_S_cyclo(
     nf_loc = S_inst_m.shape[0]
     assert len(galactic_below.shape) == 3
     assert S_inst_m.shape[0] == galactic_below.shape[1]
+    assert nf_loc > 2, 'Cannot compute meaningful spectrum smoothing without multiple frequencies'
     nt_loc = galactic_below.shape[0]
+    assert nt_loc > 1, 'Cannot compute meaningful cyclostationary model with a constant spectrum'
 
     nt_lim = PixelGenericRange(0, nt_loc, dt, 0)
     t_obs = nt_lim.dx * (nt_lim.nx_max - nt_lim.nx_min)
@@ -400,19 +403,25 @@ def get_S_cyclo(
         r_mean: NDArray[np.floating] = np.zeros((nt_loc, nc_s), dtype=np.float64)
         # whitened mean galaxy power
         Sw_in_mean: NDArray[np.floating] = np.zeros_like(S_in_mean)
+        assert np.any(S_inst_m > 0.0), 'Instrumental noise must be positive somewhere to whiten'
         Sw_in_mean[S_inst_m > 0.0] = np.abs(S_in_mean[S_inst_m > 0.0] / S_inst_m[S_inst_m > 0.0])
 
         for itrc in range(nc_s):
             # completely cut out faint frequencies for calculating the envelope modulation
             # faint frequencies are different and noisier, so just weighting may not work
-            mask: NDArray[np.bool_] = Sw_in_mean[:, itrc] > faint_cutoff_thresh * np.max(Sw_in_mean[:, itrc])
-            stabilizer: float = t_stabilizer_mult * float(np.max(S_in_mean[mask, itrc]))
-            Sw_in: NDArray[np.floating] = S_in[:, mask, itrc] / (S_in_mean[mask, itrc] + stabilizer)
-            r_mean[:, itrc] = np.mean(Sw_in, axis=1)
+            max_val: float = float(np.max(Sw_in_mean[:, itrc]))
+            if max_val == 0.:
+                # patch to handle case where there is zero power separately
+                r_mean[:, itrc] = 1.
+            else:
+                mask: NDArray[np.bool_] = Sw_in_mean[:, itrc] > faint_cutoff_thresh * max_val
+                stabilizer: float = t_stabilizer_mult * float(max_val)
+                Sw_in: NDArray[np.floating] = S_in[:, mask, itrc] / (S_in_mean[mask, itrc] + stabilizer)
+                r_mean[:, itrc] = np.mean(Sw_in, axis=1)
 
-            del Sw_in
-            del stabilizer
-            del mask
+                del Sw_in
+                del stabilizer
+                del mask
 
             assert np.all(r_mean[:, itrc] >= 0.0)
 
@@ -434,7 +443,12 @@ def get_S_cyclo(
         # but due to noise/numerical inaccuracy in the fft it could be slightly negative
         # it also appears in a division, so we will lose numerical stability if it is too small.
         # add a numerical cutoff to small values scaled to the largest
-        r_smooth[r_smooth < r_cutoff_mult * np.max(r_smooth)] = r_cutoff_mult * np.max(r_smooth)
+        r_scale: float = r_cutoff * np.max(np.abs(r_smooth))
+        # if r_scale is 0 or negative, something is wrong so just set the entire thing to 1 to prevent crashes
+        if r_scale <= 0.0:
+            r_smooth[:] = 1.0
+        else:
+            r_smooth[r_smooth < r_scale] = r_scale
 
         # absolute value should have no effect here unless r_smooth was entirely negative
         r_smooth = np.abs(r_smooth)
@@ -443,6 +457,7 @@ def get_S_cyclo(
     S_demod_mean: NDArray[np.floating] = np.zeros((nf_loc, nc_s))
 
     for itrc in range(nc_s):
+        assert np.all(r_smooth[:, itrc] > 0.0)
         S_demod_mean[:, itrc] = np.mean(np.abs(S_in[:, :, itrc].T / r_smooth[:, itrc]), axis=1)
 
     del S_in
