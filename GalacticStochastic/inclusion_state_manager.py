@@ -467,7 +467,9 @@ class BinaryInclusionState(StateManager):
             self._argbinmap = argbbinmap_temp[()]
         except KeyError:
             active_mask_temp = hf_include['active_mask']
-            self._argbinmap = np.argwhere(active_mask_temp).flatten()
+            assert isinstance(active_mask_temp, h5py.Dataset)
+            active_mask = active_mask_temp[()]
+            self._argbinmap = np.argwhere(active_mask).flatten()
 
         try:
             faints_old_temp = hf_include['faints_old']

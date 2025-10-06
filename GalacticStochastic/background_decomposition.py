@@ -114,7 +114,10 @@ class BGDecomposition:
         track_mode : int
             If nonzero, enables internal consistency checks and diagnostics. Default is 1.
         storage_mode : int
-            Storage mode for the background. Only 0 is supported. Default is 0.
+            Storage mode for the background.
+            If 0, store faint, undecided, and bright separately. Default is 0.
+            If 1, store faint separately and undecided and bright together
+
 
         Raises
         ------
@@ -123,7 +126,7 @@ class BGDecomposition:
         AssertionError
             If provided arrays do not match the expected shapes.
         """
-        if storage_mode != 0:
+        if storage_mode not in (0, 1):
             msg = 'Unrecognized option for storage mode'
             raise ValueError(msg)
 
@@ -230,6 +233,14 @@ class BGDecomposition:
             _ = hf_background.create_dataset(
                 'galactic_undecided', data=self.get_galactic_coadd_undecided(), compression='gzip',
             )
+        elif self._storage_mode == 1:
+            # track just faint part and everything else combined, useful for preliminary
+            _ = hf_background.create_dataset(
+                'galactic_below_low', data=self.get_galactic_below_low(), compression='gzip',
+            )
+            _ = hf_background.create_dataset(
+                'galactic_potentially_resolvable', data=self.get_galactic_coadd_potentially_resolvable(), compression='gzip',
+            )
         return hf_background
 
     def load_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'background', group_mode: int = 0) -> None:
@@ -277,9 +288,11 @@ class BGDecomposition:
         storage_mode_temp = hf_background.attrs['storage_mode']
         assert isinstance(storage_mode_temp, (int, np.integer))
         self._storage_mode = int(storage_mode_temp)
+
         track_mode_temp = hf_background.attrs['track_mode']
         assert isinstance(track_mode_temp, (int, np.integer))
         self._track_mode = int(track_mode_temp)
+
         nc_galaxy_temp = hf_background.attrs['nc_galaxy']
         assert isinstance(nc_galaxy_temp, (int, np.integer))
 
@@ -305,7 +318,7 @@ class BGDecomposition:
             raise ValueError(msg)
 
         if self._storage_mode == 0:
-            self._galactic_below[:] = 0.0  # reset to zero, since we cannot separate the two components
+            self._galactic_below[:] = 0.0  # reset to zero, since we cannot separate the two components and will not write this one
 
             galactic_below_low_temp = hf_background['galactic_below_low']
             assert isinstance(galactic_below_low_temp, h5py.Dataset)
@@ -325,13 +338,33 @@ class BGDecomposition:
             assert galactic_undecided.shape == self._shape1, 'Incorrect shape for galactic_undecided in hdf5 file'
             self._galactic_undecided[:] = galactic_undecided
 
-            self._galactic_total_cache = None  # reset cache since we have new data
-            # reset diagnostics
-            self._power_galactic_above = []
-            self._power_galactic_undecided = []
-            self._power_galactic_below_low = []
-            self._power_galactic_below_high = []
-            self._power_galactic_total = []
+        elif self._storage_mode == 1:
+            self._galactic_below[:] = 0.0  # reset to zero, since we cannot separate the two components and will not write this one
+            self._galactic_above[:] = 0.0  # reset to zero, since we cannot separate the two components and will not write this one
+
+            galactic_below_low_temp = hf_background['galactic_below_low']
+            assert isinstance(galactic_below_low_temp, h5py.Dataset)
+            galactic_below_low = np.asarray(galactic_below_low_temp)
+            assert galactic_below_low.shape == self._shape1, 'Incorrect shape for galactic_below_low in hdf5 file'
+            self._galactic_floor[:] = galactic_below_low
+
+            # combine bright and undecided components
+            galactic_undecided_temp = hf_background['galactic_potentially_resolvable']
+            assert isinstance(galactic_undecided_temp, h5py.Dataset)
+            galactic_undecided = np.asarray(galactic_undecided_temp)
+            assert galactic_undecided.shape == self._shape1, 'Incorrect shape for galactic_undecided in hdf5 file'
+            self._galactic_undecided[:] = galactic_undecided
+        else:
+            msg = 'Unrecognized option for storage mode'
+            raise NotImplementedError(msg)
+
+        self._galactic_total_cache = None  # reset cache since we have new data
+        # reset diagnostics
+        self._power_galactic_above = []
+        self._power_galactic_undecided = []
+        self._power_galactic_below_low = []
+        self._power_galactic_below_high = []
+        self._power_galactic_total = []
 
     def _output_shape_select(
         self, representation: NDArray[np.floating], *, shape_mode: int = 0,
