@@ -160,7 +160,7 @@ def get_iteration_config(config: dict[str, Any]) -> IterationConfig:
     noise_model_storage_mode = int(config_ic.get('noise_model_storage_mode', 0))
     background_storage_mode = int(config_ic.get('background_storage_mode', 0))
     fit_state_storage_mode = int(config_ic.get('fit_state_storage_mode', 0))
-    inclusion_state_storage_mode_prelim = int(config_ic.get('inclusion_state_storage_mode_prelim', 0))
+    inclusion_state_storage_mode_prelim = int(config_ic.get('inclusion_state_storage_mode_prelim', 5))
     inclusion_state_storage_mode = int(config_ic.get('inclusion_state_storage_mode', 2))
     manager_storage_mode = int(config_ic.get('manager_storage_mode', 0))
 

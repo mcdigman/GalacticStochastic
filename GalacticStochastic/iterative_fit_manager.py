@@ -185,8 +185,9 @@ class IterativeFitManager(StateManager):
             msg = 'Could not find group ic in hdf5 file'
             raise TypeError(msg)
 
-        for key in self.ic._fields:
-            assert np.all(getattr(self.ic, key) == hf_ic.attrs[key]), f'ic attribute {key} does not match saved value'
+        if self.fit_state.preprocess_mode != 1:
+            for key in self.ic._fields:
+                assert np.all(getattr(self.ic, key) == hf_ic.attrs[key]), f'ic attribute {key} does not match saved value'
 
         self.bis.load_hdf5(hf_manager)
         self.noise_manager.load_hdf5(hf_manager)

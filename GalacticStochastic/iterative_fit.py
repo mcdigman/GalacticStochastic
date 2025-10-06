@@ -148,6 +148,8 @@ def fetch_or_run_iterative_loop(
         galactic_below_in = ifm_prelim.noise_manager.bgd.get_galactic_below_low()
         snrs_tot_in = ifm_prelim.bis.get_final_snrs_tot_upper()
 
+        del ifm_prelim
+
         bgd = BGDecomposition(
             wc,
             ic.nc_galaxy,
@@ -167,6 +169,7 @@ def fetch_or_run_iterative_loop(
             storage_mode=ic.background_storage_mode,
         )
         snrs_tot_in = None
+
     else:
         msg = 'Unrecognized option for preprocess_mode'
         raise NotImplementedError(msg)

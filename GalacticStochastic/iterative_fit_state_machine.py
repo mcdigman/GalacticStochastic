@@ -207,10 +207,15 @@ class IterativeFitState(StateManager):
             msg = 'Could not find group ic in hdf5 file'
             raise TypeError(msg)
 
-        for key in self._ic._fields:
-            if not np.all(getattr(self._ic, key) == hf_ic.attrs[key]):
-                msg = 'iteration config in hdf5 file does not match current configuration'
-                raise ValueError(msg)
+        preprocess_mode_temp = hf_state.attrs['preprocess_mode']
+        assert isinstance(preprocess_mode_temp, (int, np.integer))
+        self._preprocess_mode = int(preprocess_mode_temp)
+
+        if self.preprocess_mode != 1:
+            for key in self._ic._fields:
+                if not np.all(getattr(self._ic, key) == hf_ic.attrs[key]):
+                    msg = 'iteration config in hdf5 file does not match current configuration'
+                    raise ValueError(msg)
 
         tmp_bright_converged = hf_state['bright_converged']
         assert isinstance(tmp_bright_converged, h5py.Dataset)
@@ -282,15 +287,14 @@ class IterativeFitState(StateManager):
 
         self._noise_safe_lower = bool(hf_state.attrs['noise_safe_lower'])
         self._noise_safe_upper = bool(hf_state.attrs['noise_safe_upper'])
+
         itrn_temp = hf_state.attrs['itrn']
         assert isinstance(itrn_temp, (int, np.integer))
         self._itrn = int(itrn_temp)
+
         n_itr_cut_temp = hf_state.attrs['n_itr_cut']
         assert isinstance(n_itr_cut_temp, (int, np.integer))
         self._n_itr_cut = int(n_itr_cut_temp)
-        preprocess_mode_temp = hf_state.attrs['preprocess_mode']
-        assert isinstance(preprocess_mode_temp, (int, np.integer))
-        self._preprocess_mode = int(preprocess_mode_temp)
 
     @property
     def preprocess_mode(self) -> int:

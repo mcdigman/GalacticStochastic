@@ -330,8 +330,9 @@ class NoiseModelManager(StateManager):
             msg = 'Could not find group ic in hdf5 file'
             raise TypeError(msg)
 
-        for key in self._ic._fields:
-            assert np.all(getattr(self._ic, key) == hf_ic.attrs[key]), f'ic attribute {key} does not match saved value'
+        if self._fit_state.preprocess_mode != 1:
+            for key in self._ic._fields:
+                assert np.all(getattr(self._ic, key) == hf_ic.attrs[key]), f'ic attribute {key} does not match saved value'
 
         # just make new noise models, don't try to load them
         if not self.cyclo_mode:

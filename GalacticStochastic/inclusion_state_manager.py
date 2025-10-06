@@ -134,6 +134,11 @@ class BinaryInclusionState(StateManager):
         else:
             faints_in = (params_gb_in[:, 3] >= self._fmax_binary) | (params_gb_in[:, 3] < self._fmin_binary)
 
+        print(snrs_tot_in)
+        print(faints_in)
+        if snrs_tot_in is not None:
+            print(np.all(snrs_tot_in[1:]) == 0.)
+
         self._argbinmap: NDArray[np.integer] = np.argwhere(~faints_in).flatten()
         self._faints_old: NDArray[np.bool_] = faints_in[self._argbinmap]
         assert self._faints_old.sum() == 0.0
@@ -143,22 +148,23 @@ class BinaryInclusionState(StateManager):
         self._params_gb: NDArray[np.floating] = np.zeros((self._n_bin_use, N_PAR_GB))
         self._params_gb[:] = params_gb_in[self._argbinmap]
 
-        self._snrs_old: NDArray[np.floating] = np.zeros(self._n_bin_use)
-
         # record old snrs if available
         if snrs_tot_in is not None:
-            self._snrs_old[:] = snrs_tot_in[self._argbinmap]
+            self._snrs_old: NDArray[np.floating] = snrs_tot_in[self._argbinmap].copy()
         else:
-            self._snrs_old[:] = -1.0
+            # don't wast memory storing this if we don't need it
+            self._snrs_old = np.zeros(0, dtype=np.float64)
 
         del snrs_tot_in
         del params_gb_in
         del faints_in
 
         self._snrs_upper: NDArray[np.floating] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use, self._lc.nc_snr))
+        self._snrs_tot_upper: NDArray[np.floating] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use))
+
         self._snrs_lower: NDArray[np.floating] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use, self._lc.nc_snr))
         self._snrs_tot_lower: NDArray[np.floating] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use))
-        self._snrs_tot_upper: NDArray[np.floating] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use))
+
         self._brights: NDArray[np.bool_] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use), dtype=np.bool_)
         self._decided: NDArray[np.bool_] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use), dtype=np.bool_)
         self._faints_cur: NDArray[np.bool_] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use), dtype=np.bool_)
@@ -208,6 +214,7 @@ class BinaryInclusionState(StateManager):
         NotImplementedError
             If the method is not implemented in a subclass.
         """
+        # TODO add digest option that *only* stores whether a binary is deemed faint or not, for maximum compression
         # can store different things depending on whether we are in preprocessing mode or not
         if self._fit_state.preprocess_mode == 0:
             storage_mode = self._ic.inclusion_state_storage_mode
@@ -231,36 +238,45 @@ class BinaryInclusionState(StateManager):
         hf_include.attrs['fit_state_name'] = self._fit_state.__class__.__name__
         hf_include.attrs['waveform_manager_name'] = self._waveform_manager.__class__.__name__
 
-        _ = hf_include.create_dataset('argbinmap', data=self._argbinmap, compression='gzip')
-        _ = hf_include.create_dataset('faints_old', data=self._faints_old, compression='gzip')
-        _ = hf_include.create_dataset('snrs_old', data=self._snrs_old, compression='gzip')
+        # storing the active mask may compress more efficiently
+        active_mask = np.zeros(self._n_tot, dtype=np.bool_)
+        active_mask[self._argbinmap] = True
+        # _ = hf_include.create_dataset('argbinmap', data=self._argbinmap, compression='gzip')
+        _ = hf_include.create_dataset('active_mask', data=active_mask, compression='gzip')
+        if self._fit_state.preprocess_mode != 1:
+            # don't store these things if were are in the initial preprocessing stage because, they are meaningless and potentially a large array.
+            _ = hf_include.create_dataset('faints_old', data=self._faints_old, compression='gzip')
+            _ = hf_include.create_dataset('snrs_old', data=self._snrs_old, compression='gzip')
+            _ = hf_include.create_dataset('faints_cur', data=self._faints_cur[: self._itrn], compression='gzip')
+            _ = hf_include.create_dataset('decided', data=self._decided[: self._itrn], compression='gzip')
+            _ = hf_include.create_dataset('brights', data=self._brights[: self._itrn], compression='gzip')
         _ = hf_include.create_dataset('n_faints_cur', data=self._n_faints_cur, compression='gzip')
         _ = hf_include.create_dataset('n_brights_cur', data=self._n_brights_cur, compression='gzip')
-
-        _ = hf_include.create_dataset('faints_cur', data=self._faints_cur[: self._itrn], compression='gzip')
-        _ = hf_include.create_dataset('decided', data=self._decided[: self._itrn], compression='gzip')
-        _ = hf_include.create_dataset('brights', data=self._brights[: self._itrn], compression='gzip')
 
         if storage_mode in (0, 2):
             # store full snrs
             _ = hf_include.create_dataset('snrs_upper', data=self._snrs_upper[: self._itrn], compression='gzip')
             _ = hf_include.create_dataset('snrs_lower', data=self._snrs_lower[: self._itrn], compression='gzip')
-            _ = hf_include.create_dataset('snrs_tot_upper', data=self._snrs_tot_upper[: self._itrn], compression='gzip')
-            _ = hf_include.create_dataset('snrs_tot_lower', data=self._snrs_tot_lower[: self._itrn], compression='gzip')
+            # _ = hf_include.create_dataset('snrs_tot_upper', data=self._snrs_tot_upper[: self._itrn], compression='gzip')
+            # _ = hf_include.create_dataset('snrs_tot_lower', data=self._snrs_tot_lower[: self._itrn], compression='gzip')
 
         if storage_mode in (1, 3):
             # store last snrs
             _ = hf_include.create_dataset('snrs_upper', data=self._snrs_upper[self._itrn - 1 : self._itrn], compression='gzip')
             _ = hf_include.create_dataset('snrs_lower', data=self._snrs_lower[self._itrn - 1 : self._itrn], compression='gzip')
-            _ = hf_include.create_dataset('snrs_tot_upper', data=self._snrs_tot_upper[self._itrn - 1 : self._itrn], compression='gzip')
-            _ = hf_include.create_dataset('snrs_tot_lower', data=self._snrs_tot_lower[self._itrn - 1 : self._itrn], compression='gzip')
+            # _ = hf_include.create_dataset('snrs_tot_upper', data=self._snrs_tot_upper[self._itrn - 1 : self._itrn], compression='gzip')
+            # _ = hf_include.create_dataset('snrs_tot_lower', data=self._snrs_tot_lower[self._itrn - 1 : self._itrn], compression='gzip')
 
-        if storage_mode in (2, 4):
+        if storage_mode in (2, 3):
             # store full params
             _ = hf_include.create_dataset('params_gb', data=self._params_gb, compression='gzip')
 
         if storage_mode == 5:
-            # minimal storage
+            # store last snr for upper channel only
+            _ = hf_include.create_dataset('snrs_upper', data=self._snrs_upper[self._itrn - 1 : self._itrn], compression='gzip')
+
+        if storage_mode == 4:
+            # lowest possible storage, store only last total snr for upper channel
             _ = hf_include.create_dataset('snrs_tot_upper', data=np.array([self._snrs_tot_upper[self._itrn - 1]]), compression='gzip')
 
         # option to skip storing the noise manager in case it is redundant
@@ -299,6 +315,77 @@ class BinaryInclusionState(StateManager):
             hf_nt.attrs[key] = getattr(self._nt_lim_waveform, key)
 
         return hf_include
+
+    def _snrs_tot_load_helper(self, lower_mode: int = 0, itrn: int = -1):
+        """Load the total snrs from the components with the exact numerical operation done in the storage helper."""
+        if itrn == -1:
+            itrn_min = 0
+            itrn_max = self._snrs_upper.shape[0]
+        else:
+            itrn_min = itrn
+            itrn_max = itrn + 1
+        for itrn_itr in range(itrn_min, itrn_max):
+            for itrb in range(self._snrs_upper.shape[1]):
+                if lower_mode == 0:
+                    self._snrs_tot_upper[itrn_itr, itrb] = np.linalg.norm(self._snrs_upper[itrn_itr, itrb])
+                else:
+                    self._snrs_tot_lower[itrn_itr, itrb] = np.linalg.norm(self._snrs_lower[itrn_itr, itrb])
+
+    def _load_snr_from_file_helper(self, hf_include: h5py.Group, storage_mode: int, *, lower_mode: int = 0) -> None:
+
+        assert lower_mode in (0, 1, 2)
+        if lower_mode == 2:
+            # copy lower from upper
+            self._snrs_lower[:] = self._snrs_upper
+            self._snrs_tot_lower[:] = self._snrs_tot_upper
+            return
+        if lower_mode == 1:
+            # read in the lower if it should exist
+            if storage_mode in (4, 5):
+                return
+            key_str = 'snrs_lower'
+            write_target = self._snrs_lower
+        else:
+            # read in the upper
+            key_str = 'snrs_upper'
+            write_target = self._snrs_upper
+
+        try:
+            snrs_temp = hf_include[key_str]
+            assert isinstance(snrs_temp, h5py.Dataset)
+
+            if storage_mode in (0, 2):
+                # store full snrs
+                write_target[: self._itrn] = snrs_temp[()]
+                self._snrs_tot_load_helper(lower_mode)
+
+            if storage_mode in (1, 3, 5):
+                # store last snrs
+                write_target[self._itrn - 1 : self._itrn] = snrs_temp[()]
+                self._snrs_tot_load_helper(lower_mode, itrn=self._itrn - 1)
+
+            # load the total snrs instead of reading them in from the file
+
+        except KeyError as e:
+            if storage_mode != 4:
+                msg = 'Expected field is missing in hdf5 file'
+                raise KeyError(msg) from e
+
+            if lower_mode == 0:
+                # minimal storage
+                snrs_tot_upper_temp = hf_include['snrs_tot_upper']
+                assert isinstance(snrs_tot_upper_temp, h5py.Dataset)
+                snrs_tot_upper_last = snrs_tot_upper_temp[()]
+                assert len(snrs_tot_upper_last.shape) == 1
+                assert snrs_tot_upper_last.size == 1
+                # did not record division into channels, just put all the power into the first channel
+                self._snrs_upper[self._itrn - 1, :, 0] = snrs_tot_upper_last[0]
+                self._snrs_upper[self._itrn - 1, :, 1:] = 0.
+                self._snrs_tot_load_helper(lower_mode, itrn=self._itrn - 1)
+            else:
+                # nothing recorded here
+                self._snrs_lower[self._itrn - 1, :, :] = 0.
+                self._snrs_tot_load_helper(lower_mode, itrn=self._itrn - 1)
 
     @override
     def load_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'inclusion_state', group_mode: int = 0) -> None:
@@ -374,17 +461,28 @@ class BinaryInclusionState(StateManager):
         else:
             assert storage_mode == self._ic.inclusion_state_storage_mode_prelim, 'storage mode in hdf5 file does not match current config'
 
-        argbbinmap_temp = hf_include['argbinmap']
-        assert isinstance(argbbinmap_temp, h5py.Dataset)
-        self._argbinmap = argbbinmap_temp[()]
+        try:
+            argbbinmap_temp = hf_include['argbinmap']
+            assert isinstance(argbbinmap_temp, h5py.Dataset)
+            self._argbinmap = argbbinmap_temp[()]
+        except KeyError:
+            active_mask_temp = hf_include['active_mask']
+            self._argbinmap = np.argwhere(active_mask_temp).flatten()
 
-        faints_old_temp = hf_include['faints_old']
-        assert isinstance(faints_old_temp, h5py.Dataset)
-        self._faints_old = faints_old_temp[()]
+        try:
+            faints_old_temp = hf_include['faints_old']
+            assert isinstance(faints_old_temp, h5py.Dataset)
+            self._faints_old = faints_old_temp[()]
+        except KeyError:
+            self._faints_old = np.zeros(len(self._argbinmap), dtype=np.bool_)
 
-        snrs_old_temp = hf_include['snrs_old']
-        assert isinstance(snrs_old_temp, h5py.Dataset)
-        self._snrs_old = snrs_old_temp[()]
+        # load the old snr values if they were stored
+        try:
+            snrs_old_temp = hf_include['snrs_old']
+            assert isinstance(snrs_old_temp, h5py.Dataset)
+            self._snrs_old = snrs_old_temp[()]
+        except KeyError:
+            self._snrs_old = np.full(len(self._argbinmap), -1.0)
 
         n_faints_cur_temp = hf_include['n_faints_cur']
         assert isinstance(n_faints_cur_temp, h5py.Dataset)
@@ -408,62 +506,43 @@ class BinaryInclusionState(StateManager):
         self._snrs_tot_upper = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use))
         self._params_gb = np.zeros((self._n_bin_use, N_PAR_GB))
 
-        try:
-            snrs_upper_temp = hf_include['snrs_upper']
-            assert isinstance(snrs_upper_temp, h5py.Dataset)
-            snrs_lower_temp = hf_include['snrs_lower']
-            assert isinstance(snrs_lower_temp, h5py.Dataset)
-            snrs_tot_upper_temp = hf_include['snrs_tot_upper']
-            assert isinstance(snrs_tot_upper_temp, h5py.Dataset)
-            snrs_tot_lower_temp = hf_include['snrs_tot_lower']
-            assert isinstance(snrs_tot_lower_temp, h5py.Dataset)
-            if storage_mode in (0, 2):
-                # store full snrs
-                self._snrs_upper[: self._itrn] = snrs_upper_temp[()]
-                self._snrs_lower[: self._itrn] = snrs_lower_temp[()]
-                self._snrs_tot_upper[: self._itrn] = snrs_tot_upper_temp[()]
-                self._snrs_tot_lower[: self._itrn] = snrs_tot_lower_temp[()]
+        # load upper
+        self._load_snr_from_file_helper(hf_include, storage_mode, lower_mode=0)
+        # load lower
+        if self._fit_state.preprocess_mode in (1, 2):
+            self._load_snr_from_file_helper(hf_include, storage_mode, lower_mode=2)
+        else:
+            self._load_snr_from_file_helper(hf_include, storage_mode, lower_mode=1)
 
-            if storage_mode in (1, 3):
-                # store last snrs
-                self._snrs_upper[self._itrn - 1 : self._itrn] = snrs_upper_temp[()]
-                self._snrs_lower[self._itrn - 1 : self._itrn] = snrs_lower_temp[()]
-                self._snrs_tot_upper[self._itrn - 1 : self._itrn] = snrs_tot_upper_temp[()]
-                self._snrs_tot_lower[self._itrn - 1 : self._itrn] = snrs_tot_lower_temp[()]
-
-            if storage_mode in (2, 4):
-                # store full params
-                params_gb_temp = hf_include['params_gb']
-                assert isinstance(params_gb_temp, h5py.Dataset)
-                self._params_gb[:] = params_gb_temp[()]
-                assert len(self._params_gb.shape) == 2
-                assert self._params_gb.shape[0] == self._n_bin_use
-                assert self._params_gb.shape[1] == N_PAR_GB
-            elif self._fit_state.preprocess_mode == 0:
-                msg = 'params_gb not stored in hdf5 file, cannot reconstruct without original file'
-                warn(msg, stacklevel=2)
+        if storage_mode in (2, 3):
+            # store full params
+            params_gb_temp = hf_include['params_gb']
+            assert isinstance(params_gb_temp, h5py.Dataset)
+            self._params_gb[:] = params_gb_temp[()]
+            assert len(self._params_gb.shape) == 2
+            assert self._params_gb.shape[0] == self._n_bin_use
+            assert self._params_gb.shape[1] == N_PAR_GB
+        elif self._fit_state.preprocess_mode == 0:
             # TODO: otherwise we should reconstruct the params from the argbinmap and a file
+            msg = 'params_gb not stored in hdf5 file, cannot reconstruct without original file'
+            warn(msg, stacklevel=2)
+
+        try:
+            faints_cur_temp = hf_include['faints_cur']
+            assert isinstance(faints_cur_temp, h5py.Dataset)
+            self._faints_cur[: self._itrn] = faints_cur_temp[()]
+
+            decided_temp = hf_include['decided']
+            assert isinstance(decided_temp, h5py.Dataset)
+            self._decided[: self._itrn] = decided_temp[()]
+
+            brights_temp = hf_include['brights']
+            assert isinstance(brights_temp, h5py.Dataset)
+            self._brights[: self._itrn] = brights_temp[()]
         except KeyError:
-            assert storage_mode == 5, 'snrs_lower, snrs_tot_upper, and snrs_tot_lower datasets not found in hdf5 file'
-            # minimal storage
-            snrs_tot_upper_temp = hf_include['snrs_tot_upper']
-            assert isinstance(snrs_tot_upper_temp, h5py.Dataset)
-            snrs_tot_upper_last = snrs_tot_upper_temp[()]
-            assert len(snrs_tot_upper_last.shape) == 1
-            assert snrs_tot_upper_last.size == 1
-            self._snrs_tot_upper[self._itrn - 1, :] = snrs_tot_upper_last[0]
-
-        faints_cur_temp = hf_include['faints_cur']
-        assert isinstance(faints_cur_temp, h5py.Dataset)
-        self._faints_cur[: self._itrn] = faints_cur_temp[()]
-
-        decided_temp = hf_include['decided']
-        assert isinstance(decided_temp, h5py.Dataset)
-        self._decided[: self._itrn] = decided_temp[()]
-
-        brights_temp = hf_include['brights']
-        assert isinstance(brights_temp, h5py.Dataset)
-        self._brights[: self._itrn] = brights_temp[()]
+            self._faints_cur[:] = False
+            self._decided[:] = False
+            self._brights[:] = False
 
         # shouldn't need to load the waveform manager, because it is reconstructed each time it is used, as long as the type is correct
 
@@ -473,11 +552,23 @@ class BinaryInclusionState(StateManager):
         for key in self._lc._fields:
             assert getattr(self._lc, key) == hf_include['lc'].attrs[key], f'lisa constant attribute {key} does not match saved value'
 
-        for key in self._ic._fields:
-            assert np.all(getattr(self._ic, key) == hf_include['ic'].attrs[key]), f'iteration config attribute {key} does not match saved value'
+        if self._fit_state.preprocess_mode != 1:
+            for key in self._ic._fields:
+                assert np.all(getattr(self._ic, key) == hf_include['ic'].attrs[key]), f'iteration config attribute {key} does not match saved value'
 
         for key in self._nt_lim_waveform._fields:
             assert getattr(self._nt_lim_waveform, key) == hf_include['nt_lim_waveform'].attrs[key], f'nt_lim_waveform attribute {key} does not match saved value'
+
+    @property
+    def params_gb(self) -> NDArray[np.floating]:
+        """Return the parameters for all the binaries currently under consideration.
+
+        Returns
+        -------
+        NDArray[np.floating]
+            The packed parameter array of all the binaries currently under consideration.
+        """
+        return self._params_gb
 
     def set_select_params(self, params_gb_in: NDArray[np.floating]) -> None:
         """Set the parameters of the binaries we are considering.
@@ -498,7 +589,13 @@ class BinaryInclusionState(StateManager):
         assert params_gb_in.shape == (self._n_tot, N_PAR_GB)
         params_gb_sel = params_gb_in[self._argbinmap]
         assert self._params_gb.shape == params_gb_sel.shape
-        assert np.all((params_gb_in[:, 3] < self._fmax_binary) & (params_gb_in[:, 3] >= self._fmin_binary))
+        print(params_gb_in.shape)
+        print(self._argbinmap.shape)
+        print(self._argbinmap)
+        print(self._fmin_binary, self._fmax_binary, (self._wc.Nf - 1) * self._wc.DF)
+        print(params_gb_in[:, 3].min(), params_gb_in[:, 3].max())
+        print(params_gb_sel[:, 3].min(), params_gb_sel[:, 3].max())
+        assert np.all((params_gb_sel[:, 3] < self._fmax_binary) & (params_gb_sel[:, 3] >= self._fmin_binary))
         if np.all(self._params_gb == 0.0):
             self._params_gb[:] = params_gb_sel
         else:
@@ -604,16 +701,18 @@ class BinaryInclusionState(StateManager):
         itrn = self._itrn
         wavelet_waveform = self._waveform_manager.get_unsorted_coeffs()
 
-        if not self._fit_state.get_faint_converged():
-            self._snrs_lower[itrn, itrb] = self._noise_manager.noise_lower.get_sparse_snrs(
-                wavelet_waveform,
-                self._noise_manager.nt_lim_snr,
-            )
-            self._snrs_tot_lower[itrn, itrb] = np.linalg.norm(self._snrs_lower[itrn, itrb])
-        else:
-            assert itrn > 1
-            self._snrs_lower[itrn, itrb] = self._snrs_lower[itrn - 1, itrb]
-            self._snrs_tot_lower[itrn, itrb] = self._snrs_tot_lower[itrn - 1, itrb]
+        # don't need to track lower snrs at all during initial pre-processing
+        if self._fit_state.preprocess_mode != 1:
+            if not self._fit_state.get_faint_converged():
+                self._snrs_lower[itrn, itrb] = self._noise_manager.noise_lower.get_sparse_snrs(
+                    wavelet_waveform,
+                    self._noise_manager.nt_lim_snr,
+                )
+                self._snrs_tot_lower[itrn, itrb] = np.linalg.norm(self._snrs_lower[itrn, itrb])
+            else:
+                assert itrn > 1
+                self._snrs_lower[itrn, itrb] = self._snrs_lower[itrn - 1, itrb]
+                self._snrs_tot_lower[itrn, itrb] = self._snrs_tot_lower[itrn - 1, itrb]
 
         if not self._fit_state.get_bright_converged():
             self._snrs_upper[itrn, itrb] = self._noise_manager.noise_upper.get_sparse_snrs(
@@ -740,9 +839,14 @@ class BinaryInclusionState(StateManager):
         Returns
         -------
         NDArray[np.floating]
-            The most recently stored snrs in the upper noise model for all binaries under consideration.
+            The most recently stored snrs in the upper noise model for all binaries under consideration,
+            with -1. inserted for binaries whose snr is not stored because they were masked already
         """
-        return self._snrs_tot_upper[self._itrn - 1, :]
+        snrs_temp = self._snrs_tot_upper[self._itrn - 1, :]
+        # make the array the length of *all* the binaries, including ones that have been masked out
+        snrs_full = np.full(self._n_tot, -1.)
+        snrs_full[self._argbinmap] = snrs_temp
+        return snrs_full
 
     @override
     def advance_state(self) -> None:
@@ -771,11 +875,11 @@ class BinaryInclusionState(StateManager):
 
         tib = perf_counter()
 
-        for itrb in idxbs:
-            if itrb % 10000 == 0:
+        for counter, itrb in enumerate(idxbs):
+            if counter % 10000 == 0:
                 tcb = perf_counter()
                 print(
-                    'Starting binary # %11d of %11d to consider at t=%9.2f s of iteration %4d' % (itrb, idxbs.size, (tcb - tib), self._itrn),
+                    'Starting binary # %11d of %11d to consider at t=%9.2f s of iteration %4d' % (counter, idxbs.size, (tcb - tib), self._itrn),
                 )
 
             self._run_binary_coadd(int(itrb))
