@@ -147,6 +147,7 @@ def fetch_or_run_iterative_loop(
 
         galactic_below_in = ifm_prelim.noise_manager.bgd.get_galactic_below_low()
         snrs_tot_in = ifm_prelim.bis.get_final_snrs_tot_upper()
+        galactic_total_in = ifm_prelim.noise_manager.bgd.get_galactic_total()
 
         del ifm_prelim
 
@@ -156,7 +157,10 @@ def fetch_or_run_iterative_loop(
             galactic_floor=galactic_below_in.copy(),
             storage_mode=ic.background_storage_mode,
         )
+        # set the expected galactic total, for later consistency checks
+        bgd.set_expected_total(galactic_total_in)
         del galactic_below_in
+        del galactic_total_in
     elif preprocess_mode == 1:
         # fetch mode options if we are in a state where the preliminary file is not needed
         # (0, 4): run the loop from scratch

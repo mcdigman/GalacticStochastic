@@ -17,6 +17,64 @@ if TYPE_CHECKING:
     from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
+def _check_correct_component_shape(
+    nc: int, wc: WDMWaveletConstants, galactic_component: NDArray[np.floating], *, shape_mode: int = 0,
+) -> NDArray[np.floating]:
+    """
+    Check and reshape a galactic background component to the correct shape.
+
+    This function verifies that the input galactic component array has a size compatible
+    with the expected shapes based on the wavelet constants and number of channels.
+    If necessary, it reshapes the array to the desired output shape specified by `shape_mode`.
+
+    Parameters
+    ----------
+    nc : int
+        Number of galactic background channels.
+    wc : WDMWaveletConstants
+        Wavelet constants describing the time-frequency grid.
+    galactic_component : NDArray[np.floating]
+        Input array representing a galactic background component.
+        Must have a size of `wc.Nt * wc.Nf * nc`.
+    shape_mode : int
+        Output shape mode:
+        - 0: Reshape to (Nt * Nf, nc)
+        - 1: Reshape to (Nt, Nf, nc)
+        - 2: Reshape to (Nt * Nf * nc,)
+        Default is 0.
+
+    Returns
+    -------
+    NDArray[np.floating]
+        The galactic component array reshaped to the selected output format.
+
+    Raises
+    ------
+    AssertionError
+        If the input array does not have the expected size or an allowed shape.
+    ValueError
+        If an invalid `shape_mode` is provided.
+    """
+    assert galactic_component.size == wc.Nt * wc.Nf * nc, 'Incorrectly sized galaxy component'
+
+    shape1 = (wc.Nt * wc.Nf, nc)
+    shape2 = (wc.Nt, wc.Nf, nc)
+    shape3 = (wc.Nt * wc.Nf * nc,)
+    shapes_allowed = (shape1, shape2, shape3)
+
+    if shape_mode >= len(shapes_allowed):
+        msg = f'Invalid shape mode {shape_mode}'
+        raise ValueError(msg)
+
+    shape_got = galactic_component.shape
+    assert shape_got in shapes_allowed, 'Unrecognized shape for galactic background component'
+
+    if shape_got != shapes_allowed[shape_mode]:
+        galactic_component = galactic_component.reshape(shapes_allowed[shape_mode])
+
+    return galactic_component
+
+
 class BGDecomposition:
     """Handle the internal decomposition of the galactic background."""
 
@@ -356,7 +414,7 @@ class BGDecomposition:
         Returns
         -------
         NDArray[np.floating]
-            Array containing the total galactic signal in the selected output shape.
+            Array containing the faint+undecided galactic signal in the selected output shape.
         """
         if not bypass_check:
             self.state_check()
@@ -382,11 +440,35 @@ class BGDecomposition:
         Returns
         -------
         NDArray[np.floating]
-            Array containing the total galactic signal in the selected output shape.
+            Array containing the unresolvable galactic signal in the selected output shape.
         """
         if not bypass_check:
             self.state_check()
         res = self._galactic_floor + self._galactic_below
+        return self._output_shape_select(res, shape_mode=shape_mode)
+
+    def get_galactic_coadd_potentially_resolvable(self, *, bypass_check: bool = False, shape_mode: int = 0) -> NDArray[np.floating]:
+        r"""
+        Get coadded signal from the potentially resolvable (bright or undecided) galactic binaries.
+
+        Parameters
+        ----------
+        bypass_check : bool
+            If True, skip the internal state consistency check. Default is False.
+        shape_mode : int
+            Output shape mode:
+            - 0: Reshape to (Nt \* Nf, nc_galaxy)
+            - 1: Reshape to (Nt, Nf, nc_galaxy)
+            Default is 0.
+
+        Returns
+        -------
+        NDArray[np.floating]
+            Array containing the bright+undecided galactic signal in the selected output shape.
+        """
+        if not bypass_check:
+            self.state_check()
+        res = self.get_galactic_coadd_undecided(bypass_check=True) + self.get_galactic_coadd_resolvable(bypass_check=True)
         return self._output_shape_select(res, shape_mode=shape_mode)
 
     def get_galactic_coadd_resolvable(self, *, bypass_check: bool = False, shape_mode: int = 0) -> NDArray[np.floating]:
@@ -406,7 +488,7 @@ class BGDecomposition:
         Returns
         -------
         NDArray[np.floating]
-            Array containing the total galactic signal in the selected output shape.
+            Array containing the bright galactic signal in the selected output shape.
         """
         if not bypass_check:
             self.state_check()
@@ -430,7 +512,7 @@ class BGDecomposition:
         Returns
         -------
         NDArray[np.floating]
-            Array containing the total galactic signal in the selected output shape.
+            Array containing the undecided galactic signal in the selected output shape.
         """
         if not bypass_check:
             self.state_check()
@@ -454,12 +536,18 @@ class BGDecomposition:
         Returns
         -------
         NDArray[np.floating]
-            Array containing the total galactic signal in the selected output shape.
+            Array containing the faintest galactic signal in the selected output shape.
         """
         if not bypass_check:
             self.state_check()
         res = self._galactic_floor
         return self._output_shape_select(res, shape_mode=shape_mode)
+
+    def set_expected_total(self, total_in: NDArray[np.floating]):
+        """
+        Set the total signal expected, for consistency checks.
+        """
+        self._galactic_total_cache = _check_correct_component_shape(self._nc_galaxy, self._wc, total_in)
 
     def state_check(self) -> None:
         """If the total recorded galactic signal is cached, check that the total not changed much.
@@ -469,7 +557,7 @@ class BGDecomposition:
         if self._track_mode:
             if self._galactic_total_cache is None:
                 assert np.all(self._galactic_below == 0.0)
-                self._galactic_total_cache = self.get_galactic_total(bypass_check=True)
+                self.set_expected_total(self.get_galactic_total(bypass_check=True))
             else:
                 # check all contributions to the total signal are tracked accurately
                 assert_allclose(
@@ -654,61 +742,3 @@ class BGDecomposition:
             The sparse wavelet waveform representing the binary to be added.
         """
         sparse_addition_helper(wavelet_waveform, self._galactic_above)
-
-
-def _check_correct_component_shape(
-    nc: int, wc: WDMWaveletConstants, galactic_component: NDArray[np.floating], *, shape_mode: int = 0,
-) -> NDArray[np.floating]:
-    """
-    Check and reshape a galactic background component to the correct shape.
-
-    This function verifies that the input galactic component array has a size compatible
-    with the expected shapes based on the wavelet constants and number of channels.
-    If necessary, it reshapes the array to the desired output shape specified by `shape_mode`.
-
-    Parameters
-    ----------
-    nc : int
-        Number of galactic background channels.
-    wc : WDMWaveletConstants
-        Wavelet constants describing the time-frequency grid.
-    galactic_component : NDArray[np.floating]
-        Input array representing a galactic background component.
-        Must have a size of `wc.Nt * wc.Nf * nc`.
-    shape_mode : int
-        Output shape mode:
-        - 0: Reshape to (Nt * Nf, nc)
-        - 1: Reshape to (Nt, Nf, nc)
-        - 2: Reshape to (Nt * Nf * nc,)
-        Default is 0.
-
-    Returns
-    -------
-    NDArray[np.floating]
-        The galactic component array reshaped to the selected output format.
-
-    Raises
-    ------
-    AssertionError
-        If the input array does not have the expected size or an allowed shape.
-    ValueError
-        If an invalid `shape_mode` is provided.
-    """
-    assert galactic_component.size == wc.Nt * wc.Nf * nc, 'Incorrectly sized galaxy component'
-
-    shape1 = (wc.Nt * wc.Nf, nc)
-    shape2 = (wc.Nt, wc.Nf, nc)
-    shape3 = (wc.Nt * wc.Nf * nc,)
-    shapes_allowed = (shape1, shape2, shape3)
-
-    if shape_mode >= len(shapes_allowed):
-        msg = f'Invalid shape mode {shape_mode}'
-        raise ValueError(msg)
-
-    shape_got = galactic_component.shape
-    assert shape_got in shapes_allowed, 'Unrecognized shape for galactic background component'
-
-    if shape_got != shapes_allowed[shape_mode]:
-        galactic_component = galactic_component.reshape(shapes_allowed[shape_mode])
-
-    return galactic_component
