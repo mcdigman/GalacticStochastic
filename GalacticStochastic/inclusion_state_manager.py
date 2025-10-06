@@ -129,6 +129,8 @@ class BinaryInclusionState(StateManager):
         self._fmin_binary: float = max(0.0, self._ic.fmin_binary)
         self._fmax_binary: float = min((self._wc.Nf - 1) * self._wc.DF, self._ic.fmax_binary)
 
+        assert self._fmin_binary < self._fmax_binary, 'No frequency range in inputs'
+
         if snrs_tot_in is not None:
             faints_in = (snrs_tot_in < self._ic.snr_min_preprocess) | (params_gb_in[:, 3] >= self._fmax_binary) | (params_gb_in[:, 3] < self._fmin_binary)
         else:
@@ -169,7 +171,14 @@ class BinaryInclusionState(StateManager):
         self._decided: NDArray[np.bool_] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use), dtype=np.bool_)
         self._faints_cur: NDArray[np.bool_] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use), dtype=np.bool_)
 
-        params0_sel: NDArray[np.floating] = self._params_gb[0]
+        # TODO recover handling for background with zero binaries in a sensible way
+        if self._params_gb.shape[0] == 0:
+            warn('No binaries selected for evaluation', stacklevel=2)
+            params0_sel: NDArray[np.floating] = np.zeros(N_PAR_GB)
+            # set default to a physical frequency
+            params0_sel[3] = (self._fmax_binary + self._fmin_binary) / 2.0
+        else:
+            params0_sel = self._params_gb[0]
         params0: SourceParams = unpack_params_gb(params0_sel)
         self._waveform_manager: LinearFrequencyWaveletWaveformTime = LinearFrequencyWaveletWaveformTime(params0, self._wc, self._lc, self._nt_lim_waveform)
 
