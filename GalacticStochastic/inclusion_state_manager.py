@@ -136,11 +136,6 @@ class BinaryInclusionState(StateManager):
         else:
             faints_in = (params_gb_in[:, 3] >= self._fmax_binary) | (params_gb_in[:, 3] < self._fmin_binary)
 
-        print(snrs_tot_in)
-        print(faints_in)
-        if snrs_tot_in is not None:
-            print(np.all(snrs_tot_in[1:]) == 0.)
-
         self._argbinmap: NDArray[np.integer] = np.argwhere(~faints_in).flatten()
         self._faints_old: NDArray[np.bool_] = faints_in[self._argbinmap]
         assert self._faints_old.sum() == 0.0
@@ -254,11 +249,11 @@ class BinaryInclusionState(StateManager):
         _ = hf_include.create_dataset('active_mask', data=active_mask, compression='gzip')
         if self._fit_state.preprocess_mode != 1:
             # don't store these things if were are in the initial preprocessing stage because, they are meaningless and potentially a large array.
-            _ = hf_include.create_dataset('faints_old', data=self._faints_old, compression='gzip')
             _ = hf_include.create_dataset('snrs_old', data=self._snrs_old, compression='gzip')
-            _ = hf_include.create_dataset('faints_cur', data=self._faints_cur[: self._itrn], compression='gzip')
-            _ = hf_include.create_dataset('decided', data=self._decided[: self._itrn], compression='gzip')
-            _ = hf_include.create_dataset('brights', data=self._brights[: self._itrn], compression='gzip')
+        _ = hf_include.create_dataset('faints_old', data=self._faints_old, compression='gzip')
+        _ = hf_include.create_dataset('faints_cur', data=self._faints_cur[: self._itrn], compression='gzip')
+        _ = hf_include.create_dataset('decided', data=self._decided[: self._itrn], compression='gzip')
+        _ = hf_include.create_dataset('brights', data=self._brights[: self._itrn], compression='gzip')
         _ = hf_include.create_dataset('n_faints_cur', data=self._n_faints_cur, compression='gzip')
         _ = hf_include.create_dataset('n_brights_cur', data=self._n_brights_cur, compression='gzip')
 
@@ -325,8 +320,19 @@ class BinaryInclusionState(StateManager):
 
         return hf_include
 
-    def _snrs_tot_load_helper(self, lower_mode: int = 0, itrn: int = -1):
-        """Load the total snrs from the components with the exact numerical operation done in the storage helper."""
+    def _snrs_tot_load_helper(self, lower_mode: int = 0, itrn: int = -1) -> None:
+        """Load the total snrs from the components with the exact numerical operation done in the storage helper.
+
+        Parameters
+        ----------
+        lower_mode: int
+            mode for whether we are loading the totals for the upper or lower snr component
+            if lower_mode=0, load the upper component
+            if lower_mode=1, load the lower component
+        itrn: int
+            which iteration to load itotal the snr for
+            if -1, load all of them (default)
+        """
         if itrn == -1:
             itrn_min = 0
             itrn_max = self._snrs_upper.shape[0]
@@ -600,12 +606,6 @@ class BinaryInclusionState(StateManager):
         assert params_gb_in.shape == (self._n_tot, N_PAR_GB)
         params_gb_sel = params_gb_in[self._argbinmap]
         assert self._params_gb.shape == params_gb_sel.shape
-        print(params_gb_in.shape)
-        print(self._argbinmap.shape)
-        print(self._argbinmap)
-        print(self._fmin_binary, self._fmax_binary, (self._wc.Nf - 1) * self._wc.DF)
-        print(params_gb_in[:, 3].min(), params_gb_in[:, 3].max())
-        print(params_gb_sel[:, 3].min(), params_gb_sel[:, 3].max())
         assert np.all((params_gb_sel[:, 3] < self._fmax_binary) & (params_gb_sel[:, 3] >= self._fmin_binary))
         if np.all(self._params_gb == 0.0):
             self._params_gb[:] = params_gb_sel
@@ -713,17 +713,6 @@ class BinaryInclusionState(StateManager):
         wavelet_waveform = self._waveform_manager.get_unsorted_coeffs()
 
         # don't need to track lower snrs at all during initial pre-processing
-        if self._fit_state.preprocess_mode != 1:
-            if not self._fit_state.get_faint_converged():
-                self._snrs_lower[itrn, itrb] = self._noise_manager.noise_lower.get_sparse_snrs(
-                    wavelet_waveform,
-                    self._noise_manager.nt_lim_snr,
-                )
-                self._snrs_tot_lower[itrn, itrb] = np.linalg.norm(self._snrs_lower[itrn, itrb])
-            else:
-                assert itrn > 1
-                self._snrs_lower[itrn, itrb] = self._snrs_lower[itrn - 1, itrb]
-                self._snrs_tot_lower[itrn, itrb] = self._snrs_tot_lower[itrn - 1, itrb]
 
         if not self._fit_state.get_bright_converged():
             self._snrs_upper[itrn, itrb] = self._noise_manager.noise_upper.get_sparse_snrs(
@@ -735,6 +724,21 @@ class BinaryInclusionState(StateManager):
             assert itrn > 1
             self._snrs_upper[itrn, itrb] = self._snrs_upper[itrn - 1, itrb]
             self._snrs_tot_upper[itrn, itrb] = self._snrs_tot_upper[itrn - 1, itrb]
+
+        if self._fit_state.preprocess_mode != 1:
+            if not self._fit_state.get_faint_converged():
+                self._snrs_lower[itrn, itrb] = self._noise_manager.noise_lower.get_sparse_snrs(
+                    wavelet_waveform,
+                    self._noise_manager.nt_lim_snr,
+                )
+                self._snrs_tot_lower[itrn, itrb] = np.linalg.norm(self._snrs_lower[itrn, itrb])
+            else:
+                assert itrn > 1
+                self._snrs_lower[itrn, itrb] = self._snrs_lower[itrn - 1, itrb]
+                self._snrs_tot_lower[itrn, itrb] = self._snrs_tot_lower[itrn - 1, itrb]
+        else:
+            self._snrs_lower[itrn, itrb] = self._snrs_upper[itrn, itrb]
+            self._snrs_tot_lower[itrn, itrb] = self._snrs_tot_upper[itrn, itrb]
 
         if np.isnan(self._snrs_tot_upper[itrn, itrb]) or np.isnan(self._snrs_tot_lower[itrn, itrb]):
             raise ValueError('nan detected in snr at ' + str(itrn) + ', ' + str(itrb))

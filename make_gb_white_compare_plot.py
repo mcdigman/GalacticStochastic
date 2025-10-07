@@ -1,6 +1,7 @@
 """make plot comparing galactic background noise spectra with and without cyclostationary model"""
 
 import matplotlib as mpl
+import matplotlib.image
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.ndimage
@@ -61,7 +62,7 @@ def result_normality_battery(nf_min_in: int, nf_max_in: int, signal_in: NDArray[
     return signal_white_out
 
 
-def white_plot_ax(ax_in, title, data, extent_in):
+def white_plot_ax(ax_in: plt.Axes, title: str, data: NDArray[np.floating], extent_in: tuple[float, float, float, float]) -> matplotlib.image.AxesImage:
     im_out = ax_in.imshow(np.rot90(data), extent=extent_in, cmap='YlOrRd', vmin=0, vmax=4, aspect='auto')
 
     ax_in.set_title(title, fontsize=14)
@@ -77,10 +78,15 @@ def white_plot_ax(ax_in, title, data, extent_in):
 
 
 if __name__ == '__main__':
-    config, wc, lc, ic, instrument_random_seed = config_helper.get_config_objects('default_parameters.toml')
+    # filename_config = 'default_parameters.toml'
+    filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters_format2.toml'
 
-    nt_min = 256 * 6
-    nt_max = nt_min + 512 * 2
+    config, wc, lc, ic, instrument_random_seed = config_helper.get_config_objects(filename_config)
+
+    nt_incr = int(wc.Nt // 16)
+
+    nt_min = nt_incr * 6
+    nt_max = nt_min + 4 * nt_incr
     nt_lim = PixelGenericRange(nt_min, nt_max, wc.DT, 0.)
     nt_min_report = 0
     nt_max_report = nt_max - nt_min

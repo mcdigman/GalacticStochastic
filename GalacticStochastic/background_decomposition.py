@@ -161,6 +161,12 @@ class BGDecomposition:
             self._galactic_above = galactic_above
 
         self._galactic_total_cache: NDArray[np.floating] | None = None
+        self._n_total_cache: int = -1
+
+        self._n_floor: int = 0
+        self._n_below: int = 0
+        self._n_undecided: int = 0
+        self._n_above: int = 0
 
         self._track_mode: int = track_mode
 
@@ -576,10 +582,18 @@ class BGDecomposition:
         res = self._galactic_floor
         return self._output_shape_select(res, shape_mode=shape_mode)
 
-    def set_expected_total(self, total_in: NDArray[np.floating]):
+    def set_expected_total(self, total_in: NDArray[np.floating], n_total: int) -> None:
         """
         Set the total signal expected, for consistency checks.
+
+        Parameters
+        ----------
+        total_in: NDArray[np.floating]
+            Array containing the expected total galactic signal
+        n_total: int
+            Number of total binaries expected to be added to the signal
         """
+        self._n_total_cache = n_total
         self._galactic_total_cache = _check_correct_component_shape(self._nc_galaxy, self._wc, total_in)
 
     def state_check(self) -> None:
@@ -588,17 +602,20 @@ class BGDecomposition:
         Otherwise, cache the current total so future runs can check if it has changed.
         """
         if self._track_mode:
+            n_total_got = self._n_floor + self._n_below + self._n_undecided + self._n_above
+            galactic_total_got = self.get_galactic_total(bypass_check=True)
             if self._galactic_total_cache is None:
                 assert np.all(self._galactic_below == 0.0)
-                self.set_expected_total(self.get_galactic_total(bypass_check=True))
+                self.set_expected_total(galactic_total_got, n_total_got)
             else:
                 # check all contributions to the total signal are tracked accurately
                 assert_allclose(
                     self._galactic_total_cache,
-                    self.get_galactic_total(bypass_check=True),
+                    galactic_total_got,
                     atol=1.0e-300,
                     rtol=1.0e-6,
                 )
+                assert self._n_total_cache == n_total_got
 
     def log_state(self, S_mean: NDArray[np.floating]) -> None:
         """Record any diagnostics we want to track about this iteration.
@@ -643,15 +660,23 @@ class BGDecomposition:
 
     def clear_undecided(self) -> None:
         """Clear the undecided part of the galactic spectrum."""
+        self._n_undecided = 0
         self._galactic_undecided[:] = 0.0
 
     def clear_above(self) -> None:
         """Clear the bright part of the galactic spectrum."""
+        self._n_above = 0
         self._galactic_above[:] = 0.0
 
     def clear_below(self) -> None:
         """Clear the faint part of the galactic spectrum."""
+        self._n_below = 0
         self._galactic_below[:] = 0.0
+
+    def clear_floor(self) -> None:
+        """Clear the faintest part of the galactic spectrum."""
+        self._n_floor = 0
+        self._galactic_floor[:] = 0.0
 
     def get_S_below_high(
         self,
@@ -744,6 +769,7 @@ class BGDecomposition:
         wavelet_waveform : SparseWaveletWaveform
             The sparse wavelet waveform representing the binary to be added.
         """
+        self._n_undecided += 1
         sparse_addition_helper(wavelet_waveform, self._galactic_undecided)
 
     def add_floor(self, wavelet_waveform: SparseWaveletWaveform) -> None:
@@ -754,6 +780,7 @@ class BGDecomposition:
         wavelet_waveform : SparseWaveletWaveform
             The sparse wavelet waveform representing the binary to be added.
         """
+        self._n_floor += 1
         sparse_addition_helper(wavelet_waveform, self._galactic_floor)
 
     def add_faint(self, wavelet_waveform: SparseWaveletWaveform) -> None:
@@ -764,6 +791,7 @@ class BGDecomposition:
         wavelet_waveform : SparseWaveletWaveform
             The sparse wavelet waveform representing the binary to be added.
         """
+        self._n_below += 1
         sparse_addition_helper(wavelet_waveform, self._galactic_below)
 
     def add_bright(self, wavelet_waveform: SparseWaveletWaveform) -> None:
@@ -774,4 +802,5 @@ class BGDecomposition:
         wavelet_waveform : SparseWaveletWaveform
             The sparse wavelet waveform representing the binary to be added.
         """
+        self._n_above += 1
         sparse_addition_helper(wavelet_waveform, self._galactic_above)

@@ -336,8 +336,8 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str = 'skip', 
             hf_in.close()
             cache_good = True
         except OSError:
-            print(filename_cache)
-            print('cache checked and missed')
+            print('Cache target: ' + str(filename_cache))
+            print('Cache checked and missed')
     elif cache_mode == 'skip':
         pass
     else:
@@ -357,7 +357,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str = 'skip', 
             msg = 'Requested frequency derivative grid does not contain zero; results may be unexpected'
             raise ValueError(msg)
 
-        print('%e %.14e %.14e %e %e' % (wc.DT, wc.DF, wc.DOM / (2 * np.pi), fd[1], fd[wc.Nfd - 1]))
+        print('DT=%e DF=%.14e DOM/2pi=%.14e fd1=%e fd-1=%e' % (wc.DT, wc.DF, wc.DOM / (2 * np.pi), fd[1], fd[wc.Nfd - 1]))
 
         Nfsam = ((wc.BW + np.abs(fd) * wc.Tw) / wc.df_bw).astype(np.int64)
         odd_mask = np.mod(Nfsam, 2) != 0
@@ -373,7 +373,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str = 'skip', 
         # half that
 
         t1 = time()
-        print('loop start time ', t1 - t0, 's')
+        print('Taylor Time Table Loop start time ', t1 - t0, 's')
         evcs, evss = get_taylor_table_time_helper(wavelet_norm, wc)
         tf = time()
         print('Got Time Taylor Table in %f s' % (tf - t1))
@@ -391,7 +391,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str = 'skip', 
             _ = hf.create_dataset('evss', data=evss, compression='gzip')
             hf.close()
             t3 = time()
-            print('output time', t3 - tf, 's')
+            print('Taylor Time Table output time', t3 - tf, 's')
         elif output_mode == 'skip':
             pass
         else:

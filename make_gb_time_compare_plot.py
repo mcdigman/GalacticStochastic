@@ -26,15 +26,18 @@ mpl.rcParams['ytick.minor.width'] = 1.5
 if __name__ == '__main__':
     smooth_targ_length = 0.25
     _: Any
+    # filename_config = 'default_parameters.toml'
+    filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters_format2.toml'
 
-    config, wc, lc, ic, instrument_random_seed = config_helper.get_config_objects('default_parameters.toml')
+    config, wc, lc, ic, instrument_random_seed = config_helper.get_config_objects(filename_config)
 
     fs = np.arange(0, wc.Nf) * wc.DF
 
     cyclo_mode = 0
     idx_use = [0, 1, 3, 7]
-    nt_mins = np.array([256 * 7, 256 * 6, 256 * 5, 256 * 4, 256 * 3, 256 * 2, 256 * 1, 256 * 0])[idx_use]
-    nt_maxs = np.array([512 * 1, 512 * 2, 512 * 3, 512 * 4, 512 * 5, 512 * 6, 512 * 7, 512 * 8])[idx_use] + nt_mins
+    nt_incr = int(wc.Nt // 16)
+    nt_mins = np.array([nt_incr * 7, nt_incr * 6, nt_incr * 5, nt_incr * 4, nt_incr * 3, nt_incr * 2, nt_incr * 1, nt_incr * 0])[idx_use]
+    nt_maxs = np.array([2 * nt_incr * 1, 2 * nt_incr * 2, 2 * nt_incr * 3, 2 * nt_incr * 4, 2 * nt_incr * 5, 2 * nt_incr * 6, 2 * nt_incr * 7, 2 * nt_incr * 8])[idx_use] + nt_mins
 
     nt_ranges = nt_maxs - nt_mins
     nk = nt_maxs.size

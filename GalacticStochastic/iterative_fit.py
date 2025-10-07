@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
+
 from GalacticStochastic import global_file_index as gfi
 from GalacticStochastic.background_decomposition import BGDecomposition
 from GalacticStochastic.config_helper import get_config_objects_from_dict
@@ -148,6 +150,7 @@ def fetch_or_run_iterative_loop(
         galactic_below_in = ifm_prelim.noise_manager.bgd.get_galactic_below_low()
         snrs_tot_in = ifm_prelim.bis.get_final_snrs_tot_upper()
         galactic_total_in = ifm_prelim.noise_manager.bgd.get_galactic_total()
+        print('INITIAL TOTAL SUM', np.sum(galactic_total_in**2))
 
         del ifm_prelim
 
@@ -158,7 +161,7 @@ def fetch_or_run_iterative_loop(
             storage_mode=ic.background_storage_mode,
         )
         # set the expected galactic total, for later consistency checks
-        bgd.set_expected_total(galactic_total_in)
+        # bgd.set_expected_total(galactic_total_in)
         del galactic_below_in
         del galactic_total_in
     elif preprocess_mode == 1:

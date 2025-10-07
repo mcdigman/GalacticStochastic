@@ -910,7 +910,6 @@ def get_freq_tdi_amp_phase(
     TFp = waveform.TFp
 
     # for the derivative of RR and II absorb 1/(2*nf_lim.dx) into the constant in tdi_TF
-    print(nf_lim)
     spacecraft_channel_deriv_helper(spacecraft_channels, -1.0 / (2 * nf_lim.dx))
 
     tdi_waveform_generic = StationaryWaveformGeneric(tdi_waveform.F, tdi_PF, tdi_TF, tdi_TF, tdi_AF)

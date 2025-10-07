@@ -340,14 +340,16 @@ class NoiseModelManager(StateManager):
         else:
             period_list = ()
 
-        if self._itrn < self._ic.n_cyclo_switch:
+        assert self._itrn - 1 >= 0
+
+        if self._itrn - 1 < self._ic.n_cyclo_switch:
             filter_periods = False
         else:
             filter_periods = not self.cyclo_mode
 
         S_upper = self.bgd.get_S_below_high(
             self.S_inst_m,
-            self._ic.smooth_lengthf[self._itrn],
+            self._ic.smooth_lengthf[self._itrn - 1],
             filter_periods,
             period_list,
         )

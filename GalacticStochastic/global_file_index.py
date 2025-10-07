@@ -199,11 +199,11 @@ def get_full_galactic_params(config: dict[str, Any]) -> tuple[NDArray[np.floatin
         if label == 'dgb' and np.any(params_loc[:, 4] < 0.0):
             warn('Some binaries reported as detached have negative frequency derivatives', stacklevel=2)
         params_got.append(params_loc)
-        print(str(label), str(ns_got[itr]))
+        print('Component: ', str(label), str(ns_got[itr]))
 
     n_tot = int(ns_got.sum())
 
-    print('total', n_tot)
+    print('Total', n_tot)
 
     params_gb = np.zeros((n_tot, n_par_gb))
 
@@ -224,7 +224,7 @@ def get_full_galactic_params(config: dict[str, Any]) -> tuple[NDArray[np.floatin
     assert np.all(params_gb[:, 3] > 0.0), 'Some binaries have non-positive frequencies'
     if np.any(np.abs(params_gb[:, 4]) * gc.SECSYEAR * 10 > 0.001):
         warn('Some binaries have large frequency derivatives', stacklevel=2)
-    print('Largest frequency derivative', np.max(np.abs(params_gb[:, 4]) * gc.SECSYEAR * 10))
+    print('Largest frequency derivative', np.max(np.abs(params_gb[:, 4])))
     assert np.all((params_gb[:, 5] >= 0.0) & (params_gb[:, 5] <= np.pi)), 'Inclination not bounded in expected range'
     assert np.all((params_gb[:, 6] >= 0.0) & (params_gb[:, 6] <= 2 * np.pi)), 'Initial phase not bounded in expected range'
     assert np.all((params_gb[:, 7] >= 0.0) & (params_gb[:, 7] <= 2 * np.pi)), 'Polarization phase not bounded in expected range'

@@ -52,7 +52,7 @@ class IterativeFitManager(StateManager):
 
     def do_loop(self) -> None:
         """Do the entire iterative fitting loop."""
-        print('entered loop')
+        print('Entered iterative fitting loop')
         ti = perf_counter()
         for _ in range(self.fit_state.get_n_itr_cut()):
             self.do_iteration()
