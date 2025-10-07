@@ -51,7 +51,7 @@ def test_intrinsic_waveform_agreement() -> None:
     lf_waveform_freq = LinearFrequencySourceWaveformFreq(
         params=params,
         lc=lc,
-        T_obs=wc.Tobs,
+        t_obs=wc.Tobs,
         nf_lim_absolute=NF_lim,
         freeze_limits=freeze_limits,
         n_pad_F=10,  # optional, default is 10
@@ -277,7 +277,7 @@ def test_intrinsic_update_consistent1_freq(freeze_limits: bool) -> None:
     lf_waveform_freq11 = LinearFrequencySourceWaveformFreq(
         params=params1,
         lc=lc,
-        T_obs=wc.Tobs,
+        t_obs=wc.Tobs,
         nf_lim_absolute=NF_lim,
         freeze_limits=freeze_limits,
         n_pad_F=10,  # optional, default is 10
@@ -286,7 +286,7 @@ def test_intrinsic_update_consistent1_freq(freeze_limits: bool) -> None:
     lf_waveform_freq22 = LinearFrequencySourceWaveformFreq(
         params=params2,
         lc=lc,
-        T_obs=wc.Tobs,
+        t_obs=wc.Tobs,
         nf_lim_absolute=NF_lim,
         freeze_limits=freeze_limits,
         n_pad_F=10,  # optional, default is 10
@@ -309,7 +309,7 @@ def test_intrinsic_update_consistent1_freq(freeze_limits: bool) -> None:
     lf_waveform_freq12 = LinearFrequencySourceWaveformFreq(
         params=params1,
         lc=lc,
-        T_obs=wc.Tobs,
+        t_obs=wc.Tobs,
         nf_lim_absolute=NF_lim,
         freeze_limits=freeze_limits,
         n_pad_F=10,  # optional, default is 10
@@ -317,7 +317,7 @@ def test_intrinsic_update_consistent1_freq(freeze_limits: bool) -> None:
     lf_waveform_freq21 = LinearFrequencySourceWaveformFreq(
         params=params2,
         lc=lc,
-        T_obs=wc.Tobs,
+        t_obs=wc.Tobs,
         nf_lim_absolute=NF_lim,
         freeze_limits=freeze_limits,
         n_pad_F=10,  # optional, default is 10

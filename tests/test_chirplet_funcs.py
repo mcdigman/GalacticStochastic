@@ -64,7 +64,7 @@ def test_intrinsic_waveform_agreement() -> None:
         params=params,
         lc=lc,
         nf_lim_absolute=NF_lim,
-        T_obs=wc.Tobs,
+        t_obs=wc.Tobs,
         freeze_limits=freeze_limits,
         n_pad_F=10,  # optional, default is 10
     )
@@ -309,7 +309,7 @@ def test_intrinsic_update_consistent1_freq(freeze_limits: bool) -> None:
         params=params1,
         lc=lc,
         nf_lim_absolute=NF_lim,
-        T_obs=wc.Tobs,
+        t_obs=wc.Tobs,
         freeze_limits=freeze_limits,
         n_pad_F=10,  # optional, default is 10
     )
@@ -318,7 +318,7 @@ def test_intrinsic_update_consistent1_freq(freeze_limits: bool) -> None:
         params=params2,
         lc=lc,
         nf_lim_absolute=NF_lim,
-        T_obs=wc.Tobs,
+        t_obs=wc.Tobs,
         freeze_limits=freeze_limits,
         n_pad_F=10,  # optional, default is 10
     )
@@ -341,7 +341,7 @@ def test_intrinsic_update_consistent1_freq(freeze_limits: bool) -> None:
         params=params1,
         lc=lc,
         nf_lim_absolute=NF_lim,
-        T_obs=wc.Tobs,
+        t_obs=wc.Tobs,
         freeze_limits=freeze_limits,
         n_pad_F=10,  # optional, default is 10
     )
@@ -349,7 +349,7 @@ def test_intrinsic_update_consistent1_freq(freeze_limits: bool) -> None:
         params=params2,
         lc=lc,
         nf_lim_absolute=NF_lim,
-        T_obs=wc.Tobs,
+        t_obs=wc.Tobs,
         freeze_limits=freeze_limits,
         n_pad_F=10,  # optional, default is 10
     )

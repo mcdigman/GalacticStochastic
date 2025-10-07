@@ -253,11 +253,11 @@ class EdgeRiseModel(NamedTuple):
 
     Attributes
     ----------
-    Tstart : float
+    t_start : float
         Start time of the model.
-    Tend : float
+    t_end : float
         End time of the model.
     """
 
-    Tstart: float
-    Tend: float
+    t_start: float
+    t_end: float

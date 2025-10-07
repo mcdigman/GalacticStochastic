@@ -61,15 +61,15 @@ def get_empty_sparse_taylor_time_waveform(nc_waveform: int, wc: WDMWaveletConsta
     # need the frequency derivatives to calculate the maximum possible size
     fds = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)
     # calculate maximum possible number of pixels
-    N_max = int(np.ceil((wc.BW + np.max(np.abs(fds)) * wc.Tw) / wc.DF)) * wc.Nt
+    n_pixel_max = int(np.ceil((wc.BW + np.max(np.abs(fds)) * wc.Tw) / wc.DF)) * wc.Nt
     # array of wavelet coefficients
-    wave_value = np.zeros((nc_waveform, N_max))
+    wave_value = np.zeros((nc_waveform, n_pixel_max))
     # aray of pixel indices
-    pixel_index = np.full((nc_waveform, N_max), -1, dtype=np.int64)
+    pixel_index = np.full((nc_waveform, n_pixel_max), -1, dtype=np.int64)
     # number of pixel indices that are set
     n_set = np.zeros(nc_waveform, dtype=np.int64)
 
-    return SparseWaveletWaveform(wave_value, pixel_index, n_set, N_max)
+    return SparseWaveletWaveform(wave_value, pixel_index, n_set, n_pixel_max)
 
 
 def wavelet(wc: WDMWaveletConstants, m: int, nrm: float, *, n_in: int = -1) -> NDArray[np.floating]:

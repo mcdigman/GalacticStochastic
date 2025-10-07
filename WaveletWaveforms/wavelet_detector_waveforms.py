@@ -64,7 +64,7 @@ class SparseWaveletSourceWaveform(Generic[StationaryWaveformType, IntrinsicParam
         _ = hf_wavelet.create_dataset('wave_value', data=self._wavelet_waveform.wave_value, compression='gzip')
         _ = hf_wavelet.create_dataset('pixel_index', data=self._wavelet_waveform.pixel_index, compression='gzip')
         _ = hf_wavelet.create_dataset('n_set', data=self._wavelet_waveform.n_set, compression='gzip')
-        _ = hf_wavelet.create_dataset('N_max', data=[self._wavelet_waveform.N_max], compression='gzip')
+        _ = hf_wavelet.create_dataset('n_pixel_max', data=[self._wavelet_waveform.n_pixel_max], compression='gzip')
 
         _ = self._source_waveform.store_hdf5(hf_wavelet)
 

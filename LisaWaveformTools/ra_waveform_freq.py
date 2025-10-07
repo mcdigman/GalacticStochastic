@@ -900,7 +900,6 @@ def get_freq_tdi_amp_phase(
     er: EdgeRiseModel,
 ) -> None:
     """Get the frequency domain TDI response."""
-    # TODO figure out how to set Tend properly
     tdi_AF = tdi_waveform.AF
     tdi_PF = tdi_waveform.PF
     tdi_TF = tdi_waveform.TF

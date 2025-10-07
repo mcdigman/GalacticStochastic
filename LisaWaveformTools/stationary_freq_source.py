@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 class StationarySourceWaveformFreq(Generic[IntrinsicParamsType, ExtrinsicParamsType], StationarySourceWaveform[StationaryWaveformFreq, IntrinsicParamsType, ExtrinsicParamsType], ABC):
     """Class to store a binary waveform in frequency domain and update for search."""
 
-    def __init__(self, params: SourceParams, lc: LISAConstants, nf_lim_absolute: PixelGenericRange, freeze_limits: int, T_obs: float, n_pad_F: int = 10, response_mode: int = 0) -> None:
+    def __init__(self, params: SourceParams, lc: LISAConstants, nf_lim_absolute: PixelGenericRange, freeze_limits: int, t_obs: float, n_pad_F: int = 10, response_mode: int = 0) -> None:
         """Construct a binary wavelet object."""
         self._lc: LISAConstants = lc
         self._nc_waveform: int = self._lc.nc_waveform
@@ -79,7 +79,7 @@ class StationarySourceWaveformFreq(Generic[IntrinsicParamsType, ExtrinsicParamsT
         AET_TFps = np.zeros((self.nc_waveform, self.NF))
 
         tdi_waveform = StationaryWaveformFreq(self.FFs, AET_AmpFs, AET_PPFs, AET_TFs, AET_TFps)
-        self._t_gen: float = self._lc.t0 + T_obs + self._lc.t_rise
+        self._t_gen: float = self._lc.t0 + t_obs + self._lc.t_rise
         del AET_AmpFs
         del AET_PPFs
         del AET_TFs

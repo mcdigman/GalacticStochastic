@@ -917,7 +917,7 @@ class BinaryInclusionState(StateManager):
     @override
     def print_report(self) -> None:
         """Do any printing desired after convergence has been achieved and the loop ends."""
-        Tobs_consider_yr = (self._noise_manager.nt_lim_snr.nx_max - self._noise_manager.nt_lim_snr.nx_min) * self._wc.DT / gc.SECSYEAR
+        t_obs_consider_yr = (self._noise_manager.nt_lim_snr.nx_max - self._noise_manager.nt_lim_snr.nx_min) * self._wc.DT / gc.SECSYEAR
         n_consider = self._n_bin_use
         n_faint = int(self._faints_old.sum())
         n_faint2 = int(self._faints_cur[self._itrn - 1].sum())
@@ -927,7 +927,7 @@ class BinaryInclusionState(StateManager):
             'Out of %10d total binaries, %10d were deemed undetectable by a previous run, %10d were considered here.' % (self._n_tot, self._n_tot - n_consider, n_consider),
         )
         print(
-            'The iterative procedure deemed (%5.3f yr observation at threshold snr=%5.3f):' % (Tobs_consider_yr, self._ic.snr_thresh),
+            'The iterative procedure deemed (%5.3f yr observation at threshold snr=%5.3f):' % (t_obs_consider_yr, self._ic.snr_thresh),
         )
         print('       %10d undetectable due to instrument noise' % n_faint)
         print('       %10d undetectable due to galactic confusion' % n_faint2)

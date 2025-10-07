@@ -22,17 +22,17 @@ class SparseWaveletWaveform(NamedTuple):
         stores the actual intrinsic_waveform as the values of the wavelet pixels
         at the pixel indices specified by lists_pixels.
         All values with index >= n_set should be set to 0.
-        Shape is the same as lists_pixels: shape: (_nc_waveform, N_max)
+        Shape is the same as lists_pixels: shape: (_nc_waveform, n_max)
     pixel_index : numpy.ndarray
         stores the indices of x,y coordinates of all pixels that are
         currently set. All values with index >= n_set should be set to -1
-        shape: (_nc_waveform, N_max) number of TDI channels x maximum number
+        shape: (_nc_waveform, n_max) number of TDI channels x maximum number
         of pixels possible in sparse representation.
     n_set : numpy.ndarray of integers
         number of wavelet coefficients that are *currently* set
-        all values must be <= N_max.
+        all values must be <= n_pixel_max.
         shape: number of TDI channels
-    N_max: integer
+    n_pixel_max: integer
         the maximum number of wavelet pixels that could possibly
         be set in the sparse representation,
         which is determined by the shape of the interpolation table
@@ -40,7 +40,7 @@ class SparseWaveletWaveform(NamedTuple):
     wave_value: NDArray[np.floating]
     pixel_index: NDArray[np.int64]
     n_set: NDArray[np.integer]
-    N_max: int
+    n_pixel_max: int
 
 
 class PixelGenericRange(NamedTuple):
@@ -89,14 +89,14 @@ def wavelet_sparse_to_dense(wavelet_waveform: SparseWaveletWaveform, wc: WDMWave
     assert len(pixel_index.shape) == 2
     assert len(n_set.shape) == 1
     assert pixel_index.shape == wave_value.shape
-    assert pixel_index.shape[1] == wavelet_waveform.N_max
+    assert pixel_index.shape[1] == wavelet_waveform.n_pixel_max
     assert pixel_index.shape[0] == nc_waveform
 
     result = np.zeros((wc.Nt, wc.Nf, nc_waveform))
 
     # unpack the signal
     for itrc in range(nc_waveform):
-        assert n_set[itrc] <= wavelet_waveform.N_max
+        assert n_set[itrc] <= wavelet_waveform.n_pixel_max
         for itrp in range(n_set[itrc]):
             assert pixel_index[itrc, itrp] != -1
             i = pixel_index[itrc, itrp] % wc.Nf

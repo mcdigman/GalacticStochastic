@@ -154,7 +154,7 @@ def _sparse_time_unpack_loop(wavelet_waveform: SparseWaveletWaveform, m_pixel: N
                     pixel_index[itrc, mm] = n * wc.Nf + m_pos
                     mm += 1
         n_set[itrc] = mm
-        # n_set[itrc] = wavelet_waveform.N_max
+        # n_set[itrc] = wavelet_waveform.n_pixel_max
 
     # clean up any pixels that were set in the old intrinsic_waveform but aren't anymore
     for itrc in range(nc_waveform):
@@ -174,11 +174,11 @@ def get_empty_sparse_sparse_wavelet_time_waveform(nc: int, wc: WDMWaveletConstan
     assert 2 * wc.Nf % sparse_thin == 0, 'Nf currently needs to be an integer multiple of sparse thin factor'
 
     kx: int = int(2 * wc.Nf // sparse_thin)
-    N_max: int = kx * wc.Nt
-    wave_value = np.zeros((nc, N_max))
-    pixel_index = np.zeros((nc, N_max), np.int64)
+    n_pixel_max: int = kx * wc.Nt
+    wave_value = np.zeros((nc, n_pixel_max))
+    pixel_index = np.zeros((nc, n_pixel_max), np.int64)
     n_set = np.zeros(nc, dtype=np.int64)
-    return SparseWaveletWaveform(wave_value, pixel_index, n_set, N_max)
+    return SparseWaveletWaveform(wave_value, pixel_index, n_set, n_pixel_max)
 
 
 def make_sparse_wavelet_time(wave: StationarySourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType], wavelet_waveform: SparseWaveletWaveform, sparse_table: SparseTimeCoefficientTable, wc: WDMWaveletConstants) -> None:

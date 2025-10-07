@@ -12,11 +12,11 @@ class StationaryTaylorF2WaveformFreq(StationarySourceWaveformFreq[TaylorF2Aligne
     """Store a taylorf2 waveform in the frequency domain and update it."""
 
     @override
-    def __init__(self, params: SourceParams, lc: LISAConstants, nf_lim_absolute: PixelGenericRange, freeze_limits: int, T_obs: float,
+    def __init__(self, params: SourceParams, lc: LISAConstants, nf_lim_absolute: PixelGenericRange, freeze_limits: int, t_obs: float,
                  n_pad_F: int = 10, *, mf_taylor_anchor: float = 1.e-5) -> None:
         """Construct a waveform for a binary using the TaylorF2 model."""
         self.mf_taylor_anchor: float = mf_taylor_anchor
-        super().__init__(params, lc, nf_lim_absolute, freeze_limits, T_obs, n_pad_F=n_pad_F)
+        super().__init__(params, lc, nf_lim_absolute, freeze_limits, t_obs, n_pad_F=n_pad_F)
 
     @override
     def _update_intrinsic(self) -> None:

@@ -102,21 +102,21 @@ def spacecraft_channel_deriv_helper(spacecraft_channels: AntennaResponseChannels
 def edge_rise_multiplier_helper(t: float, er: EdgeRiseModel, lc: LISAConstants) -> float:
     """Apply the edge rise model to the amplitude of a waveform."""
     x: float = 1.0
-    Tstart: float = er.Tstart
-    Tend: float = er.Tend
+    t_start: float = er.t_start
+    t_end: float = er.t_end
     t_rise: float = lc.t_rise
     if lc.rise_mode == 0:
-        if Tstart < t < Tstart + t_rise:
-            x = 0.5 * (1.0 - np.cos(np.pi * (t - Tstart) / t_rise))
-        if (Tend - t_rise) < t < Tend:
-            x = 0.5 * (1.0 - np.cos(np.pi * (t - Tend) / t_rise))
+        if t_start < t < t_start + t_rise:
+            x = 0.5 * (1.0 - np.cos(np.pi * (t - t_start) / t_rise))
+        if (t_end - t_rise) < t < t_end:
+            x = 0.5 * (1.0 - np.cos(np.pi * (t - t_end) / t_rise))
     elif lc.rise_mode == 0:
-        if t > Tend:
+        if t > t_end:
             x = 0.0
-        if t < Tstart:
+        if t < t_start:
             x = 0.0
     elif lc.rise_mode == 2:
-        if t > Tend:
+        if t > t_end:
             x = 0.0
     elif lc.rise_mode == 3:
         pass

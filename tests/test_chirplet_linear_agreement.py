@@ -223,7 +223,7 @@ def test_cross_waveform_agreement_freq2() -> None:
     linear_freq = LinearFrequencySourceWaveformFreq(
         params=params_linear,
         lc=lc,
-        T_obs=wc.Tobs,
+        t_obs=wc.Tobs,
         nf_lim_absolute=NF_lim,
         freeze_limits=freeze_limits,
         n_pad_F=10,  # optional, default is 10
@@ -232,7 +232,7 @@ def test_cross_waveform_agreement_freq2() -> None:
     chirplet_freq = LinearChirpletSourceWaveformFreq(
         params=params_chirplet,
         lc=lc,
-        T_obs=wc.Tobs,
+        t_obs=wc.Tobs,
         nf_lim_absolute=NF_lim,
         freeze_limits=freeze_limits,
         n_pad_F=10,  # optional, default is 10
