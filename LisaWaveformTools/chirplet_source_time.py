@@ -12,7 +12,6 @@ from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletSparseTime,
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
-# TODO do consistency checks
 class LinearChirpletSourceWaveformTime(StationarySourceWaveformTime[LinearChirpletIntrinsicParams, ExtrinsicParams]):
     """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain."""
 

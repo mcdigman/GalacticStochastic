@@ -7,7 +7,6 @@ from LisaWaveformTools.stationary_freq_source import StationarySourceWaveformFre
 from WaveletWaveforms.chirplet_funcs import LinearChirpletIntrinsicParams, LinearChirpletParamsManager, chirplet_freq_intrinsic
 
 
-# TODO do consistency checks
 class LinearChirpletSourceWaveformFreq(StationarySourceWaveformFreq[LinearChirpletIntrinsicParams, ExtrinsicParams]):
     """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain."""
 
