@@ -102,8 +102,5 @@ def wavelet_sparse_to_dense(wavelet_waveform: SparseWaveletWaveform, wc: WDMWave
             i = pixel_index[itrc, itrp] % wc.Nf
             j = (pixel_index[itrc, itrp] - i) // wc.Nf
             result[j, i, itrc] = wave_value[itrc, itrp]
-        # i = np.mod(pixel_index[itrc, :n_set[itrc]], _wc.Nf).astype(np.int64)
-        # j = ((pixel_index[itrc, :n_set[itrc]] - i) // _wc.Nf).astype(np.int64)
-        # result[j, i, itrc] = wave_value[itrc, :n_set[itrc]]
 
     return result

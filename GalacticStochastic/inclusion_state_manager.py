@@ -245,7 +245,6 @@ class BinaryInclusionState(StateManager):
         # storing the active mask may compress more efficiently
         active_mask = np.zeros(self._n_tot, dtype=np.bool_)
         active_mask[self._argbinmap] = True
-        # _ = hf_include.create_dataset('argbinmap', data=self._argbinmap, compression='gzip')
         _ = hf_include.create_dataset('active_mask', data=active_mask, compression='gzip')
         if self._fit_state.preprocess_mode != 1:
             # don't store these things if were are in the initial preprocessing stage because, they are meaningless and potentially a large array.
@@ -261,15 +260,11 @@ class BinaryInclusionState(StateManager):
             # store full snrs
             _ = hf_include.create_dataset('snrs_upper', data=self._snrs_upper[: self._itrn], compression='gzip')
             _ = hf_include.create_dataset('snrs_lower', data=self._snrs_lower[: self._itrn], compression='gzip')
-            # _ = hf_include.create_dataset('snrs_tot_upper', data=self._snrs_tot_upper[: self._itrn], compression='gzip')
-            # _ = hf_include.create_dataset('snrs_tot_lower', data=self._snrs_tot_lower[: self._itrn], compression='gzip')
 
         if storage_mode in (1, 3):
             # store last snrs
             _ = hf_include.create_dataset('snrs_upper', data=self._snrs_upper[self._itrn - 1 : self._itrn], compression='gzip')
             _ = hf_include.create_dataset('snrs_lower', data=self._snrs_lower[self._itrn - 1 : self._itrn], compression='gzip')
-            # _ = hf_include.create_dataset('snrs_tot_upper', data=self._snrs_tot_upper[self._itrn - 1 : self._itrn], compression='gzip')
-            # _ = hf_include.create_dataset('snrs_tot_lower', data=self._snrs_tot_lower[self._itrn - 1 : self._itrn], compression='gzip')
 
         if storage_mode in (2, 3):
             # store full params

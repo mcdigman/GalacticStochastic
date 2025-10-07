@@ -173,9 +173,6 @@ class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform[StationaryWaveformTime
         self._nt_lim_waveform: PixelGenericRange = nt_lim_waveform
         self._wavelet_mode: int = wavelet_mode
 
-        # store the intrinsic_waveform
-        # self._source_waveform: StationarySourceWaveform[StationaryWaveformTime] = source_waveform
-
         # get a blank wavelet intrinsic_waveform with the correct size for the sparse taylor time method
         # when consistent is set to True, it will be the correct intrinsic_waveform
         wavelet_waveform_loc: SparseWaveletWaveform = get_empty_sparse_taylor_time_waveform(int(self._lc.nc_waveform), wc)
@@ -258,9 +255,6 @@ class BinaryWaveletSparseTime(SparseWaveletSourceWaveform[StationaryWaveformTime
         self._nt_lim_waveform: PixelGenericRange = nt_lim_waveform
         self._storage_mode: int = storage_mode
         self._wavelet_mode: int = wavelet_mode
-
-        # store the intrinsic_waveform
-        # self._source_waveform: StationarySourceWaveform[StationaryWaveformTime] = source_waveform
 
         # get a blank wavelet intrinsic_waveform with the correct size for the sparse taylor time method
         # when consistent is set to True, it will be the correct intrinsic_waveform

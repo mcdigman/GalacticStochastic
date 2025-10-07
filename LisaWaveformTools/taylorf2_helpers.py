@@ -859,6 +859,5 @@ def TaylorF2_aligned_inplace(intrinsic_waveform: StationaryWaveformFreq, params_
         PSI[n] = 2 * np.pi * TTRef * FS[n] + PSI_ref - np.pi / 4 + c0 / nu**5 * (1 + c1 * nu**2 + c2 * nu**3 + c3 * nu**4 + c4 * m4 * nu**5 + (c5 + ac5) * nu**6 + c6 * nu**7)
         TS[n] = TTRef - p0 / nu**8 * (1 + p1 * nu**2 + p2 * nu**3 + p3 * nu**4 + p4 * nu**5 + (ap5 + p5) * nu**6 + p6 * nu**7)
         TPS[n] = f0 / nu**11 * (1 + f1 * nu**2 + f2 * nu**3 + f3 * nu**4 + f4 * nu**5 + (f5 + fp5) * nu**6 + f6 * nu**7)
-        # AS[n] = a0*FS[n]**(-7/6)*(1+a1*(np.pi*FS[n])**(2/3)+a2*(np.pi*FS[n])+a3*(np.pi*FS[n])**(4/3)+a4*(np.pi*FS[n])**(5/3)+a5*(np.pi*FS[n])**2)
         AS[n] = a0 / np.sqrt(nu)**7 * (1 + a1 * nu**2 + a2 * nu**3 + a3 * nu**4 + a4 * nu**5 + a5 * nu**6 + a6 * nu**7 + a7 * nu**8 + a8 * nu**9)
     return float(TTRef)

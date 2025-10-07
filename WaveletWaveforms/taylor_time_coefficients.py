@@ -188,7 +188,6 @@ def get_taylor_table_time_helper(wavelet_norm: NDArray[np.floating], wc: WDMWave
                 evc += wavelet_norm[k] * np.cos(zs)
                 evs += wavelet_norm[k] * np.sin(zs)
             assert evc != 0.0
-            # assert evs != 0.0  # the sin component can be extremely close to zero, perhaps exactly by coincidence
             evcs[jj, i] = evc
             evss[jj, i] = evs
     return evcs, evss

@@ -27,7 +27,7 @@ if __name__ == '__main__':
     smooth_targ_length = 0.25
     _: Any
     # filename_config = 'default_parameters.toml'
-    filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters_format2.toml'
+    filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters.toml'
 
     config, wc, lc, ic, instrument_random_seed = config_helper.get_config_objects(filename_config)
 

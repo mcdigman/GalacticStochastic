@@ -140,8 +140,6 @@ class StationarySourceWaveformTime(Generic[IntrinsicParamsType, ExtrinsicParamsT
     @override
     def _update_extrinsic(self) -> None:
         """Update the intrinsic_waveform with respect to the extrinsic parameters."""
-        # TODO fix F_min and nf_range
-        # nt_lim = PixelGenericRange(0, self._nt_range, self._nt_lim_waveform.dx, self._lc.t0)
         if self.response_mode in (0, 1):
             rigid_adiabatic_antenna(
                 self._spacecraft_channels,

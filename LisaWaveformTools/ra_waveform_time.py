@@ -356,48 +356,6 @@ def get_time_tdi_amp_phase_helper(
     waveform_generic = StationaryWaveformGeneric(waveform.T, waveform.PT, waveform.FT, waveform.FTd, waveform.AT)
     amp_phase_loop_helper(waveform.FT, waveform.T, waveform_generic, AET_waveform_generic, spacecraft_channels, lc, nt_lim)
     apply_edge_rise_helper(waveform.T, AET_waveform.AT, er, lc, nt_lim)
-    # for n in prange(n_t):
-    #    fonfs = waveform.FT[n] / lc.fstr
-
-    #    # including TDI + fractional frequency modifiers
-    #    Ampx = waveform.AT[n] * (8 * fonfs * np.sin(fonfs))
-    #    for itrc in range(nc_channel):
-    #        RR = spacecraft_channels.RR[itrc, n]
-    #        II = spacecraft_channels.II[itrc, n]
-    #        dRR = spacecraft_channels.dRR[itrc, n]
-    #        dII = spacecraft_channels.dII[itrc, n]
-
-    #        if RR == 0.0 and II == 0.0:
-    #            # Handle zero denominator phase.
-    #            p = 0.0
-
-    #            # Handle zero denominator FT without a delta function.
-    #            # Note that the second derivative could be more complicated here,
-    #            # But we ignore that for now and just take a numerical derivative.
-    #            AET_FT[itrc, n] = waveform.FT[n]
-    #        elif II * dRR == RR * dII:
-    #            # Zero numerator phase is the same as general case.
-    #            p = np.arctan2(II, RR) % (2 * np.pi)
-
-    #            # Handle zero numerator FT without a delta function
-    #            # May improve numerical stability if denominator is also close to zero
-    #            AET_FT[itrc, n] = waveform.FT[n]
-    #        else:
-    #            # General case of phase.
-    #            p = np.arctan2(II, RR) % (2 * np.pi)
-
-    #            # Handle general case, with the analytic derivative of the phase.
-    #            # dRR and dII are currently computed through a numerical derivative,
-    #            # But could be constructed analytically.
-    #            # Ignores delta functions in FT that can happen when RR or II pass through 0.
-    #            # The results change slightly if the compiler has the fused multiply and add enabled,
-    #            # e.g. fastmath = {'contract'} for the LLVM compiler
-    #            AET_FT[itrc, n] = waveform.FT[n] - (II * dRR - RR * dII) / (RR**2 + II**2) / (2 * np.pi)
-
-    #        # Set the amplitude
-    #        AET_AT[itrc, n] = Ampx * np.sqrt(RR**2 + II**2)
-    #        # Set the phase, including the input base phase and the perturbation from this iteration,
-    #        AET_PT[itrc, n] = waveform.PT[n] + p
 
 
 @njit()

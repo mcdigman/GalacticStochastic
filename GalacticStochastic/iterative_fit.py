@@ -202,7 +202,6 @@ def fetch_or_run_iterative_loop(
 
     ifm = IterativeFitManager(ic, fit_state, noise_manager, bis)
 
-    # TODO preprocessed calls might need different snrs cutoffs based on threshold entered
     fetched = False
     if fetch_mode in (1, 2, 3):
         try:

@@ -5,8 +5,6 @@ from typing import override
 
 import h5py
 import numpy as np
-
-# import numba as nb
 from numba import njit
 from numpy.typing import NDArray
 
@@ -56,8 +54,6 @@ def get_sparse_snr_helper(
                 mult: float = inv_chol_S[j_loc, i_loc, itrc] * wave_value_loc[mm]
                 snr2s[itrc] += mult * mult
     return np.sqrt(snr2s)
-
-# from numba.experimental import jitclass
 
 
 class DenseNoiseModel(ABC):
