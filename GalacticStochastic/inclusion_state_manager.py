@@ -8,6 +8,7 @@ from warnings import warn
 
 import h5py
 import numpy as np
+from numba import njit
 from numpy.testing import assert_allclose
 
 import GalacticStochastic.global_const as gc
@@ -64,6 +65,42 @@ def unpack_params_gb(params_in: NDArray[np.floating]) -> SourceParams:
     params_extrinsic = ExtrinsicParams(costh, phi, cosi, psi)
     params_intrinsic = LinearFrequencyIntrinsicParams(amp0_t, phi0, F0, FTd0)
     return SourceParams(intrinsic=params_intrinsic, extrinsic=params_extrinsic)
+
+
+@njit()
+def _snrs_tot_load_helper(snrs_upper: NDArray[np.floating], snrs_lower: NDArray[np.floating], snrs_tot_upper: NDArray[np.floating], snrs_tot_lower: NDArray[np.floating], lower_mode: int = 0, itrn: int = -1) -> None:
+    """Load the total snrs from the components with the exact numerical operation done in the storage helper.
+
+    Parameters
+    ----------
+    snrs_upper: NDArray[np.floating]
+        upper snrs
+    snrs_lower: NDArray[np.floating]
+        lower snrs
+    snrs_tot_upper: NDArray[np.floating]
+        upper tot snrs
+    snrs_tot_lower: NDArray[np.floating]
+        lower tot snrs
+    lower_mode: int
+        mode for whether we are loading the totals for the upper or lower snr component
+        if lower_mode=0, load the upper component
+        if lower_mode=1, load the lower component
+    itrn: int
+        which iteration to load itotal the snr for
+        if -1, load all of them (default)
+    """
+    if itrn == -1:
+        itrn_min = 0
+        itrn_max = snrs_upper.shape[0]
+    else:
+        itrn_min = itrn
+        itrn_max = itrn + 1
+    for itrn_itr in range(itrn_min, itrn_max):
+        for itrb in range(snrs_upper.shape[1]):
+            if lower_mode == 0:
+                snrs_tot_upper[itrn_itr, itrb] = np.linalg.norm(snrs_upper[itrn_itr, itrb])
+            else:
+                snrs_tot_lower[itrn_itr, itrb] = np.linalg.norm(snrs_lower[itrn_itr, itrb])
 
 
 class BinaryInclusionState(StateManager):
@@ -175,7 +212,7 @@ class BinaryInclusionState(StateManager):
         else:
             params0_sel = self._params_gb[0]
         params0: SourceParams = unpack_params_gb(params0_sel)
-        self._waveform_manager: LinearFrequencyWaveletWaveformTime = LinearFrequencyWaveletWaveformTime(params0, self._wc, self._lc, self._nt_lim_waveform)
+        self._waveform_manager: LinearFrequencyWaveletWaveformTime = LinearFrequencyWaveletWaveformTime(params0, self._wc, self._lc, self._nt_lim_waveform, table_cache_mode='check', table_output_mode='skip')
 
         del params0
         del params0_sel
@@ -232,12 +269,12 @@ class BinaryInclusionState(StateManager):
         else:
             msg = 'Unrecognized option for group mode'
             raise NotImplementedError(msg)
-        hf_include.attrs['storage_mode'] = storage_mode
-        hf_include.attrs['itrn'] = self._itrn
-        hf_include.attrs['n_bin_use'] = self._n_bin_use
-        hf_include.attrs['n_tot'] = self._n_tot
-        hf_include.attrs['fmin_binary'] = self._fmin_binary
-        hf_include.attrs['fmax_binary'] = self._fmax_binary
+        hf_include.attrs['storage_mode'] = int(storage_mode)
+        hf_include.attrs['itrn'] = int(self._itrn)
+        hf_include.attrs['n_bin_use'] = int(self._n_bin_use)
+        hf_include.attrs['n_tot'] = int(self._n_tot)
+        hf_include.attrs['fmin_binary'] = float(self._fmin_binary)
+        hf_include.attrs['fmax_binary'] = float(self._fmax_binary)
         hf_include.attrs['noise_manager_name'] = self._noise_manager.__class__.__name__
         hf_include.attrs['fit_state_name'] = self._fit_state.__class__.__name__
         hf_include.attrs['waveform_manager_name'] = self._waveform_manager.__class__.__name__
@@ -315,7 +352,7 @@ class BinaryInclusionState(StateManager):
 
         return hf_include
 
-    def _snrs_tot_load_helper(self, lower_mode: int = 0, itrn: int = -1) -> None:
+    def _snrs_tot_load(self, lower_mode: int = 0, itrn: int = -1) -> None:
         """Load the total snrs from the components with the exact numerical operation done in the storage helper.
 
         Parameters
@@ -328,18 +365,7 @@ class BinaryInclusionState(StateManager):
             which iteration to load itotal the snr for
             if -1, load all of them (default)
         """
-        if itrn == -1:
-            itrn_min = 0
-            itrn_max = self._snrs_upper.shape[0]
-        else:
-            itrn_min = itrn
-            itrn_max = itrn + 1
-        for itrn_itr in range(itrn_min, itrn_max):
-            for itrb in range(self._snrs_upper.shape[1]):
-                if lower_mode == 0:
-                    self._snrs_tot_upper[itrn_itr, itrb] = np.linalg.norm(self._snrs_upper[itrn_itr, itrb])
-                else:
-                    self._snrs_tot_lower[itrn_itr, itrb] = np.linalg.norm(self._snrs_lower[itrn_itr, itrb])
+        _snrs_tot_load_helper(self._snrs_upper, self._snrs_lower, self._snrs_tot_upper, self._snrs_tot_lower, lower_mode=lower_mode, itrn=itrn)
 
     def _load_snr_from_file_helper(self, hf_include: h5py.Group, storage_mode: int, *, lower_mode: int = 0) -> None:
 
@@ -367,12 +393,12 @@ class BinaryInclusionState(StateManager):
             if storage_mode in (0, 2):
                 # store full snrs
                 write_target[: self._itrn] = snrs_temp[()]
-                self._snrs_tot_load_helper(lower_mode)
+                self._snrs_tot_load(lower_mode)
 
             if storage_mode in (1, 3, 5):
                 # store last snrs
                 write_target[self._itrn - 1 : self._itrn] = snrs_temp[()]
-                self._snrs_tot_load_helper(lower_mode, itrn=self._itrn - 1)
+                self._snrs_tot_load(lower_mode, itrn=self._itrn - 1)
 
             # load the total snrs instead of reading them in from the file
 
@@ -391,11 +417,11 @@ class BinaryInclusionState(StateManager):
                 # did not record division into channels, just put all the power into the first channel
                 self._snrs_upper[self._itrn - 1, :, 0] = snrs_tot_upper_last[0]
                 self._snrs_upper[self._itrn - 1, :, 1:] = 0.
-                self._snrs_tot_load_helper(lower_mode, itrn=self._itrn - 1)
+                self._snrs_tot_load(lower_mode, itrn=self._itrn - 1)
             else:
                 # nothing recorded here
                 self._snrs_lower[self._itrn - 1, :, :] = 0.
-                self._snrs_tot_load_helper(lower_mode, itrn=self._itrn - 1)
+                self._snrs_tot_load(lower_mode, itrn=self._itrn - 1)
 
     @override
     def load_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'inclusion_state', group_mode: int = 0) -> None:
@@ -452,11 +478,11 @@ class BinaryInclusionState(StateManager):
         self._n_tot = int(n_tot_val)
 
         fmin_binary_val = hf_include.attrs['fmin_binary']
-        assert isinstance(fmin_binary_val, (float, np.floating, int, np.integer)), 'fmin_binary must be float'
+        assert isinstance(fmin_binary_val, float), 'fmin_binary must be float'
         self._fmin_binary = float(fmin_binary_val)
 
         fmax_binary_val = hf_include.attrs['fmax_binary']
-        assert isinstance(fmax_binary_val, (float, np.floating, int, np.integer)), 'fmax_binary must be float'
+        assert isinstance(fmax_binary_val, float), 'fmax_binary must be float'
         self._fmax_binary = float(fmax_binary_val)
 
         assert hf_include.attrs['noise_manager_name'] == self._noise_manager.__class__.__name__, 'incorrect noise manager name found in hdf5 file'

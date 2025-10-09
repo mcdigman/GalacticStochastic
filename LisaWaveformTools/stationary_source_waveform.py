@@ -61,6 +61,7 @@ class StationarySourceWaveform(Generic[StationaryWaveformType, IntrinsicParamsTy
         params: SourceParams,
         intrinsic_waveform: StationaryWaveformType,
         tdi_waveform: StationaryWaveformType,
+        response_mode: int = 0,
     ) -> None:
         """
         Initialize the intrinsic_waveform object for use in the stationary wave approximation.
@@ -73,6 +74,7 @@ class StationarySourceWaveform(Generic[StationaryWaveformType, IntrinsicParamsTy
         self._consistent: bool = False
         self._consistent_intrinsic: bool = False
         self._consistent_extrinsic: bool = False
+        self._response_mode: int = response_mode
 
         intrinsic: IntrinsicParamsType = cast('IntrinsicParamsType', params.intrinsic)
         extrinsic: ExtrinsicParamsType = cast('ExtrinsicParamsType', params.extrinsic)
@@ -259,3 +261,8 @@ class StationarySourceWaveform(Generic[StationaryWaveformType, IntrinsicParamsTy
         nc_waveform : int
             The number of channels in the waveform.
         """
+
+    @property
+    def response_mode(self) -> int:
+        """Get the current response mode."""
+        return self._response_mode

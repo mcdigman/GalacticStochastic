@@ -162,7 +162,7 @@ class SparseWaveletSourceWaveform(Generic[StationaryWaveformType, IntrinsicParam
 class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType]):
     """Store a sparse binary wavelet for a time domain taylor waveform."""
 
-    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, source_waveform: StationarySourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType], *, wavelet_mode: int = 1, storage_mode: int = 0) -> None:
+    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, source_waveform: StationarySourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType], *, wavelet_mode: int = 1, storage_mode: int = 0, table_cache_mode: str = 'check', table_output_mode: str = 'skip') -> None:
         """Construct a sparse binary wavelet for a time domain taylor intrinsic_waveform with interpolation."""
         if storage_mode not in (0, 1):
             msg = 'Unrecognized option for storage_mode'
@@ -172,6 +172,8 @@ class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform[StationaryWaveformTime
         self._lc: LISAConstants = lc
         self._nt_lim_waveform: PixelGenericRange = nt_lim_waveform
         self._wavelet_mode: int = wavelet_mode
+        self._table_cache_mode = table_cache_mode
+        self._table_output_mode = table_output_mode
 
         # get a blank wavelet intrinsic_waveform with the correct size for the sparse taylor time method
         # when consistent is set to True, it will be the correct intrinsic_waveform
@@ -181,8 +183,8 @@ class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform[StationaryWaveformTime
         # TODO need better way of setting whether cache is checked, whether to output, and whether to store in hdf5
         self._taylor_time_table: WaveletTaylorTimeCoeffs = get_taylor_table_time(
             self._wc,
-            cache_mode='check',
-            output_mode='skip',
+            cache_mode=self._table_cache_mode,
+            output_mode=self._table_output_mode,
         )
 
         self._storage_mode: int = storage_mode
@@ -195,6 +197,8 @@ class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform[StationaryWaveformTime
 
         hf_wavelet.attrs['wavelet_mode'] = self._wavelet_mode
         hf_wavelet.attrs['storage_mode'] = self._storage_mode
+        hf_wavelet.attrs['table_cache_mode'] = self._table_cache_mode
+        hf_wavelet.attrs['table_output_mode'] = self._table_output_mode
         hf_wavelet.attrs['taylor_time_table_name'] = self._taylor_time_table.__class__.__name__
 
         if self._storage_mode == 0:

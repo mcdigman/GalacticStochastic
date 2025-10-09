@@ -58,7 +58,8 @@ def instrument_noise_AET_wdm_loop(
     # realistically this really only needs run once and is fast enough without jit
     # TODO check normalization
     # TODO get first and last bins correct
-    nrm: float = float(np.sqrt(12318.0 / wc.Nf)) * float(np.linalg.norm(phif))
+    # nrm: float = float(np.sqrt(12318.0 / wc.Nf)) * float(np.linalg.norm(phif))
+    nrm = np.sqrt(2 * wc.dt) * np.linalg.norm(phif)
     print('nrm instrument', nrm)
     phif = phif / nrm
     phif2 = phif**2
@@ -67,7 +68,16 @@ def instrument_noise_AET_wdm_loop(
     fs_long = np.arange(-half_Nt, half_Nt + wc.Nf * half_Nt) / wc.Tobs
     # prevent division by 0
     fs_long[half_Nt] = fs_long[half_Nt + 1]
-    S_inst_long = instrument_noise_AET(fs_long, lc)
+    if lc.noise_curve_mode == 0:
+        # standard mode
+        S_inst_long = instrument_noise_AET(fs_long, lc)
+    elif lc.noise_curve_mode == 1:
+        # flat unit spectrum for testing
+        S_inst_long = np.full((fs_long.size, 3), 1.0)
+    else:
+        msg = 'Unrecognized option for noise curve mode'
+        raise ValueError(msg)
+
     # excise the f=0 point
     S_inst_long[half_Nt, :] = 0.0
 
@@ -96,13 +106,12 @@ def instrument_noise_AET_wdm_m(lc: LISAConstants, wc: WDMWaveletConstants) -> ND
         array shape is (freq. layers x number of TDI channels)
 
     """
-    if lc.noise_curve_mode == 0:
-        # TODO why no plus 1?
-        ls: NDArray[np.integer] = np.arange(-wc.Nt // 2, wc.Nt // 2)
-        fs: NDArray[np.floating] = ls / wc.Tobs
-        phif: NDArray[np.float64] = (np.sqrt(wc.dt) * phitilde_vec(2 * np.pi * fs * wc.dt, wc.Nf, wc.nx)).astype(np.float64)
+    # TODO why no plus 1?
+    ls: NDArray[np.integer] = np.arange(-wc.Nt // 2, wc.Nt // 2)
+    fs: NDArray[np.floating] = ls / wc.Tobs
+    phif: NDArray[np.float64] = (np.sqrt(wc.dt) * phitilde_vec(2 * np.pi * fs * wc.dt, wc.Nf, wc.nx)).astype(np.float64)
 
-        # TODO check ad hoc normalization factor
-        return instrument_noise_AET_wdm_loop(phif, lc, wc)
+    # TODO check ad hoc normalization factor
+    return instrument_noise_AET_wdm_loop(phif, lc, wc)
     msg = 'Unrecognized option for noise curve mode'
     raise NotImplementedError(msg)

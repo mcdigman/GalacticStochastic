@@ -1,8 +1,10 @@
 """read wavelet transform constants in from config file and compute derived parameters"""
 
 from typing import Any, NamedTuple
+from warnings import warn
 
 import numpy as np
+from numpy.testing import assert_allclose
 
 
 class WDMWaveletConstants(NamedTuple):
@@ -37,10 +39,12 @@ def get_wavelet_model(config: dict[str, Any]) -> WDMWaveletConstants:
     # number of time pixels (should be even)
     Nf = int(config_wc['Nf'])
     assert Nf & 1 == 0  # check even
+    assert Nf > 0
 
     # number of frequency pixels (should be even)
     Nt = int(config_wc['Nt'])
     assert Nt & 1 == 0  # check even
+    assert Nt > 0
 
     # time sampling cadence (units of seconds)
     dt = float(config_wc['dt'])
@@ -48,22 +52,32 @@ def get_wavelet_model(config: dict[str, Any]) -> WDMWaveletConstants:
 
     # over sampling
     mult = int(config_wc['mult'])
+    assert mult > 0, 'filter width must be strictly positive'
+    if mult < 4:
+        warn('Mult is unusually small', stacklevel=2)
 
     # number of frequency steps in interpolation table
     Nsf = int(config_wc['Nsf'])
+    assert Nsf > 0
 
     # number of fdots in interpolation table
     Nfd = int(config_wc['Nfd'])
+    assert Nfd > 0
 
     # fractional fdot increment in interpolation table
     dfdot = float(config_wc['dfdot'])
+    assert dfdot > 0.0
 
     # number of fdot increments which are less than zero in the interpolation table
     Nfd_negative = int(config_wc['Nfd_negative'])
-    assert Nfd_negative < Nfd
+    assert Nfd_negative >= 0
+    assert Nfd_negative < Nfd, 'Must be some positive values'
+    if Nfd_negative > Nfd // 2:
+        warn('Interpolation table is larger for negative frequencies than positive', stacklevel=2)
 
     # number of time steps used to compute the interpolation table; must be an integer times mult
     Nst = int(config_wc['Nst'])
+    assert Nst > 0
 
     dkstep = int(Nst // mult)
     if dkstep * mult != Nst:
@@ -72,11 +86,12 @@ def get_wavelet_model(config: dict[str, Any]) -> WDMWaveletConstants:
 
     # filter steepness of wavelet transform
     nx = float(config_wc['nx'])
+    assert nx > 0.
 
     # reduced filter length; must be a power of 2
     L = int(config_wc['L'])
-    assert L > 0
-    assert (L & (L - 1)) == 0  # check power of 2
+    assert L > 0, 'L must be a positive power of two'
+    assert (L & (L - 1)) == 0, 'L must be a power of two'
 
     # derived constants
 
@@ -92,18 +107,25 @@ def get_wavelet_model(config: dict[str, Any]) -> WDMWaveletConstants:
     # width of wavelet pixel in frequency (cycles/time)
     DF = float(1.0 / (2 * dt * Nf))
 
-    # dimensionless filter legnth
+    # dimensionless filter length
     K = int(mult * 2 * Nf)
     assert K > 0
+    if K <= L:
+        msg = 'K = %d is not bigger than L = %d' % (K, L)
+        raise ValueError(msg)
+    assert K % L == 0, 'K should be an integer multiple of L'
 
     # filter duration (time; same units as dt)
     Tw = float(dt * K)
+    assert Tw > 0.0
+    assert Tw <= Tobs, 'Probably do not want wavelet window longer than observing time'
 
     # angular frequency spacing (radians per time)
     dom = float(2.0 * np.pi / Tw)
 
     # Nyquist angular frequency (Radians per time)
     OM = float(np.pi / dt)
+    assert OM > 0.
 
     # 2 pi times DF (radians/time)
     DOM = float(OM / Nf)
@@ -127,7 +149,16 @@ def get_wavelet_model(config: dict[str, Any]) -> WDMWaveletConstants:
     dfd = DF / Tw * dfdot
 
     # double check some known relationships between the parameters hold
-    assert DF**2 == DF / (2 * DT)
+    # note that some of these could be allclose, but the tests pass right now
+    assert_allclose(DF**2, DF / (2 * DT))
+    assert_allclose(B, 2 * A)
+    assert_allclose(DOM, 2 * B)
+    assert_allclose(DOM, np.pi / (dt * Nf))
+    assert_allclose(B, np.pi / (2 * dt * Nf))
+    assert_allclose(A, np.pi / (4 * dt * Nf))
+    assert_allclose(BW, 3 / (4 * dt * Nf))
+    assert_allclose(dfd, dfdot / (4 * dt**2 * mult * Nf ** 2))
+    assert_allclose(Tw, 2 * dt * mult * Nf)
 
     return WDMWaveletConstants(
         Nf,

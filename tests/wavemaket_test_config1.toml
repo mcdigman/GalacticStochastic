@@ -45,7 +45,7 @@ Nst = 800
 nx = 4.0
 
 # reduced filter length; must be a power of 2
-L = 512
+L = 64
 
 [lisa_constants]
 # constants related to LISA constellation

@@ -12,8 +12,8 @@ from GalacticStochastic.noise_manager import NoiseModelManager
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 if __name__ == '__main__':
-    # config_file = 'Galaxies/GalaxyFullLDC/run_old_parameters_format3.toml'
-    config_file = 'default_parameters.toml'
+    config_file = 'Galaxies/GalaxyFullLDC/run_old_parameters_format4.toml'
+    # config_file = 'default_parameters.toml'
     config, wc, lc, ic, instrument_random_seed = get_config_objects(config_file)
 
     galaxy_file = config['files']['galaxy_file']
@@ -37,25 +37,26 @@ if __name__ == '__main__':
 
     ifm = IterativeFitManager(ic, fit_state, noise_manager, bis)
 
-    del params_gb
-
     ifm.do_loop()
 
-    do_hf_out = False
+    do_hf_out = True
     if do_hf_out:
         gfi.store_processed_gb_file(
             config,
             wc,
             ifm,
+            params_gb_in=params_gb,
             write_mode=2,
             preprocess_mode=preprocess_mode,
         )
+
+    del params_gb
 
     do_plot_noise_spectrum_ambiguity = False
 
     if do_plot_noise_spectrum_ambiguity:
         pch.plot_noise_spectrum_ambiguity(ifm)
 
-    do_plot_noise_spectrum_evolve = False
+    do_plot_noise_spectrum_evolve = True
     if do_plot_noise_spectrum_evolve:
         pch.plot_noise_spectrum_evolve(ifm)

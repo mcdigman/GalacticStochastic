@@ -1,5 +1,6 @@
 """Functions for reading and writing galactic binary parameter files and iterative fit results."""
 
+import contextlib
 import hashlib
 from pathlib import Path
 from typing import Any
@@ -116,7 +117,7 @@ def _source_mask_read_helper(hf_sky: h5py.Group, key: str, fmin: float, fmax: fl
         msg = 'Unrecognized hdf5 file format'
         raise TypeError(msg)
 
-    freqs = np.asarray(hf_cat['Frequency'])  # pyright: ignore[reportArgumentType]
+    freqs = np.asarray(hf_cat['Frequency'])  # type: ignore[reportArgumentType, index]
 
     if not np.issubdtype(freqs.dtype, np.floating):
         msg = 'Unrecognized hdf5 file format'
@@ -127,7 +128,7 @@ def _source_mask_read_helper(hf_sky: h5py.Group, key: str, fmin: float, fmax: fl
     n_loc = int(np.sum(1 * mask))
     params = np.zeros((n_loc, n_par_gb), dtype=np.float64)
     for itrl in range(n_par_gb):
-        hf_param = hf_cat[labels_gb[itrl]]  # pyright: ignore[reportArgumentType]
+        hf_param = hf_cat[labels_gb[itrl]]  # type: ignore[reportArgumentType, index]
         if not isinstance(hf_param, (h5py.Dataset, np.ndarray)):
             msg = 'Unrecognized hdf5 file format'
             raise TypeError(msg)
@@ -177,10 +178,12 @@ def get_full_galactic_params(config: dict[str, Any]) -> tuple[NDArray[np.floatin
     """
     # dgb is detached galactic binaries, igb is interacting galactic binaries, vgb is verification
     config_ic: dict[str, Any] = config['iterative_fit_constants']
+    assert isinstance(config_ic, dict)
     categories: list[str] = config_ic.get('component_list', ['dgb', 'igb', 'vgb'])
-    fmin: float = float(config_ic.get('fmin_binary', 1.0e-8))
-    fmax: float = float(config_ic.get('fmax_binary', 1.0e0))
-    assert fmin <= fmax
+    fmin = float(config_ic.get('fmin_binary', 1.0e-8))
+    assert isinstance(fmin, float)
+    fmax = float(config_ic.get('fmax_binary', 1.0e0))
+    assert isinstance(fmax, float)
     full_galactic_params_filename = get_galaxy_filename(config)
     filename = full_galactic_params_filename
 
@@ -317,10 +320,17 @@ def load_processed_galactic_file(
     ifm.load_hdf5(hf_run)
 
 
+def _get_file_hash(filename: str) -> str:
+    with Path(filename).open('rb') as f:
+        digest = hashlib.file_digest(f, 'sha256')
+        return digest.hexdigest()
+
+
 def store_processed_gb_file(
     config: dict[str, Any],
     wc: WDMWaveletConstants,
     ifm: IterativeFitManager,
+    params_gb_in: NDArray[np.floating],
     *,
     write_mode: int = 0,
     preprocess_mode: int = 0,
@@ -388,13 +398,9 @@ def store_processed_gb_file(
 
     sha256_hex_orig = None
     if write_mode != 2:
-        try:
+        with contextlib.suppress(FileNotFoundError):
             # if we are re-processing a pre-processed file, record the old hash before we modified it
-            with Path(filename_out).open('rb') as f:
-                digest = hashlib.file_digest(f, 'sha256')
-                sha256_hex_orig = digest.hexdigest()
-        except FileNotFoundError:
-            pass
+            sha256_hex_orig = _get_file_hash(filename_out)
 
     if write_mode in (0, 1):
         hf_out = h5py.File(filename_out, 'a')
@@ -409,7 +415,8 @@ def store_processed_gb_file(
     cyclo_mode = noise_manager.cyclo_mode
 
     filename_source_gb = get_galaxy_filename(config)
-    filename_config: str = config.get('toml_filename', 'not_recorded')
+    filename_config = config.get('toml_filename', 'not_recorded')
+    assert isinstance(filename_config, str)
 
     # save the configuration filenames to the object and raise an error if they are already there but do not match
     if (not skip_init) and (filename_gb_init in hf_out.attrs):
@@ -466,10 +473,14 @@ def store_processed_gb_file(
     # If they have been previously recorded in the hdf5 file, check if they match.
     # Otherwise, record them.
 
-    with Path(filename_source_gb).open('rb') as f:
-        digest = hashlib.file_digest(f, 'sha256')
-        sha256_hex_gb = digest.hexdigest()
-        print('Computed sha256 checksum of source galactic binary file', sha256_hex_gb)
+    sha256_hex_gb = hashlib.sha256(params_gb_in.tobytes()).hexdigest()
+    print('Computed sha256 checksum of source galactic binary array', sha256_hex_gb)
+    del params_gb_in
+    # with Path(filename_source_gb).open('rb') as f:
+    #    digest = hashlib.file_digest(f, 'sha256')
+    #    sha256_hex_gb = digest.hexdigest()
+    #    print('Computed sha256 checksum of source galactic binary file', sha256_hex_gb)
+    # sha256_hex_gb = _get_file_hash(filename_source_gb)
 
     if hash_mode == 1 and 'filename_source_gb_sha256' in hf_out.attrs:
         assert hf_out.attrs['filename_source_gb_sha256'] == sha256_hex_gb, 'Processed file was generated from a different source galactic binary file than the one currently specified'
@@ -477,7 +488,7 @@ def store_processed_gb_file(
 
     hf_out.attrs['filename_source_gb_sha256'] = sha256_hex_gb
 
-    prelim_hash_list = []
+    prelim_hash_list: list[str] = []
 
     if (not skip_init) and hash_mode == 1:
         with h5py.File(filename_gb_init, 'r') as hf_prelim:
@@ -490,7 +501,8 @@ def store_processed_gb_file(
                 warn('Pre-processed file did not record a sha256 checksum, cannot verify it matches source galactic binary file', stacklevel=2)
 
             # get old recorded hashes from the pre-processed file if they exist
-            prelim_hash_log: Any = hf_prelim.attrs.get('filename_out_sha256_history', [])
+            list_temp: list[str] = []
+            prelim_hash_log = hf_prelim.attrs.get('filename_out_sha256_history', list_temp)
             if not isinstance(prelim_hash_log, (list, np.ndarray)):
                 msg = 'filename_out_sha256_history must be a list or numpy array'
                 raise TypeError(msg)
@@ -500,13 +512,15 @@ def store_processed_gb_file(
 
     if not skip_init:
 
-        with Path(filename_gb_init).open('rb') as f:
-            digest = hashlib.file_digest(f, 'sha256')
-            sha256_hex_gb_init = digest.hexdigest()
-            print('Computed sha256 checksum of pre-processed file', sha256_hex_gb_init)
+        sha256_hex_gb_init = _get_file_hash(filename_gb_init)
+        # with Path(filename_gb_init).open('rb') as f:
+        #    digest = hashlib.file_digest(f, 'sha256')
+        #    sha256_hex_gb_init = digest.hexdigest()
+        print('Computed sha256 checksum of pre-processed file', sha256_hex_gb_init)
 
         if hash_mode == 1 and 'filename_gb_init_sha256' in hf_out.attrs:
-            sha256_hex_gb_prelim_expect = hf_out.attrs['filename_gb_init_sha256']
+            sha256_hex_gb_prelim_expect = str(hf_out.attrs['filename_gb_init_sha256'])
+            assert isinstance(sha256_hex_gb_prelim_expect, str)
             prelim_hash_list.append(sha256_hex_gb_prelim_expect)
             if sha256_hex_gb_prelim_expect != sha256_hex_gb_init:
                 print('Previous pre-processed file hash', sha256_hex_gb_prelim_expect)
@@ -532,17 +546,9 @@ def store_processed_gb_file(
     hf_run.attrs['filename_config'] = filename_config
     hf_run.attrs['filename_source_gb'] = filename_source_gb
 
-    # archive the entire raw text of the configuration file to the hdf5 file as well
-    with Path(filename_config).open('rb') as file:
-        file_content = file.read()
-
-    hf_run.attrs['config_content'] = file_content
-
     _ = ifm.store_hdf5(hf_run)
 
     hf_out.close()
 
-    with Path(filename_out).open('rb') as f:
-        digest = hashlib.file_digest(f, 'sha256')
-        sha256_hex_out = digest.hexdigest()
+    sha256_hex_out = _get_file_hash(filename_out)
     print(f'Wrote {filename_out} with sha256 checksum {sha256_hex_out}')

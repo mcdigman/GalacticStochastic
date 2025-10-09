@@ -36,8 +36,6 @@ if __name__ == '__main__':
 
     ifm = IterativeFitManager(ic, fit_state, noise_manager, bis)
 
-    del params_gb
-
     ifm.do_loop()
 
     do_hf_out = True
@@ -46,9 +44,13 @@ if __name__ == '__main__':
             config,
             wc,
             ifm,
+            params_gb_in=params_gb,
             write_mode=0,
             preprocess_mode=preprocess_mode,
         )
+
+    del params_gb
+
     do_plot_noise_spectrum_ambiguity = True
 
     if do_plot_noise_spectrum_ambiguity:

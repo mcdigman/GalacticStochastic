@@ -30,7 +30,7 @@ class StationaryTaylorF2WaveformFreq(StationarySourceWaveformFreq[TaylorF2Aligne
 
         # TODO proper selectable waveform model everywhere it is used
 
-        self.TTRef: float = TaylorF2_aligned_inplace(self.intrinsic_waveform, self.params.intrinsic, self.nf_lim, include_phenom_amp=True, include_pn_SS3=False, tc_mode=True, t_offset=tc)
+        self.TTRef: float = TaylorF2_aligned_inplace(self.intrinsic_waveform, self.params.intrinsic, self.nf_lim, include_phenom_amp=True, include_pn_ss3=False, tc_mode=True, t_offset=tc)
         itrFCut_new = self.itrFCut
         # TODO set itrFCut_new if we need it
 

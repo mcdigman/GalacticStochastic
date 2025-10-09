@@ -83,6 +83,12 @@ def get_config_dict_from_file(toml_filename: str) -> dict[str, Any]:
     with Path(toml_filename).open('rb') as f:
         config: dict[str, Any] = tomllib.load(f)
 
+    # archive the entire raw text of the configuration file for output purposes
+    with Path(toml_filename).open('rb') as f:
+        file_content = f.read()
+
+    config['_raw_file_content'] = file_content
+
     assert toml_filename == config.setdefault('toml_filename', toml_filename)
     return config
 

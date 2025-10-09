@@ -111,8 +111,8 @@ class IterativeFitManager(StateManager):
         else:
             msg = 'Unrecognized option for group mode'
             raise NotImplementedError(msg)
-        hf_manager.attrs['itrn'] = self._itrn
-        hf_manager.attrs['n_full_converged'] = self._n_full_converged
+        hf_manager.attrs['itrn'] = int(self._itrn)
+        hf_manager.attrs['n_full_converged'] = int(self._n_full_converged)
         hf_manager.attrs['creator_name'] = self.__class__.__name__
         hf_manager.attrs['inclusion_state_name'] = self.bis.__class__.__name__
         hf_manager.attrs['fit_state_name'] = self.fit_state.__class__.__name__

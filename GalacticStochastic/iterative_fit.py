@@ -15,6 +15,8 @@ from GalacticStochastic.noise_manager import NoiseModelManager
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
     from GalacticStochastic.iteration_config import IterationConfig
     from LisaWaveformTools.lisa_config import LISAConstants
     from WaveletWaveforms.wdm_config import WDMWaveletConstants
@@ -24,7 +26,7 @@ def fetch_or_run_iterative_loop(
     config: dict[str, Any],
     cyclo_mode: int,
     *,
-    nt_range: tuple[int, int] = (0, -1),
+    nt_range_snr: tuple[int, int] = (0, -1),
     fetch_mode: int = 0,
     output_mode: int = 1,
     wc_in: WDMWaveletConstants | None = None,
@@ -32,6 +34,8 @@ def fetch_or_run_iterative_loop(
     ic_in: IterationConfig | None = None,
     instrument_random_seed_in: int | None = None,
     preprocess_mode: int = 0,
+    params_gb_in: NDArray[np.floating] | None = None,
+    custom_params: int = -1,
 ) -> IterativeFitManager:
     """
     Run or fetch the iterative fit loop for galactic binary background analysis.
@@ -47,7 +51,7 @@ def fetch_or_run_iterative_loop(
         Configuration dictionary containing file paths and fit settings.
     cyclo_mode : int
         Cyclostationary mode key for the fit.
-    nt_range : tuple of int
+    nt_range_snr : tuple of int
         Time-frequency pixel range as (min, max) indices. Defaults to (0, -1) for full range.
     fetch_mode : int
         Mode for fetching or running the fit:
@@ -60,7 +64,8 @@ def fetch_or_run_iterative_loop(
     output_mode : int
         Output mode for storing results:
         0: do not store;
-        1: store results (default).
+        1: store results unless they are fetched (default).
+        2: store results even they were fetched
     wc_in : WDMWaveletConstants, optional
         Optional override for wavelet constants.
     lc_in : LISAConstants, optional
@@ -90,33 +95,49 @@ def fetch_or_run_iterative_loop(
     NotImplementedError
         If an unsupported preprocess_mode is specified.
     """
+    # input validations
+    assert output_mode in (0, 1, 2), 'Unrecognized option for output mode'
+    assert preprocess_mode in (0, 1, 2), 'Unrecognized option for processing mode'
+    assert fetch_mode in (0, 1, 2, 3, 4), 'Unrecognized option for fetch_mode'
+
     config, wc, lc, ic, instrument_random_seed = get_config_objects_from_dict(config)
     if wc_in is not None:
         wc = wc_in
+
     if lc_in is not None:
         lc = lc_in
+
     if ic_in is not None:
         ic = ic_in
+
+    if nt_range_snr == (0, -1):
+        nt_min_snr = 0
+        nt_max_snr = wc.Nt
+    else:
+        nt_min_snr = nt_range_snr[0]
+        nt_max_snr = nt_range_snr[1]
+
+    assert 0 <= nt_min_snr < nt_max_snr <= wc.Nt
+
     if instrument_random_seed_in is not None:
         instrument_random_seed = instrument_random_seed_in
 
-    if nt_range == (0, -1):
-        nt_min = 0
-        nt_max = wc.Nt
+    # TODO handle storage with custom params
+    if params_gb_in is not None:
+        params_gb = params_gb_in
+        if custom_params == -1:
+            custom_params = 1
     else:
-        nt_min = nt_range[0]
-        nt_max = nt_range[1]
+        params_gb, _ = gfi.get_full_galactic_params(config)
 
-    assert 0 <= nt_min < nt_max <= wc.Nt
+    del params_gb_in
 
-    assert fetch_mode in (0, 1, 2, 3, 4), 'Unrecognized option for fetch_mode'
-
-    nt_lim_snr = PixelGenericRange(nt_min, nt_max, wc.DT, 0.0)
+    nt_lim_snr = PixelGenericRange(nt_min_snr, nt_max_snr, wc.DT, 0.0)
     nt_lim_waveform = PixelGenericRange(0, wc.Nt, wc.DT, 0.0)
 
     print(
-        nt_lim_snr.nx_min,
-        nt_lim_snr.nx_max,
+        nt_min_snr,
+        nt_max_snr,
         nt_lim_waveform.nx_min,
         nt_lim_waveform.nx_max,
         wc.Nt,
@@ -145,7 +166,7 @@ def fetch_or_run_iterative_loop(
             raise ValueError(msg)
 
         nt_range_prelim = (0, wc.Nt)
-        ifm_prelim = fetch_or_run_iterative_loop(config, cyclo_mode=1, nt_range=nt_range_prelim, fetch_mode=fetch_mode_prelim, preprocess_mode=1, output_mode=output_mode, wc_in=wc_in, lc_in=lc, ic_in=ic_in, instrument_random_seed_in=instrument_random_seed_in)
+        ifm_prelim = fetch_or_run_iterative_loop(config, cyclo_mode=1, nt_range_snr=nt_range_prelim, fetch_mode=fetch_mode_prelim, preprocess_mode=1, output_mode=output_mode, wc_in=wc_in, lc_in=lc, ic_in=ic_in, instrument_random_seed_in=instrument_random_seed_in, params_gb_in=params_gb, custom_params=custom_params)
 
         galactic_below_in = ifm_prelim.noise_manager.bgd.get_galactic_below_low()
         snrs_tot_in = ifm_prelim.bis.get_final_snrs_tot_upper()
@@ -180,8 +201,6 @@ def fetch_or_run_iterative_loop(
     else:
         msg = 'Unrecognized option for preprocess_mode'
         raise NotImplementedError(msg)
-
-    params_gb, _ = gfi.get_full_galactic_params(config)
 
     fit_state = IterativeFitState(ic, preprocess_mode=preprocess_mode)
 
@@ -230,11 +249,9 @@ def fetch_or_run_iterative_loop(
         msg = 'Unrecognized option for fetch_mode'
         raise ValueError(msg)
 
-    del params_gb
-
-    if fetched:
+    if fetched and output_mode != 2:
         pass
-    elif output_mode == 1:
+    elif output_mode in (1, 2):
         if preprocess_mode == 0:
             # if pre-processing in mode 2 has happened we will have an inconsistent hash for any re-pre-processed files
             write_mode = 0
@@ -249,6 +266,7 @@ def fetch_or_run_iterative_loop(
             ifm,
             write_mode=write_mode,
             preprocess_mode=preprocess_mode,
+            params_gb_in=params_gb,
         )
 
     elif output_mode == 0:

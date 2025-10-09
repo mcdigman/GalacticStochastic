@@ -79,7 +79,7 @@ def white_plot_ax(ax_in: plt.Axes, title: str, data: NDArray[np.floating], exten
 
 if __name__ == '__main__':
     # filename_config = 'default_parameters.toml'
-    filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters_format2.toml'
+    filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters.toml'
 
     config, wc, lc, ic, instrument_random_seed = config_helper.get_config_objects(filename_config)
 
@@ -93,10 +93,10 @@ if __name__ == '__main__':
     nt_lim_report = PixelGenericRange(nt_min_report, nt_max_report, wc.DT, 0.)
     nt_range = (nt_min, nt_max)
 
-    ifm_cyclo = fetch_or_run_iterative_loop(config, cyclo_mode=0, nt_range=nt_range, fetch_mode=1)
-    ifm_stat = fetch_or_run_iterative_loop(config, cyclo_mode=1, nt_range=nt_range, fetch_mode=1)
+    ifm_cyclo = fetch_or_run_iterative_loop(config, cyclo_mode=0, nt_range_snr=nt_range, fetch_mode=1)
+    ifm_stat = fetch_or_run_iterative_loop(config, cyclo_mode=1, nt_range_snr=nt_range, fetch_mode=1)
 
-    noise_realization = ifm_stat.noise_manager.get_instrument_realization()
+    noise_realization = ifm_stat.noise_manager.get_instrument_realization(white_mode=0)
 
     bgd_cyclo = ifm_cyclo.noise_manager.bgd
     bgd_stat = ifm_stat.noise_manager.bgd

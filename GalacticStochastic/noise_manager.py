@@ -174,9 +174,10 @@ class NoiseModelManager(StateManager):
         _ = hf_noise.create_dataset('S_record_upper_mean', data=np.mean(self.S_record_upper, axis=1), compression='gzip')
         _ = hf_noise.create_dataset('S_record_lower_mean', data=np.mean(self.S_record_lower, axis=1), compression='gzip')
 
-        if storage_mode in (1, 2):
+        if storage_mode == 1 and self._itr_save > 0:
             # can safely be rederived as long as bgd is stored
-            _ = hf_noise.create_dataset('S_record_final', data=self.S_record_lower, compression='gzip')
+            _ = hf_noise.create_dataset('S_record_upper_final', data=self.S_record_upper[self._itr_save - 1], compression='gzip')
+            _ = hf_noise.create_dataset('S_record_lower_final', data=self.S_record_lower[self._itr_save - 1], compression='gzip')
 
         if storage_mode == 2:
             # full versions of these potentially take a lot of memory, and aren't always needed so don't necessarily want to write them to disk
@@ -284,8 +285,9 @@ class NoiseModelManager(StateManager):
         self.S_record_lower = np.zeros((self._idx_S_save.size, self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy))
         self.S_final = np.zeros((self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy))
 
-        if storage_mode in (1, 2):
-            self.S_record_final = np.asarray(hf_noise['S_record_final'], dtype=np.float64)
+        if storage_mode == 1 and self._itr_save > 0:
+            self.S_record_upper[self._itr_save - 1] = np.asarray(hf_noise['S_record_upper_final'], dtype=np.float64)
+            self.S_record_lower[self._itr_save - 1] = np.asarray(hf_noise['S_record_lower_final'], dtype=np.float64)
 
         if storage_mode == 2:
             self.S_record_upper = np.asarray(hf_noise['S_record_upper'], dtype=np.float64)
@@ -304,9 +306,9 @@ class NoiseModelManager(StateManager):
         nx_max_temp = hf_nt.attrs['nx_max']
         assert isinstance(nx_max_temp, (int, np.integer))
         dx_temp = hf_nt.attrs['dx']
-        assert isinstance(dx_temp, (float, np.floating))
+        assert isinstance(dx_temp, float)
         x_min_temp = hf_nt.attrs['x_min']
-        assert isinstance(x_min_temp, (float, np.floating))
+        assert isinstance(x_min_temp, float)
         self.nt_lim_snr = PixelGenericRange(int(nx_min_temp), int(nx_max_temp), float(dx_temp), float(x_min_temp))
 
         hf_wc = hf_noise['wc']

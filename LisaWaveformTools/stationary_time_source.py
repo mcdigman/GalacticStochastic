@@ -186,6 +186,7 @@ class StationarySourceWaveformTime(Generic[IntrinsicParamsType, ExtrinsicParamsT
         return self._wavefront_time
 
     @property
+    @override
     def response_mode(self) -> int:
         """Get the current response mode."""
         return self._response_mode

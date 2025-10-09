@@ -62,7 +62,7 @@ if __name__ == '__main__':
 
     for itrk in range(nk):
         nt_lim = PixelGenericRange(nt_mins[itrk], nt_maxs[itrk], wc.DT, 0)
-        ifm = fetch_or_run_iterative_loop(config, cyclo_mode, nt_range=(nt_lim.nx_min, nt_lim.nx_max), fetch_mode=1)
+        ifm = fetch_or_run_iterative_loop(config, cyclo_mode, nt_range_snr=(nt_lim.nx_min, nt_lim.nx_max), fetch_mode=1)
         galactic_below_high = ifm.noise_manager.bgd.get_galactic_below_high(shape_mode=1)
 
         S_stat_m[itrk] = np.mean(galactic_below_high, axis=0)

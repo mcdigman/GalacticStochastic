@@ -26,7 +26,6 @@ class StationarySourceWaveformFreq(Generic[IntrinsicParamsType, ExtrinsicParamsT
         self._nc_waveform: int = self._lc.nc_waveform
         self._consistent_extrinsic: bool = False
         self._n_pad_F: int = n_pad_F
-        self.response_mode: int = response_mode
 
         if lc.rise_mode == 3:
             self._er: EdgeRiseModel = EdgeRiseModel(-np.inf, np.inf)
@@ -90,7 +89,7 @@ class StationarySourceWaveformFreq(Generic[IntrinsicParamsType, ExtrinsicParamsT
         self._tdi_waveform: StationaryWaveformFreq = tdi_waveform
         self._intrinsic_waveform: StationaryWaveformFreq = intrinsic_waveform
 
-        super().__init__(params, intrinsic_waveform, tdi_waveform)
+        super().__init__(params, intrinsic_waveform, tdi_waveform, response_mode)
 
         self.freeze_limits = freeze_limits
 
@@ -99,7 +98,7 @@ class StationarySourceWaveformFreq(Generic[IntrinsicParamsType, ExtrinsicParamsT
         hf_source = super().store_hdf5(hf_in, group_name=group_name, group_mode=group_mode)
 
         hf_source.attrs['channels_name'] = self._spacecraft_channels.__class__.__name__
-        hf_source.attrs['response_mode'] = self.response_mode
+        hf_source.attrs['response_mode'] = self._response_mode
         hf_source.attrs['nc_waveform'] = self._nc_waveform
         hf_source.attrs['itrfCut'] = self.itrFCut
         hf_source.attrs['TTRef'] = self.TTRef

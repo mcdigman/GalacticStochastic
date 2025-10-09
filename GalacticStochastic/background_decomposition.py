@@ -228,6 +228,11 @@ class BGDecomposition:
         hf_background.attrs['nc_galaxy'] = self.nc_galaxy
         hf_background.attrs['shape1'] = self._shape1
         hf_background.attrs['shape2'] = self._shape2
+        hf_background.attrs['n_total_cache'] = self._n_total_cache
+        hf_background.attrs['n_floor'] = self._n_floor
+        hf_background.attrs['n_below'] = self._n_below
+        hf_background.attrs['n_undecided'] = self._n_undecided
+        hf_background.attrs['n_above'] = self._n_above
 
         if self._storage_mode == 0:
             _ = hf_background.create_dataset(
@@ -306,6 +311,35 @@ class BGDecomposition:
         if nc_galaxy_loaded != self.nc_galaxy:
             msg = f'nc_galaxy does not match: {nc_galaxy_loaded} != {self.nc_galaxy}'
             raise ValueError(msg)
+
+        try:
+            n_floor_temp = hf_background.attrs['n_floor']
+            assert isinstance(n_floor_temp, (int, np.integer))
+
+            n_below_temp = hf_background.attrs['n_below']
+            assert isinstance(n_below_temp, (int, np.integer))
+
+            n_undecided_temp = hf_background.attrs['n_undecided']
+            assert isinstance(n_undecided_temp, (int, np.integer))
+
+            n_above_temp = hf_background.attrs['n_above']
+            assert isinstance(n_above_temp, (int, np.integer))
+
+            n_total_cache_temp = hf_background.attrs['n_total_cache']
+            assert isinstance(n_total_cache_temp, (int, np.integer))
+
+            self._n_floor = int(n_floor_temp)
+            self._n_below = int(n_below_temp)
+            self._n_undecided = int(n_undecided_temp)
+            self._n_above = int(n_above_temp)
+            self._n_total_cache = int(n_total_cache_temp)
+        except KeyError:
+            print('Cache did not contain expected totals')
+            self._n_floor = 0
+            self._n_below = 0
+            self._n_undecided = 0
+            self._n_above = 0
+            self._n_total_cache = -1
 
         shape1_temp = hf_background.attrs['shape1']
         assert isinstance(shape1_temp, (tuple, list, np.ndarray))

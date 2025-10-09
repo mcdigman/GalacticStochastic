@@ -284,7 +284,7 @@ def _mean_smooth_helper(
     # so we can apply the smoothing in log frequency instead of frequency
     assert nf_loc > 1
     n_f_interp = interp_mult * nf_loc
-    log_f_interp = np.linspace(0.0, np.log10(nf_loc - 1), n_f_interp)
+    log_f_interp = np.linspace(0.0, np.log10(nf_loc - 1), n_f_interp, dtype=np.float64)
 
     x_smooth = np.zeros((nf_loc, nc_s))
     x_smooth[0, :] = x_mean_abs[0, :]

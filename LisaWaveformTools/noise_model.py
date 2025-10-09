@@ -115,9 +115,8 @@ class DenseNoiseModel(ABC):
     def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_lim_snr: PixelGenericRange) -> NDArray[np.floating]:
         """Get S/N of intrinsic_waveform in each TDI channel.
 
-        Parameters usually come from
-        LinearFrequencyWaveletWaveformTime.get_unsorted_coeffs() from
-        wavelet_detector_waveforms.
+        Parameters usually come from e.g.
+        get_unsorted_coeffs() from a wavelet waveform
 
         Parameters
         ----------
