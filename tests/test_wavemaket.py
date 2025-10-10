@@ -174,6 +174,7 @@ def multishape_method_match_helper(p_offset: float, f0_mult: float, f0p_mult: fl
     with Path(toml_filename_in).open('rb') as f:
         config_in1 = tomllib.load(f)
 
+    config_in1['wavelet_constants']['L'] = 64
     Nf = int(config_in1['wavelet_constants']['Nf'])
     Nt = int(config_in1['wavelet_constants']['Nt'])
 
@@ -182,6 +183,7 @@ def multishape_method_match_helper(p_offset: float, f0_mult: float, f0p_mult: fl
         config_in2 = tomllib.load(f)
 
     # replace the Nf and Nt from the file
+    config_in2['wavelet_constants']['L'] = 64
     config_in2['wavelet_constants']['Nf'] = int(Nf // gridsize2_mult)
     config_in2['wavelet_constants']['Nt'] = int(Nt * gridsize2_mult)
 
@@ -444,6 +446,8 @@ def test_wavemaket_dimension_comparison_midevolve2(p_offset: float, f0_mult: flo
     with Path(toml_filename_in).open('rb') as f:
         config_in1 = tomllib.load(f)
 
+    config_in1['wavelet_constants']['L'] = 64
+
     wc1 = get_wavelet_model(config_in1)
     lc1 = get_lisa_constants(config_in1)
     taylor_time_table1 = get_taylor_table_time(wc1, cache_mode='check', output_mode='hf')
@@ -451,6 +455,8 @@ def test_wavemaket_dimension_comparison_midevolve2(p_offset: float, f0_mult: flo
     # get the config for the second (Nf, Nt) pair
     with Path(toml_filename_in).open('rb') as f:
         config_in2 = tomllib.load(f)
+
+    config_in2['wavelet_constants']['L'] = 64
 
     # replace the Nf and Nt from the file
     config_in2['wavelet_constants']['Nf'] = int(wc1.Nf // gridsize2_mult)
@@ -582,6 +588,8 @@ def test_wavemaket_dimension_comparison_slowevolve(p_offset: float, f0_mult: flo
     with Path(toml_filename_in).open('rb') as f:
         config_in1 = tomllib.load(f)
 
+    config_in1['wavelet_constants']['L'] = 64
+
     wc1 = get_wavelet_model(config_in1)
     lc1 = get_lisa_constants(config_in1)
     taylor_time_table1 = get_taylor_table_time(wc1, cache_mode='check', output_mode='hf')
@@ -589,6 +597,8 @@ def test_wavemaket_dimension_comparison_slowevolve(p_offset: float, f0_mult: flo
     # get the config for the second (Nf, Nt) pair
     with Path(toml_filename_in).open('rb') as f:
         config_in2 = tomllib.load(f)
+
+    config_in2['wavelet_constants']['L'] = 64
 
     # replace the Nf and Nt from the file
     config_in2['wavelet_constants']['Nf'] = int(wc1.Nf // gridsize2_mult)
@@ -729,6 +739,8 @@ def test_wavemaket_dimension_comparison_midevolve(p_offset: float, f0_mult: floa
     with Path(toml_filename_in).open('rb') as f:
         config_in1 = tomllib.load(f)
 
+    config_in1['wavelet_constants']['L'] = 64
+
     wc1 = get_wavelet_model(config_in1)
     lc1 = get_lisa_constants(config_in1)
     taylor_time_table1 = get_taylor_table_time(wc1, cache_mode='check', output_mode='hf')
@@ -736,6 +748,8 @@ def test_wavemaket_dimension_comparison_midevolve(p_offset: float, f0_mult: floa
     # get the config for the second (Nf, Nt) pair
     with Path(toml_filename_in).open('rb') as f:
         config_in2 = tomllib.load(f)
+
+    config_in2['wavelet_constants']['L'] = 64
 
     # replace the Nf and Nt from the file
     config_in2['wavelet_constants']['Nf'] = int(wc1.Nf // gridsize2_mult)
@@ -849,6 +863,8 @@ def test_wavemaket_1d(f0_mult: float, f0p_mult: float, f0pp_mult: float, rr_mode
 
     with Path(toml_filename_in).open('rb') as f:
         config_in1 = tomllib.load(f)
+
+    config_in1['wavelet_constants']['L'] = 64
 
     wc1 = get_wavelet_model(config_in1)
     lc1 = get_lisa_constants(config_in1)

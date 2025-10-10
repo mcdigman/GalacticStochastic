@@ -34,6 +34,19 @@ def instrument_noise_AET(f: NDArray[np.float64], lc: LISAConstants) -> NDArray[n
     # see arXiv:1002.1291
 
     nc_aet = 3  # the three TDI channels
+    S_inst = np.zeros((f.size, nc_aet))
+
+    if lc.noise_curve_mode == 0:
+        # standard mode
+        pass
+    elif lc.noise_curve_mode == 1:
+        # flat unit spectrum for testing
+        S_inst[:] = 1.0
+        return S_inst
+    else:
+        msg = 'Unrecognized option for noise curve mode'
+        raise ValueError(msg)
+
     fonfs = f / lc.fstr
 
     LC = 64 / (3 * lc.Larm**2)
@@ -42,8 +55,6 @@ def instrument_noise_AET(f: NDArray[np.float64], lc: LISAConstants) -> NDArray[n
     mult_sp = lc.Sps * (1.0 + (2.0e-3 / f) ** 4.0)
 
     cosfonfs = np.cos(fonfs)
-
-    S_inst = np.zeros((f.size, nc_aet))
 
     S_inst[:, 0] = instrument_noise1(f, lc)  # TODO make this all self consistent
     S_inst[:, 1] = S_inst[:, 0]
@@ -59,7 +70,7 @@ def instrument_noise_AET_wdm_loop(
     # TODO check normalization
     # TODO get first and last bins correct
     # nrm: float = float(np.sqrt(12318.0 / wc.Nf)) * float(np.linalg.norm(phif))
-    nrm = np.sqrt(2 * wc.dt) * np.linalg.norm(phif)
+    nrm: float = float(np.sqrt(2 * wc.dt) * np.linalg.norm(phif))
     print('nrm instrument', nrm)
     phif = phif / nrm
     phif2 = phif**2
@@ -68,15 +79,7 @@ def instrument_noise_AET_wdm_loop(
     fs_long = np.arange(-half_Nt, half_Nt + wc.Nf * half_Nt) / wc.Tobs
     # prevent division by 0
     fs_long[half_Nt] = fs_long[half_Nt + 1]
-    if lc.noise_curve_mode == 0:
-        # standard mode
-        S_inst_long = instrument_noise_AET(fs_long, lc)
-    elif lc.noise_curve_mode == 1:
-        # flat unit spectrum for testing
-        S_inst_long = np.full((fs_long.size, 3), 1.0)
-    else:
-        msg = 'Unrecognized option for noise curve mode'
-        raise ValueError(msg)
+    S_inst_long = instrument_noise_AET(fs_long, lc)
 
     # excise the f=0 point
     S_inst_long[half_Nt, :] = 0.0
@@ -113,5 +116,3 @@ def instrument_noise_AET_wdm_m(lc: LISAConstants, wc: WDMWaveletConstants) -> ND
 
     # TODO check ad hoc normalization factor
     return instrument_noise_AET_wdm_loop(phif, lc, wc)
-    msg = 'Unrecognized option for noise curve mode'
-    raise NotImplementedError(msg)

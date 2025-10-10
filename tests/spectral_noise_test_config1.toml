@@ -10,6 +10,13 @@ galaxy_file = 'galaxy_binaries.hdf5'
 # periodicities to fit to cyclostationary model; 1/year, 2/year, 3/year, etc
 period_list = [1, 2, 3, 4, 5]
 
+[noise_realization]
+
+# signed integer, random seed for the noise realization to set for generating noise realization
+# so we don't have to store the whole array to disk
+# if -1 the noise is seeded at runtime instead
+instrument_noise_realization_seed = 31415926
+
 [wavelet_constants]
 # constants related to wavelet transforms
 
@@ -45,7 +52,7 @@ Nst = 800
 nx = 4.0
 
 # reduced filter length; must be a power of 2
-L = 512
+L = 32
 
 [lisa_constants]
 # constants related to LISA constellation

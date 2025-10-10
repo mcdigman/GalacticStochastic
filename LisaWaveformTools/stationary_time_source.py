@@ -80,7 +80,7 @@ class StationarySourceWaveformTime(Generic[IntrinsicParamsType, ExtrinsicParamsT
         self._tdi_waveform: StationaryWaveformTime = tdi_waveform
         self._intrinsic_waveform: StationaryWaveformTime = intrinsic_waveform
 
-        super().__init__(params, intrinsic_waveform, tdi_waveform)
+        super().__init__(params, intrinsic_waveform, tdi_waveform, response_mode=self._response_mode)
 
     @override
     def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'source_waveform', group_mode: int = 0) -> h5py.Group:

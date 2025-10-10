@@ -111,9 +111,11 @@ def get_wavelet_model(config: dict[str, Any]) -> WDMWaveletConstants:
     K = int(mult * 2 * Nf)
     assert K > 0
     if K <= L:
-        msg = 'K = %d is not bigger than L = %d' % (K, L)
+        msg = 'K = %d should be than L = %d' % (K, L)
         raise ValueError(msg)
-    assert K % L == 0, 'K should be an integer multiple of L'
+    if K % L != 0:
+        msg = 'K = %d should be an integer multiple of L = %d' % (K, L)
+        raise ValueError(msg)
 
     # filter duration (time; same units as dt)
     Tw = float(dt * K)

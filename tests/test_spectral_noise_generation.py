@@ -15,6 +15,86 @@ from LisaWaveformTools.noise_model import DiagonalNonstationaryDenseNoiseModel, 
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
 
+def test_noise_normalization_flat() -> None:
+    """Test ability to generate noise matching known spectrum through wavelet methods"""
+    toml_filename = 'tests/spectral_noise_test_config1.toml'
+
+    with Path(toml_filename).open('rb') as f:
+        config = tomllib.load(f)
+
+    config['lisa_constants']['noise_curve_mode'] = 1
+
+    wc = get_wavelet_model(config)
+    lc = get_lisa_constants(config)
+
+    ND = wc.Nt * wc.Nf
+    Nf = wc.Nf
+    Nt = wc.Nt
+    dt = wc.dt
+    Tobs = dt * ND
+    fs_fft = np.arange(0, ND // 2 + 1) / Tobs
+    nc_noise = 3
+    nc_snr = 3
+    seed = int(config['noise_realization']['instrument_noise_realization_seed'])
+
+    S_inst_m = instrument_noise_AET_wdm_m(lc, wc)
+    spectra_need = np.zeros((ND // 2 + 1, nc_noise))
+    spectra_need[1:, :] = np.sqrt(ND // 2) * np.sqrt(instrument_noise_AET(fs_fft[1:], lc))
+
+    # check whitened noise matches correct spectrum
+    noise_model_stat = DiagonalStationaryDenseNoiseModel(S_inst_m, wc, 1, nc_snr, seed=seed)
+    noise_wave = noise_model_stat.generate_dense_noise()
+    noise_realization_freq = np.zeros((ND // 2 + 1, nc_noise), dtype=np.complex128)
+    noise_realization_time = np.zeros((ND, nc_noise), dtype=np.float64)
+
+    for itrc in range(nc_noise):
+        noise_realization_time[:, itrc] = inverse_wavelet_time(noise_wave[:, :, itrc], Nf, Nt)
+        # plt.plot(noise_realization_time[:, 0]**2)
+        # plt.show()
+
+    for itrc in range(nc_noise):
+        noise_realization_freq[:, itrc] = inverse_wavelet_freq(noise_wave[:, :, itrc], Nf, Nt)
+        # NOTE have to cut off Nt because at very low frequencies
+        # we are not currently estimating the spectrum correctly in the wavelet domain
+        # also dont't hit the frequencies with big dips
+        arglim = np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs)
+        # import matplotlib.pyplot as plt
+        # plt.loglog(np.abs(noise_realization_freq[Nt // 2:arglim, itrc]))
+        # plt.loglog(np.abs(spectra_need[Nt // 2:arglim, itrc]))
+        # plt.show()
+        _ = unit_normal_battery(
+            np.real(noise_realization_freq[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
+            mult=1.0,
+            do_assert=True,
+        )
+        _ = unit_normal_battery(
+            np.imag(noise_realization_freq[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
+            mult=1.0,
+            do_assert=True,
+        )
+
+    # check can generate noise through nonstationary method as well
+    noise_model_cyclo = DiagonalNonstationaryDenseNoiseModel(noise_model_stat.get_S(), wc, True, nc_snr, seed=seed)
+    noise_wave_var = noise_model_cyclo.generate_dense_noise()
+    noise_realization_freq_var = np.zeros((ND // 2 + 1, nc_noise), dtype=np.complex128)
+    for itrc in range(nc_noise):
+        noise_realization_freq_var[:, itrc] = inverse_wavelet_freq(noise_wave_var[:, :, itrc], Nf, Nt)
+        # NOTE have to cut off Nt because at very low frequencies
+        # we are not currently estimating the spectrum correctly in the wavelet domain
+        # also dont't hit the frequencies with big dips
+        arglim = np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs)
+        _ = unit_normal_battery(
+            np.real(noise_realization_freq_var[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
+            mult=1.0,
+            do_assert=True,
+        )
+        _ = unit_normal_battery(
+            np.imag(noise_realization_freq_var[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
+            mult=1.0,
+            do_assert=True,
+        )
+
+
 @pytest.mark.parametrize('scale_mult', [1.0, 2.0])
 def test_unit_noise_generation_stat(scale_mult: float) -> None:
     """Test unit normal noise for stationary model produced with input spectrum S_stat_m = 1"""
@@ -25,13 +105,15 @@ def test_unit_noise_generation_stat(scale_mult: float) -> None:
 
     wc = get_wavelet_model(config)
 
+    seed = 314159265
+
     ND = wc.Nf * wc.Nt
 
     nc_noise = 3
     nc_snr = 3
 
     S_inst_m_one = np.full((wc.Nf, nc_noise), scale_mult)
-    noise_model_stat = DiagonalStationaryDenseNoiseModel(S_inst_m_one, wc, False, nc_snr)
+    noise_model_stat = DiagonalStationaryDenseNoiseModel(S_inst_m_one, wc, False, nc_snr, seed=seed)
 
     noise_realization = noise_model_stat.generate_dense_noise()
 
@@ -61,6 +143,7 @@ def test_unit_noise_generation_cyclo_time(var_select: str) -> None:
         config = tomllib.load(f)
 
     wc = get_wavelet_model(config)
+    seed = 314159265
 
     ND = wc.Nf * wc.Nt
     nc_noise = 3
@@ -92,7 +175,7 @@ def test_unit_noise_generation_cyclo_time(var_select: str) -> None:
     for itrc in range(nc_noise):
         S_cyclo[:, :, itrc] = np.outer(r_cyclo[:, itrc], S_one[:, itrc])
 
-    noise_model_cyclo = DiagonalNonstationaryDenseNoiseModel(S_cyclo, wc, False, nc_snr)
+    noise_model_cyclo = DiagonalNonstationaryDenseNoiseModel(S_cyclo, wc, False, nc_snr, seed=seed)
 
     noise_realization_var = noise_model_cyclo.generate_dense_noise()
 
@@ -121,8 +204,11 @@ def test_noise_normalization_match() -> None:
     with Path(toml_filename).open('rb') as f:
         config = tomllib.load(f)
 
+    config['lisa_constants']['noise_curve_mode'] = 1
+
     wc = get_wavelet_model(config)
     lc = get_lisa_constants(config)
+
     ND = wc.Nt * wc.Nf
     Nf = wc.Nf
     Nt = wc.Nt
@@ -131,13 +217,14 @@ def test_noise_normalization_match() -> None:
     fs_fft = np.arange(0, ND // 2 + 1) / Tobs
     nc_noise = 3
     nc_snr = 3
+    seed = int(config['noise_realization']['instrument_noise_realization_seed'])
 
     S_inst_m = instrument_noise_AET_wdm_m(lc, wc)
     spectra_need = np.zeros((ND // 2 + 1, nc_noise))
     spectra_need[1:, :] = np.sqrt(ND // 2) * np.sqrt(instrument_noise_AET(fs_fft[1:], lc))
 
     # check whitened noise matches correct spectrum
-    noise_model_stat = DiagonalStationaryDenseNoiseModel(S_inst_m, wc, True, nc_snr)
+    noise_model_stat = DiagonalStationaryDenseNoiseModel(S_inst_m, wc, 1, nc_snr, seed=seed)
     noise_wave = noise_model_stat.generate_dense_noise()
     noise_realization_freq = np.zeros((ND // 2 + 1, nc_noise), dtype=np.complex128)
     for itrc in range(nc_noise):
@@ -146,6 +233,10 @@ def test_noise_normalization_match() -> None:
         # we are not currently estimating the spectrum correctly in the wavelet domain
         # also dont't hit the frequencies with big dips
         arglim = np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs)
+        # import matplotlib.pyplot as plt
+        # plt.loglog(np.abs(noise_realization_freq[Nt // 2:arglim, itrc]))
+        # plt.loglog(np.abs(spectra_need[Nt // 2:arglim, itrc]))
+        # plt.show()
         _ = unit_normal_battery(
             np.real(noise_realization_freq[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
             mult=1.0,
@@ -158,7 +249,7 @@ def test_noise_normalization_match() -> None:
         )
 
     # check can generate noise through nonstationary method as well
-    noise_model_cyclo = DiagonalNonstationaryDenseNoiseModel(noise_model_stat.get_S(), wc, True, nc_snr)
+    noise_model_cyclo = DiagonalNonstationaryDenseNoiseModel(noise_model_stat.get_S(), wc, True, nc_snr, seed=seed)
     noise_wave_var = noise_model_cyclo.generate_dense_noise()
     noise_realization_freq_var = np.zeros((ND // 2 + 1, nc_noise), dtype=np.complex128)
     for itrc in range(nc_noise):

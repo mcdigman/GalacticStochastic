@@ -2,6 +2,7 @@
 
 import numpy as np
 import scipy.stats
+from numpy.testing import assert_array_less
 from numpy.typing import NDArray
 
 
@@ -77,8 +78,8 @@ def unit_normal_battery(
 
     # check mean and variance
     if do_assert:
-        assert test1
-        assert test2
-        assert test3
+        assert_array_less(mean_stat, sig_thresh)
+        assert_array_less(std_stat, sig_thresh)
+        assert_array_less(a2_star, a2_cut)
 
     return test_combo, a2_star, mean_stat, std_stat

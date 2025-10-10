@@ -89,7 +89,7 @@ class StationarySourceWaveformFreq(Generic[IntrinsicParamsType, ExtrinsicParamsT
         self._tdi_waveform: StationaryWaveformFreq = tdi_waveform
         self._intrinsic_waveform: StationaryWaveformFreq = intrinsic_waveform
 
-        super().__init__(params, intrinsic_waveform, tdi_waveform, response_mode)
+        super().__init__(params, intrinsic_waveform, tdi_waveform, response_mode=response_mode)
 
         self.freeze_limits = freeze_limits
 
