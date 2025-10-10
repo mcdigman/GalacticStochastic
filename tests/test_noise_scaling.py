@@ -948,7 +948,6 @@ def test_noise_generation_scaling_flat(channel_mult: tuple[float, float, float, 
 
 # scaling on (Nf, Nt, dt, mult) in the second configuration
 # (2.0, 2.0, 2.0, 2.0),
-@pytest.mark.skip
 @pytest.mark.parametrize(
     'channel_mult',
     [
