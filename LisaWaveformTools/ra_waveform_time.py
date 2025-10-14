@@ -249,14 +249,14 @@ def amp_phase_loop_helper(F: NDArray[np.floating], T: NDArray[np.floating], wave
                 AET_X[itrc, n] = wave_X[n]
             elif II * dRR == RR * dII:
                 # Zero numerator phase is the same as general case.
-                p = np.arctan2(II, RR) % (2 * np.pi)
+                p = float(np.arctan2(II, RR) % (2 * np.pi))
 
                 # Handle zero numerator FT without a delta function
                 # May improve numerical stability if denominator is also close to zero
                 AET_X[itrc, n] = wave_X[n]
             else:
                 # General case of phase.
-                p = np.arctan2(II, RR) % (2 * np.pi)
+                p = float(np.arctan2(II, RR) % (2 * np.pi))
 
                 # Handle general case, with the analytic derivative of the phase.
                 # dRR and dII are currently computed through a numerical derivative,

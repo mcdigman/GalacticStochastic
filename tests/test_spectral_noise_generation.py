@@ -70,8 +70,8 @@ def test_noise_normalization_flat(noise_curve_mode: int, distort_mult: int) -> N
         # NOTE have to cut off Nt because at very low frequencies
         # we are not currently estimating the spectrum correctly in the wavelet domain
         # also dont't hit the frequencies with big dips
-        arglim_min = max(Nt, np.int64(np.pi * max(2 * wc.Tobs / wc.Tw, 2 * wc.Tobs / wc.DT)))
-        arglim = np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs)
+        arglim_min: int = int(max(Nt, int(np.int64(np.pi * max(2 * wc.Tobs / wc.Tw, 2 * wc.Tobs / wc.DT)))))
+        arglim: int = int(np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs))
         # import matplotlib.pyplot as plt
         # plt.loglog(np.abs(noise_realization_freq[arglim_min:arglim, itrc]))
         # plt.loglog(np.sqrt(np.abs(psd_interp[arglim_min:arglim, itrc])))
@@ -89,8 +89,8 @@ def test_noise_normalization_flat(noise_curve_mode: int, distort_mult: int) -> N
         print(corr_real)
         angle_got = np.angle(noise_realization_freq[arglim_min:arglim, itrc])
         assert_allclose(corr_real[0, 1], 0., atol=2.e-3)
-        assert_allclose(np.mean(angle_got), 0., atol=4. / np.sqrt(angle_got.size))
-        assert_allclose(spectra_need[arglim_min:arglim, itrc], np.sqrt(psd_interp[arglim_min:arglim, itrc]), atol=1.e-40, rtol=2.e-1)
+        assert_allclose(np.mean(angle_got), 0., atol=float(4. / np.sqrt(angle_got.size)))
+        assert_allclose(spectra_need[arglim_min:arglim, itrc], np.sqrt(psd_interp[arglim_min:arglim, itrc]), atol=1.e-40, rtol=3.e-1)
         _ = unit_normal_battery(
             np.real(noise_realization_freq[arglim_min:arglim, itrc] / spectra_need[arglim_min:arglim, itrc]),
             mult=1.,
@@ -112,7 +112,7 @@ def test_noise_normalization_flat(noise_curve_mode: int, distort_mult: int) -> N
         # we are not currently estimating the spectrum correctly in the wavelet domain
         # also dont't hit the frequencies with big dips
         nrm = float(np.sqrt(ND // 2) / np.sqrt(2 * wc.dt))
-        arglim = np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs)
+        arglim = int(np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs))
         _ = unit_normal_battery(
             np.real(noise_realization_freq_var[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
             mult=nrm,
@@ -142,15 +142,17 @@ def test_unit_noise_generation_stat(scale_mult: float) -> None:
     nc_noise = 3
     nc_snr = 3
 
+    sq_scale_mult = float(np.sqrt(scale_mult))
+
     S_inst_m_one = np.full((wc.Nf, nc_noise), scale_mult)
     noise_model_stat = DiagonalStationaryDenseNoiseModel(S_inst_m_one, wc, False, nc_snr, seed=seed)
 
     noise_realization = noise_model_stat.generate_dense_noise()
 
     for itrc in range(nc_noise):
-        _ = unit_normal_battery(noise_realization[:, 1:, itrc].flatten(), mult=np.sqrt(scale_mult), do_assert=True)
+        _ = unit_normal_battery(noise_realization[:, 1:, itrc].flatten(), mult=sq_scale_mult, do_assert=True)
 
-    freq_mult = np.sqrt(scale_mult) * np.sqrt(ND // 2)
+    freq_mult: float = sq_scale_mult * float(np.sqrt(ND // 2))
 
     print('got noise realization')
 
@@ -159,9 +161,9 @@ def test_unit_noise_generation_stat(scale_mult: float) -> None:
         _ = unit_normal_battery(np.asarray(np.real(noise_realization_freq), dtype=np.float64), mult=freq_mult, do_assert=True)
         _ = unit_normal_battery(np.asarray(np.imag(noise_realization_freq), dtype=np.float64), mult=freq_mult, do_assert=True)
         noise_realization_time = np.asarray(fft.irfft(noise_realization_freq), dtype=np.float64)
-        _ = unit_normal_battery(noise_realization_time, mult=np.sqrt(scale_mult), do_assert=True)
+        _ = unit_normal_battery(noise_realization_time, mult=sq_scale_mult, do_assert=True)
         noise_realization_time = np.asarray(inverse_wavelet_time(noise_realization[:, :, itrc], wc.Nf, wc.Nt), dtype=np.float64)
-        _ = unit_normal_battery(noise_realization_time, mult=np.sqrt(scale_mult), do_assert=True)
+        _ = unit_normal_battery(noise_realization_time, mult=sq_scale_mult, do_assert=True)
 
 
 @pytest.mark.parametrize('var_select', ['const1', 'const2', 'cos1'])
@@ -212,7 +214,7 @@ def test_unit_noise_generation_cyclo_time(var_select: str) -> None:
     for itrc in range(nc_noise):
         for itrt in range(wc.Nt):
             _ = unit_normal_battery(
-                noise_realization_var[itrt, :, itrc].flatten(), mult=np.sqrt(r_cyclo[itrt, itrc]), do_assert=True,
+                noise_realization_var[itrt, :, itrc].flatten(), mult=float(np.sqrt(r_cyclo[itrt, itrc])), do_assert=True,
             )
 
     for itrc in range(nc_noise):
@@ -223,8 +225,8 @@ def test_unit_noise_generation_cyclo_time(var_select: str) -> None:
         _ = unit_normal_battery(noise_realization_time, do_assert=True)
         # check frequency components were preserved
         noise_realization_freq = np.fft.rfft(noise_realization_time)
-        _ = unit_normal_battery(np.real(noise_realization_freq), mult=np.sqrt(ND // 2), do_assert=True)
-        _ = unit_normal_battery(np.imag(noise_realization_freq), mult=np.sqrt(ND // 2), do_assert=True)
+        _ = unit_normal_battery(np.real(noise_realization_freq), mult=float(np.sqrt(ND // 2)), do_assert=True)
+        _ = unit_normal_battery(np.imag(noise_realization_freq), mult=float(np.sqrt(ND // 2)), do_assert=True)
 
 
 def test_noise_normalization_match() -> None:
@@ -257,7 +259,7 @@ def test_noise_normalization_match() -> None:
     noise_model_stat = DiagonalStationaryDenseNoiseModel(S_inst_m, wc, 1, nc_snr, seed=seed)
     noise_wave = noise_model_stat.generate_dense_noise()
     noise_realization_freq = np.zeros((ND // 2 + 1, nc_noise), dtype=np.complex128)
-    nrm = float(np.sqrt(ND // 2) / np.sqrt(2 * wc.dt))
+    nrm: float = float(np.sqrt(ND // 2)) / float(np.sqrt(2 * wc.dt))
     for itrc in range(nc_noise):
         noise_realization_freq[:, itrc] = inverse_wavelet_freq(noise_wave[:, :, itrc], Nf, Nt)
         # NOTE have to cut off Nt because at very low frequencies

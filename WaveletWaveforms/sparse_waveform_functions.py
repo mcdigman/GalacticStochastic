@@ -102,8 +102,8 @@ def wavelet_sparse_to_dense(wavelet_waveform: SparseWaveletWaveform, wc: WDMWave
         assert n_set[itrc] <= n_pixel_max
         for itrp in range(n_set[itrc]):
             assert pixel_index[itrc, itrp] != -1
-            i = pixel_index[itrc, itrp] % wc.Nf
-            j = (pixel_index[itrc, itrp] - i) // wc.Nf
+            i: int = int(pixel_index[itrc, itrp] % wc.Nf)
+            j: int = int((pixel_index[itrc, itrp] - i) // wc.Nf)
             result[j, i, itrc] = wave_value[itrc, itrp]
 
     return result
@@ -140,8 +140,8 @@ def whiten_sparse_data(wavelet_waveform: SparseWaveletWaveform, inv_chol_S: NDAr
         assert n_set[itrc] <= n_pixel_max
         for itrp in range(n_set[itrc]):
             assert pixel_index[itrc, itrp] != -1
-            i = pixel_index[itrc, itrp] % wc.Nf
-            j = (pixel_index[itrc, itrp] - i) // wc.Nf
+            i: int = int(pixel_index[itrc, itrp] % wc.Nf)
+            j: int = int((pixel_index[itrc, itrp] - i) // wc.Nf)
             wave_value_new[itrc, itrp] = wave_value[itrc, itrp] * inv_chol_S[j, i, itrc]
 
     return SparseWaveletWaveform(wave_value_new, pixel_index, n_set, n_pixel_max)
@@ -191,8 +191,8 @@ def wavelet_dense_select_sparse(dense_waveform: NDArray[np.floating], wavelet_wa
         assert n_set[itrc] <= n_pixel_max
         for itrp in range(n_set[itrc]):
             assert pixel_index[itrc, itrp] != -1
-            i = pixel_index[itrc, itrp] % wc.Nf
-            j = (pixel_index[itrc, itrp] - i) // wc.Nf
+            i: int = int(pixel_index[itrc, itrp] % wc.Nf)
+            j: int = int((pixel_index[itrc, itrp] - i) // wc.Nf)
             wave_value_new[itrc, itrp] = dense_waveform[j, i, itrc]
 
     return waveform_out

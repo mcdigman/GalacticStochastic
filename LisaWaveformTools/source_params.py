@@ -152,7 +152,7 @@ class AbstractParamsManager(Generic[ParamsType], ABC):
         hf_params.attrs['creator_name'] = self.__class__.__name__
         hf_params.attrs['n_packed'] = self.n_packed
 
-        hf_params.create_dataset('packed', data=self.params_packed)
+        _ = hf_params.create_dataset('packed', data=self.params_packed)
 
         hf_p = hf_params.create_group('params')
         for key in self.params._fields:

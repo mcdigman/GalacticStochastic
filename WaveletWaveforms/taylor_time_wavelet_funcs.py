@@ -3,6 +3,8 @@
 The functions use the WDM wavelet basis.
 """
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 from numba import njit
 
@@ -10,6 +12,9 @@ from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, SparseWaveletWaveform
 from WaveletWaveforms.taylor_time_coefficients import WaveletTaylorTimeCoeffs, get_taylor_time_pixel_direct
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 @njit(fastmath=True)
@@ -78,50 +83,50 @@ def wavemaket(
     nc_waveform = wavelet_waveform.wave_value.shape[0]
 
     for itrc in range(nc_waveform):
-        mm = 0
-        nf_min = 0
-        nf_max = wc.Nf - 1
+        mm: int = 0
+        nf_min: int = 0
+        nf_max: int = wc.Nf - 1
         for j in range(nt_lim_waveform.nx_min, nt_lim_waveform.nx_max):
             # keep j_ind separate in case we want to apply a time offset in the future
-            j_ind = j
+            j_ind: int = j
 
-            y0 = waveform.FTd[itrc, j] / wc.dfd
-            ny = int(np.floor(y0))
-            n_ind = ny + wc.Nfd_negative
+            y0: float = waveform.FTd[itrc, j] / wc.dfd
+            ny: int = int(np.floor(y0))
+            n_ind: int = ny + wc.Nfd_negative
 
             assert taylor_table.Nfsam.size == wc.Nfd
             if 0 <= n_ind < wc.Nfd - 1:
-                c = waveform.AT[itrc, j] * np.cos(waveform.PT[itrc, j])
-                s = waveform.AT[itrc, j] * np.sin(waveform.PT[itrc, j])
+                c: float = waveform.AT[itrc, j] * np.cos(waveform.PT[itrc, j])
+                s: float = waveform.AT[itrc, j] * np.sin(waveform.PT[itrc, j])
 
-                dy = y0 - ny
+                dy: float = y0 - ny
                 assert 0.0 <= dy <= 1.0
-                fa = waveform.FT[itrc, j]
-                za = fa / wc.df_bw
+                fa: float = waveform.FT[itrc, j]
+                za: float = fa / wc.df_bw
 
-                Nfsam1_loc = taylor_table.Nfsam[n_ind]
+                Nfsam1_loc = int(taylor_table.Nfsam[n_ind])
                 # assert Nfsam1_loc == int(_wc.Nsf + 2 / 3 * np.abs(ny) * _wc.dfdot * _wc.Nsf)
-                Nfsam2_loc = taylor_table.Nfsam[n_ind + 1]
+                Nfsam2_loc = int(taylor_table.Nfsam[n_ind + 1])
                 # assert Nfsam2_loc == int(_wc.Nsf + 2 / 3 * np.abs(ny + 1) * _wc.dfdot * _wc.Nsf)
-                half_bandwidth = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df_bw / 2
+                half_bandwidth: float = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df_bw / 2
 
                 # lowest frequency layer
-                kmin = max(nf_min, int(np.ceil((fa - half_bandwidth) / wc.DF)))
+                kmin: int = max(nf_min, int(np.ceil((fa - half_bandwidth) / wc.DF)))
 
                 # highest frequency layer
-                kmax = min(nf_max, int(np.floor((fa + half_bandwidth) / wc.DF)))
+                kmax: int = min(nf_max, int(np.floor((fa + half_bandwidth) / wc.DF)))
 
                 for k in range(kmin, kmax + 1):
-                    zmid = (wc.DF / wc.df_bw) * k
+                    zmid: float = (wc.DF / wc.df_bw) * k
 
                     # we apparently need za - zmid to be positive
                     if za < zmid:
                         zmid = za - np.abs(za - zmid)
 
-                    kk = np.floor(za - zmid - 0.5)
-                    zsam = zmid + kk + 0.5
-                    kk = int(kk)
-                    dx = za - zsam  # used for linear interpolation
+                    kk_float: float = np.floor(za - zmid - 0.5)
+                    zsam: float = zmid + kk_float + 0.5
+                    kk = int(kk_float)
+                    dx: float = za - zsam  # used for linear interpolation
                     assert 0.0 <= dx <= 1.0
 
                     # interpolate over frequency
@@ -137,11 +142,11 @@ def wavemaket(
                         assert taylor_table.evc[n_ind + 1, jj2] != 0.0
                         assert taylor_table.evc[n_ind + 1, jj2 + 1] != 0.0
 
-                        y = (1.0 - dx) * taylor_table.evc[n_ind, jj1] + dx * taylor_table.evc[n_ind, jj1 + 1]
-                        yy = (1.0 - dx) * taylor_table.evc[n_ind + 1, jj2] + dx * taylor_table.evc[n_ind + 1, jj2 + 1]
+                        y: float = (1.0 - dx) * taylor_table.evc[n_ind, jj1] + dx * taylor_table.evc[n_ind, jj1 + 1]
+                        yy: float = (1.0 - dx) * taylor_table.evc[n_ind + 1, jj2] + dx * taylor_table.evc[n_ind + 1, jj2 + 1]
 
-                        z = (1.0 - dx) * taylor_table.evs[n_ind, jj1] + dx * taylor_table.evs[n_ind, jj1 + 1]
-                        zz = (1.0 - dx) * taylor_table.evs[n_ind + 1, jj2] + dx * taylor_table.evs[n_ind + 1, jj2 + 1]
+                        z: float = (1.0 - dx) * taylor_table.evs[n_ind, jj1] + dx * taylor_table.evs[n_ind, jj1 + 1]
+                        zz: float = (1.0 - dx) * taylor_table.evs[n_ind + 1, jj2] + dx * taylor_table.evs[n_ind + 1, jj2 + 1]
 
                         # interpolate over fdot
                         y = (1.0 - dy) * y + dy * yy
@@ -250,40 +255,40 @@ def wavemaket_direct(
     --------
     wavemaket : Table-based computation of wavelet coefficients using precomputed interpolation.
     """
-    n_set_old = wavelet_waveform.n_set.copy()
+    n_set_old: NDArray[np.integer] = wavelet_waveform.n_set.copy()
 
-    nc_waveform = wavelet_waveform.wave_value.shape[0]
+    nc_waveform: int = wavelet_waveform.wave_value.shape[0]
 
     wavelet_norm = taylor_table.wavelet_norm
 
     for itrc in range(nc_waveform):
-        mm = 0
-        nf_min = 0
-        nf_max = wc.Nf - 1
+        mm: int = 0
+        nf_min: int = 0
+        nf_max: int = wc.Nf - 1
 
         for j in range(nt_lim_waveform.nx_min, nt_lim_waveform.nx_max):
-            j_ind = j  # keep j_ind separate in case we want to apply a time offset in the future
+            j_ind: int = j  # keep j_ind separate in case we want to apply a time offset in the future
 
-            c = waveform.AT[itrc, j] * np.cos(waveform.PT[itrc, j])
-            s = waveform.AT[itrc, j] * np.sin(waveform.PT[itrc, j])
+            c: float = waveform.AT[itrc, j] * np.cos(waveform.PT[itrc, j])
+            s: float = waveform.AT[itrc, j] * np.sin(waveform.PT[itrc, j])
 
-            fa = waveform.FT[itrc, j]
+            fa: float = waveform.FT[itrc, j]
 
-            y0 = waveform.FTd[itrc, j] / wc.dfd
+            y0: float = waveform.FTd[itrc, j] / wc.dfd
             ny = int(np.floor(y0))
 
-            Nfsam1_loc = int(wc.Nsf + 2 / 3 * np.abs(ny) * wc.dfdot * wc.Nsf)
-            Nfsam2_loc = int(wc.Nsf + 2 / 3 * np.abs(ny + 1) * wc.dfdot * wc.Nsf)
+            Nfsam1_loc: int = int(wc.Nsf + 2 / 3 * np.abs(ny) * wc.dfdot * wc.Nsf)
+            Nfsam2_loc: int = int(wc.Nsf + 2 / 3 * np.abs(ny + 1) * wc.dfdot * wc.Nsf)
             # not sure the - 1 is strictly necessary
-            half_bandwidth = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df_bw / 2
+            half_bandwidth: float = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df_bw / 2
 
             # lowest frequency layer
-            kmin = int(np.ceil((fa - half_bandwidth) / wc.DF))
+            kmin: int = int(np.ceil((fa - half_bandwidth) / wc.DF))
             kmin = max(nf_min, kmin)
             kmin = min(nf_max, kmin)
 
             # highest frequency layer
-            kmax = min(nf_max, int(np.floor((fa + half_bandwidth) / wc.DF)))
+            kmax: int = min(nf_max, int(np.floor((fa + half_bandwidth) / wc.DF)))
             kmax = max(nf_min, kmax)
             kmax = max(kmin, kmax)
 
@@ -304,6 +309,6 @@ def wavemaket_direct(
 
     # clean up any pixels that were set in the old intrinsic_waveform but aren't anymore
     for itrc in range(nc_waveform):
-        for itrm in range(wavelet_waveform.n_set[itrc], n_set_old[itrc]):
+        for itrm in range(int(wavelet_waveform.n_set[itrc]), int(n_set_old[itrc])):
             wavelet_waveform.pixel_index[itrc, itrm] = -1
             wavelet_waveform.wave_value[itrc, itrm] = 0.0

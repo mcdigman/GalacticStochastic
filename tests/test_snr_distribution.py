@@ -132,14 +132,6 @@ def test_noise_generation_scaling_direct(channel_mult: tuple[float, float, float
 
     noise_noise2 = np.zeros(n_seed)
 
-    data_signal2 = np.zeros(n_seed)
-
-    data_noise2 = np.zeros(n_seed)
-
-    data_data2 = np.zeros(n_seed)
-
-    log_likelihood2 = np.zeros(n_seed)
-
     signal_signal2 = np.full(n_seed, np.sum(waveform_sparse2_white.wave_value * waveform_sparse2_white.wave_value))
     signal_noise_noise_noise2 = np.full(n_seed, np.sum(waveform_sparse2_white.wave_value * waveform_sparse2_white.wave_value))
 
@@ -155,7 +147,7 @@ def test_noise_generation_scaling_direct(channel_mult: tuple[float, float, float
         # noise_real2_white = noise_manager2.generate_dense_noise(seed_override=seed_loc, white_mode=1)
         # overwrite sparsely for speed
         for itrc in range(noise2.shape[1]):
-            n_set_loc = noise_sparse2_white.n_set[itrc]
+            n_set_loc: int = int(noise_sparse2_white.n_set[itrc])
             noise_sparse2_white.wave_value[itrc, :n_set_loc] = rng.normal(0., 1., n_set_loc)
 
         signal_noise2[itrs] = np.sum(noise_sparse2_white.wave_value * waveform_sparse2_white.wave_value)
@@ -176,9 +168,9 @@ def test_noise_generation_scaling_direct(channel_mult: tuple[float, float, float
     # assert_allclose(log_likelihood_mean_exp1, log_likelihood_mean_exp2, atol=1.e-100, rtol=1.e-10)
 
     snr_channel2 = noise_manager2.get_sparse_snrs(wavelet_waveform2, nt_lim_snr2)
-    snr_tot2 = float(np.linalg.norm(snr_channel2))
+    snr_tot2: float = float(np.linalg.norm(snr_channel2))
 
-    n_set_tot2 = np.sum(wavelet_waveform2.n_set)
+    n_set_tot2: int = int(np.sum(wavelet_waveform2.n_set))
 
     print('2 likelihood mean, std, min, max', np.mean(log_likelihood2), np.std(log_likelihood2), np.min(log_likelihood2), np.max(log_likelihood2))
     print('2 likelihood expect', log_likelihood_mean_exp2)
@@ -194,7 +186,7 @@ def test_noise_generation_scaling_direct(channel_mult: tuple[float, float, float
     print('2 signal*signal', np.mean(signal_signal2))
     print('2 set, total', wavelet_waveform2.n_set, n_set_tot2)
     print('2 (signal* noise std)/(total snr)', np.std(signal_noise2) / snr_tot2)
-    std_data_data = np.sqrt(4 * snr_tot2**2 + 2 * n_set_tot2)
+    std_data_data: float = float(np.sqrt(4 * snr_tot2**2 + 2 * n_set_tot2))
     # print('2 cov', cov_need, 2 * snr_tot2 * 15.0, cov_got, cov_got2, std_data_data)
 
     # import matplotlib.pyplot as plt
@@ -218,12 +210,12 @@ def test_noise_generation_scaling_direct(channel_mult: tuple[float, float, float
 
     assert_allclose(snr_tot2**2, 2 * log_likelihood_mean_exp2, atol=1.e-10, rtol=1.e-10)
 
-    unit_normal_battery(signal_noise2, mult=snr_tot2, do_assert=True)
-    unit_normal_battery(data_signal2 - signal_signal2, mult=snr_tot2, do_assert=True)
-    unit_normal_battery(noise_noise2 - n_set_tot2, mult=np.sqrt(2 * n_set_tot2), do_assert=True)
-    unit_normal_battery(data_noise2 - n_set_tot2, mult=np.sqrt(2 * n_set_tot2 + snr_tot2**2), do_assert=True)
-    unit_normal_battery(data_data2 - n_set_tot2 - signal_signal2, mult=std_data_data, do_assert=True)
-    unit_normal_battery(log_likelihood2 - signal_signal2 / 2, mult=snr_tot2, do_assert=True)
+    _ = unit_normal_battery(signal_noise2, mult=snr_tot2, do_assert=True)
+    _ = unit_normal_battery(data_signal2 - signal_signal2, mult=snr_tot2, do_assert=True)
+    _ = unit_normal_battery(noise_noise2 - n_set_tot2, mult=float(np.sqrt(2 * n_set_tot2)), do_assert=True)
+    _ = unit_normal_battery(data_noise2 - n_set_tot2, mult=float(np.sqrt(2 * n_set_tot2 + snr_tot2**2)), do_assert=True)
+    _ = unit_normal_battery(data_data2 - n_set_tot2 - signal_signal2, mult=std_data_data, do_assert=True)
+    _ = unit_normal_battery(log_likelihood2 - signal_signal2 / 2, mult=snr_tot2, do_assert=True)
 
 
 # scaling on (Nf, Nt, dt, mult) in the second configuration
@@ -364,18 +356,6 @@ def test_noise_generation_scaling_compare(channel_mult: tuple[float, float, floa
     noise_noise1 = np.zeros(n_seed)
     noise_noise2 = np.zeros(n_seed)
 
-    data_signal1 = np.zeros(n_seed)
-    data_signal2 = np.zeros(n_seed)
-
-    data_noise1 = np.zeros(n_seed)
-    data_noise2 = np.zeros(n_seed)
-
-    data_data1 = np.zeros(n_seed)
-    data_data2 = np.zeros(n_seed)
-
-    log_likelihood1 = np.zeros(n_seed)
-    log_likelihood2 = np.zeros(n_seed)
-
     signal_signal1 = np.full(n_seed, np.sum(waveform_sparse1_white.wave_value * waveform_sparse1_white.wave_value))
     signal_signal2 = np.full(n_seed, np.sum(waveform_sparse2_white.wave_value * waveform_sparse2_white.wave_value))
 
@@ -448,26 +428,26 @@ def test_noise_generation_scaling_compare(channel_mult: tuple[float, float, floa
     assert_allclose(snr_tot1**2, 2 * log_likelihood_mean_exp1, atol=1.e-10, rtol=1.e-10)
     assert_allclose(snr_tot2**2, 2 * log_likelihood_mean_exp2, atol=1.e-10, rtol=1.e-10)
 
-    unit_normal_battery(signal_noise1, mult=snr_tot1, do_assert=True)
-    unit_normal_battery(signal_noise2, mult=snr_tot2, do_assert=True)
-    unit_normal_battery(data_signal1 - signal_signal1, mult=snr_tot1, do_assert=True)
-    unit_normal_battery(data_signal2 - signal_signal2, mult=snr_tot2, do_assert=True)
-    unit_normal_battery(noise_noise1 - n_set_tot1, mult=np.sqrt(2 * n_set_tot1), do_assert=True)
-    unit_normal_battery(noise_noise2 - n_set_tot2, mult=np.sqrt(2 * n_set_tot2), do_assert=True)
-    unit_normal_battery(data_noise1 - n_set_tot1, mult=np.sqrt(2 * n_set_tot1 + snr_tot1**2), do_assert=True)
-    unit_normal_battery(data_noise2 - n_set_tot2, mult=np.sqrt(2 * n_set_tot2 + snr_tot2**2), do_assert=True)
-    unit_normal_battery(data_data1 - n_set_tot1 - signal_signal1, mult=np.sqrt(2 * n_set_tot1 + 4 * snr_tot1**2), do_assert=True)
-    unit_normal_battery(data_data2 - n_set_tot2 - signal_signal2, mult=np.sqrt(2 * n_set_tot2 + 4 * snr_tot2**2), do_assert=True)
-    unit_normal_battery(log_likelihood1 - signal_signal1 / 2, mult=snr_tot1, do_assert=True)
-    unit_normal_battery(log_likelihood2 - signal_signal2 / 2, mult=snr_tot2, do_assert=True)
+    _ = unit_normal_battery(signal_noise1, mult=snr_tot1, do_assert=True)
+    _ = unit_normal_battery(signal_noise2, mult=snr_tot2, do_assert=True)
+    _ = unit_normal_battery(data_signal1 - signal_signal1, mult=snr_tot1, do_assert=True)
+    _ = unit_normal_battery(data_signal2 - signal_signal2, mult=snr_tot2, do_assert=True)
+    _ = unit_normal_battery(noise_noise1 - n_set_tot1, mult=float(np.sqrt(2 * n_set_tot1)), do_assert=True)
+    _ = unit_normal_battery(noise_noise2 - n_set_tot2, mult=float(np.sqrt(2 * n_set_tot2)), do_assert=True)
+    _ = unit_normal_battery(data_noise1 - n_set_tot1, mult=float(np.sqrt(2 * n_set_tot1 + snr_tot1**2)), do_assert=True)
+    _ = unit_normal_battery(data_noise2 - n_set_tot2, mult=float(np.sqrt(2 * n_set_tot2 + snr_tot2**2)), do_assert=True)
+    _ = unit_normal_battery(data_data1 - n_set_tot1 - signal_signal1, mult=float(np.sqrt(2 * n_set_tot1 + 4 * snr_tot1**2)), do_assert=True)
+    _ = unit_normal_battery(data_data2 - n_set_tot2 - signal_signal2, mult=float(np.sqrt(2 * n_set_tot2 + 4 * snr_tot2**2)), do_assert=True)
+    _ = unit_normal_battery(log_likelihood1 - signal_signal1 / 2, mult=snr_tot1, do_assert=True)
+    _ = unit_normal_battery(log_likelihood2 - signal_signal2 / 2, mult=snr_tot2, do_assert=True)
 
     # check if means of likelihoods match each other
-    assert_allclose(np.mean(log_likelihood1) - signal_signal1 / 2, np.mean(log_likelihood2) - signal_signal2 / 2, atol=5. * np.sqrt(snr_tot1**2 + snr_tot2**2), rtol=1.e-10)
+    assert_allclose(np.mean(log_likelihood1) - signal_signal1 / 2, np.mean(log_likelihood2) - signal_signal2 / 2, atol=float(5. * np.sqrt(snr_tot1**2 + snr_tot2**2)), rtol=1.e-10)
 
     # check if stds of likelihoods match each other
     rat1 = np.std(signal_noise1) / snr_tot1
     rat2 = np.std(signal_noise2) / snr_tot2
-    assert_allclose(rat1 - 1., rat2 - 1., atol=5. * np.sqrt(2 / n_seed) * np.sqrt(rat1**2 + rat2**2), rtol=1.e-10)
+    assert_allclose(rat1 - 1., rat2 - 1., atol=float(5. * np.sqrt(2 / n_seed) * np.sqrt(rat1**2 + rat2**2)), rtol=1.e-10)
 
     # this would also be true if the channels are uncorrelated
     # unit_normal_battery(log_likelihood1 - signal_signal1/2 - log_likelihood2 + signal_signal2/2, mult=np.sqrt(snr_tot1**2 + snr_tot2**2), do_assert=True)
@@ -635,8 +615,8 @@ def test_noise_whiten_consistency(channel_mult: tuple[float, float, float, float
         pixel_dist1 = noise_sparse1_white.wave_value[:, :np.min(noise_sparse1_white.n_set)].flatten()
         pixel_dist2 = noise_sparse2_white.wave_value[:, :np.min(noise_sparse2_white.n_set)].flatten()
 
-        unit_normal_battery(pixel_dist1, do_assert=True)
-        unit_normal_battery(pixel_dist2, do_assert=True)
+        _ = unit_normal_battery(pixel_dist1, do_assert=True)
+        _ = unit_normal_battery(pixel_dist2, do_assert=True)
 
         signal_noise1[itrs] = np.sum(noise_sparse1_white.wave_value * waveform_sparse1_white.wave_value)
         signal_noise2[itrs] = np.sum(noise_sparse2_white.wave_value * waveform_sparse2_white.wave_value)

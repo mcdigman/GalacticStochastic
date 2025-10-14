@@ -48,8 +48,8 @@ def get_sparse_snr_helper(
         i_itrs: NDArray[np.integer] = np.mod(pixel_index_loc, wc.Nf)
         j_itrs: NDArray[np.integer] = (pixel_index_loc - i_itrs) // wc.Nf
         for mm in range(n_pixel_loc):
-            j_loc: int = j_itrs[mm]
-            i_loc: int = i_itrs[mm]
+            j_loc: int = int(j_itrs[mm])
+            i_loc: int = int(i_itrs[mm])
             if nt_lim_snr.nx_min <= j_loc < nt_lim_snr.nx_max:
                 signal_white: float = inv_chol_S[j_loc, i_loc, itrc] * wave_value_loc[mm]
                 snr2s[itrc] += signal_white * signal_white
@@ -76,8 +76,8 @@ def get_sparse_likelihood_helper_prewhitened(
         i_itrs: NDArray[np.integer] = np.mod(pixel_index_loc, wc.Nf)
         j_itrs: NDArray[np.integer] = (pixel_index_loc - i_itrs) // wc.Nf
         for mm in range(n_pixel_loc):
-            j_loc: int = j_itrs[mm]
-            i_loc: int = i_itrs[mm]
+            j_loc: int = int(j_itrs[mm])
+            i_loc: int = int(i_itrs[mm])
             if nt_lim_snr.nx_min <= j_loc < nt_lim_snr.nx_max:
                 signal_white: float = inv_chol_S[j_loc, i_loc, itrc] * wave_value_loc[mm]
                 data_white: float = wavelet_data_white[j_loc, i_loc, itrc]

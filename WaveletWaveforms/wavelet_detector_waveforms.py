@@ -172,8 +172,8 @@ class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform[StationaryWaveformTime
         self._lc: LISAConstants = lc
         self._nt_lim_waveform: PixelGenericRange = nt_lim_waveform
         self._wavelet_mode: int = wavelet_mode
-        self._table_cache_mode = table_cache_mode
-        self._table_output_mode = table_output_mode
+        self._table_cache_mode: str = table_cache_mode
+        self._table_output_mode: str = table_output_mode
 
         # get a blank wavelet intrinsic_waveform with the correct size for the sparse taylor time method
         # when consistent is set to True, it will be the correct intrinsic_waveform
@@ -202,10 +202,10 @@ class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform[StationaryWaveformTime
         hf_wavelet.attrs['taylor_time_table_name'] = self._taylor_time_table.__class__.__name__
 
         if self._storage_mode == 0:
-            hf_wavelet.create_dataset('Nfsam', data=self._taylor_time_table.Nfsam, compression='gzip')
-            hf_wavelet.create_dataset('evc', data=self._taylor_time_table.evc, compression='gzip')
-            hf_wavelet.create_dataset('evs', data=self._taylor_time_table.evs, compression='gzip')
-            hf_wavelet.create_dataset('wavelet_norm', data=self._taylor_time_table.wavelet_norm, compression='gzip')
+            _ = hf_wavelet.create_dataset('Nfsam', data=self._taylor_time_table.Nfsam, compression='gzip')
+            _ = hf_wavelet.create_dataset('evc', data=self._taylor_time_table.evc, compression='gzip')
+            _ = hf_wavelet.create_dataset('evs', data=self._taylor_time_table.evs, compression='gzip')
+            _ = hf_wavelet.create_dataset('wavelet_norm', data=self._taylor_time_table.wavelet_norm, compression='gzip')
 
         hf_wavelet.attrs['nt_lim_name'] = self._nt_lim_waveform.__class__.__name__
         hf_nt = hf_wavelet.create_group('nt_lim_waveform')
@@ -278,8 +278,8 @@ class BinaryWaveletSparseTime(SparseWaveletSourceWaveform[StationaryWaveformTime
         hf_wavelet.attrs['sparse_table_name'] = self._sparse_table.__class__.__name__
 
         if self._storage_mode == 0:
-            hf_wavelet.create_dataset('cM', data=self._sparse_table.cM, compression='gzip')
-            hf_wavelet.create_dataset('sM', data=self._sparse_table.sM, compression='gzip')
+            _ = hf_wavelet.create_dataset('cM', data=self._sparse_table.cM, compression='gzip')
+            _ = hf_wavelet.create_dataset('sM', data=self._sparse_table.sM, compression='gzip')
 
         hf_wavelet.attrs['nt_lim_name'] = self._nt_lim_waveform.__class__.__name__
         hf_nt = hf_wavelet.create_group('nt_lim_waveform')

@@ -327,11 +327,11 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult: float, rr_model: str, f0p_mult: 
     gradient_uniform_inplace(dII, ddII, wc.DT)
     gradient_uniform_inplace(dRR, ddRR, wc.DT)
 
-    # Checks specitic for static sine wave
+    # Checks specific for static sine wave
     for itrc in range(nc_waveform):
-        p_offset0 = np.arctan2(II[itrc], RR[itrc]) % (2 * np.pi)
-        dp_offset0 = np.gradient(p_offset0, T, edge_order=2) / (2 * np.pi)
-        dp_offset1 = (
+        p_offset0: NDArray[np.floating] = np.arctan2(II[itrc], RR[itrc]) % (2 * np.pi)
+        dp_offset0: NDArray[np.floating] = np.gradient(p_offset0, T, edge_order=2) / (2 * np.pi)
+        dp_offset1: NDArray[np.floating] = (
             -(II[itrc] * spacecraft_channels.dRR[itrc] - RR[itrc] * spacecraft_channels.dII[itrc])
             / (RR[itrc] ** 2 + II[itrc] ** 2)
             / (2 * np.pi)
@@ -367,7 +367,7 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult: float, rr_model: str, f0p_mult: 
         assert_allclose(
             AET_waveform.PT[itrc] - p_offset0,
             2 * np.pi * (f_input + 1.0 / 2 * fp_input * T) * T,
-            atol=1.0e-13 * 2 * np.pi * f_input * T.max(),
+            atol=float(1.0e-13 * 2 * np.pi * f_input * T.max()),
             rtol=1.0e-13,
         )
         assert_allclose(

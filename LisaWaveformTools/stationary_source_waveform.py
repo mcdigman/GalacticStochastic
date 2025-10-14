@@ -108,8 +108,8 @@ class StationarySourceWaveform(Generic[StationaryWaveformType, IntrinsicParamsTy
         hf_source.attrs['_consistent'] = self._consistent
         hf_source.attrs['_consistent_extrinsic'] = self._consistent_extrinsic
         hf_source.attrs['_consistent_intrinsic'] = self._consistent_intrinsic
-        self._intrinsic_params_manager.store_hdf5(hf_source, group_name='intrinsic')
-        self._extrinsic_params_manager.store_hdf5(hf_source, group_name='extrinsic')
+        _ = self._intrinsic_params_manager.store_hdf5(hf_source, group_name='intrinsic')
+        _ = self._extrinsic_params_manager.store_hdf5(hf_source, group_name='extrinsic')
         return hf_source
 
     @abstractmethod

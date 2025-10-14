@@ -102,7 +102,7 @@ def wavelet(wc: WDMWaveletConstants, m: int, nrm: float, *, n_in: int = -1) -> N
     reference wavelets for coefficient tables and intrinsic_waveform synthesis.
     """
     if n_in == -1:
-        n_use = wc.K
+        n_use: int = wc.K
     else:
         n_use = n_in
 
@@ -113,7 +113,7 @@ def wavelet(wc: WDMWaveletConstants, m: int, nrm: float, *, n_in: int = -1) -> N
 
     DE = np.zeros(n_use, dtype=np.complex128)
 
-    om = wc.dom * np.hstack([np.arange(0, half_n_us + 1), -np.arange(half_n_us - 1, 0, -1)])
+    om: NDArray[np.floating] = wc.dom * np.hstack([np.arange(0, half_n_us + 1), -np.arange(half_n_us - 1, 0, -1)])
     DE[:] = (
         np.sqrt(wc.dt)
         / np.sqrt(2.0)
@@ -123,7 +123,7 @@ def wavelet(wc: WDMWaveletConstants, m: int, nrm: float, *, n_in: int = -1) -> N
         )
     )
 
-    DE_fft = spf.fft(DE, n_use, overwrite_x=True)
+    DE_fft: NDArray[np.complex128] = spf.fft(DE, n_use, overwrite_x=True)
 
     del DE
 
@@ -167,26 +167,26 @@ def get_taylor_table_time_helper(wavelet_norm: NDArray[np.floating], wc: WDMWave
 
     This function can be time consuming for large tables, and so exploits parallel loops where feasible.
     """
-    fd = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)  # set f-dot increments
-    Nfsam = ((wc.BW + np.abs(fd) * wc.Tw) / wc.df_bw).astype(np.int64)
+    fd: NDArray[np.floating] = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)  # set f-dot increments
+    Nfsam: NDArray[np.integer] = ((wc.BW + np.abs(fd) * wc.Tw) / wc.df_bw).astype(np.int64)
     Nfsam[Nfsam % 2 == 1] += 1
 
     evcs = np.zeros((wc.Nfd, np.max(Nfsam)))
     evss = np.zeros((wc.Nfd, np.max(Nfsam)))
-    zadd = np.pi / 16
-    zpre = np.pi * wc.df_bw * wc.dt
-    zquads = np.zeros(wc.K)
+    z_add: float = np.pi / 16
+    z_pre: float = np.pi * wc.df_bw * wc.dt
+    z_quads = np.zeros(wc.K)
     for jj in range(wc.Nfd):
         for k in range(wc.K):
-            zquads[k] = np.pi * wc.dt**2 * fd[jj] * (k - wc.K // 2) ** 2
-        for i in range(Nfsam[jj]):
-            zmults = zadd + zpre * (1 - Nfsam[jj] + 2 * i)
-            evc = 0.0
-            evs = 0.0
+            z_quads[k] = np.pi * wc.dt**2 * fd[jj] * (k - wc.K // 2) ** 2
+        for i in range(int(Nfsam[jj])):
+            z_mult: float = z_add + z_pre * (1 - Nfsam[jj] + 2 * i)
+            evc: float = 0.0
+            evs: float = 0.0
             for k in prange(0, wc.K):
-                zs = zmults * (k - wc.K // 2) + zquads[k]
-                evc += wavelet_norm[k] * np.cos(zs)
-                evs += wavelet_norm[k] * np.sin(zs)
+                z: float = z_mult * (k - wc.K // 2) + z_quads[k]
+                evc += wavelet_norm[k] * np.cos(z)
+                evs += wavelet_norm[k] * np.sin(z)
             assert evc != 0.0
             evcs[jj, i] = evc
             evss[jj, i] = evs
@@ -216,7 +216,7 @@ def get_wavelet_norm(wc: WDMWaveletConstants) -> NDArray[np.floating]:
     """
     wave = wavelet(wc, 0, 1.0, n_in=wc.K)
 
-    nrm = (1.0 / np.sqrt(2.0)) * float(np.linalg.norm(wave))
+    nrm: float = (1.0 / np.sqrt(2.0)) * float(np.linalg.norm(wave))
     # TODO check if this is the right way of getting the relevant m
     kwave = int(wc.Nf // 16)
     return wavelet(wc, kwave, nrm)
@@ -282,7 +282,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str = 'skip', 
     wavemaket : Use the precomputed Taylor table for sparse wavelet construction.
     wavemaket_direct : Direct Taylor evaluation without table lookup.
     """
-    t0 = time()
+    t0 = float(time())
 
     print('Filter length (seconds) %e' % wc.Tw)
     print('dt=' + str(wc.dt) + 's Tobs=' + str(wc.Tobs / SECSYEAR))
@@ -314,10 +314,10 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str = 'skip', 
         + '.h5'
     )
 
-    fds = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)
+    fds: NDArray[np.floating] = wc.dfd * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)
 
     # number of samples for each frequency derivative layer (grow with increasing BW)
-    Nfsam = ((wc.BW + np.abs(fds) * wc.Tw) / wc.df_bw).astype(np.int64)
+    Nfsam: NDArray[np.integer] = ((wc.BW + np.abs(fds) * wc.Tw) / wc.df_bw).astype(np.int64)
     Nfsam[Nfsam % 2 != 0] += 1  # makes sure it is an even number
 
     wavelet_norm = get_wavelet_norm(wc)
@@ -371,7 +371,7 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str = 'skip', 
         # DOM/PI, except for the first and last which have width
         # half that
 
-        t1 = time()
+        t1 = float(time())
         print('Taylor Time Table Loop start time ', t1 - t0, 's')
         evcs, evss = get_taylor_table_time_helper(wavelet_norm, wc)
         tf = time()
@@ -444,24 +444,24 @@ def get_taylor_time_pixel_direct(fa: float, fda: float, k_in: int, wavelet_norm:
     get_taylor_table_time : Compute or retrieve Taylor coefficient tables for a grid of points.
     wavemaket_direct : Construct sparse wavelet representations using direct coefficient evaluation.
     """
-    dfa = fa - wc.DF * k_in
-    xk = np.abs(dfa) / wc.df_bw
-    fd_mid = fda
+    dfa: float = fa - wc.DF * k_in
+    xk: float = np.abs(dfa) / wc.df_bw
+    fd_mid: float = fda
 
-    zadd = np.pi / 16
-    zpre = 2 * np.pi * wc.df_bw * wc.dt * xk
-    zquads_mid = np.zeros(wc.K)
+    z_add: float = np.pi / 16
+    z_pre: float = 2 * np.pi * wc.df_bw * wc.dt * xk
+    z_quads_mid = np.zeros(wc.K)
     for k in range(wc.K):
-        zquads_mid[k] = np.pi * wc.dt**2 * fd_mid * (k - wc.K // 2) ** 2
+        z_quads_mid[k] = np.pi * wc.dt**2 * fd_mid * (k - wc.K // 2) ** 2
 
-    zmults = zadd + zpre
-    evc_mid = 0.0
-    evs_mid = 0.0
+    z_mult: float = z_add + z_pre
+    evc_mid: float = 0.0
+    evs_mid: float = 0.0
 
     for k in prange(wc.K):
-        zs_mid = zmults * (k - wc.K // 2) + zquads_mid[k]
-        evc_mid += wavelet_norm[k] * np.cos(zs_mid)
-        evs_mid += wavelet_norm[k] * np.sin(zs_mid)
+        z_mid: float = z_mult * (k - wc.K // 2) + z_quads_mid[k]
+        evc_mid += wavelet_norm[k] * np.cos(z_mid)
+        evs_mid += wavelet_norm[k] * np.sin(z_mid)
 
     assert evc_mid != 0.0
     assert evs_mid != 0.0

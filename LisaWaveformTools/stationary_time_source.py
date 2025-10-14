@@ -91,34 +91,34 @@ class StationarySourceWaveformTime(Generic[IntrinsicParamsType, ExtrinsicParamsT
         hf_source.attrs['nc_waveform'] = self._nc_waveform
 
         hf_source.attrs['spacecraft_orbits_name'] = self._spacecraft_orbits.__class__.__name__
-        hf_source.create_dataset('spacecraft_x', data=self._spacecraft_orbits.x, compression='gzip')
-        hf_source.create_dataset('spacecraft_y', data=self._spacecraft_orbits.y, compression='gzip')
-        hf_source.create_dataset('spacecraft_z', data=self._spacecraft_orbits.z, compression='gzip')
+        _ = hf_source.create_dataset('spacecraft_x', data=self._spacecraft_orbits.x, compression='gzip')
+        _ = hf_source.create_dataset('spacecraft_y', data=self._spacecraft_orbits.y, compression='gzip')
+        _ = hf_source.create_dataset('spacecraft_z', data=self._spacecraft_orbits.z, compression='gzip')
 
-        hf_source.create_dataset('spacecraft_xa', data=self._spacecraft_orbits.xa, compression='gzip')
-        hf_source.create_dataset('spacecraft_ya', data=self._spacecraft_orbits.ya, compression='gzip')
-        hf_source.create_dataset('spacecraft_za', data=self._spacecraft_orbits.za, compression='gzip')
+        _ = hf_source.create_dataset('spacecraft_xa', data=self._spacecraft_orbits.xa, compression='gzip')
+        _ = hf_source.create_dataset('spacecraft_ya', data=self._spacecraft_orbits.ya, compression='gzip')
+        _ = hf_source.create_dataset('spacecraft_za', data=self._spacecraft_orbits.za, compression='gzip')
 
-        hf_source.create_dataset('T', data=self._TTs, compression='gzip')
+        _ = hf_source.create_dataset('T', data=self._TTs, compression='gzip')
 
-        hf_source.create_dataset('spacecraft_channel_t', data=self._spacecraft_channels.x, compression='gzip')
-        hf_source.create_dataset('RR', data=self._spacecraft_channels.RR, compression='gzip')
-        hf_source.create_dataset('II', data=self._spacecraft_channels.II, compression='gzip')
-        hf_source.create_dataset('dRR', data=self._spacecraft_channels.dRR, compression='gzip')
-        hf_source.create_dataset('dII', data=self._spacecraft_channels.dII, compression='gzip')
+        _ = hf_source.create_dataset('spacecraft_channel_t', data=self._spacecraft_channels.x, compression='gzip')
+        _ = hf_source.create_dataset('RR', data=self._spacecraft_channels.RR, compression='gzip')
+        _ = hf_source.create_dataset('II', data=self._spacecraft_channels.II, compression='gzip')
+        _ = hf_source.create_dataset('dRR', data=self._spacecraft_channels.dRR, compression='gzip')
+        _ = hf_source.create_dataset('dII', data=self._spacecraft_channels.dII, compression='gzip')
 
-        hf_source.create_dataset('wavefront_time', data=self._wavefront_time, compression='gzip')
-        hf_source.create_dataset('kdotx', data=self._kdotx, compression='gzip')
+        _ = hf_source.create_dataset('wavefront_time', data=self._wavefront_time, compression='gzip')
+        _ = hf_source.create_dataset('kdotx', data=self._kdotx, compression='gzip')
 
-        hf_source.create_dataset('tdi_T', data=self._tdi_waveform.T, compression='gzip')
-        hf_source.create_dataset('tdi_AT', data=self._tdi_waveform.AT, compression='gzip')
-        hf_source.create_dataset('tdi_FT', data=self._tdi_waveform.FT, compression='gzip')
-        hf_source.create_dataset('tdi_FTd', data=self._tdi_waveform.FTd, compression='gzip')
+        _ = hf_source.create_dataset('tdi_T', data=self._tdi_waveform.T, compression='gzip')
+        _ = hf_source.create_dataset('tdi_AT', data=self._tdi_waveform.AT, compression='gzip')
+        _ = hf_source.create_dataset('tdi_FT', data=self._tdi_waveform.FT, compression='gzip')
+        _ = hf_source.create_dataset('tdi_FTd', data=self._tdi_waveform.FTd, compression='gzip')
 
-        hf_source.create_dataset('intrinsic_T', data=self._intrinsic_waveform.T, compression='gzip')
-        hf_source.create_dataset('intrinsic_AT', data=self._intrinsic_waveform.AT, compression='gzip')
-        hf_source.create_dataset('intrinsic_FT', data=self._intrinsic_waveform.FT, compression='gzip')
-        hf_source.create_dataset('intrinsic_FTd', data=self._intrinsic_waveform.FTd, compression='gzip')
+        _ = hf_source.create_dataset('intrinsic_T', data=self._intrinsic_waveform.T, compression='gzip')
+        _ = hf_source.create_dataset('intrinsic_AT', data=self._intrinsic_waveform.AT, compression='gzip')
+        _ = hf_source.create_dataset('intrinsic_FT', data=self._intrinsic_waveform.FT, compression='gzip')
+        _ = hf_source.create_dataset('intrinsic_FTd', data=self._intrinsic_waveform.FTd, compression='gzip')
 
         hf_lc = hf_source.create_group('lc')
         hf_source.attrs['lc_name'] = self._lc.__class__.__name__

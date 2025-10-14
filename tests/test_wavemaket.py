@@ -262,7 +262,7 @@ def multishape_method_match_helper(p_offset: float, f0_mult: float, f0p_mult: fl
     assert power_diff < 5.e-2
 
     assert_allclose(fd_envelope1, fd_envelope2, atol=1.e2 * f_input / wc.Tobs, rtol=1.e-4)
-    assert_allclose(np.mean(fd_envelope1 - fd_envelope2), 0., atol=2.e-2 * max(np.max(np.abs(fd_envelope1)), np.max(np.abs(fd_envelope2))))
+    assert_allclose(np.mean(fd_envelope1 - fd_envelope2), 0., atol=2.e-2 * max(float(np.max(np.abs(fd_envelope1))), float(np.max(np.abs(fd_envelope2)))))
 
     mask = (wavelet_dense1 != 0.) & (wavelet_dense2 != 0.)
     assert_allclose(wavelet_dense1[mask], wavelet_dense2[mask], atol=6.e-3, rtol=1.e-10)
@@ -413,8 +413,8 @@ def test_wavemaket_extreme_size(p_offset: float, f0_mult: float, direct: bool) -
     mask = wavelet_dense[:, :, 0] != 0.
 
     # can't guarantee all pixels are good because of the corners, but most should be
-    n_close = np.isclose(wavelet_dense[mask, 0], wavelet_design[mask], atol=1.e-1 * np.max(np.abs(wavelet_design)), rtol=1.e-1).sum()
-    assert n_close > 0.99 * mask.sum()
+    n_close: int = int(np.isclose(wavelet_dense[mask, 0], wavelet_design[mask], atol=1.e-1 * float(np.max(np.abs(wavelet_design))), rtol=1.e-1).sum())
+    assert n_close > 0.99 * float(mask.sum())
 
     match = np.sum(wavelet_design * wavelet_dense[:, :, 0]) / np.sqrt(np.sum(wavelet_design**2)) / np.sqrt(np.sum(wavelet_design**2))
     resid = np.sum((wavelet_design - wavelet_dense[:, :, 0])**2) / np.sqrt(np.sum(wavelet_design**2)) / np.sqrt(np.sum(wavelet_design**2))
@@ -546,7 +546,7 @@ def test_wavemaket_dimension_comparison_midevolve2(p_offset: float, f0_mult: flo
     assert_allclose(f_envelope1, f_envelope2, atol=2.e-2 * f_input, rtol=1.e-4)
     assert_allclose(np.mean(f_envelope1 - f_envelope2), 0., atol=2.e-5 * f_input)
 
-    max_fd_envelope = max(np.max(np.abs(fd_envelope1)), np.max(np.abs(fd_envelope2)))
+    max_fd_envelope: float = max(float(np.max(np.abs(fd_envelope1))), float(np.max(np.abs(fd_envelope2))))
     assert_allclose(fd_envelope1, fd_envelope2, atol=5.e-1 * max_fd_envelope, rtol=1.e-4)
     assert_allclose(np.mean(fd_envelope1 - fd_envelope2), 0., atol=1.e-3 * max_fd_envelope)
 
@@ -982,7 +982,7 @@ def test_wavemaket_1d(f0_mult: float, f0p_mult: float, f0pp_mult: float, rr_mode
     # maximum predicted wavelet value to scale closeness check
     wave_pred_sparse_cos = wavelet_waveform_sparse_cos.wave_value[0, :wavelet_waveform.n_set[0]]
     wave_got_sparse = wavelet_waveform.wave_value[0, :wavelet_waveform.n_set[0]]
-    max_wave = max(np.max(np.abs(wave_pred_sparse_cos)), 1.e-5)
+    max_wave: float = max(float(np.max(np.abs(wave_pred_sparse_cos))), 1.e-5)
 
     nrm_sparse_got = np.linalg.norm(wave_got_sparse)
     nrm_sparse_cos = np.linalg.norm(wave_pred_sparse_cos)

@@ -580,13 +580,13 @@ def test_stabilized_gradient_uniform_inplace(t_scale_base: str, t_scale_perturb:
             assert_allclose(
                 result[itrc, mask_ind] - gradient_perturber[itrc, mask_ind],
                 dydt_unperturbed[itrc, mask_ind],
-                atol=max(np.abs(result[itrc, mask_ind]).max() * 1.0e-11, 1.0e-14),
+                atol=max(float(np.abs(result[itrc, mask_ind]).max()) * 1.0e-11, 1.0e-14),
                 rtol=1.0e-12,
             )
             assert_allclose(
                 result[itrc, mask_ind] - dydt_unperturbed[itrc, mask_ind],
                 gradient_perturber[itrc, mask_ind],
-                atol=max(np.abs(result[itrc, mask_ind]).max() * 1.0e-11, 1.0e-14),
+                atol=max(float(np.abs(result[itrc, mask_ind]).max()) * 1.0e-11, 1.0e-14),
                 rtol=1.0e-12,
             )
             # check that the approximation is an improvement on average

@@ -301,8 +301,8 @@ def stationary_mean_smooth_helper(bg_models: list[str], noise_models: list[str],
             assert_allclose(
                 got_loc,
                 pred_loc,
-                atol=5 * (f_mult_smooth[itrf, itrc] ** 2) / np.sqrt(wc.Nt),
-                rtol=5 * (f_mult_smooth[itrf, itrc] ** 2) / np.sqrt(wc.Nt),
+                atol=5 * float((f_mult_smooth[itrf, itrc] ** 2) / np.sqrt(wc.Nt)),
+                rtol=5 * float((f_mult_smooth[itrf, itrc] ** 2) / np.sqrt(wc.Nt)),
             )
 
 
@@ -451,8 +451,8 @@ def test_nonstationary_mean_zero_case() -> None:
             assert np.allclose(
                 got_loc,
                 pred_loc,
-                atol=5 * (f_mult_smooth[itrf, itrc] ** 2) / np.sqrt(wc.Nt),
-                rtol=5 * (bg_loc) / np.sqrt(wc.Nt),
+                atol=5.0 * float((f_mult_smooth[itrf, itrc] ** 2) / np.sqrt(wc.Nt)),
+                rtol=5.0 * float(np.max(bg_loc) / np.sqrt(wc.Nt)),
             )
 
 
@@ -510,7 +510,7 @@ def nonstationary_mean_smooth_helper(
             assert np.isclose(
                 (angle_got[itrp, itrc] - phase_exp[itrp] + np.pi) % (2 * np.pi) + phase_exp[itrp] - np.pi,
                 phase_exp[itrp],
-                atol=1.0e-2 / (amp_got[itrp, itrc] + 0.001),
+                atol=float(1.0e-2 / (amp_got[itrp, itrc] + 0.001)),
                 rtol=1.0e-1,
             )
 
@@ -546,8 +546,9 @@ def nonstationary_mean_smooth_helper(
             assert np.allclose(
                 got_loc,
                 pred_loc,
-                atol=5 * (f_mult_smooth[itrf, itrc] ** 2) / np.sqrt(wc.Nt),
-                rtol=5 * (bg_loc) / np.sqrt(wc.Nt),
+                atol=5.0 * float((f_mult_smooth[itrf, itrc] ** 2) / np.sqrt(wc.Nt)),
+                rtol=5 * float(np.max(bg_loc) / np.sqrt(wc.Nt)),
+
             )
 
 
