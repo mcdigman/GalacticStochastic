@@ -3,10 +3,10 @@
 
 import pytest
 
-# TODO whatever
-# TODO whatever 2
+# whatever
+# whatever 2
 
-# scaling on (Nf, Nt, dt, mult) in the second configuration
+# whatever 3
 @pytest.mark.skip
 def test_ruff_fails() -> None:
     """A test case that causes ruff to have an infinite loop"""
