@@ -21,17 +21,9 @@ repos:
     args: [--allow-missing-credentials]
   - id: detect-private-key
   - id: mixed-line-ending
-    #  - id: name-tests-test
-    #args: [--pytest-test-first]
   - id: pretty-format-json
     args: [--autofix]
   - id: requirements-txt-fixer
-
-    #- repo: https://github.com/pycqa/isort
-    #  rev: 6.0.1
-    #  hooks:
-    #  - id: isort
-    #    name: isort (python)
 
 - repo: https://github.com/asottile/pyupgrade
   rev: v3.19.1

@@ -4,8 +4,11 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import scipy.signal
 import tomllib
 import WDMWaveletTransforms.fft_funcs as fft
+from numpy.testing import assert_allclose
+from scipy.interpolate import InterpolatedUnivariateSpline
 from WDMWaveletTransforms.wavelet_transforms import inverse_wavelet_freq, inverse_wavelet_time
 
 from GalacticStochastic.testing_tools import unit_normal_battery
@@ -15,15 +18,20 @@ from LisaWaveformTools.noise_model import DiagonalNonstationaryDenseNoiseModel, 
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
 
-def test_noise_normalization_flat() -> None:
+@pytest.mark.parametrize('noise_curve_mode', [0, 1])
+@pytest.mark.parametrize('distort_mult', [1, 2, 4])
+def test_noise_normalization_flat(noise_curve_mode: int, distort_mult: int) -> None:
     """Test ability to generate noise matching known spectrum through wavelet methods"""
     toml_filename = 'tests/spectral_noise_test_config1.toml'
 
     with Path(toml_filename).open('rb') as f:
         config = tomllib.load(f)
 
-    config['lisa_constants']['noise_curve_mode'] = 1
-
+    config['lisa_constants']['noise_curve_mode'] = noise_curve_mode
+    print(config['wavelet_constants']['Nf'])
+    config['wavelet_constants']['Nf'] = int(config['wavelet_constants']['Nf'] * distort_mult)
+    print(config['wavelet_constants']['Nf'])
+    config['wavelet_constants']['Nt'] = int(config['wavelet_constants']['Nt'] // distort_mult)
     wc = get_wavelet_model(config)
     lc = get_lisa_constants(config)
 
@@ -39,7 +47,7 @@ def test_noise_normalization_flat() -> None:
 
     S_inst_m = instrument_noise_AET_wdm_m(lc, wc)
     spectra_need = np.zeros((ND // 2 + 1, nc_noise))
-    spectra_need[1:, :] = np.sqrt(ND // 2) * np.sqrt(instrument_noise_AET(fs_fft[1:], lc))
+    spectra_need[1:, :] = np.sqrt(instrument_noise_AET(fs_fft[1:], lc))
 
     # check whitened noise matches correct spectrum
     noise_model_stat = DiagonalStationaryDenseNoiseModel(S_inst_m, wc, 1, nc_snr, seed=seed)
@@ -47,29 +55,50 @@ def test_noise_normalization_flat() -> None:
     noise_realization_freq = np.zeros((ND // 2 + 1, nc_noise), dtype=np.complex128)
     noise_realization_time = np.zeros((ND, nc_noise), dtype=np.float64)
 
+    psd_interp = np.zeros((ND // 2 + 1, nc_noise))
+
     for itrc in range(nc_noise):
         noise_realization_time[:, itrc] = inverse_wavelet_time(noise_wave[:, :, itrc], Nf, Nt)
+        fpsd, psd_loc = scipy.signal.welch(noise_realization_time[:, itrc], fs=1. / dt, nperseg=2 * Nf, scaling='density', window='tukey')
+        psd_interp[:, itrc] = InterpolatedUnivariateSpline(fpsd, psd_loc, k=3, ext=1)(fs_fft)
         # plt.plot(noise_realization_time[:, 0]**2)
         # plt.show()
 
     for itrc in range(nc_noise):
-        noise_realization_freq[:, itrc] = inverse_wavelet_freq(noise_wave[:, :, itrc], Nf, Nt)
+        nrm = float(np.sqrt(ND // 2) / np.sqrt(2 * wc.dt))
+        noise_realization_freq[:, itrc] = inverse_wavelet_freq(noise_wave[:, :, itrc], Nf, Nt) / nrm
         # NOTE have to cut off Nt because at very low frequencies
         # we are not currently estimating the spectrum correctly in the wavelet domain
         # also dont't hit the frequencies with big dips
+        arglim_min = max(Nt, np.int64(np.pi * max(2 * wc.Tobs / wc.Tw, 2 * wc.Tobs / wc.DT)))
         arglim = np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs)
         # import matplotlib.pyplot as plt
-        # plt.loglog(np.abs(noise_realization_freq[Nt // 2:arglim, itrc]))
-        # plt.loglog(np.abs(spectra_need[Nt // 2:arglim, itrc]))
+        # plt.loglog(np.abs(noise_realization_freq[arglim_min:arglim, itrc]))
+        # plt.loglog(np.sqrt(np.abs(psd_interp[arglim_min:arglim, itrc])))
+        # plt.loglog(np.abs(spectra_need[arglim_min:arglim, itrc]))
         # plt.show()
+        print(arglim_min, wc.Nt, wc.Nt, 1. / wc.DT, 1. / wc.Tobs, 1. / wc.Tw, fs_fft[arglim])
+        print(wc.mult)
+        print(psd_interp[:, itrc])
+        print(np.std(np.real(noise_realization_freq[arglim_min:arglim, itrc] / spectra_need[arglim_min:arglim, itrc])))
+        print(np.std(np.imag(noise_realization_freq[arglim_min:arglim, itrc] / spectra_need[arglim_min:arglim, itrc])))
+        print(np.std(np.real(noise_realization_freq[arglim_min:arglim, itrc] / np.sqrt(psd_interp[arglim_min:arglim, itrc]))))
+        print(np.std(np.imag(noise_realization_freq[arglim_min:arglim, itrc] / np.sqrt(psd_interp[arglim_min:arglim, itrc]))))
+        print(np.sqrt(2 * wc.dt), 2 * dt, np.sqrt(Nf), np.sqrt(ND // 2) / np.sqrt(2 * wc.dt), np.sqrt(wc.Nf) * (np.sqrt(2 * wc.dt)), np.sqrt(12318.0 / Nf))
+        corr_real = np.corrcoef(np.real(noise_realization_freq[arglim_min:arglim, itrc]), np.imag(noise_realization_freq[arglim_min:arglim, itrc]))
+        print(corr_real)
+        angle_got = np.angle(noise_realization_freq[arglim_min:arglim, itrc])
+        assert_allclose(corr_real[0, 1], 0., atol=2.e-3)
+        assert_allclose(np.mean(angle_got), 0., atol=4. / np.sqrt(angle_got.size))
+        assert_allclose(spectra_need[arglim_min:arglim, itrc], np.sqrt(psd_interp[arglim_min:arglim, itrc]), atol=1.e-40, rtol=2.e-1)
         _ = unit_normal_battery(
-            np.real(noise_realization_freq[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
-            mult=1.0,
+            np.real(noise_realization_freq[arglim_min:arglim, itrc] / spectra_need[arglim_min:arglim, itrc]),
+            mult=1.,
             do_assert=True,
         )
         _ = unit_normal_battery(
-            np.imag(noise_realization_freq[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
-            mult=1.0,
+            np.imag(noise_realization_freq[arglim_min:arglim, itrc] / spectra_need[arglim_min:arglim, itrc]),
+            mult=1.,
             do_assert=True,
         )
 
@@ -82,15 +111,16 @@ def test_noise_normalization_flat() -> None:
         # NOTE have to cut off Nt because at very low frequencies
         # we are not currently estimating the spectrum correctly in the wavelet domain
         # also dont't hit the frequencies with big dips
+        nrm = float(np.sqrt(ND // 2) / np.sqrt(2 * wc.dt))
         arglim = np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs)
         _ = unit_normal_battery(
             np.real(noise_realization_freq_var[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
-            mult=1.0,
+            mult=nrm,
             do_assert=True,
         )
         _ = unit_normal_battery(
             np.imag(noise_realization_freq_var[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
-            mult=1.0,
+            mult=nrm,
             do_assert=True,
         )
 
@@ -221,12 +251,13 @@ def test_noise_normalization_match() -> None:
 
     S_inst_m = instrument_noise_AET_wdm_m(lc, wc)
     spectra_need = np.zeros((ND // 2 + 1, nc_noise))
-    spectra_need[1:, :] = np.sqrt(ND // 2) * np.sqrt(instrument_noise_AET(fs_fft[1:], lc))
+    spectra_need[1:, :] = np.sqrt(instrument_noise_AET(fs_fft[1:], lc))
 
     # check whitened noise matches correct spectrum
     noise_model_stat = DiagonalStationaryDenseNoiseModel(S_inst_m, wc, 1, nc_snr, seed=seed)
     noise_wave = noise_model_stat.generate_dense_noise()
     noise_realization_freq = np.zeros((ND // 2 + 1, nc_noise), dtype=np.complex128)
+    nrm = float(np.sqrt(ND // 2) / np.sqrt(2 * wc.dt))
     for itrc in range(nc_noise):
         noise_realization_freq[:, itrc] = inverse_wavelet_freq(noise_wave[:, :, itrc], Nf, Nt)
         # NOTE have to cut off Nt because at very low frequencies
@@ -239,12 +270,12 @@ def test_noise_normalization_match() -> None:
         # plt.show()
         _ = unit_normal_battery(
             np.real(noise_realization_freq[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
-            mult=1.0,
+            mult=nrm,
             do_assert=True,
         )
         _ = unit_normal_battery(
             np.imag(noise_realization_freq[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
-            mult=1.0,
+            mult=nrm,
             do_assert=True,
         )
 
@@ -260,11 +291,11 @@ def test_noise_normalization_match() -> None:
         arglim = np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs)
         _ = unit_normal_battery(
             np.real(noise_realization_freq_var[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
-            mult=1.0,
+            mult=nrm,
             do_assert=True,
         )
         _ = unit_normal_battery(
             np.imag(noise_realization_freq_var[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
-            mult=1.0,
+            mult=nrm,
             do_assert=True,
         )

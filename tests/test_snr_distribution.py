@@ -176,7 +176,7 @@ def test_noise_generation_scaling_direct(channel_mult: tuple[float, float, float
     # assert_allclose(log_likelihood_mean_exp1, log_likelihood_mean_exp2, atol=1.e-100, rtol=1.e-10)
 
     snr_channel2 = noise_manager2.get_sparse_snrs(wavelet_waveform2, nt_lim_snr2)
-    snr_tot2 = np.linalg.norm(snr_channel2)
+    snr_tot2 = float(np.linalg.norm(snr_channel2))
 
     n_set_tot2 = np.sum(wavelet_waveform2.n_set)
 
@@ -412,10 +412,10 @@ def test_noise_generation_scaling_compare(channel_mult: tuple[float, float, floa
     # assert_allclose(log_likelihood_mean_exp1, log_likelihood_mean_exp2, atol=1.e-100, rtol=1.e-10)
 
     snr_channel1 = noise_manager1.get_sparse_snrs(wavelet_waveform1, nt_lim_snr1)
-    snr_tot1 = np.linalg.norm(snr_channel1)
+    snr_tot1 = float(np.linalg.norm(snr_channel1))
 
     snr_channel2 = noise_manager2.get_sparse_snrs(wavelet_waveform2, nt_lim_snr2)
-    snr_tot2 = np.linalg.norm(snr_channel2)
+    snr_tot2 = float(np.linalg.norm(snr_channel2))
 
     print('1 likelihood mean, std, min, max', np.mean(log_likelihood1), np.std(log_likelihood1), np.min(log_likelihood1), np.max(log_likelihood1))
     print('1 likelihood expect', log_likelihood_mean_exp1)
