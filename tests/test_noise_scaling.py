@@ -21,6 +21,7 @@ from WaveletWaveforms.wdm_config import get_wavelet_model
 # TODO add higher precision test using identical noise generated natively in time domain
 # TODO add test with large enough slope to cross multiple pixels
 
+
 # scaling on (Nf, Nt, dt, mult) in the second configuration
 @pytest.mark.parametrize(
     'channel_mult',
