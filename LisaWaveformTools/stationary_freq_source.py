@@ -202,27 +202,27 @@ class StationarySourceWaveformFreq(
         # enforce cleanup of values that will not be reset
         if nf_lim_old.nx_max > nf_high:
             # TODO this manipulation of kdotx should only happen if it is a private variable
-            self.kdotx[nf_high : nf_lim_old.nx_max] = 0.0
-            self._tdi_waveform.AF[:, nf_high : nf_lim_old.nx_max] = 0.0
-            self._tdi_waveform.PF[:, nf_high : nf_lim_old.nx_max] = 0.0
-            self._tdi_waveform.TF[:, nf_high : nf_lim_old.nx_max] = 0.0
-            self._tdi_waveform.TFp[:, nf_high : nf_lim_old.nx_max] = 0.0
-            self._spacecraft_channels.RR[:, nf_high : nf_lim_old.nx_max] = 0.0
-            self._spacecraft_channels.II[:, nf_high : nf_lim_old.nx_max] = 0.0
-            self._spacecraft_channels.dRR[:, nf_high : nf_lim_old.nx_max] = 0.0
-            self._spacecraft_channels.dII[:, nf_high : nf_lim_old.nx_max] = 0.0
+            self.kdotx[nf_high: nf_lim_old.nx_max] = 0.0
+            self._tdi_waveform.AF[:, nf_high: nf_lim_old.nx_max] = 0.0
+            self._tdi_waveform.PF[:, nf_high: nf_lim_old.nx_max] = 0.0
+            self._tdi_waveform.TF[:, nf_high: nf_lim_old.nx_max] = 0.0
+            self._tdi_waveform.TFp[:, nf_high: nf_lim_old.nx_max] = 0.0
+            self._spacecraft_channels.RR[:, nf_high: nf_lim_old.nx_max] = 0.0
+            self._spacecraft_channels.II[:, nf_high: nf_lim_old.nx_max] = 0.0
+            self._spacecraft_channels.dRR[:, nf_high: nf_lim_old.nx_max] = 0.0
+            self._spacecraft_channels.dII[:, nf_high: nf_lim_old.nx_max] = 0.0
 
         if nf_lim_old.nx_min < nf_low:
             # TODO this manipulation of kdotx should only happen if it is a private variable
-            self.kdotx[nf_lim_old.nx_min : nf_low] = 0.0
-            self._tdi_waveform.AF[:, nf_lim_old.nx_min : nf_low] = 0.0
-            self._tdi_waveform.PF[:, nf_lim_old.nx_min : nf_low] = 0.0
-            self._tdi_waveform.TF[:, nf_lim_old.nx_min : nf_low] = 0.0
-            self._tdi_waveform.TFp[:, nf_lim_old.nx_min : nf_low] = 0.0
-            self._spacecraft_channels.RR[:, nf_lim_old.nx_min : nf_low] = 0.0
-            self._spacecraft_channels.II[:, nf_lim_old.nx_min : nf_low] = 0.0
-            self._spacecraft_channels.dRR[:, nf_lim_old.nx_min : nf_low] = 0.0
-            self._spacecraft_channels.dII[:, nf_lim_old.nx_min : nf_low] = 0.0
+            self.kdotx[nf_lim_old.nx_min: nf_low] = 0.0
+            self._tdi_waveform.AF[:, nf_lim_old.nx_min: nf_low] = 0.0
+            self._tdi_waveform.PF[:, nf_lim_old.nx_min: nf_low] = 0.0
+            self._tdi_waveform.TF[:, nf_lim_old.nx_min: nf_low] = 0.0
+            self._tdi_waveform.TFp[:, nf_lim_old.nx_min: nf_low] = 0.0
+            self._spacecraft_channels.RR[:, nf_lim_old.nx_min: nf_low] = 0.0
+            self._spacecraft_channels.II[:, nf_lim_old.nx_min: nf_low] = 0.0
+            self._spacecraft_channels.dRR[:, nf_lim_old.nx_min: nf_low] = 0.0
+            self._spacecraft_channels.dII[:, nf_lim_old.nx_min: nf_low] = 0.0
 
         self.nf_lim = PixelGenericRange(nf_low, nf_high, nf_lim_old.dx, nf_lim_old.x_min)
 

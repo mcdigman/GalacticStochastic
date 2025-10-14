@@ -495,9 +495,9 @@ def test_sincos_low_wdm_match(m: int, use_tukey: bool, use_cos: bool) -> None:
 
     if not use_tukey:
         assert_allclose(wave_got_time[:, 0:m], 0.0, atol=1.0e-8)
-        assert_allclose(wave_got_time[:, m + 1 :], 0.0, atol=1.0e-8)
+        assert_allclose(wave_got_time[:, m + 1:], 0.0, atol=1.0e-8)
         assert_allclose(wave_got_freq[:, 0:m], 0.0, atol=1.0e-8)
-        assert_allclose(wave_got_freq[:, m + 1 :], 0.0, atol=1.0e-8)
+        assert_allclose(wave_got_freq[:, m + 1:], 0.0, atol=1.0e-8)
 
         alt1 = not (m % 2 == 1) ^ use_cos  # or (not (m%2==1) and not use_cos)
         if alt1:
@@ -564,9 +564,9 @@ def test_sincos_wdm_match(dt_loc: float, Nt_loc: int, Nf_loc: int, m: int, use_c
     assert matchsigf_sigt < 1.0e-7
     assert_allclose(wave_got_time, wave_got_freq, atol=1.0e-8, rtol=1.0e-8)
     assert_allclose(wave_got_time[:, 0:m], 0.0, atol=1.0e-8)
-    assert_allclose(wave_got_time[:, m + 1 :], 0.0, atol=1.0e-8)
+    assert_allclose(wave_got_time[:, m + 1:], 0.0, atol=1.0e-8)
     assert_allclose(wave_got_freq[:, 0:m], 0.0, atol=1.0e-8)
-    assert_allclose(wave_got_freq[:, m + 1 :], 0.0, atol=1.0e-8)
+    assert_allclose(wave_got_freq[:, m + 1:], 0.0, atol=1.0e-8)
 
     alt1 = not (m % 2 == 1) ^ use_cos  # or (not (m%2==1) and not use_cos)
     if alt1:

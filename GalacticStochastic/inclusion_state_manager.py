@@ -323,10 +323,10 @@ class BinaryInclusionState(StateManager):
         if storage_mode in (1, 3):
             # store last snrs
             _ = hf_include.create_dataset(
-                'snrs_upper', data=self._snrs_upper[self._itrn - 1 : self._itrn], compression='gzip'
+                'snrs_upper', data=self._snrs_upper[self._itrn - 1: self._itrn], compression='gzip'
             )
             _ = hf_include.create_dataset(
-                'snrs_lower', data=self._snrs_lower[self._itrn - 1 : self._itrn], compression='gzip'
+                'snrs_lower', data=self._snrs_lower[self._itrn - 1: self._itrn], compression='gzip'
             )
 
         if storage_mode in (2, 3):
@@ -336,7 +336,7 @@ class BinaryInclusionState(StateManager):
         if storage_mode == 5:
             # store last snr for upper channel only
             _ = hf_include.create_dataset(
-                'snrs_upper', data=self._snrs_upper[self._itrn - 1 : self._itrn], compression='gzip'
+                'snrs_upper', data=self._snrs_upper[self._itrn - 1: self._itrn], compression='gzip'
             )
 
         if storage_mode == 4:
@@ -433,7 +433,7 @@ class BinaryInclusionState(StateManager):
 
             if storage_mode in (1, 3, 5):
                 # store last snrs
-                write_target[self._itrn - 1 : self._itrn] = snrs_temp[()]
+                write_target[self._itrn - 1: self._itrn] = snrs_temp[()]
                 self._snrs_tot_load(lower_mode, itrn=self._itrn - 1)
 
             # load the total snrs instead of reading them in from the file
@@ -470,11 +470,11 @@ class BinaryInclusionState(StateManager):
 
         Parameters
         ----------
-        hf_in : h5py.Group
+        hf_in: h5py.Group
             The HDF5 group where the state was stored.
-        group_name : str
+        group_name: str
             Name of the group under which to store the state (default is 'state_manager').
-        group_mode : int
+        group_mode: int
             If group_mode == 1, assume no new group was created, and read directly from hf_in.
             If group_mode == 0, assume a new group was created under hf_in with name group_name (default is 0).
 
@@ -677,7 +677,7 @@ class BinaryInclusionState(StateManager):
 
         Parameters
         ----------
-        params_gb_in : NDArray[np.floating]
+        params_gb_in: NDArray[np.floating]
             Array of shape (n_binaries, N_PAR_GB) containing the parameters of all galactic binaries.
             The parameters are assumed to be in the order:
             [amp0_t, l, phi, F0, FTd0, i, phi0, psi]
@@ -784,7 +784,7 @@ class BinaryInclusionState(StateManager):
 
         Parameters
         ----------
-        itrb : int
+        itrb: int
             The index of the binary under consideration.
 
         Raises
@@ -834,7 +834,7 @@ class BinaryInclusionState(StateManager):
 
         Parameters
         ----------
-        itrb : int
+        itrb: int
             The index of the binary under consideration.
 
         Returns
@@ -887,7 +887,7 @@ class BinaryInclusionState(StateManager):
 
         Parameters
         ----------
-        itrb : int
+        itrb: int
             The index of the binary under consideration.
         """
         itrn = self._itrn
@@ -920,7 +920,7 @@ class BinaryInclusionState(StateManager):
 
         Parameters
         ----------
-        itrb : int
+        itrb: int
             The index of the binary under consideration.
         """
         itrn = self._itrn

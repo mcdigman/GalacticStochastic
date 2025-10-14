@@ -88,7 +88,7 @@ def instrument_noise_AET_wdm_loop(
     S_inst_m = np.zeros((wc.Nf, S_inst_long.shape[-1]))
     # apply window in loop
     for m in range(wc.Nf):
-        S_inst_m[m] = np.dot(phif2, S_inst_long[m * half_Nt : (m + 2) * half_Nt])
+        S_inst_m[m] = np.dot(phif2, S_inst_long[m * half_Nt: (m + 2) * half_Nt])
 
     return S_inst_m
 

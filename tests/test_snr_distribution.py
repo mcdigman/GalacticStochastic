@@ -181,7 +181,7 @@ def test_noise_generation_scaling_direct(channel_mult: tuple[float, float, float
     print('data*signal mean, std, min, max', data_signal.mean(), data_signal.std(), data_signal.min(), data_signal.max())
     print('data*noise mean, std, min, max', data_noise.mean(), data_noise.std(), data_noise.min(), data_noise.max())
     print('data*data mean, std, min, max', data_data.mean(), data_data.std(), data_data.min(), data_data.max())
-    print('2 data*data mean diff, std', (data_data.mean() - n_set_tot - signal_signal.mean()) / np.sqrt(2 * n_set_tot + 2 * snr_tot**2), data_data.std() / np.sqrt(2 * n_set_tot + 2 * snr_tot**2))
+    print('data*data mean diff, std', (data_data.mean() - n_set_tot - signal_signal.mean()) / np.sqrt(2 * n_set_tot + 2 * snr_tot**2), data_data.std() / np.sqrt(2 * n_set_tot + 2 * snr_tot**2))
     print('signal noise noise noise mean, std, min, max', signal_noise_noise_noise2.mean(), signal_noise_noise_noise2.std(), signal_noise_noise_noise2.min(), signal_noise_noise_noise2.max())
     print('data*data exp, std', np.sqrt(2 * n_set_tot + 2 * snr_tot**2) / np.sqrt(n_seed), np.sqrt(2.0) / np.sqrt(n_seed) / np.sqrt(2 * n_set_tot + 2 * snr_tot**2))
     print('snr channels, total', snr_channel, snr_tot)

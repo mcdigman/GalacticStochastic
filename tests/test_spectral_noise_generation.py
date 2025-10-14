@@ -139,12 +139,12 @@ def test_noise_normalization_flat(noise_curve_mode: int, distort_mult: int) -> N
         nrm = float(np.sqrt(ND // 2) / np.sqrt(2 * wc.dt))
         arglim = int(np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs))
         _ = unit_normal_battery(
-            np.real(noise_realization_freq_var[Nt // 2 : arglim, itrc] / spectra_need[Nt // 2 : arglim, itrc]),
+            np.real(noise_realization_freq_var[Nt // 2: arglim, itrc] / spectra_need[Nt // 2: arglim, itrc]),
             mult=nrm,
             do_assert=True,
         )
         _ = unit_normal_battery(
-            np.imag(noise_realization_freq_var[Nt // 2 : arglim, itrc] / spectra_need[Nt // 2 : arglim, itrc]),
+            np.imag(noise_realization_freq_var[Nt // 2: arglim, itrc] / spectra_need[Nt // 2: arglim, itrc]),
             mult=nrm,
             do_assert=True,
         )
@@ -304,12 +304,12 @@ def test_noise_normalization_match() -> None:
         # plt.loglog(np.abs(spectra_need[Nt // 2:arglim, itrc]))
         # plt.show()
         _ = unit_normal_battery(
-            np.real(noise_realization_freq[Nt // 2 : arglim, itrc] / spectra_need[Nt // 2 : arglim, itrc]),
+            np.real(noise_realization_freq[Nt // 2: arglim, itrc] / spectra_need[Nt // 2: arglim, itrc]),
             mult=nrm,
             do_assert=True,
         )
         _ = unit_normal_battery(
-            np.imag(noise_realization_freq[Nt // 2 : arglim, itrc] / spectra_need[Nt // 2 : arglim, itrc]),
+            np.imag(noise_realization_freq[Nt // 2: arglim, itrc] / spectra_need[Nt // 2: arglim, itrc]),
             mult=nrm,
             do_assert=True,
         )
@@ -325,12 +325,12 @@ def test_noise_normalization_match() -> None:
         # also dont't hit the frequencies with big dips
         arglim = np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs)
         _ = unit_normal_battery(
-            np.real(noise_realization_freq_var[Nt // 2 : arglim, itrc] / spectra_need[Nt // 2 : arglim, itrc]),
+            np.real(noise_realization_freq_var[Nt // 2: arglim, itrc] / spectra_need[Nt // 2: arglim, itrc]),
             mult=nrm,
             do_assert=True,
         )
         _ = unit_normal_battery(
-            np.imag(noise_realization_freq_var[Nt // 2 : arglim, itrc] / spectra_need[Nt // 2 : arglim, itrc]),
+            np.imag(noise_realization_freq_var[Nt // 2: arglim, itrc] / spectra_need[Nt // 2: arglim, itrc]),
             mult=nrm,
             do_assert=True,
         )

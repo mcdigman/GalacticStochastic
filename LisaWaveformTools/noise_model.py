@@ -315,8 +315,8 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
         self._inv_chol_S: NDArray[np.floating] = np.zeros((self._wc.Nt, self._wc.Nf, self._nc_noise))
         for j in range(self._wc.Nt):
             for itrc in range(self._nc_noise):
-                chol_S_loc = np.sqrt(self._S[j, self.prune :, itrc])
-                self._inv_chol_S[j, self.prune :, itrc] = 1.0 / chol_S_loc
+                chol_S_loc = np.sqrt(self._S[j, self.prune:, itrc])
+                self._inv_chol_S[j, self.prune:, itrc] = 1.0 / chol_S_loc
 
     @override
     def store_hdf5(

@@ -278,7 +278,7 @@ def get_scaling_test_case_helper(
         x = np.abs(T - T[nt_loc // 2])
         dxdt = np.zeros(nt_loc)
         dxdt[nt_loc // 2] = 0.0
-        dxdt[nt_loc // 2 + 1 :] = 1.0
+        dxdt[nt_loc // 2 + 1:] = 1.0
         dxdt[: nt_loc // 2] = -1.0
     elif t_scaling == 'quad1':
         x = T**2
@@ -451,7 +451,7 @@ def test_gradient_uniform_inplace(t_scaling: str, DT: float, t0: float, nt_loc: 
     gradient_uniform_inplace(ys, result, DT)
 
     for itrc in range(nc_waveform):
-        gradient_uniform_inplace(ys[itrc : itrc + 1], result2[itrc : itrc + 1], DT)
+        gradient_uniform_inplace(ys[itrc: itrc + 1], result2[itrc: itrc + 1], DT)
 
     assert_array_equal(result, result2)
 
@@ -547,7 +547,7 @@ def test_stabilized_gradient_uniform_inplace(
     stabilized_gradient_uniform_inplace(x, dxdt, y_perturbed, result, DT)
 
     for itrc in range(nc_waveform):
-        stabilized_gradient_uniform_inplace(x, dxdt, y_perturbed[itrc : itrc + 1], result2[itrc : itrc + 1], DT)
+        stabilized_gradient_uniform_inplace(x, dxdt, y_perturbed[itrc: itrc + 1], result2[itrc: itrc + 1], DT)
 
     assert_array_equal(result, result2)
     del result2
@@ -572,7 +572,7 @@ def test_stabilized_gradient_uniform_inplace(
         assert_array_equal(mask1, (mask2 & mask3))
 
         # indices where finite except at the edge
-        mask_ind = np.argwhere(mask1[1 : nt_loc - 1]).flatten() + 1
+        mask_ind = np.argwhere(mask1[1: nt_loc - 1]).flatten() + 1
         # check general closeness to expectation
         assert_allclose(result[itrc, mask1], gradient_exp[itrc, mask1], atol=1.0e-12, rtol=1.0e-12)
 

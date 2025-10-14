@@ -20,13 +20,13 @@ class ExtrinsicParams(NamedTuple):
 
     Parameters
     ----------
-    costh : float
+    costh: float
         Cosine of the source's ecliptic colatitude
-    phi : float
+    phi: float
         Source's ecliptic longitude in radians
-    cosi : float
+    cosi: float
         Cosine of the source's inclination angle
-    psi : float
+    psi: float
         Source polarization angle in radians
     """
 
@@ -66,7 +66,7 @@ def _packed_from_extrinsic_helper(params_extrinsic: ExtrinsicParams) -> NDArray[
 
     Parameters
     ----------
-    params_extrinsic : ExtrinsicParams
+    params_extrinsic: ExtrinsicParams
         The extrinsic parameters to pack.
 
     Returns
@@ -87,7 +87,7 @@ def _validate_extrinsic_helper(params_extrinsic: ExtrinsicParams) -> bool:
 
     Parameters
     ----------
-    params_extrinsic : ExtrinsicParams
+    params_extrinsic: ExtrinsicParams
         The extrinsic parameters to validate.
 
     Returns
@@ -205,7 +205,7 @@ class SourceParamsManager(Generic[ExtrinsicParamsType, IntrinsicParamsType], Abs
     def params_packed(self, params_in: NDArray[np.floating]) -> None:
         assert params_in.size == self.n_packed
         extrinsic_loc = params_in[: self._n_extrinsic]
-        intrinsic_loc = params_in[self._n_extrinsic : self._n_extrinsic + self._n_intrinsic]
+        intrinsic_loc = params_in[self._n_extrinsic: self._n_extrinsic + self._n_intrinsic]
         self._extrinsic_manager.params_packed = extrinsic_loc
         self._intrinsic_manager.params_packed = intrinsic_loc
         self.params: SourceParams = SourceParams(self._intrinsic_manager.params, self._extrinsic_manager.params)

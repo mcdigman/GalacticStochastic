@@ -37,21 +37,21 @@ class NoiseModelManager(StateManager):
 
         Parameters
         ----------
-        ic : IterationConfig
+        ic: IterationConfig
             Configuration object for the iterative fit.
-        wc : WDMWaveletConstants
+        wc: WDMWaveletConstants
             Wavelet constants describing the time-frequency grid.
-        lc : LISAConstants
+        lc: LISAConstants
             LISA instrument configuration constants.
-        fit_state : IterativeFitState
+        fit_state: IterativeFitState
             Object tracking the current state of the iterative fit.
-        bgd : BGDecomposition
+        bgd: BGDecomposition
             Galactic background decomposition object.
-        cyclo_mode : int
+        cyclo_mode: int
             Cyclostationary mode flag. If nonzero, enables cyclostationary noise modeling.
-        nt_lim_snr : PixelGenericRange
+        nt_lim_snr: PixelGenericRange
             Range of time-frequency pixels used for SNR calculations.
-        instrument_random_seed : int
+        instrument_random_seed: int
             Random seed for instrument noise realizations.
 
         Raises
@@ -422,12 +422,12 @@ class NoiseModelManager(StateManager):
         )
         galactic_below_high = self.bgd.get_galactic_below_high()
         noise_divide = np.sqrt(
-            self.noise_upper.get_S()[self.nt_lim_snr.nx_min : self.nt_lim_snr.nx_max, res_mask, :2]
+            self.noise_upper.get_S()[self.nt_lim_snr.nx_min: self.nt_lim_snr.nx_max, res_mask, :2]
             - self.S_inst_m[res_mask, :2],
         )
         points_res = (
             galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy)[
-                self.nt_lim_snr.nx_min : self.nt_lim_snr.nx_max,
+                self.nt_lim_snr.nx_min: self.nt_lim_snr.nx_max,
                 res_mask,
                 :2,
             ]
@@ -502,7 +502,7 @@ class NoiseModelManager(StateManager):
 
         Parameters
         ----------
-        white_mode : int
+        white_mode: int
             If white_mode == 0, return colored noise.
             If white_mode == 1, return white noise (default).
 

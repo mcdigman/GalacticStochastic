@@ -449,15 +449,15 @@ def test_noise_generation_scaling_curve(channel_mult: tuple[float, float, float,
 
         # later bins have less loss of precision
         assert_allclose(
-            psd1_white[wc1.Nf // 2 :][mask1_lim[wc1.Nf // 2 :]],
-            psd1_white2[wc1.Nf // 2 :][mask1_lim[wc1.Nf // 2 :]],
+            psd1_white[wc1.Nf // 2:][mask1_lim[wc1.Nf // 2:]],
+            psd1_white2[wc1.Nf // 2:][mask1_lim[wc1.Nf // 2:]],
             atol=1.0e-100,
             rtol=5.0e-3,
         )
         if wc2.Nf > 32:
             assert_allclose(
-                psd2_white[wc2.Nf // 2 :][mask2_lim[wc2.Nf // 2 :]],
-                psd2_white2[wc2.Nf // 2 :][mask2_lim[wc2.Nf // 2 :]],
+                psd2_white[wc2.Nf // 2:][mask2_lim[wc2.Nf // 2:]],
+                psd2_white2[wc2.Nf // 2:][mask2_lim[wc2.Nf // 2:]],
                 atol=1.0e-100,
                 rtol=5.0e-3,
             )
