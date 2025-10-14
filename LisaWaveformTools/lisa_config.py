@@ -108,4 +108,21 @@ def get_lisa_constants(config: dict[str, Any]) -> LISAConstants:
     # Mode to use for instrument noise curve calculation
     noise_curve_mode = int(config_lc.get('noise_curve_mode', 0))
 
-    return LISAConstants(Larm, Sps, Sacc, kappa0, lambda0, fstr, t_arm, r_orbit, ec, fm, nc_waveform, nc_snr, t0, t_rise, rise_mode, noise_curve_mode)
+    return LISAConstants(
+        Larm,
+        Sps,
+        Sacc,
+        kappa0,
+        lambda0,
+        fstr,
+        t_arm,
+        r_orbit,
+        ec,
+        fm,
+        nc_waveform,
+        nc_snr,
+        t0,
+        t_rise,
+        rise_mode,
+        noise_curve_mode,
+    )

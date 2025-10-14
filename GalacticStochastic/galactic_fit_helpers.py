@@ -240,7 +240,10 @@ def filter_periods_fft(
 
 
 def _mean_smooth_helper(
-    x_mean: NDArray[np.floating], log_stabilizer: float, smooth_lengthf: float, interp_mult: int,
+    x_mean: NDArray[np.floating],
+    log_stabilizer: float,
+    smooth_lengthf: float,
+    interp_mult: int,
 ) -> NDArray[np.floating]:
     """
     Smooth a mean spectrum in log-frequency space using Gaussian filtering.
@@ -327,10 +330,10 @@ def get_S_cyclo(
     Estimate the cyclostationary spectrum of the galactic background using FFT-based filtering and smoothing.
 
     This function computes a time- and frequency-dependent estimate of the galactic background spectrum
-    by removing the mean time variation in the spectrum,
-    optionally filtering for specific periodicities of known physical interest, and smoothing the result in log-frequency space.
-    The output cyclostationary spectrum is given by the product of the smoothed mean spectrum and the smoothed time-dependent modulation ratio.
-    The method is independent of fiting functions for the frequency spectrum and uses the observed data to extract the cyclostationary structure.
+    by removing the mean time variation in the spectrum, optionally filtering for specific periodicities of interest,
+    and smoothing the result in log-frequency space.
+    The output cyclostationary spectrum is the product of the smoothed spectrum and the smoothed time modulation.
+    The method is independent of fiting functions for the frequency spectrum, as it uses only smoothing.
 
     Parameters
     ----------
@@ -410,9 +413,9 @@ def get_S_cyclo(
             # completely cut out faint frequencies for calculating the envelope modulation
             # faint frequencies are different and noisier, so just weighting may not work
             max_val: float = float(np.max(Sw_in_mean[:, itrc]))
-            if max_val == 0.:
+            if max_val == 0.0:
                 # patch to handle case where there is zero power separately
-                r_mean[:, itrc] = 1.
+                r_mean[:, itrc] = 1.0
             else:
                 mask: NDArray[np.bool_] = Sw_in_mean[:, itrc] > faint_cutoff_thresh * max_val
                 stabilizer: float = t_stabilizer_mult * float(max_val)

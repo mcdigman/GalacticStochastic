@@ -14,7 +14,18 @@ from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 # If you need a toml config, import get_lisa_constants, Path, tomllib, etc., and update generate_test_inputs accordingly.
 
 
-def generate_test_inputs(seed: int, nt_loc: int = 128) -> tuple[AntennaResponseChannels, ExtrinsicParams, NDArray[np.floating], NDArray[np.floating], int, int, NDArray[np.floating], LISAConstants]:
+def generate_test_inputs(
+    seed: int, nt_loc: int = 128
+) -> tuple[
+    AntennaResponseChannels,
+    ExtrinsicParams,
+    NDArray[np.floating],
+    NDArray[np.floating],
+    int,
+    int,
+    NDArray[np.floating],
+    LISAConstants,
+]:
     """Programmatically create varied yet deterministic test inputs for rigid_adiabatic_antenna."""
     toml_filename = 'tests/raantenna_test_config1.toml'
     with Path(toml_filename).open('rb') as f:
@@ -51,7 +62,10 @@ def generate_test_inputs(seed: int, nt_loc: int = 128) -> tuple[AntennaResponseC
     spacecraft_channels = AntennaResponseChannels(TTs, RR.copy(), II.copy(), dRR.copy(), dII.copy())
 
     params_extrinsic = ExtrinsicParams(
-        costh=rng.uniform(-1., 1.), phi=rng.uniform(0, 2 * np.pi), cosi=rng.uniform(-1., 1.), psi=rng.uniform(0, 2 * np.pi),
+        costh=rng.uniform(-1.0, 1.0),
+        phi=rng.uniform(0, 2 * np.pi),
+        cosi=rng.uniform(-1.0, 1.0),
+        psi=rng.uniform(0, 2 * np.pi),
     )
 
     nf_low = 0
@@ -71,7 +85,11 @@ def main(seeds: list[int], output_path: str) -> None:
             rigid_adiabatic_antenna(
                 spacecraft_channels,
                 params_extrinsic,
-                ts, FFs, nf_lim, kdotx_mut, lc,
+                ts,
+                FFs,
+                nf_lim,
+                kdotx_mut,
+                lc,
             )
             # Prepare group
             realization = realizations.create_group(str(seed))

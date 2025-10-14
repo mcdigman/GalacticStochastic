@@ -1,6 +1,5 @@
 """Time domain TDI waveform generation using the rigid adiabatic approximation."""
 
-
 import numpy as np
 from numba import njit, prange
 from numpy.typing import NDArray
@@ -14,7 +13,9 @@ from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 @njit()
 def phase_wrap_helper(
-    AET_waveform: StationaryWaveformTime, waveform: StationaryWaveformTime, wrap_thresh: float = 6.0,
+    AET_waveform: StationaryWaveformTime,
+    waveform: StationaryWaveformTime,
+    wrap_thresh: float = 6.0,
 ) -> None:
     """
     Wrap the tdi perturbations to the phases by appropriate factors of 2 pi.
@@ -127,7 +128,9 @@ def edge_rise_multiplier_helper(t: float, er: EdgeRiseModel, lc: LISAConstants) 
 
 
 @njit(fastmath=True)
-def apply_edge_rise_helper(t: NDArray[np.floating], A: NDArray[np.floating], er: EdgeRiseModel, lc: LISAConstants, nx_lim: PixelGenericRange) -> None:
+def apply_edge_rise_helper(
+    t: NDArray[np.floating], A: NDArray[np.floating], er: EdgeRiseModel, lc: LISAConstants, nx_lim: PixelGenericRange
+) -> None:
     """Apply edge rise to the amplitude of a waveform in place."""
     if lc.rise_mode == 3:
         pass
@@ -142,8 +145,16 @@ def apply_edge_rise_helper(t: NDArray[np.floating], A: NDArray[np.floating], er:
 
 
 @njit(fastmath=True, parallel=True)
-def amp_phase_loop_helper(F: NDArray[np.floating], T: NDArray[np.floating], waveform: StationaryWaveformGeneric, AET_waveform: StationaryWaveformGeneric, spacecraft_channels: AntennaResponseChannels, lc: LISAConstants, nx_lim: PixelGenericRange) -> None:
-    """Compute TDI (Time Delay Interferometry) modifications for the amplitude, phase, and frequency of a intrinsic_waveform.
+def amp_phase_loop_helper(
+    F: NDArray[np.floating],
+    T: NDArray[np.floating],
+    waveform: StationaryWaveformGeneric,
+    AET_waveform: StationaryWaveformGeneric,
+    spacecraft_channels: AntennaResponseChannels,
+    lc: LISAConstants,
+    nx_lim: PixelGenericRange,
+) -> None:
+    """Compute TDI modifications for the amplitude, phase, and frequency of a intrinsic_waveform.
 
     This function perturbs the intrinsic amplitude, phase, and frequency of a generic intrinsic_waveform
     from the stationary wave approximation to compute the TDI intrinsic_waveform in the stationary wave approximation.
@@ -281,7 +292,7 @@ def get_time_tdi_amp_phase_helper(
     er: EdgeRiseModel,
     nt_lim: PixelGenericRange,
 ) -> None:
-    """Compute TDI (Time Delay Interferometry) modifications for the amplitude, phase, and frequency of a intrinsic_waveform.
+    """Compute TDI modifications for the amplitude, phase, and frequency of a intrinsic_waveform.
 
     This function perturbs the intrinsic amplitude, phase, and frequency of a time domain intrinsic_waveform
     from the stationary wave approximation to compute the TDI intrinsic_waveform in the stationary wave approximation.
@@ -354,7 +365,9 @@ def get_time_tdi_amp_phase_helper(
 
     AET_waveform_generic = StationaryWaveformGeneric(AET_waveform.T, AET_PT, AET_FT, AET_waveform.FTd, AET_AT)
     waveform_generic = StationaryWaveformGeneric(waveform.T, waveform.PT, waveform.FT, waveform.FTd, waveform.AT)
-    amp_phase_loop_helper(waveform.FT, waveform.T, waveform_generic, AET_waveform_generic, spacecraft_channels, lc, nt_lim)
+    amp_phase_loop_helper(
+        waveform.FT, waveform.T, waveform_generic, AET_waveform_generic, spacecraft_channels, lc, nt_lim
+    )
     apply_edge_rise_helper(waveform.T, AET_waveform.AT, er, lc, nt_lim)
 
 
@@ -370,7 +383,7 @@ def get_time_tdi_amp_phase(
 ) -> None:
     """Compute TDI modifications for the amplitude, phase, frequency, and frequency derivative of a intrinsic_waveform.
 
-    This function perturbs the intrinsic amplitude, phase, frequency, and frequency derivative of a time domain intrinsic_waveform
+    This function perturbs the intrinsic amplitude, phase, frequency, and frequency derivative in the domain
     from the stationary wave approximation to compute the TDI intrinsic_waveform in the stationary wave approximation.
     Uses the real (RR) and imaginary (II) components already computed and stored in sc_channels
     using the rigid adiabatic approximation.

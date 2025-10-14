@@ -95,7 +95,7 @@ def _validate_extrinsic_helper(params_extrinsic: ExtrinsicParams) -> bool:
     bool
         True if the parameters are valid, False otherwise.
     """
-    if not -1. <= params_extrinsic.costh <= 1.:
+    if not -1.0 <= params_extrinsic.costh <= 1.0:
         return False
     return -1.0 <= params_extrinsic.cosi <= 1.0
 
@@ -166,7 +166,7 @@ class AbstractExtrinsicParamsManager(AbstractParamsManager[ExtrinsicParamsType],
         super().__init__(params_load)
 
 
-# TODO write default methods for AbstractIntrinsicParamsManager that reads names of packed parameter fields from a list, to make subclassing easier
+# TODO write default methods for AbstractIntrinsicParamsManager that reads names of packed parameter fields from a list
 class AbstractIntrinsicParamsManager(AbstractParamsManager[IntrinsicParamsType], ABC):
     """Manage creation, translation, and handling of IntrinsicParamsType objects."""
 
@@ -175,7 +175,11 @@ class AbstractIntrinsicParamsManager(AbstractParamsManager[IntrinsicParamsType],
 
 
 class SourceParamsManager(Generic[ExtrinsicParamsType, IntrinsicParamsType], AbstractParamsManager[SourceParams]):
-    def __init__(self, intrinsic: AbstractIntrinsicParamsManager[IntrinsicParamsType], extrinsic: AbstractExtrinsicParamsManager[ExtrinsicParamsType]) -> None:
+    def __init__(
+        self,
+        intrinsic: AbstractIntrinsicParamsManager[IntrinsicParamsType],
+        extrinsic: AbstractExtrinsicParamsManager[ExtrinsicParamsType],
+    ) -> None:
         self._intrinsic_manager: AbstractIntrinsicParamsManager[IntrinsicParamsType] = intrinsic
         self._extrinsic_manager: AbstractExtrinsicParamsManager[ExtrinsicParamsType] = extrinsic
 
@@ -200,8 +204,8 @@ class SourceParamsManager(Generic[ExtrinsicParamsType, IntrinsicParamsType], Abs
     @override
     def params_packed(self, params_in: NDArray[np.floating]) -> None:
         assert params_in.size == self.n_packed
-        extrinsic_loc = params_in[:self._n_extrinsic]
-        intrinsic_loc = params_in[self._n_extrinsic:self._n_extrinsic + self._n_intrinsic]
+        extrinsic_loc = params_in[: self._n_extrinsic]
+        intrinsic_loc = params_in[self._n_extrinsic : self._n_extrinsic + self._n_intrinsic]
         self._extrinsic_manager.params_packed = extrinsic_loc
         self._intrinsic_manager.params_packed = intrinsic_loc
         self.params: SourceParams = SourceParams(self._intrinsic_manager.params, self._extrinsic_manager.params)

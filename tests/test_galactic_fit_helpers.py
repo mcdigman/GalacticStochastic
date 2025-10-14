@@ -11,7 +11,12 @@ from numpy.typing import NDArray
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 import GalacticStochastic.global_const as gc
-from GalacticStochastic.galactic_fit_helpers import S_gal_model_5param, S_gal_model_7param, filter_periods_fft, get_S_cyclo
+from GalacticStochastic.galactic_fit_helpers import (
+    S_gal_model_5param,
+    S_gal_model_7param,
+    filter_periods_fft,
+    get_S_cyclo,
+)
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
@@ -39,8 +44,8 @@ def test_S_gal_fit_consistency() -> None:
     fknee = 0.03
 
     f1 = 0.1
-    beta = 0.  # parameter not present in first fit model, so must be set to 0 to match exactly
-    kappa = 0.  # parameter not present in first fit model, irrelevant if beta is 0
+    beta = 0.0  # parameter not present in first fit model, so must be set to 0 to match exactly
+    kappa = 0.0  # parameter not present in first fit model, irrelevant if beta is 0
 
     # derived parameters
     log10_A = np.log10(A)
@@ -49,40 +54,61 @@ def test_S_gal_fit_consistency() -> None:
     log10_fknee = np.log10(fknee)
 
     n_f = 10000
-    f_min = 0.
-    f_max = 10.
+    f_min = 0.0
+    f_max = 10.0
     f = np.linspace(f_min, f_max, n_f)
 
     # check vector scalar
     res10 = 2 * f ** (2.0 / 3.0) * S_gal_model_5param(f, log10_A, log10_f2, log10_f1, log10_fknee, alpha)
     res20 = S_gal_model_7param(f, log10_A, log10_f2, log10_f1, log10_fknee, alpha, beta, kappa)
 
-    assert_allclose(res10, res20, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(res10, res20, atol=1.0e-20, rtol=1.0e-10)
 
     # check vector vector
-    res11 = 2 * f ** (2.0 / 3.0) * S_gal_model_5param(f, np.full(n_f, log10_A), np.full(n_f, log10_f2), np.full(n_f, log10_f1), np.full(n_f, log10_fknee), np.full(n_f, alpha))
-    res21 = S_gal_model_7param(f, np.full(n_f, log10_A), np.full(n_f, log10_f2), np.full(n_f, log10_f1),
-                               np.full(n_f, log10_fknee), np.full(n_f, alpha), np.full(n_f, beta), np.full(n_f, kappa))
+    res11 = (
+        2
+        * f ** (2.0 / 3.0)
+        * S_gal_model_5param(
+            f,
+            np.full(n_f, log10_A),
+            np.full(n_f, log10_f2),
+            np.full(n_f, log10_f1),
+            np.full(n_f, log10_fknee),
+            np.full(n_f, alpha),
+        )
+    )
+    res21 = S_gal_model_7param(
+        f,
+        np.full(n_f, log10_A),
+        np.full(n_f, log10_f2),
+        np.full(n_f, log10_f1),
+        np.full(n_f, log10_fknee),
+        np.full(n_f, alpha),
+        np.full(n_f, beta),
+        np.full(n_f, kappa),
+    )
 
-    assert_allclose(res11, res21, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(res11, res21, atol=1.0e-20, rtol=1.0e-10)
 
     # check scalar scalar
     res12 = np.zeros(n_f)
     res22 = np.zeros(n_f)
     for itrf in range(n_f):
-        res12[itrf] = 2 * f[itrf] ** (2.0 / 3.0) * S_gal_model_5param(f[itrf], log10_A, log10_f2, log10_f1, log10_fknee, alpha)
+        res12[itrf] = (
+            2 * f[itrf] ** (2.0 / 3.0) * S_gal_model_5param(f[itrf], log10_A, log10_f2, log10_f1, log10_fknee, alpha)
+        )
         res22[itrf] = S_gal_model_7param(f[itrf], log10_A, log10_f2, log10_f1, log10_fknee, alpha, beta, kappa)
 
-    assert_allclose(res12, res22, atol=1.e-20, rtol=1.e-10)
+    assert_allclose(res12, res22, atol=1.0e-20, rtol=1.0e-10)
 
     # check cross consistent
-    assert_allclose(res10, res11, atol=1.e-20, rtol=1.e-14)
-    assert_allclose(res10, res12, atol=1.e-20, rtol=1.e-14)
-    assert_allclose(res11, res12, atol=1.e-20, rtol=1.e-14)
+    assert_allclose(res10, res11, atol=1.0e-20, rtol=1.0e-14)
+    assert_allclose(res10, res12, atol=1.0e-20, rtol=1.0e-14)
+    assert_allclose(res11, res12, atol=1.0e-20, rtol=1.0e-14)
 
-    assert_allclose(res20, res21, atol=1.e-20, rtol=1.e-14)
-    assert_allclose(res20, res22, atol=1.e-20, rtol=1.e-14)
-    assert_allclose(res21, res22, atol=1.e-20, rtol=1.e-14)
+    assert_allclose(res20, res21, atol=1.0e-20, rtol=1.0e-14)
+    assert_allclose(res20, res22, atol=1.0e-20, rtol=1.0e-14)
+    assert_allclose(res21, res22, atol=1.0e-20, rtol=1.0e-14)
 
 
 @pytest.mark.parametrize('sign_high', [1, -1])
@@ -93,7 +119,9 @@ def test_filter_periods_fft_full(sign_low: int, sign_high: int) -> None:
 
     period_list = tuple(
         np.arange(
-            0, np.int64(gc.SECSYEAR // wc.DT) // 2 + 1 / int(wc.Tobs / gc.SECSYEAR), 1 / int(wc.Tobs / gc.SECSYEAR),
+            0,
+            np.int64(gc.SECSYEAR // wc.DT) // 2 + 1 / int(wc.Tobs / gc.SECSYEAR),
+            1 / int(wc.Tobs / gc.SECSYEAR),
         ),
     )
 
@@ -150,7 +178,9 @@ def test_filter_periods_fft_full2() -> None:
 
     period_list = tuple(
         np.arange(
-            0, np.int64(gc.SECSYEAR // wc.DT) // 2 + 1 / int(wc.Tobs / gc.SECSYEAR), 1 / int(wc.Tobs / gc.SECSYEAR),
+            0,
+            np.int64(gc.SECSYEAR // wc.DT) // 2 + 1 / int(wc.Tobs / gc.SECSYEAR),
+            1 / int(wc.Tobs / gc.SECSYEAR),
         ),
     )
 
@@ -247,7 +277,9 @@ def get_noise_model_helper(model_name: str) -> NDArray[np.floating]:
     return f_mult
 
 
-def stationary_mean_smooth_helper(bg_models: list[str], noise_models: list[str], smooth_lengthf: float, filter_periods: int) -> None:
+def stationary_mean_smooth_helper(
+    bg_models: list[str], noise_models: list[str], smooth_lengthf: float, filter_periods: int
+) -> None:
     """Helper to test stationary mean with several lengths of spectral smoothing
     can reproduce injected input spectrum
     """
@@ -325,7 +357,9 @@ def test_nonstationary_mean_faint_alternate(amp2_mult: float) -> None:
 
     period_list = tuple(
         np.arange(
-            0, np.int64(gc.SECSYEAR // wc.DT) // 2 + 1 / int(wc.Tobs / gc.SECSYEAR), 1 / int(wc.Tobs / gc.SECSYEAR),
+            0,
+            np.int64(gc.SECSYEAR // wc.DT) // 2 + 1 / int(wc.Tobs / gc.SECSYEAR),
+            1 / int(wc.Tobs / gc.SECSYEAR),
         ),
     )
 
@@ -347,7 +381,8 @@ def test_nonstationary_mean_faint_alternate(amp2_mult: float) -> None:
 
     for itrc in range(nc_galaxy):
         bg_here[:, :, itrc] *= np.outer(t_mult1[:, itrc], f_mult1[:, itrc]) + np.outer(
-            t_mult2[:, itrc], f_mult2[:, itrc],
+            t_mult2[:, itrc],
+            f_mult2[:, itrc],
         )
 
     S_inst_m = np.full((wc.Nf, nc_galaxy), 0.0)
@@ -357,7 +392,7 @@ def test_nonstationary_mean_faint_alternate(amp2_mult: float) -> None:
     _, _, _, amp_got, _ = get_S_cyclo(bg_here, S_inst_m, wc.DT, smooth_lengthf, filter_periods, period_list=None)
 
     nt_lim = PixelGenericRange(0, wc.Nt, wc.DT, 0)
-    _, amp_got1, _ = filter_periods_fft(t_mult1 ** 2 + 1.0, period_list, nt_lim)
+    _, amp_got1, _ = filter_periods_fft(t_mult1**2 + 1.0, period_list, nt_lim)
 
     if amp2**2 < 0.1 * amp1**2:
         assert_allclose(amp_got[2 * int(wc.Tobs / gc.SECSYEAR) * itrk1, :], 1.0, atol=1.0e-10, rtol=1.0e-10)
@@ -457,7 +492,13 @@ def test_nonstationary_mean_zero_case() -> None:
 
 
 def nonstationary_mean_smooth_helper(
-        bg_models: list[str], noise_models: list[str], smooth_lengthf: float, filter_periods: int, itrk1: int, amp1: float, phase1: float,
+    bg_models: list[str],
+    noise_models: list[str],
+    smooth_lengthf: float,
+    filter_periods: int,
+    itrk1: int,
+    amp1: float,
+    phase1: float,
 ) -> None:
     """Helper to test stationary mean with several lengths of spectral smoothing
     can reproduce injected input spectrum
@@ -499,8 +540,9 @@ def nonstationary_mean_smooth_helper(
     for itrc in range(nc_galaxy):
         S_inst_m[:, itrc] = get_noise_model_helper(noise_models[itrc])
 
-    S_got, rec_got, _, amp_got, angle_got = get_S_cyclo(bg_here, S_inst_m, wc.DT, smooth_lengthf, filter_periods,
-                                                        period_list=period_list2)
+    S_got, rec_got, _, amp_got, angle_got = get_S_cyclo(
+        bg_here, S_inst_m, wc.DT, smooth_lengthf, filter_periods, period_list=period_list2
+    )
 
     assert np.all(rec_got > 0.0)
 
@@ -548,7 +590,6 @@ def nonstationary_mean_smooth_helper(
                 pred_loc,
                 atol=5.0 * float((f_mult_smooth[itrf, itrc] ** 2) / np.sqrt(wc.Nt)),
                 rtol=5 * float(np.max(bg_loc) / np.sqrt(wc.Nt)),
-
             )
 
 
@@ -561,7 +602,13 @@ def test_nonstationary_bg_power_bg_slope(bg_model: str, noise_model: str, itrk: 
     produces expected results
     """
     nonstationary_mean_smooth_helper(
-        [bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], 1.0, True, itrk, 0.2, phase,
+        [bg_model, bg_model, bg_model],
+        [noise_model, noise_model, noise_model],
+        1.0,
+        True,
+        itrk,
+        0.2,
+        phase,
     )
 
 
@@ -574,7 +621,13 @@ def test_nonstationary_bg_power_bg_brightness(bg_model: str, noise_model: str, i
     produces expected results
     """
     nonstationary_mean_smooth_helper(
-        [bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], 1.0, True, itrk, 0.2, phase,
+        [bg_model, bg_model, bg_model],
+        [noise_model, noise_model, noise_model],
+        1.0,
+        True,
+        itrk,
+        0.2,
+        phase,
     )
 
 
@@ -588,7 +641,13 @@ def test_nonstationary_bg_power_bg_amp(bg_model: str, noise_model: str, itrk: in
     produces expected results
     """
     nonstationary_mean_smooth_helper(
-        [bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], 1.0, True, itrk, amp, phase,
+        [bg_model, bg_model, bg_model],
+        [noise_model, noise_model, noise_model],
+        1.0,
+        True,
+        itrk,
+        amp,
+        phase,
     )
 
 
@@ -601,7 +660,13 @@ def test_nonstationary_bg_power_harmonic(bg_model: str, noise_model: str, itrk: 
     produces expected results with different known injected time variation
     """
     nonstationary_mean_smooth_helper(
-        [bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], 1.0, True, itrk, 0.2, phase,
+        [bg_model, bg_model, bg_model],
+        [noise_model, noise_model, noise_model],
+        1.0,
+        True,
+        itrk,
+        0.2,
+        phase,
     )
 
 
@@ -614,7 +679,13 @@ def test_nonstationary_bg_power_noise_brightness(bg_model: str, noise_model: str
     produces expected results
     """
     nonstationary_mean_smooth_helper(
-        [bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], 1.0, True, itrk, 0.2, phase,
+        [bg_model, bg_model, bg_model],
+        [noise_model, noise_model, noise_model],
+        1.0,
+        True,
+        itrk,
+        0.2,
+        phase,
     )
 
 
@@ -646,7 +717,13 @@ def test_nonstationary_bg_power_phase(bg_model: str, noise_model: str, itrk: int
     with different phases
     """
     nonstationary_mean_smooth_helper(
-        [bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], 1.0, True, itrk, 0.2, phase,
+        [bg_model, bg_model, bg_model],
+        [noise_model, noise_model, noise_model],
+        1.0,
+        True,
+        itrk,
+        0.2,
+        phase,
     )
 
 
@@ -655,7 +732,10 @@ def test_different_bg_spectra() -> None:
     if background spectrum differs between channels
     """
     stationary_mean_smooth_helper(
-        ['powerlaw1', 'white_bright', 'powerlaw2'], ['white_equal', 'white_equal', 'white_equal'], 1.0, False,
+        ['powerlaw1', 'white_bright', 'powerlaw2'],
+        ['white_equal', 'white_equal', 'white_equal'],
+        1.0,
+        False,
     )
 
 
@@ -664,7 +744,10 @@ def test_different_noise_spectra() -> None:
     if noise spectrum differs between channels
     """
     stationary_mean_smooth_helper(
-        ['white_equal', 'white_equal', 'white_equal'], ['powerlaw1', 'white_equal', 'powerlaw2'], 1.0, False,
+        ['white_equal', 'white_equal', 'white_equal'],
+        ['powerlaw1', 'white_equal', 'powerlaw2'],
+        1.0,
+        False,
     )
 
 
@@ -694,18 +777,23 @@ def test_stationary_noise_power(bg_model: str, noise_model: str) -> None:
 
 
 @pytest.mark.parametrize(
-    'bg_model', ['sin1', 'sin2', 'sin3', 'powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2'])
+    'bg_model', ['sin1', 'sin2', 'sin3', 'powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2']
+)
 @pytest.mark.parametrize('noise_model', ['white_equal'])
 @pytest.mark.parametrize('smooth_lengthf', [1.0])
 def test_stationary_filter_bg_(bg_model: str, noise_model: str, smooth_lengthf: float) -> None:
     """Test nothing unexpected happens if filter_periods is true but the noise model has no harmonics"""
     stationary_mean_smooth_helper(
-        [bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], smooth_lengthf, True,
+        [bg_model, bg_model, bg_model],
+        [noise_model, noise_model, noise_model],
+        smooth_lengthf,
+        True,
     )
 
 
 @pytest.mark.parametrize(
-    'bg_model', ['sin1', 'sin2', 'sin3', 'powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2'],
+    'bg_model',
+    ['sin1', 'sin2', 'sin3', 'powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2'],
 )
 @pytest.mark.parametrize('noise_model', ['white_equal'])
 @pytest.mark.parametrize('smooth_lengthf', [0.1, 1.0, 10.0, 100.0])
@@ -714,13 +802,17 @@ def test_stationary_mean_bg_smooth(bg_model: str, noise_model: str, smooth_lengt
     with different smoothing lengths
     """
     stationary_mean_smooth_helper(
-        [bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], smooth_lengthf, False,
+        [bg_model, bg_model, bg_model],
+        [noise_model, noise_model, noise_model],
+        smooth_lengthf,
+        False,
     )
 
 
 @pytest.mark.parametrize('bg_model', ['sin2', 'sin3', 'powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2'])
 @pytest.mark.parametrize(
-    'noise_model', ['sin1', 'sin2', 'sin3', 'powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2'],
+    'noise_model',
+    ['sin1', 'sin2', 'sin3', 'powerlaw1', 'powerlaw2', 'white_equal', 'dirac1', 'dirac2'],
 )
 @pytest.mark.parametrize('smooth_lengthf', [1.0, 100.0])
 def test_stationary_mean__instrument_smooth(bg_model: str, noise_model: str, smooth_lengthf: float) -> None:
@@ -728,5 +820,8 @@ def test_stationary_mean__instrument_smooth(bg_model: str, noise_model: str, smo
     produces expected results
     """
     stationary_mean_smooth_helper(
-        [bg_model, bg_model, bg_model], [noise_model, noise_model, noise_model], smooth_lengthf, False,
+        [bg_model, bg_model, bg_model],
+        [noise_model, noise_model, noise_model],
+        smooth_lengthf,
+        False,
     )

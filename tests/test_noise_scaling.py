@@ -251,8 +251,13 @@ def test_noise_generation_scaling_curve(channel_mult: tuple[float, float, float,
     pow2_spect = np.sum(noise_manager2.get_S(), axis=0)
 
     if spectrum_equal:
-        assert_allclose(pow1_spect, time_rat_waveform * pow2_spect, atol=1.e-40, rtol=1.e-10)
-        assert_allclose(pow1_spect[1:] / noise1_exp[1:], time_rat_waveform * pow2_spect[1:] / noise2_exp[1:], atol=1.e-40, rtol=1.e-8)
+        assert_allclose(pow1_spect, time_rat_waveform * pow2_spect, atol=1.0e-40, rtol=1.0e-10)
+        assert_allclose(
+            pow1_spect[1:] / noise1_exp[1:],
+            time_rat_waveform * pow2_spect[1:] / noise2_exp[1:],
+            atol=1.0e-40,
+            rtol=1.0e-8,
+        )
 
     pow1 = np.sum(pow1_spect[mask1])
     pow2 = np.sum(pow2_spect[mask2])
@@ -264,8 +269,15 @@ def test_noise_generation_scaling_curve(channel_mult: tuple[float, float, float,
 
     print(frange1, frange2, range_rat)
     print(pow1, pow2)
-    print(wc1.Nf * wc1.Nt / (wc2.Nf * wc2.Nt), time_rat_waveform, wc1.dt / wc2.dt, wc1.DF / wc2.DF, wc1.DT / wc2.DT,
-          pow1 / pow2, pow1 / pow2 / time_rat_waveform)
+    print(
+        wc1.Nf * wc1.Nt / (wc2.Nf * wc2.Nt),
+        time_rat_waveform,
+        wc1.dt / wc2.dt,
+        wc1.DF / wc2.DF,
+        wc1.DT / wc2.DT,
+        pow1 / pow2,
+        pow1 / pow2 / time_rat_waveform,
+    )
     print(wc1.Tw / wc2.Tw)
     print(wc1.Tobs / wc1.Tw, wc1.Tobs / wc2.Tw)
     # scale the spectra and check the integrated power matches expectation
@@ -275,18 +287,18 @@ def test_noise_generation_scaling_curve(channel_mult: tuple[float, float, float,
     pow2_white_rescale = correct_fac * pow2_white
     if n_pix_equal:
         if spectrum_equal:
-            assert_allclose(pow1, pow2_rescale, atol=1.e-40, rtol=5.e-1)
-        assert_allclose(pow1_white, pow2_white_rescale, atol=1.e-40, rtol=4.e-2)
+            assert_allclose(pow1, pow2_rescale, atol=1.0e-40, rtol=5.0e-1)
+        assert_allclose(pow1_white, pow2_white_rescale, atol=1.0e-40, rtol=4.0e-2)
     else:
         if spectrum_equal:
-            assert_allclose(pow1, pow2_rescale, atol=1.e-40, rtol=5.e-1)
-        assert_allclose(pow1_white, pow2_white_rescale, atol=1.e-40, rtol=6.e-2)
+            assert_allclose(pow1, pow2_rescale, atol=1.0e-40, rtol=5.0e-1)
+        assert_allclose(pow1_white, pow2_white_rescale, atol=1.0e-40, rtol=6.0e-2)
 
     # get realizations of the noise and mask the non-overlapping part so we can isolate the band-limited noise
     noise_real1 = noise_manager1.generate_dense_noise()
     noise_real2 = noise_manager2.generate_dense_noise()
-    noise_real1[:, ~mask1, :] = 0.
-    noise_real2[:, ~mask2, :] = 0.
+    noise_real1[:, ~mask1, :] = 0.0
+    noise_real2[:, ~mask2, :] = 0.0
 
     noise_real1_white = noise_real1.copy()
     noise_real1_white[:, 1:, :] = noise_real1_white[:, 1:] / np.sqrt(noise1_exp[1:])
@@ -301,7 +313,7 @@ def test_noise_generation_scaling_curve(channel_mult: tuple[float, float, float,
     pow_real2_white = np.sum(noise_real2[:, 1:] ** 2 / noise2_exp[1:])
     pow_real2_white_rescale = pow_real2_white * correct_fac
 
-    pow_real1_white2 = np.sum(noise_real1_white[:, 1:]**2)
+    pow_real1_white2 = np.sum(noise_real1_white[:, 1:] ** 2)
     pow_real2_white2 = np.sum(noise_real2_white[:, 1:] ** 2)
     pow_real2_white_rescale2 = pow_real2_white2 * correct_fac
     assert_allclose(pow_real1_white, pow_real1_white2)
@@ -310,13 +322,15 @@ def test_noise_generation_scaling_curve(channel_mult: tuple[float, float, float,
 
     print(pow1, pow_real1, pow2, pow_real2, pow_real2_rescale)
     # check the power in the realizations matches what we expect
-    assert_allclose(pow_real1, pow1, atol=1.e-40, rtol=7.e-3)
-    assert_allclose(pow_real2, pow2, atol=1.e-40, rtol=7.e-3)
-    assert_allclose(pow_real1 / pow_real2_rescale, pow1 / pow2_rescale, atol=1.e-40, rtol=1.e-1)
+    assert_allclose(pow_real1, pow1, atol=1.0e-40, rtol=7.0e-3)
+    assert_allclose(pow_real2, pow2, atol=1.0e-40, rtol=7.0e-3)
+    assert_allclose(pow_real1 / pow_real2_rescale, pow1 / pow2_rescale, atol=1.0e-40, rtol=1.0e-1)
 
-    assert_allclose(pow_real1_white, pow1_white, atol=1.e-40, rtol=7.e-3)
-    assert_allclose(pow_real2_white, pow2_white, atol=1.e-40, rtol=1.e-2)
-    assert_allclose(pow_real1_white / pow_real2_white_rescale, pow1_white / pow2_white_rescale, atol=1.e-40, rtol=1.e-1)
+    assert_allclose(pow_real1_white, pow1_white, atol=1.0e-40, rtol=7.0e-3)
+    assert_allclose(pow_real2_white, pow2_white, atol=1.0e-40, rtol=1.0e-2)
+    assert_allclose(
+        pow_real1_white / pow_real2_white_rescale, pow1_white / pow2_white_rescale, atol=1.0e-40, rtol=1.0e-1
+    )
 
     # transform realized noise to time domain
 
@@ -333,32 +347,37 @@ def test_noise_generation_scaling_curve(channel_mult: tuple[float, float, float,
         noise_time2[:, itrc] = inverse_wavelet_time(noise_real2[:, :, itrc], wc2.Nf, wc2.Nt)
         noise_time2_white[:, itrc] = inverse_wavelet_time(noise_real2_white[:, :, itrc], wc2.Nf, wc2.Nt)
 
-    pow_real1_time = np.sum(noise_time1 ** 2)
-    pow_real2_time = np.sum(noise_time2 ** 2)
+    pow_real1_time = np.sum(noise_time1**2)
+    pow_real2_time = np.sum(noise_time2**2)
     pow_real2_time_rescale = pow_real2_time * correct_fac
 
-    pow_real1_time_white = np.sum(noise_time1_white ** 2)
-    pow_real2_time_white = np.sum(noise_time2_white ** 2)
+    pow_real1_time_white = np.sum(noise_time1_white**2)
+    pow_real2_time_white = np.sum(noise_time2_white**2)
     pow_real2_time_white_rescale = pow_real2_time_white * correct_fac
 
     # check band limited power in time domain matches (parseval's theorem requires this)
-    assert_allclose(pow_real1, pow_real1_time, atol=1.e-40, rtol=1.e-8)
-    assert_allclose(pow_real2, pow_real2_time, atol=1.e-40, rtol=1.e-8)
-    assert_allclose(pow_real1 / pow_real2_rescale, pow_real1_time / pow_real2_time_rescale, atol=1.e-40, rtol=1.e-8)
+    assert_allclose(pow_real1, pow_real1_time, atol=1.0e-40, rtol=1.0e-8)
+    assert_allclose(pow_real2, pow_real2_time, atol=1.0e-40, rtol=1.0e-8)
+    assert_allclose(pow_real1 / pow_real2_rescale, pow_real1_time / pow_real2_time_rescale, atol=1.0e-40, rtol=1.0e-8)
 
-    assert_allclose(pow_real1_white, pow_real1_time_white, atol=1.e-40, rtol=1.e-8)
-    assert_allclose(pow_real2_white, pow_real2_time_white, atol=1.e-40, rtol=1.e-8)
-    assert_allclose(pow_real1_white / pow_real2_white_rescale, pow_real1_time_white / pow_real2_time_white_rescale, atol=1.e-40, rtol=1.e-8)
+    assert_allclose(pow_real1_white, pow_real1_time_white, atol=1.0e-40, rtol=1.0e-8)
+    assert_allclose(pow_real2_white, pow_real2_time_white, atol=1.0e-40, rtol=1.0e-8)
+    assert_allclose(
+        pow_real1_white / pow_real2_white_rescale,
+        pow_real1_time_white / pow_real2_time_white_rescale,
+        atol=1.0e-40,
+        rtol=1.0e-8,
+    )
 
     # somewhat narrower range than originally specified to trim edge effects
-    mask1_lim = (fs1 >= fmin1 + 2 * wc1.DF + 2. / wc1.DT) & (fs1 <= fmax1 - 2 * wc1.DF - 2. / wc1.DT)
-    mask2_lim = (fs2 >= fmin2 + 2 * wc2.DF + 2. / wc2.DT) & (fs2 <= fmax2 - 2 * wc2.DF - 2. / wc2.DT)
+    mask1_lim = (fs1 >= fmin1 + 2 * wc1.DF + 2.0 / wc1.DT) & (fs1 <= fmax1 - 2 * wc1.DF - 2.0 / wc1.DT)
+    mask2_lim = (fs2 >= fmin2 + 2 * wc2.DF + 2.0 / wc2.DT) & (fs2 <= fmax2 - 2 * wc2.DF - 2.0 / wc2.DT)
 
     assert np.any(mask1_lim)
     assert np.any(mask2_lim)
 
-    noise_real1_spect = 2 * wc1.dt * np.mean(noise_real1 ** 2, axis=0)
-    noise_real2_spect = 2 * wc2.dt * np.mean(noise_real2 ** 2, axis=0)
+    noise_real1_spect = 2 * wc1.dt * np.mean(noise_real1**2, axis=0)
+    noise_real2_spect = 2 * wc2.dt * np.mean(noise_real2**2, axis=0)
 
     noise_real1_spect_white = np.zeros_like(noise_real1_spect)
     noise_real2_spect_white = np.zeros_like(noise_real2_spect)
@@ -367,22 +386,30 @@ def test_noise_generation_scaling_curve(channel_mult: tuple[float, float, float,
     noise_real2_spect_white[1:] = noise_real2_spect[1:] / noise2_exp[1:]
 
     for itrc in range(noise_time1.shape[1]):
-        fpsd1, psd1 = scipy.signal.welch(noise_time1[:, itrc], fs=1. / wc1.dt, nperseg=2 * wc1.Nf, scaling='density', window='tukey')
-        fpsd2, psd2 = scipy.signal.welch(noise_time2[:, itrc], fs=1. / wc2.dt, nperseg=2 * wc2.Nf, scaling='density', window='tukey')
+        fpsd1, psd1 = scipy.signal.welch(
+            noise_time1[:, itrc], fs=1.0 / wc1.dt, nperseg=2 * wc1.Nf, scaling='density', window='tukey'
+        )
+        fpsd2, psd2 = scipy.signal.welch(
+            noise_time2[:, itrc], fs=1.0 / wc2.dt, nperseg=2 * wc2.Nf, scaling='density', window='tukey'
+        )
 
-        _, psd1_white2 = scipy.signal.welch(noise_time1_white[:, itrc], fs=1. / wc1.dt, nperseg=2 * wc1.Nf, scaling='density', window='tukey')
-        _, psd2_white2 = scipy.signal.welch(noise_time2_white[:, itrc], fs=1. / wc2.dt, nperseg=2 * wc2.Nf, scaling='density', window='tukey')
+        _, psd1_white2 = scipy.signal.welch(
+            noise_time1_white[:, itrc], fs=1.0 / wc1.dt, nperseg=2 * wc1.Nf, scaling='density', window='tukey'
+        )
+        _, psd2_white2 = scipy.signal.welch(
+            noise_time2_white[:, itrc], fs=1.0 / wc2.dt, nperseg=2 * wc2.Nf, scaling='density', window='tukey'
+        )
 
-        fpsd1 = fpsd1[:wc1.Nf]
-        fpsd2 = fpsd2[:wc2.Nf]
+        fpsd1 = fpsd1[: wc1.Nf]
+        fpsd2 = fpsd2[: wc2.Nf]
         assert psd1.size == wc1.Nf + 1
         assert psd2.size == wc2.Nf + 1
 
-        psd1 = psd1[:wc1.Nf]
-        psd2 = psd2[:wc2.Nf]
+        psd1 = psd1[: wc1.Nf]
+        psd2 = psd2[: wc2.Nf]
 
-        psd1_white2 = psd1_white2[:wc1.Nf]
-        psd2_white2 = psd2_white2[:wc2.Nf]
+        psd1_white2 = psd1_white2[: wc1.Nf]
+        psd2_white2 = psd2_white2[: wc2.Nf]
 
         psd1_white = psd1.copy()
         psd2_white = psd2.copy()
@@ -417,30 +444,54 @@ def test_noise_generation_scaling_curve(channel_mult: tuple[float, float, float,
         #    plt.plot(psd2_white2[mask2_lim])
         #    plt.show()
 
-        assert_allclose(psd1_white[mask1_lim], psd1_white2[mask1_lim], atol=1.e-100, rtol=5.e-2)
-        assert_allclose(psd2_white[mask2_lim], psd2_white2[mask2_lim], atol=1.e-100, rtol=5.e-2)
+        assert_allclose(psd1_white[mask1_lim], psd1_white2[mask1_lim], atol=1.0e-100, rtol=5.0e-2)
+        assert_allclose(psd2_white[mask2_lim], psd2_white2[mask2_lim], atol=1.0e-100, rtol=5.0e-2)
 
         # later bins have less loss of precision
-        assert_allclose(psd1_white[wc1.Nf // 2:][mask1_lim[wc1.Nf // 2:]], psd1_white2[wc1.Nf // 2:][mask1_lim[wc1.Nf // 2:]], atol=1.e-100, rtol=5.e-3)
+        assert_allclose(
+            psd1_white[wc1.Nf // 2 :][mask1_lim[wc1.Nf // 2 :]],
+            psd1_white2[wc1.Nf // 2 :][mask1_lim[wc1.Nf // 2 :]],
+            atol=1.0e-100,
+            rtol=5.0e-3,
+        )
         if wc2.Nf > 32:
-            assert_allclose(psd2_white[wc2.Nf // 2:][mask2_lim[wc2.Nf // 2:]], psd2_white2[wc2.Nf // 2:][mask2_lim[wc2.Nf // 2:]], atol=1.e-100, rtol=5.e-3)
+            assert_allclose(
+                psd2_white[wc2.Nf // 2 :][mask2_lim[wc2.Nf // 2 :]],
+                psd2_white2[wc2.Nf // 2 :][mask2_lim[wc2.Nf // 2 :]],
+                atol=1.0e-100,
+                rtol=5.0e-3,
+            )
 
-        print(1. / wc1.Tw, 1. / wc2.Tw, 1. / wc1.DT, 1. / wc2.DT, wc1.DF, wc2.DF)
+        print(1.0 / wc1.Tw, 1.0 / wc2.Tw, 1.0 / wc1.DT, 1.0 / wc2.DT, wc1.DF, wc2.DF)
 
-        assert_allclose(psd1[mask1_lim], noise_real1_spect[mask1_lim, itrc], atol=1.e-100, rtol=1.e-1)
-        assert_allclose(psd2[mask2_lim], noise_real2_spect[mask2_lim, itrc], atol=1.e-100, rtol=4.e-1)
+        assert_allclose(psd1[mask1_lim], noise_real1_spect[mask1_lim, itrc], atol=1.0e-100, rtol=1.0e-1)
+        assert_allclose(psd2[mask2_lim], noise_real2_spect[mask2_lim, itrc], atol=1.0e-100, rtol=4.0e-1)
 
-        assert_allclose(psd1_white[mask1_lim], noise_real1_spect_white[mask1_lim, itrc], atol=1.e-100, rtol=1.e-1)
-        assert_allclose(psd2_white[mask2_lim], noise_real2_spect_white[mask2_lim, itrc], atol=1.e-1, rtol=2.e-1)
+        assert_allclose(psd1_white[mask1_lim], noise_real1_spect_white[mask1_lim, itrc], atol=1.0e-100, rtol=1.0e-1)
+        assert_allclose(psd2_white[mask2_lim], noise_real2_spect_white[mask2_lim, itrc], atol=1.0e-1, rtol=2.0e-1)
 
-        assert_allclose(np.mean(psd1_white[mask1_lim]), np.mean(noise_real1_spect_white[mask1_lim, itrc]), atol=3.e-3, rtol=3.e-3)
-        assert_allclose(np.mean(psd2_white[mask2_lim]), np.mean(noise_real2_spect_white[mask2_lim, itrc]), atol=9.e-3, rtol=9.e-3)
+        assert_allclose(
+            np.mean(psd1_white[mask1_lim]), np.mean(noise_real1_spect_white[mask1_lim, itrc]), atol=3.0e-3, rtol=3.0e-3
+        )
+        assert_allclose(
+            np.mean(psd2_white[mask2_lim]), np.mean(noise_real2_spect_white[mask2_lim, itrc]), atol=9.0e-3, rtol=9.0e-3
+        )
 
-        assert_allclose(np.sqrt(3. / 2.) * np.std(psd1_white[mask1_lim]), np.std(noise_real1_spect_white[mask1_lim, itrc]), atol=1.e-100, rtol=1.e-1)
-        assert_allclose(np.sqrt(3. / 2.) * np.std(psd2_white[mask2_lim]), np.std(noise_real2_spect_white[mask2_lim, itrc]), atol=1.e-100, rtol=4.e-1)
+        assert_allclose(
+            np.sqrt(3.0 / 2.0) * np.std(psd1_white[mask1_lim]),
+            np.std(noise_real1_spect_white[mask1_lim, itrc]),
+            atol=1.0e-100,
+            rtol=1.0e-1,
+        )
+        assert_allclose(
+            np.sqrt(3.0 / 2.0) * np.std(psd2_white[mask2_lim]),
+            np.std(noise_real2_spect_white[mask2_lim, itrc]),
+            atol=1.0e-100,
+            rtol=4.0e-1,
+        )
 
-        assert_allclose(np.mean(psd1[mask1_lim] / noise_real1_spect[mask1_lim, itrc]), 1., atol=3.e-3, rtol=3.e-3)
-        assert_allclose(np.mean(psd2[mask2_lim] / noise_real2_spect[mask2_lim, itrc]), 1., atol=9.e-3, rtol=9.e-3)
+        assert_allclose(np.mean(psd1[mask1_lim] / noise_real1_spect[mask1_lim, itrc]), 1.0, atol=3.0e-3, rtol=3.0e-3)
+        assert_allclose(np.mean(psd2[mask2_lim] / noise_real2_spect[mask2_lim, itrc]), 1.0, atol=9.0e-3, rtol=9.0e-3)
 
         # variation in the spectra generated from the same noise realization should be correlated
         corr1 = np.corrcoef(psd1_white[mask1_lim], noise_real1_spect_white[mask1_lim, itrc])
@@ -462,28 +513,33 @@ def test_noise_generation_scaling_curve(channel_mult: tuple[float, float, float,
         assert corr2_3[0, 1] > 0.97
 
         # case where we known the expected answers
-        assert_allclose(np.mean(noise_real1_spect_white[mask1_lim, itrc]), 1., atol=1.e-2, rtol=1.e-2)
-        assert_allclose(np.mean(psd1_white[mask1_lim]), 1., atol=1.e-2, rtol=1.e-2)
-        assert_allclose(np.mean(noise_real2_spect_white[mask2_lim, itrc]), 1., atol=1.e-2, rtol=1.e-2)
-        assert_allclose(np.mean(psd2_white[mask2_lim]), 1., atol=1.e-2, rtol=1.e-2)
+        assert_allclose(np.mean(noise_real1_spect_white[mask1_lim, itrc]), 1.0, atol=1.0e-2, rtol=1.0e-2)
+        assert_allclose(np.mean(psd1_white[mask1_lim]), 1.0, atol=1.0e-2, rtol=1.0e-2)
+        assert_allclose(np.mean(noise_real2_spect_white[mask2_lim, itrc]), 1.0, atol=1.0e-2, rtol=1.0e-2)
+        assert_allclose(np.mean(psd2_white[mask2_lim]), 1.0, atol=1.0e-2, rtol=1.0e-2)
 
-        assert_allclose(noise_real1_spect_white[mask1_lim, itrc], 1., atol=1.e-1, rtol=1.e-1)
-        assert_allclose(psd1_white[mask1_lim], 1., atol=1.e-1, rtol=1.e-1)
-        assert_allclose(noise_real2_spect_white[mask2_lim, itrc], 1., atol=3.e-1, rtol=3.e-1)
-        assert_allclose(psd2_white[mask2_lim], 1., atol=3.e-1, rtol=3.e-1)
+        assert_allclose(noise_real1_spect_white[mask1_lim, itrc], 1.0, atol=1.0e-1, rtol=1.0e-1)
+        assert_allclose(psd1_white[mask1_lim], 1.0, atol=1.0e-1, rtol=1.0e-1)
+        assert_allclose(noise_real2_spect_white[mask2_lim, itrc], 1.0, atol=3.0e-1, rtol=3.0e-1)
+        assert_allclose(psd2_white[mask2_lim], 1.0, atol=3.0e-1, rtol=3.0e-1)
 
         if wc1.Nf == wc2.Nf:
             # can compare the spectra directly, and the cross terms
             mask12_lim = mask1_lim & mask2_lim
-            assert_allclose(psd1_white[mask12_lim], psd2_white[mask12_lim], atol=7.e-2, rtol=1.e-1)
-            assert_allclose(noise_real1_spect_white[mask12_lim, itrc], noise_real2_spect_white[mask12_lim, itrc], atol=7.e-2, rtol=1.e-1)
-            assert_allclose(psd2_white[mask12_lim], noise_real1_spect_white[mask12_lim, itrc], atol=7.e-2, rtol=1.e-1)
-            assert_allclose(psd1_white[mask12_lim], noise_real2_spect_white[mask12_lim, itrc], atol=7.e-2, rtol=1.e-1)
+            assert_allclose(psd1_white[mask12_lim], psd2_white[mask12_lim], atol=7.0e-2, rtol=1.0e-1)
+            assert_allclose(
+                noise_real1_spect_white[mask12_lim, itrc],
+                noise_real2_spect_white[mask12_lim, itrc],
+                atol=7.0e-2,
+                rtol=1.0e-1,
+            )
+            assert_allclose(psd2_white[mask12_lim], noise_real1_spect_white[mask12_lim, itrc], atol=7.0e-2, rtol=1.0e-1)
+            assert_allclose(psd1_white[mask12_lim], noise_real2_spect_white[mask12_lim, itrc], atol=7.0e-2, rtol=1.0e-1)
 
         psd1_2 = InterpolatedUnivariateSpline(fs1, psd1_white, k=1, ext=1)(fs2)
         psd2_1 = InterpolatedUnivariateSpline(fs2, psd2_white, k=1, ext=1)(fs1)
-        mask1_2 = InterpolatedUnivariateSpline(fs1, 1. * mask1_lim, k=1, ext=1)(fs2)
-        mask2_1 = InterpolatedUnivariateSpline(fs2, 1. * mask2_lim, k=1, ext=1)(fs1)
+        mask1_2 = InterpolatedUnivariateSpline(fs1, 1.0 * mask1_lim, k=1, ext=1)(fs2)
+        mask2_1 = InterpolatedUnivariateSpline(fs2, 1.0 * mask2_lim, k=1, ext=1)(fs1)
 
         noise_real1_spect_2 = InterpolatedUnivariateSpline(fs1, noise_real1_spect_white[:, itrc], k=1, ext=1)(fs2)
         noise_real2_spect_1 = InterpolatedUnivariateSpline(fs2, noise_real2_spect_white[:, itrc], k=1, ext=1)(fs1)
@@ -506,39 +562,66 @@ def test_noise_generation_scaling_curve(channel_mult: tuple[float, float, float,
         # scale tolerances based on how different the binning is
         if time_equal and spectrum_equal:
             # noise should have generated identically in this case, so tolerance is much tighter
-            rtol12: float = 1.e-20 * float(np.max([np.sqrt(wc1.Nt / wc2.Nt), np.sqrt(wc2.Nt / wc1.Nt)]))
-            atol12: float = 1.e-20 * float(np.max([np.sqrt(wc1.Nf / wc2.Nf), np.sqrt(wc2.Nf / wc1.Nf)]))
+            rtol12: float = 1.0e-20 * float(np.max([np.sqrt(wc1.Nt / wc2.Nt), np.sqrt(wc2.Nt / wc1.Nt)]))
+            atol12: float = 1.0e-20 * float(np.max([np.sqrt(wc1.Nf / wc2.Nf), np.sqrt(wc2.Nf / wc1.Nf)]))
         else:
             rtol12 = 1.4e-1 * float(np.max([np.sqrt(wc1.Nt / wc2.Nt), np.sqrt(wc2.Nt / wc1.Nt)]))
             atol12 = 1.4e-1 * float(np.max([np.sqrt(wc1.Nf / wc2.Nf), np.sqrt(wc2.Nf / wc1.Nf)]))
         # these terms won't be exactly same unless the noise generated the same
         assert_allclose(psd1_2[mask12_lim_2], psd2_white[mask12_lim_2], atol=atol12, rtol=rtol12)
         assert_allclose(psd2_1[mask12_lim_1], psd1_white[mask12_lim_1], atol=atol12, rtol=rtol12)
-        assert_allclose(noise_real2_spect_1[mask12_lim_1], noise_real1_spect_white[mask12_lim_1, itrc], atol=atol12, rtol=rtol12)
-        assert_allclose(noise_real1_spect_2[mask12_lim_2], noise_real2_spect_white[mask12_lim_2, itrc], atol=atol12, rtol=rtol12)
-        assert_allclose(np.mean(psd1_2[mask12_lim_2]), np.mean(psd2_white[mask12_lim_2]), atol=6.e-2 * atol12, rtol=6.e-2 * rtol12)
-        assert_allclose(np.mean(psd2_1[mask12_lim_1]), np.mean(psd1_white[mask12_lim_1]), atol=6.e-2 * atol12, rtol=6.e-2 * rtol12)
-        assert_allclose(np.mean(noise_real2_spect_1[mask12_lim_1]), np.mean(noise_real1_spect_white[mask12_lim_1, itrc]), atol=6.e-2 * atol12, rtol=6.e-2 * rtol12)
-        assert_allclose(np.mean(noise_real1_spect_2[mask12_lim_2]), np.mean(noise_real2_spect_white[mask12_lim_2, itrc]), atol=6.e-2 * atol12, rtol=6.e-2 * rtol12)
+        assert_allclose(
+            noise_real2_spect_1[mask12_lim_1], noise_real1_spect_white[mask12_lim_1, itrc], atol=atol12, rtol=rtol12
+        )
+        assert_allclose(
+            noise_real1_spect_2[mask12_lim_2], noise_real2_spect_white[mask12_lim_2, itrc], atol=atol12, rtol=rtol12
+        )
+        assert_allclose(
+            np.mean(psd1_2[mask12_lim_2]), np.mean(psd2_white[mask12_lim_2]), atol=6.0e-2 * atol12, rtol=6.0e-2 * rtol12
+        )
+        assert_allclose(
+            np.mean(psd2_1[mask12_lim_1]), np.mean(psd1_white[mask12_lim_1]), atol=6.0e-2 * atol12, rtol=6.0e-2 * rtol12
+        )
+        assert_allclose(
+            np.mean(noise_real2_spect_1[mask12_lim_1]),
+            np.mean(noise_real1_spect_white[mask12_lim_1, itrc]),
+            atol=6.0e-2 * atol12,
+            rtol=6.0e-2 * rtol12,
+        )
+        assert_allclose(
+            np.mean(noise_real1_spect_2[mask12_lim_2]),
+            np.mean(noise_real2_spect_white[mask12_lim_2, itrc]),
+            atol=6.0e-2 * atol12,
+            rtol=6.0e-2 * rtol12,
+        )
 
         # cross terms also have extra tolerance loss from using different methods
         if time_equal and spectrum_equal:
             # tigther tolerance case
-            rtol12 = 4.e-2 * float(np.max([np.sqrt(wc1.Nt / wc2.Nt), np.sqrt(wc2.Nt / wc1.Nt)]))
-            atol12 = 4.e-2 * float(np.max([np.sqrt(wc1.Nf / wc2.Nf), np.sqrt(wc2.Nf / wc1.Nf)]))
+            rtol12 = 4.0e-2 * float(np.max([np.sqrt(wc1.Nt / wc2.Nt), np.sqrt(wc2.Nt / wc1.Nt)]))
+            atol12 = 4.0e-2 * float(np.max([np.sqrt(wc1.Nf / wc2.Nf), np.sqrt(wc2.Nf / wc1.Nf)]))
         else:
             rtol12 = 1.2e-1 * float(np.max([np.sqrt(wc1.Nt / wc2.Nt), np.sqrt(wc2.Nt / wc1.Nt)]))
             atol12 = 1.2e-1 * float(np.max([np.sqrt(wc1.Nf / wc2.Nf), np.sqrt(wc2.Nf / wc1.Nf)]))
         assert_allclose(noise_real2_spect_1[mask12_lim_1], psd1_white[mask12_lim_1], atol=atol12, rtol=rtol12)
         assert_allclose(noise_real1_spect_2[mask12_lim_2], psd2_white[mask12_lim_2], atol=atol12, rtol=rtol12)
 
-        assert_allclose(np.mean(noise_real2_spect_1[mask12_lim_1]), np.mean(psd1_white[mask12_lim_1]),
-                        atol=5.e-2 * atol12, rtol=5.e-2 * rtol12)
-        assert_allclose(np.mean(noise_real1_spect_2[mask12_lim_2]), np.mean(psd2_white[mask12_lim_2]),
-                        atol=8.e-2 * atol12, rtol=8.e-2 * rtol12)
+        assert_allclose(
+            np.mean(noise_real2_spect_1[mask12_lim_1]),
+            np.mean(psd1_white[mask12_lim_1]),
+            atol=5.0e-2 * atol12,
+            rtol=5.0e-2 * rtol12,
+        )
+        assert_allclose(
+            np.mean(noise_real1_spect_2[mask12_lim_2]),
+            np.mean(psd2_white[mask12_lim_2]),
+            atol=8.0e-2 * atol12,
+            rtol=8.0e-2 * rtol12,
+        )
 
 
 # hi
+
 
 # scaling on (Nf, Nt, dt, mult) in the second configuration
 @pytest.mark.parametrize(
@@ -763,7 +846,7 @@ def test_noise_generation_scaling_flat(channel_mult: tuple[float, float, float, 
     pow2_spect = np.sum(noise_manager2.get_S(), axis=(0, 2))
 
     if spectrum_equal:
-        assert_allclose(pow1_spect, time_rat_waveform * pow2_spect, atol=1.e-40, rtol=1.e-10)
+        assert_allclose(pow1_spect, time_rat_waveform * pow2_spect, atol=1.0e-40, rtol=1.0e-10)
 
     pow1 = np.sum(pow1_spect[mask1])
     pow2 = np.sum(pow2_spect[mask2])
@@ -772,32 +855,39 @@ def test_noise_generation_scaling_flat(channel_mult: tuple[float, float, float, 
 
     print(frange1, frange2, range_rat)
     print(pow1, pow2)
-    print(wc1.Nf * wc1.Nt / (wc2.Nf * wc2.Nt), time_rat_waveform, wc1.dt / wc2.dt, wc1.DF / wc2.DF, wc1.DT / wc2.DT,
-          pow1 / pow2, pow1 / pow2 / time_rat_waveform)
+    print(
+        wc1.Nf * wc1.Nt / (wc2.Nf * wc2.Nt),
+        time_rat_waveform,
+        wc1.dt / wc2.dt,
+        wc1.DF / wc2.DF,
+        wc1.DT / wc2.DT,
+        pow1 / pow2,
+        pow1 / pow2 / time_rat_waveform,
+    )
     # scale the spectra and check the integrated power matches expectation
     correct_fac = (wc2.dt / wc1.dt) * time_rat_waveform
     assert_allclose(correct_fac, (wc1.Nf * wc1.Nt) / (wc2.Nf * wc2.Nt))
     pow2_rescale = correct_fac * pow2
     if n_pix_equal:
-        assert_allclose(pow1, pow2_rescale, atol=1.e-40, rtol=2.e-2)
+        assert_allclose(pow1, pow2_rescale, atol=1.0e-40, rtol=2.0e-2)
     else:
-        assert_allclose(pow1, pow2_rescale, atol=1.e-40, rtol=4.e-2)
+        assert_allclose(pow1, pow2_rescale, atol=1.0e-40, rtol=4.0e-2)
 
     # get realizations of the noise and mask the non-overlapping part so we can isolate the band-limited noise
     noise_real1 = noise_manager1.generate_dense_noise()
     noise_real2 = noise_manager2.generate_dense_noise()
-    noise_real1[:, ~mask1, :] = 0.
-    noise_real2[:, ~mask2, :] = 0.
+    noise_real1[:, ~mask1, :] = 0.0
+    noise_real2[:, ~mask2, :] = 0.0
 
-    pow_real1 = np.sum(noise_real1 ** 2)
-    pow_real2 = np.sum(noise_real2 ** 2)
+    pow_real1 = np.sum(noise_real1**2)
+    pow_real2 = np.sum(noise_real2**2)
     pow_real2_rescale = pow_real2 * correct_fac
 
     print(pow1, pow_real1, pow2, pow_real2, pow_real2_rescale)
     # check the power in the realizations matches what we expect
-    assert_allclose(pow_real1, pow1, atol=1.e-40, rtol=7.e-3)
-    assert_allclose(pow_real2, pow2, atol=1.e-40, rtol=7.e-3)
-    assert_allclose(pow_real1 / pow_real2_rescale, pow1 / pow2_rescale, atol=1.e-40, rtol=7.e-3)
+    assert_allclose(pow_real1, pow1, atol=1.0e-40, rtol=7.0e-3)
+    assert_allclose(pow_real2, pow2, atol=1.0e-40, rtol=7.0e-3)
+    assert_allclose(pow_real1 / pow_real2_rescale, pow1 / pow2_rescale, atol=1.0e-40, rtol=7.0e-3)
 
     # transform realized noise to time domain
 
@@ -809,32 +899,34 @@ def test_noise_generation_scaling_flat(channel_mult: tuple[float, float, float, 
     for itrc in range(noise_real2.shape[-1]):
         noise_time2[:, itrc] = inverse_wavelet_time(noise_real2[:, :, itrc], wc2.Nf, wc2.Nt)
 
-    pow_real1_time = np.sum(noise_time1 ** 2)
-    pow_real2_time = np.sum(noise_time2 ** 2)
+    pow_real1_time = np.sum(noise_time1**2)
+    pow_real2_time = np.sum(noise_time2**2)
     pow_real2_time_rescale = pow_real2_time * correct_fac
 
     # check band limited power in time domain matches (parseval's theorem requires this)
-    assert_allclose(pow_real1, pow_real1_time, atol=1.e-40, rtol=1.e-8)
-    assert_allclose(pow_real2, pow_real2_time, atol=1.e-40, rtol=1.e-8)
-    assert_allclose(pow_real1 / pow_real2_rescale, pow_real1_time / pow_real2_time_rescale, atol=1.e-40, rtol=1.e-8)
+    assert_allclose(pow_real1, pow_real1_time, atol=1.0e-40, rtol=1.0e-8)
+    assert_allclose(pow_real2, pow_real2_time, atol=1.0e-40, rtol=1.0e-8)
+    assert_allclose(pow_real1 / pow_real2_rescale, pow_real1_time / pow_real2_time_rescale, atol=1.0e-40, rtol=1.0e-8)
 
     # somewhat narrower range than originally specified to trim edge effects
     mask1_lim = (fs1 >= fmin1 + wc1.DF) & (fs1 <= fmax1 - wc1.DF)
     mask2_lim = (fs2 >= fmin2 + wc2.DF) & (fs2 <= fmax2 - wc2.DF)
 
-    noise_real1_spect = 2 * wc1.dt * np.mean(noise_real1 ** 2, axis=0)
-    noise_real2_spect = 2 * wc2.dt * np.mean(noise_real2 ** 2, axis=0)
+    noise_real1_spect = 2 * wc1.dt * np.mean(noise_real1**2, axis=0)
+    noise_real2_spect = 2 * wc2.dt * np.mean(noise_real2**2, axis=0)
 
     for itrc in range(noise_time1.shape[1]):
-        fpsd1, psd1 = scipy.signal.welch(noise_time1[:, itrc], fs=1. / wc1.dt, nperseg=2 * wc1.Nf, scaling='density',
-                                         window='tukey')
-        fpsd2, psd2 = scipy.signal.welch(noise_time2[:, itrc], fs=1. / wc2.dt, nperseg=2 * wc2.Nf, scaling='density',
-                                         window='tukey')
+        fpsd1, psd1 = scipy.signal.welch(
+            noise_time1[:, itrc], fs=1.0 / wc1.dt, nperseg=2 * wc1.Nf, scaling='density', window='tukey'
+        )
+        fpsd2, psd2 = scipy.signal.welch(
+            noise_time2[:, itrc], fs=1.0 / wc2.dt, nperseg=2 * wc2.Nf, scaling='density', window='tukey'
+        )
 
-        fpsd1_lim = fpsd1[:wc1.Nf]
+        fpsd1_lim = fpsd1[: wc1.Nf]
         assert_allclose(fpsd1_lim, fs1)
 
-        fpsd2_lim = fpsd2[:wc2.Nf]
+        fpsd2_lim = fpsd2[: wc2.Nf]
         assert_allclose(fpsd2_lim, fs2)
 
         print(psd1.shape)
@@ -853,48 +945,64 @@ def test_noise_generation_scaling_flat(channel_mult: tuple[float, float, float, 
         # plt.plot(noise_real2_spect[:,0][mask2_lim])
         # plt.show()
 
-        assert_allclose(psd1[:wc1.Nf][mask1_lim], noise_real1_spect[mask1_lim, itrc], atol=4.e-2, rtol=1.e-1)
-        assert_allclose(psd2[:wc2.Nf][mask2_lim], noise_real2_spect[mask2_lim, itrc], atol=5.e-2 * float(np.sqrt(wc2.Nf / wc1.Nf)),
-                        rtol=2.e-1)
+        assert_allclose(psd1[: wc1.Nf][mask1_lim], noise_real1_spect[mask1_lim, itrc], atol=4.0e-2, rtol=1.0e-1)
+        assert_allclose(
+            psd2[: wc2.Nf][mask2_lim],
+            noise_real2_spect[mask2_lim, itrc],
+            atol=5.0e-2 * float(np.sqrt(wc2.Nf / wc1.Nf)),
+            rtol=2.0e-1,
+        )
 
-        assert_allclose(np.mean(psd1[:wc1.Nf][mask1_lim]), np.mean(noise_real1_spect[mask1_lim, itrc]), atol=1.e-10,
-                        rtol=3.e-3)
-        assert_allclose(np.mean(psd2[:wc2.Nf][mask2_lim]), np.mean(noise_real2_spect[mask2_lim, itrc]), atol=1.e-10,
-                        rtol=3.e-3)
+        assert_allclose(
+            np.mean(psd1[: wc1.Nf][mask1_lim]), np.mean(noise_real1_spect[mask1_lim, itrc]), atol=1.0e-10, rtol=3.0e-3
+        )
+        assert_allclose(
+            np.mean(psd2[: wc2.Nf][mask2_lim]), np.mean(noise_real2_spect[mask2_lim, itrc]), atol=1.0e-10, rtol=3.0e-3
+        )
 
         # multiplier due to different effective smoothing
-        assert_allclose(np.sqrt(3. / 2.) * np.std(psd1[:wc1.Nf][mask1_lim]), np.std(noise_real1_spect[mask1_lim, itrc]),
-                        atol=5.e-3, rtol=5.e-3)
-        assert_allclose(np.sqrt(3. / 2.) * np.std(psd2[:wc2.Nf][mask2_lim]), np.std(noise_real2_spect[mask2_lim, itrc]),
-                        atol=5.e-3, rtol=5.e-3)
+        assert_allclose(
+            np.sqrt(3.0 / 2.0) * np.std(psd1[: wc1.Nf][mask1_lim]),
+            np.std(noise_real1_spect[mask1_lim, itrc]),
+            atol=5.0e-3,
+            rtol=5.0e-3,
+        )
+        assert_allclose(
+            np.sqrt(3.0 / 2.0) * np.std(psd2[: wc2.Nf][mask2_lim]),
+            np.std(noise_real2_spect[mask2_lim, itrc]),
+            atol=5.0e-3,
+            rtol=5.0e-3,
+        )
 
         # variation in the spectra generated from the same noise realization should be correlated
-        corr1 = np.corrcoef(psd1[:wc1.Nf][mask1_lim], noise_real1_spect[mask1_lim, itrc])
-        corr2 = np.corrcoef(psd2[:wc2.Nf][mask2_lim], noise_real2_spect[mask2_lim, itrc])
+        corr1 = np.corrcoef(psd1[: wc1.Nf][mask1_lim], noise_real1_spect[mask1_lim, itrc])
+        corr2 = np.corrcoef(psd2[: wc2.Nf][mask2_lim], noise_real2_spect[mask2_lim, itrc])
 
         assert corr1[0, 1] > 0.82
         assert corr2[0, 1] > 0.7
 
         # case where we known the expected answers
         if lc1.noise_curve_mode == 1:
-            assert_allclose(np.mean(noise_real1_spect[mask1_lim, itrc]), 1., atol=1.e-2, rtol=1.e-2)
-            assert_allclose(np.mean(psd1[:wc1.Nf][mask1_lim]), 1., atol=1.e-2, rtol=1.e-2)
+            assert_allclose(np.mean(noise_real1_spect[mask1_lim, itrc]), 1.0, atol=1.0e-2, rtol=1.0e-2)
+            assert_allclose(np.mean(psd1[: wc1.Nf][mask1_lim]), 1.0, atol=1.0e-2, rtol=1.0e-2)
         if lc2.noise_curve_mode == 1:
-            assert_allclose(np.mean(noise_real2_spect[mask2_lim, itrc]), 1., atol=1.e-2, rtol=1.e-2)
-            assert_allclose(np.mean(psd2[:wc2.Nf][mask2_lim]), 1., atol=1.e-2, rtol=1.e-2)
+            assert_allclose(np.mean(noise_real2_spect[mask2_lim, itrc]), 1.0, atol=1.0e-2, rtol=1.0e-2)
+            assert_allclose(np.mean(psd2[: wc2.Nf][mask2_lim]), 1.0, atol=1.0e-2, rtol=1.0e-2)
 
         if wc1.Nf == wc2.Nf:
             # can compare the spectra directly, and the cross terms
             mask12_lim = mask1_lim & mask2_lim
-            assert_allclose(psd1[:wc1.Nf][mask12_lim], psd2[:wc2.Nf][mask12_lim], atol=7.e-2, rtol=1.e-1)
-            assert_allclose(noise_real1_spect[mask12_lim, itrc], noise_real2_spect[mask12_lim, itrc], atol=7.e-2, rtol=1.e-1)
-            assert_allclose(psd2[:wc2.Nf][mask12_lim], noise_real1_spect[mask12_lim, itrc], atol=7.e-2, rtol=1.e-1)
-            assert_allclose(psd1[:wc2.Nf][mask12_lim], noise_real2_spect[mask12_lim, itrc], atol=7.e-2, rtol=1.e-1)
+            assert_allclose(psd1[: wc1.Nf][mask12_lim], psd2[: wc2.Nf][mask12_lim], atol=7.0e-2, rtol=1.0e-1)
+            assert_allclose(
+                noise_real1_spect[mask12_lim, itrc], noise_real2_spect[mask12_lim, itrc], atol=7.0e-2, rtol=1.0e-1
+            )
+            assert_allclose(psd2[: wc2.Nf][mask12_lim], noise_real1_spect[mask12_lim, itrc], atol=7.0e-2, rtol=1.0e-1)
+            assert_allclose(psd1[: wc2.Nf][mask12_lim], noise_real2_spect[mask12_lim, itrc], atol=7.0e-2, rtol=1.0e-1)
 
-        psd1_2 = InterpolatedUnivariateSpline(fs1, psd1[:wc1.Nf], k=1, ext=1)(fs2)
-        psd2_1 = InterpolatedUnivariateSpline(fs2, psd2[:wc2.Nf], k=1, ext=1)(fs1)
-        mask1_2 = InterpolatedUnivariateSpline(fs1, 1. * mask1_lim, k=1, ext=1)(fs2)
-        mask2_1 = InterpolatedUnivariateSpline(fs2, 1. * mask2_lim, k=1, ext=1)(fs1)
+        psd1_2 = InterpolatedUnivariateSpline(fs1, psd1[: wc1.Nf], k=1, ext=1)(fs2)
+        psd2_1 = InterpolatedUnivariateSpline(fs2, psd2[: wc2.Nf], k=1, ext=1)(fs1)
+        mask1_2 = InterpolatedUnivariateSpline(fs1, 1.0 * mask1_lim, k=1, ext=1)(fs2)
+        mask2_1 = InterpolatedUnivariateSpline(fs2, 1.0 * mask2_lim, k=1, ext=1)(fs1)
 
         noise_real1_spect_2 = InterpolatedUnivariateSpline(fs1, noise_real1_spect[:, itrc], k=1, ext=1)(fs2)
         noise_real2_spect_1 = InterpolatedUnivariateSpline(fs2, noise_real2_spect[:, itrc], k=1, ext=1)(fs1)
@@ -917,40 +1025,68 @@ def test_noise_generation_scaling_flat(channel_mult: tuple[float, float, float, 
         # scale tolerances based on how different the binning is
         if time_equal and spectrum_equal:
             # noise should have generated identically in this case, so tolerance is much tighter
-            rtol12: float = 1.e-20 * float(np.max([np.sqrt(wc1.Nt / wc2.Nt), np.sqrt(wc2.Nt / wc1.Nt)]))
-            atol12: float = 1.e-20 * float(np.max([np.sqrt(wc1.Nf / wc2.Nf), np.sqrt(wc2.Nf / wc1.Nf)]))
+            rtol12: float = 1.0e-20 * float(np.max([np.sqrt(wc1.Nt / wc2.Nt), np.sqrt(wc2.Nt / wc1.Nt)]))
+            atol12: float = 1.0e-20 * float(np.max([np.sqrt(wc1.Nf / wc2.Nf), np.sqrt(wc2.Nf / wc1.Nf)]))
         else:
             rtol12 = 1.4e-1 * float(np.max([np.sqrt(wc1.Nt / wc2.Nt), np.sqrt(wc2.Nt / wc1.Nt)]))
             atol12 = 1.4e-1 * float(np.max([np.sqrt(wc1.Nf / wc2.Nf), np.sqrt(wc2.Nf / wc1.Nf)]))
         # these terms won't be exactly same unless the noise generated the same
-        assert_allclose(psd1_2[mask12_lim_2], psd2[:wc2.Nf][mask12_lim_2], atol=atol12, rtol=rtol12)
-        assert_allclose(psd2_1[mask12_lim_1], psd1[:wc1.Nf][mask12_lim_1], atol=atol12, rtol=rtol12)
-        assert_allclose(noise_real2_spect_1[mask12_lim_1], noise_real1_spect[mask12_lim_1, itrc], atol=atol12, rtol=rtol12)
-        assert_allclose(noise_real1_spect_2[mask12_lim_2], noise_real2_spect[mask12_lim_2, itrc], atol=atol12, rtol=rtol12)
-        assert_allclose(np.mean(psd1_2[mask12_lim_2]), np.mean(psd2[:wc2.Nf][mask12_lim_2]), atol=4.e-2 * atol12,
-                        rtol=4.e-2 * rtol12)
-        assert_allclose(np.mean(psd2_1[mask12_lim_1]), np.mean(psd1[:wc1.Nf][mask12_lim_1]), atol=4.e-2 * atol12,
-                        rtol=4.e-2 * rtol12)
-        assert_allclose(np.mean(noise_real2_spect_1[mask12_lim_1]), np.mean(noise_real1_spect[mask12_lim_1, itrc]),
-                        atol=4.e-2 * atol12, rtol=4.e-2 * rtol12)
-        assert_allclose(np.mean(noise_real1_spect_2[mask12_lim_2]), np.mean(noise_real2_spect[mask12_lim_2, itrc]),
-                        atol=4.e-2 * atol12, rtol=4.e-2 * rtol12)
+        assert_allclose(psd1_2[mask12_lim_2], psd2[: wc2.Nf][mask12_lim_2], atol=atol12, rtol=rtol12)
+        assert_allclose(psd2_1[mask12_lim_1], psd1[: wc1.Nf][mask12_lim_1], atol=atol12, rtol=rtol12)
+        assert_allclose(
+            noise_real2_spect_1[mask12_lim_1], noise_real1_spect[mask12_lim_1, itrc], atol=atol12, rtol=rtol12
+        )
+        assert_allclose(
+            noise_real1_spect_2[mask12_lim_2], noise_real2_spect[mask12_lim_2, itrc], atol=atol12, rtol=rtol12
+        )
+        assert_allclose(
+            np.mean(psd1_2[mask12_lim_2]),
+            np.mean(psd2[: wc2.Nf][mask12_lim_2]),
+            atol=4.0e-2 * atol12,
+            rtol=4.0e-2 * rtol12,
+        )
+        assert_allclose(
+            np.mean(psd2_1[mask12_lim_1]),
+            np.mean(psd1[: wc1.Nf][mask12_lim_1]),
+            atol=4.0e-2 * atol12,
+            rtol=4.0e-2 * rtol12,
+        )
+        assert_allclose(
+            np.mean(noise_real2_spect_1[mask12_lim_1]),
+            np.mean(noise_real1_spect[mask12_lim_1, itrc]),
+            atol=4.0e-2 * atol12,
+            rtol=4.0e-2 * rtol12,
+        )
+        assert_allclose(
+            np.mean(noise_real1_spect_2[mask12_lim_2]),
+            np.mean(noise_real2_spect[mask12_lim_2, itrc]),
+            atol=4.0e-2 * atol12,
+            rtol=4.0e-2 * rtol12,
+        )
 
         # cross terms also have extra tolerance loss from using different methods
         if time_equal and spectrum_equal:
             # tigther tolerance case
-            rtol12 = 4.e-2 * float(np.max([np.sqrt(wc1.Nt / wc2.Nt), np.sqrt(wc2.Nt / wc1.Nt)]))
-            atol12 = 4.e-2 * float(np.max([np.sqrt(wc1.Nf / wc2.Nf), np.sqrt(wc2.Nf / wc1.Nf)]))
+            rtol12 = 4.0e-2 * float(np.max([np.sqrt(wc1.Nt / wc2.Nt), np.sqrt(wc2.Nt / wc1.Nt)]))
+            atol12 = 4.0e-2 * float(np.max([np.sqrt(wc1.Nf / wc2.Nf), np.sqrt(wc2.Nf / wc1.Nf)]))
         else:
             rtol12 = 1.2e-1 * float(np.max([np.sqrt(wc1.Nt / wc2.Nt), np.sqrt(wc2.Nt / wc1.Nt)]))
             atol12 = 1.2e-1 * float(np.max([np.sqrt(wc1.Nf / wc2.Nf), np.sqrt(wc2.Nf / wc1.Nf)]))
-        assert_allclose(noise_real2_spect_1[mask12_lim_1], psd1[:wc1.Nf][mask12_lim_1], atol=atol12, rtol=rtol12)
-        assert_allclose(noise_real1_spect_2[mask12_lim_2], psd2[:wc2.Nf][mask12_lim_2], atol=atol12, rtol=rtol12)
+        assert_allclose(noise_real2_spect_1[mask12_lim_1], psd1[: wc1.Nf][mask12_lim_1], atol=atol12, rtol=rtol12)
+        assert_allclose(noise_real1_spect_2[mask12_lim_2], psd2[: wc2.Nf][mask12_lim_2], atol=atol12, rtol=rtol12)
 
-        assert_allclose(np.mean(noise_real2_spect_1[mask12_lim_1]), np.mean(psd1[:wc1.Nf][mask12_lim_1]),
-                        atol=4.e-2 * atol12, rtol=4.e-2 * rtol12)
-        assert_allclose(np.mean(noise_real1_spect_2[mask12_lim_2]), np.mean(psd2[:wc2.Nf][mask12_lim_2]),
-                        atol=4.e-2 * atol12, rtol=4.e-2 * rtol12)
+        assert_allclose(
+            np.mean(noise_real2_spect_1[mask12_lim_1]),
+            np.mean(psd1[: wc1.Nf][mask12_lim_1]),
+            atol=4.0e-2 * atol12,
+            rtol=4.0e-2 * rtol12,
+        )
+        assert_allclose(
+            np.mean(noise_real1_spect_2[mask12_lim_2]),
+            np.mean(psd2[: wc2.Nf][mask12_lim_2]),
+            atol=4.0e-2 * atol12,
+            rtol=4.0e-2 * rtol12,
+        )
 
 
 # scaling on (Nf, Nt, dt, mult) in the second configuration
@@ -996,10 +1132,10 @@ def test_noise_snr_scaling(channel_mult: tuple[float, float, float, float]) -> N
 
     noise_curve_mode = 0
     if noise_curve_mode == 0:
-        amp_use = 1.e-27
+        amp_use = 1.0e-27
         response_mode = 0
     elif noise_curve_mode == 1:
-        amp_use = 1.
+        amp_use = 1.0
         response_mode = 2
     else:
         msg = 'Unrecognized option for noise curve mode'
@@ -1160,7 +1296,15 @@ def test_noise_snr_scaling(channel_mult: tuple[float, float, float, float]) -> N
         FTd0=3.0e-12,  # frequency derivative (Hz/s)
     )
 
-    print(intrinsic.FTd0, 8 * wc1.DF / wc1.Tw, 8 * wc2.DF / wc2.Tw, wc1.DF**2 / 8, wc2.DF**2 / 8, wc1.dfd * (wc1.Nfd - wc1.Nfd_negative), wc2.dfd * (wc2.Nfd - wc2.Nfd_negative))
+    print(
+        intrinsic.FTd0,
+        8 * wc1.DF / wc1.Tw,
+        8 * wc2.DF / wc2.Tw,
+        wc1.DF**2 / 8,
+        wc2.DF**2 / 8,
+        wc1.dfd * (wc1.Nfd - wc1.Nfd_negative),
+        wc2.dfd * (wc2.Nfd - wc2.Nfd_negative),
+    )
     # TODO need this check in iterative fit
     assert intrinsic.FTd0 < 8 * wc1.DF / wc1.Tw
     assert intrinsic.FTd0 < 8 * wc2.DF / wc2.Tw
@@ -1188,8 +1332,24 @@ def test_noise_snr_scaling(channel_mult: tuple[float, float, float, float]) -> N
 
     t_rat_snr = t_obs_snr1 / t_obs_snr2
 
-    waveform1 = LinearFrequencyWaveletWaveformTime(params, wc1, lc1, nt_lim_waveform1, table_cache_mode='check', table_output_mode='hf', response_mode=response_mode)
-    waveform2 = LinearFrequencyWaveletWaveformTime(params, wc2, lc2, nt_lim_waveform2, table_cache_mode='check', table_output_mode='skip', response_mode=response_mode)
+    waveform1 = LinearFrequencyWaveletWaveformTime(
+        params,
+        wc1,
+        lc1,
+        nt_lim_waveform1,
+        table_cache_mode='check',
+        table_output_mode='hf',
+        response_mode=response_mode,
+    )
+    waveform2 = LinearFrequencyWaveletWaveformTime(
+        params,
+        wc2,
+        lc2,
+        nt_lim_waveform2,
+        table_cache_mode='check',
+        table_output_mode='skip',
+        response_mode=response_mode,
+    )
 
     wavelet_waveform1 = waveform1.get_unsorted_coeffs()
     wavelet_waveform2 = waveform2.get_unsorted_coeffs()
@@ -1202,7 +1362,9 @@ def test_noise_snr_scaling(channel_mult: tuple[float, float, float, float]) -> N
     print(snrs1, snr_tot1)
     print(snrs2, snr_tot2)
     print(t_rat_snr, time_rat_waveform)
-    print((wc1.DF * wc1.Nf) / intrinsic.F0, (wc2.DF * wc2.Nf) / intrinsic.F0, intrinsic.F0 / wc1.DF, intrinsic.F0 / wc2.DF)
+    print(
+        (wc1.DF * wc1.Nf) / intrinsic.F0, (wc2.DF * wc2.Nf) / intrinsic.F0, intrinsic.F0 / wc1.DF, intrinsic.F0 / wc2.DF
+    )
 
     if waveform1.source_waveform.response_mode == response_mode and lc1.noise_curve_mode == 1:
         assert_array_equal(snrs1[0], snrs1)

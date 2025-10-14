@@ -1,4 +1,5 @@
 """A source with linearly increasing frequency and constant amplitude."""
+
 from abc import ABC
 from typing import Generic, override
 
@@ -7,7 +8,12 @@ import numpy as np
 from numpy.typing import NDArray
 
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.ra_waveform_freq import get_spacecraft_vec, get_tensor_basis, get_wavefront_time, rigid_adiabatic_antenna
+from LisaWaveformTools.ra_waveform_freq import (
+    get_spacecraft_vec,
+    get_tensor_basis,
+    get_wavefront_time,
+    rigid_adiabatic_antenna,
+)
 from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
 from LisaWaveformTools.source_params import ExtrinsicParamsType, IntrinsicParamsType, SourceParams
 from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, EdgeRiseModel, SpacecraftOrbits
@@ -15,10 +21,16 @@ from LisaWaveformTools.stationary_source_waveform import StationarySourceWavefor
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 
-class StationarySourceWaveformTime(Generic[IntrinsicParamsType, ExtrinsicParamsType], StationarySourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType], ABC):
-    """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain."""
+class StationarySourceWaveformTime(
+    Generic[IntrinsicParamsType, ExtrinsicParamsType],
+    StationarySourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType],
+    ABC,
+):
+    """Store a binary with linearly increasing frequency and constant amplitude in the time domain."""
 
-    def __init__(self, params: SourceParams, nt_lim_waveform: PixelGenericRange, lc: LISAConstants, *, response_mode: int = 0) -> None:
+    def __init__(
+        self, params: SourceParams, nt_lim_waveform: PixelGenericRange, lc: LISAConstants, *, response_mode: int = 0
+    ) -> None:
         """Initialize the object."""
         self._nt_lim_waveform: PixelGenericRange = nt_lim_waveform
         self._nt_range: int = int(self._nt_lim_waveform.nx_max - self._nt_lim_waveform.nx_min)
@@ -27,7 +39,9 @@ class StationarySourceWaveformTime(Generic[IntrinsicParamsType, ExtrinsicParamsT
         self._consistent_extrinsic: bool = False
         self._consistent_intrinsic: bool = False
 
-        self._TTs: NDArray[np.float64] = np.float64(self._nt_lim_waveform.dx) * np.arange(self._nt_lim_waveform.nx_min, self._nt_lim_waveform.nx_max)
+        self._TTs: NDArray[np.float64] = np.float64(self._nt_lim_waveform.dx) * np.arange(
+            self._nt_lim_waveform.nx_min, self._nt_lim_waveform.nx_max
+        )
         self._spacecraft_orbits: SpacecraftOrbits = get_spacecraft_vec(self._TTs, self._lc)
 
         self._response_mode: int = -1
@@ -151,16 +165,20 @@ class StationarySourceWaveformTime(Generic[IntrinsicParamsType, ExtrinsicParamsT
                 self._lc,
             )
             get_time_tdi_amp_phase(
-                self._spacecraft_channels, self._tdi_waveform, self.intrinsic_waveform, self._lc, self._er,
+                self._spacecraft_channels,
+                self._tdi_waveform,
+                self.intrinsic_waveform,
+                self._lc,
+                self._er,
                 self._nt_lim_waveform,
             )
         elif self.response_mode == 2:
             # intrinsic only, no rigid adiabatic response
-            self._spacecraft_channels.RR[:] = 1.
-            self._spacecraft_channels.II[:] = 0.
-            self._spacecraft_channels.dRR[:] = 0.
-            self._spacecraft_channels.dII[:] = 0.
-            self._kdotx[:] = 0.
+            self._spacecraft_channels.RR[:] = 1.0
+            self._spacecraft_channels.II[:] = 0.0
+            self._spacecraft_channels.dRR[:] = 0.0
+            self._spacecraft_channels.dII[:] = 0.0
+            self._kdotx[:] = 0.0
             self._tdi_waveform.AT[:] = self.intrinsic_waveform.AT
             self._tdi_waveform.PT[:] = self.intrinsic_waveform.PT
             self._tdi_waveform.FT[:] = self.intrinsic_waveform.FT
@@ -211,17 +229,17 @@ class StationarySourceWaveformTime(Generic[IntrinsicParamsType, ExtrinsicParamsT
                 spacecraft_orbits_loc.x[:] -= spacecraft_orbits_loc.xa
                 spacecraft_orbits_loc.y[:] -= spacecraft_orbits_loc.ya
                 spacecraft_orbits_loc.z[:] -= spacecraft_orbits_loc.za
-                spacecraft_orbits_loc.xa[:] = 0.
-                spacecraft_orbits_loc.ya[:] = 0.
-                spacecraft_orbits_loc.za[:] = 0.
+                spacecraft_orbits_loc.xa[:] = 0.0
+                spacecraft_orbits_loc.ya[:] = 0.0
+                spacecraft_orbits_loc.za[:] = 0.0
             elif mode == 2:
                 # no spacecraft motion
-                spacecraft_orbits_loc.x[:] = 0.
-                spacecraft_orbits_loc.y[:] = 0.
-                spacecraft_orbits_loc.z[:] = 0.
-                spacecraft_orbits_loc.xa[:] = 0.
-                spacecraft_orbits_loc.ya[:] = 0.
-                spacecraft_orbits_loc.za[:] = 0.
+                spacecraft_orbits_loc.x[:] = 0.0
+                spacecraft_orbits_loc.y[:] = 0.0
+                spacecraft_orbits_loc.z[:] = 0.0
+                spacecraft_orbits_loc.xa[:] = 0.0
+                spacecraft_orbits_loc.ya[:] = 0.0
+                spacecraft_orbits_loc.za[:] = 0.0
 
             self._spacecraft_orbits = spacecraft_orbits_loc
 

@@ -43,7 +43,7 @@ def get_sparse_snr_helper(
     snr2s = np.zeros(nc_snr)
     for itrc in range(nc_snr):
         n_pixel_loc: int = int(wavelet_waveform.n_set[itrc])
-        pixel_index_loc: NDArray[np.integer] = wavelet_waveform.pixel_index[itrc, : n_pixel_loc]
+        pixel_index_loc: NDArray[np.integer] = wavelet_waveform.pixel_index[itrc, :n_pixel_loc]
         wave_value_loc: NDArray[np.floating] = wavelet_waveform.wave_value[itrc, :]
         i_itrs: NDArray[np.integer] = np.mod(pixel_index_loc, wc.Nf)
         j_itrs: NDArray[np.integer] = (pixel_index_loc - i_itrs) // wc.Nf
@@ -71,7 +71,7 @@ def get_sparse_likelihood_helper_prewhitened(
     likelihoods = np.zeros(nc_snr)
     for itrc in range(nc_snr):
         n_pixel_loc: int = int(wavelet_waveform.n_set[itrc])
-        pixel_index_loc: NDArray[np.integer] = wavelet_waveform.pixel_index[itrc, : n_pixel_loc]
+        pixel_index_loc: NDArray[np.integer] = wavelet_waveform.pixel_index[itrc, :n_pixel_loc]
         wave_value_loc: NDArray[np.floating] = wavelet_waveform.wave_value[itrc, :]
         i_itrs: NDArray[np.integer] = np.mod(pixel_index_loc, wc.Nf)
         j_itrs: NDArray[np.integer] = (pixel_index_loc - i_itrs) // wc.Nf
@@ -81,14 +81,16 @@ def get_sparse_likelihood_helper_prewhitened(
             if nt_lim_snr.nx_min <= j_loc < nt_lim_snr.nx_max:
                 signal_white: float = inv_chol_S[j_loc, i_loc, itrc] * wave_value_loc[mm]
                 data_white: float = wavelet_data_white[j_loc, i_loc, itrc]
-                signal_part = - signal_white ** 2 / 2
+                signal_part = -(signal_white**2) / 2
                 data_part = data_white * signal_white
                 likelihoods[itrc] += signal_part + data_part
     return likelihoods
 
 
 class DenseNoiseModel(ABC):
-    def __init__(self, wc: WDMWaveletConstants, *, prune: int, nc_snr: int, nc_noise: int, seed: int = -1, storage_mode: int = 0) -> None:
+    def __init__(
+        self, wc: WDMWaveletConstants, *, prune: int, nc_snr: int, nc_noise: int, seed: int = -1, storage_mode: int = 0
+    ) -> None:
         self._wc: WDMWaveletConstants = wc
         self._prune: int = prune
         self._seed: int = seed
@@ -132,18 +134,20 @@ class DenseNoiseModel(ABC):
 
     def get_inv_S(self) -> NDArray[np.floating]:
         """Get the inverse of the dense noise covariance matrix."""
-        res = self.get_inv_chol_S()**2
-        res[:, :self.prune, :] = 0.
+        res = self.get_inv_chol_S() ** 2
+        res[:, : self.prune, :] = 0.0
         return res
 
     def get_chol_S(self) -> NDArray[np.floating]:
         """Get the cholesky decomposition of the dense noise covariance matrix."""
         # make sure pruned bins are zero
         res: NDArray[np.floating] = np.sqrt(self.get_S())
-        res[:, :self.prune, :] = 0.
+        res[:, : self.prune, :] = 0.0
         return res
 
-    def get_sparse_snrs(self, wavelet_waveform: SparseWaveletWaveform, nt_lim_snr: PixelGenericRange) -> NDArray[np.floating]:
+    def get_sparse_snrs(
+        self, wavelet_waveform: SparseWaveletWaveform, nt_lim_snr: PixelGenericRange
+    ) -> NDArray[np.floating]:
         """Get S/N of intrinsic_waveform in each TDI channel.
 
         Parameters usually come from e.g.
@@ -163,7 +167,9 @@ class DenseNoiseModel(ABC):
         """
         return get_sparse_snr_helper(wavelet_waveform, nt_lim_snr, self._wc, self.get_inv_chol_S(), self._nc_snr)
 
-    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'dense_noise_model', group_mode: int = 0) -> h5py.Group:
+    def store_hdf5(
+        self, hf_in: h5py.Group, *, group_name: str = 'dense_noise_model', group_mode: int = 0
+    ) -> h5py.Group:
         """Store attributes, configuration, and results to an hdf5 file."""
         if group_mode == 0:
             hf_noise = hf_in.create_group(group_name)
@@ -253,7 +259,7 @@ class DenseNoiseModel(ABC):
             for j in range(self._wc.Nt):
                 noise_res[j, :, :] = rng.normal(0.0, 1.0, (self._wc.Nf, self._nc_noise))
                 # wipe pruned values, but still need to get them to advance the rng state
-                noise_res[j, :self.prune, :] = 0.
+                noise_res[j, : self.prune, :] = 0.0
         return noise_res
 
     def get_S_stat_m(self) -> NDArray[np.floating]:
@@ -264,7 +270,15 @@ class DenseNoiseModel(ABC):
 class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
     """Handle the full nonstationary noise model."""
 
-    def __init__(self, S: NDArray[np.floating], wc: WDMWaveletConstants, prune: int, nc_snr: int, seed: int = -1, storage_mode: int = 0) -> None:
+    def __init__(
+        self,
+        S: NDArray[np.floating],
+        wc: WDMWaveletConstants,
+        prune: int,
+        nc_snr: int,
+        seed: int = -1,
+        storage_mode: int = 0,
+    ) -> None:
         """Initialize the fully diagonal, nonstationary noise model.
 
         Parameters
@@ -293,17 +307,21 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
         assert len(S.shape) == 3
         assert S.shape[0] == wc.Nt
         assert S.shape[1] == wc.Nf
-        super().__init__(wc, prune=prune, nc_snr=nc_snr, nc_noise=int(S.shape[-1]), seed=seed, storage_mode=storage_mode)
+        super().__init__(
+            wc, prune=prune, nc_snr=nc_snr, nc_noise=int(S.shape[-1]), seed=seed, storage_mode=storage_mode
+        )
 
         self._S: NDArray[np.floating] = S.copy()
         self._inv_chol_S: NDArray[np.floating] = np.zeros((self._wc.Nt, self._wc.Nf, self._nc_noise))
         for j in range(self._wc.Nt):
             for itrc in range(self._nc_noise):
-                chol_S_loc = np.sqrt(self._S[j, self.prune:, itrc])
-                self._inv_chol_S[j, self.prune:, itrc] = 1.0 / chol_S_loc
+                chol_S_loc = np.sqrt(self._S[j, self.prune :, itrc])
+                self._inv_chol_S[j, self.prune :, itrc] = 1.0 / chol_S_loc
 
     @override
-    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'dense_noise_model', group_mode: int = 0) -> h5py.Group:
+    def store_hdf5(
+        self, hf_in: h5py.Group, *, group_name: str = 'dense_noise_model', group_mode: int = 0
+    ) -> h5py.Group:
         """Store attributes, configuration, and results to an hdf5 file."""
         return super().store_hdf5(hf_in, group_name=group_name, group_mode=group_mode)
 
@@ -321,7 +339,15 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
 class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
     """Handle a noise model that is diagonal and stationary in time."""
 
-    def __init__(self, S_stat_m: NDArray[np.floating], wc: WDMWaveletConstants, prune: int, nc_snr: int, seed: int = -1, storage_mode: int = 0) -> None:
+    def __init__(
+        self,
+        S_stat_m: NDArray[np.floating],
+        wc: WDMWaveletConstants,
+        prune: int,
+        nc_snr: int,
+        seed: int = -1,
+        storage_mode: int = 0,
+    ) -> None:
         """Initialize the stationary instrument noise model.
 
         Parameters
@@ -352,7 +378,9 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
         """
         assert len(S_stat_m.shape) == 2
         assert S_stat_m.shape[0] == wc.Nf
-        super().__init__(wc, prune=prune, nc_snr=nc_snr, nc_noise=int(S_stat_m.shape[-1]), seed=seed, storage_mode=storage_mode)
+        super().__init__(
+            wc, prune=prune, nc_snr=nc_snr, nc_noise=int(S_stat_m.shape[-1]), seed=seed, storage_mode=storage_mode
+        )
         self._S_stat_m_in: NDArray[np.floating] = S_stat_m
 
         self._inv_chol_S_stat_m: NDArray[np.floating] = np.zeros((self._wc.Nf, self._nc_noise))
@@ -384,7 +412,9 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
                     self._inv_chol_S[j, 0, itrc] = self._inv_chol_S_stat_m[0, itrc]
 
     @override
-    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'dense_noise_model', group_mode: int = 0) -> h5py.Group:
+    def store_hdf5(
+        self, hf_in: h5py.Group, *, group_name: str = 'dense_noise_model', group_mode: int = 0
+    ) -> h5py.Group:
         """Store attributes, configuration, and results to an hdf5 file."""
         hf_noise = super().store_hdf5(hf_in, group_name=group_name, group_mode=group_mode)
 

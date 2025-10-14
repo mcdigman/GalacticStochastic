@@ -106,9 +106,15 @@ class NoiseModelManager(StateManager):
             self._itr_save += 1
         S_lower = np.asarray(np.min([S_lower, S_upper], axis=0), dtype=np.float64)
 
-        self.noise_upper: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(S_upper, wc, prune=1, nc_snr=lc.nc_snr, seed=self._instrument_random_seed)
-        self.noise_lower: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(S_lower, wc, prune=1, nc_snr=lc.nc_snr, seed=self._instrument_random_seed)
-        self.noise_instrument: DiagonalStationaryDenseNoiseModel = DiagonalStationaryDenseNoiseModel(self.S_inst_m, wc, prune=1, nc_snr=lc.nc_snr, seed=self._instrument_random_seed)
+        self.noise_upper: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(
+            S_upper, wc, prune=1, nc_snr=lc.nc_snr, seed=self._instrument_random_seed
+        )
+        self.noise_lower: DiagonalNonstationaryDenseNoiseModel = DiagonalNonstationaryDenseNoiseModel(
+            S_lower, wc, prune=1, nc_snr=lc.nc_snr, seed=self._instrument_random_seed
+        )
+        self.noise_instrument: DiagonalStationaryDenseNoiseModel = DiagonalStationaryDenseNoiseModel(
+            self.S_inst_m, wc, prune=1, nc_snr=lc.nc_snr, seed=self._instrument_random_seed
+        )
 
         del S_upper
         del S_lower
@@ -171,16 +177,25 @@ class NoiseModelManager(StateManager):
         _ = hf_noise.create_dataset('idx_S_save', data=self._idx_S_save, compression='gzip')
 
         # at least store the history of the mean spectrum
-        _ = hf_noise.create_dataset('S_record_upper_mean', data=np.mean(self.S_record_upper, axis=1), compression='gzip')
-        _ = hf_noise.create_dataset('S_record_lower_mean', data=np.mean(self.S_record_lower, axis=1), compression='gzip')
+        _ = hf_noise.create_dataset(
+            'S_record_upper_mean', data=np.mean(self.S_record_upper, axis=1), compression='gzip'
+        )
+        _ = hf_noise.create_dataset(
+            'S_record_lower_mean', data=np.mean(self.S_record_lower, axis=1), compression='gzip'
+        )
 
         if storage_mode == 1 and self._itr_save > 0:
             # can safely be rederived as long as bgd is stored
-            _ = hf_noise.create_dataset('S_record_upper_final', data=self.S_record_upper[self._itr_save - 1], compression='gzip')
-            _ = hf_noise.create_dataset('S_record_lower_final', data=self.S_record_lower[self._itr_save - 1], compression='gzip')
+            _ = hf_noise.create_dataset(
+                'S_record_upper_final', data=self.S_record_upper[self._itr_save - 1], compression='gzip'
+            )
+            _ = hf_noise.create_dataset(
+                'S_record_lower_final', data=self.S_record_lower[self._itr_save - 1], compression='gzip'
+            )
 
         if storage_mode == 2:
-            # full versions of these potentially take a lot of memory, and aren't always needed so don't necessarily want to write them to disk
+            # full versions of these potentially take a lot of memory
+            # and aren't always needed, so don't necessarily want to write them to disk
             _ = hf_noise.create_dataset('S_record_upper', data=self.S_record_upper, compression='gzip')
             _ = hf_noise.create_dataset('S_record_lower', data=self.S_record_lower, compression='gzip')
 
@@ -266,12 +281,22 @@ class NoiseModelManager(StateManager):
         cyclo_mode_temp = hf_noise.attrs['cyclo_mode']
         assert isinstance(cyclo_mode_temp, (int, np.integer))
         self.cyclo_mode = int(cyclo_mode_temp)
-        assert hf_noise.attrs['noise_upper_name'] == self.noise_upper.__class__.__name__, 'incorrect noise upper name found in hdf5 file'
-        assert hf_noise.attrs['noise_lower_name'] == self.noise_lower.__class__.__name__, 'incorrect noise lower name found in hdf5 file'
-        assert hf_noise.attrs['noise_instrument_name'] == self.noise_instrument.__class__.__name__, 'incorrect noise instrument name found in hdf5 file'
+        assert hf_noise.attrs['noise_upper_name'] == self.noise_upper.__class__.__name__, (
+            'incorrect noise upper name found in hdf5 file'
+        )
+        assert hf_noise.attrs['noise_lower_name'] == self.noise_lower.__class__.__name__, (
+            'incorrect noise lower name found in hdf5 file'
+        )
+        assert hf_noise.attrs['noise_instrument_name'] == self.noise_instrument.__class__.__name__, (
+            'incorrect noise instrument name found in hdf5 file'
+        )
         assert hf_noise.attrs['bgd_name'] == self.bgd.__class__.__name__, 'incorrect bgd name found in hdf5 file'
-        assert hf_noise.attrs['fit_state_name'] == self._fit_state.__class__.__name__, 'incorrect fit state name found in hdf5 file'
-        assert hf_noise.attrs['nt_lim_snr_name'] == self.nt_lim_snr.__class__.__name__, 'incorrect nt_lim_snr name found in hdf5 file'
+        assert hf_noise.attrs['fit_state_name'] == self._fit_state.__class__.__name__, (
+            'incorrect fit state name found in hdf5 file'
+        )
+        assert hf_noise.attrs['nt_lim_snr_name'] == self.nt_lim_snr.__class__.__name__, (
+            'incorrect nt_lim_snr name found in hdf5 file'
+        )
         instrument_random_seed_temp = hf_noise.attrs['instrument_random_seed']
         assert isinstance(instrument_random_seed_temp, (int, np.integer))
         self._instrument_random_seed = int(instrument_random_seed_temp)
@@ -334,7 +359,9 @@ class NoiseModelManager(StateManager):
 
         if self._fit_state.preprocess_mode != 1:
             for key in self._ic._fields:
-                assert np.all(getattr(self._ic, key) == hf_ic.attrs[key]), f'ic attribute {key} does not match saved value'
+                assert np.all(getattr(self._ic, key) == hf_ic.attrs[key]), (
+                    f'ic attribute {key} does not match saved value'
+                )
 
         # just make new noise models, don't try to load them
         if not self.cyclo_mode:
@@ -362,7 +389,9 @@ class NoiseModelManager(StateManager):
         S_lower = np.asarray(np.min([S_lower, self.noise_upper.get_S()], axis=0), dtype=np.float64)
 
         self.noise_lower = DiagonalNonstationaryDenseNoiseModel(S_lower, self.wc, prune=1, nc_snr=self._lc.nc_snr)
-        self.noise_instrument = DiagonalStationaryDenseNoiseModel(self.S_inst_m, self.wc, prune=1, nc_snr=self._lc.nc_snr, seed=self._instrument_random_seed)
+        self.noise_instrument = DiagonalStationaryDenseNoiseModel(
+            self.S_inst_m, self.wc, prune=1, nc_snr=self._lc.nc_snr, seed=self._instrument_random_seed
+        )
 
     @override
     def log_state(self) -> None:
@@ -386,10 +415,15 @@ class NoiseModelManager(StateManager):
     @override
     def print_report(self) -> None:
         """Do any printing desired after convergence has been achieved and the loop ends."""
-        res_mask = np.asarray(((self.noise_upper.get_S()[:, :, 0] - self.S_inst_m[:, 0]).mean(axis=0) > 0.1 * self.S_inst_m[:, 0]) & (self.S_inst_m[:, 0] > 0.0), dtype=np.bool_)
+        res_mask = np.asarray(
+            ((self.noise_upper.get_S()[:, :, 0] - self.S_inst_m[:, 0]).mean(axis=0) > 0.1 * self.S_inst_m[:, 0])
+            & (self.S_inst_m[:, 0] > 0.0),
+            dtype=np.bool_,
+        )
         galactic_below_high = self.bgd.get_galactic_below_high()
         noise_divide = np.sqrt(
-            self.noise_upper.get_S()[self.nt_lim_snr.nx_min : self.nt_lim_snr.nx_max, res_mask, :2] - self.S_inst_m[res_mask, :2],
+            self.noise_upper.get_S()[self.nt_lim_snr.nx_min : self.nt_lim_snr.nx_max, res_mask, :2]
+            - self.S_inst_m[res_mask, :2],
         )
         points_res = (
             galactic_below_high.reshape(self.wc.Nt, self.wc.Nf, self.bgd.nc_galaxy)[
@@ -413,11 +447,13 @@ class NoiseModelManager(StateManager):
         del points_res
         if unit_normal_res:
             print(
-                'Background PASSES normality: points=%12d A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f' % (n_points, a2score, mean_rat, std_rat),
+                'Background PASSES normality: points=%12d A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f'
+                % (n_points, a2score, mean_rat, std_rat),
             )
         else:
             print(
-                'Background FAILS  normality: points=%12d A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f' % (n_points, a2score, mean_rat, std_rat),
+                'Background FAILS  normality: points=%12d A2=%3.5f, mean ratio=%3.5f, std ratio=%3.5f'
+                % (n_points, a2score, mean_rat, std_rat),
             )
 
     @override

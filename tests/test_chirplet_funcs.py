@@ -32,23 +32,25 @@ def test_intrinsic_waveform_agreement() -> None:
     wc = get_wavelet_model(config)
     lc = get_lisa_constants(config)
 
-    nt_lim_waveform = PixelGenericRange(0, wc.Nt, wc.DT, 0.)
+    nt_lim_waveform = PixelGenericRange(0, wc.Nt, wc.DT, 0.0)
 
     fdot_mult = 0.1
     fdot = 3.105 * fdot_mult * wc.DF / wc.Tw  # used an irrational fraction to ensure the fdot lands between samples
 
     f0 = 16 * wc.DF
 
-    tp = wc.Tobs / 2.
+    tp = wc.Tobs / 2.0
 
     fp = f0 + fdot * tp  # ensures that frequency starts positive
 
-    gamma = fp / 8.
+    gamma = fp / 8.0
     tau = gamma / fdot
 
     # Setup the intrinsic parameters for the binary source
-    intrinsic = LinearChirpletIntrinsicParams(10000., 0.1, fp, tp, tau, gamma)
-    extrinsic = ExtrinsicParams(costh=0.1, phi=0.1, cosi=0.2, psi=0.3)  # Replace this with a real extrinsic param object if needed
+    intrinsic = LinearChirpletIntrinsicParams(10000.0, 0.1, fp, tp, tau, gamma)
+    extrinsic = ExtrinsicParams(
+        costh=0.1, phi=0.1, cosi=0.2, psi=0.3
+    )  # Replace this with a real extrinsic param object if needed
 
     # Bundle parameters
     params = SourceParams(
@@ -56,7 +58,7 @@ def test_intrinsic_waveform_agreement() -> None:
         extrinsic=extrinsic,
     )
 
-    NF_lim = PixelGenericRange(0, wc.Nf, wc.DF, 0.)
+    NF_lim = PixelGenericRange(0, wc.Nf, wc.DF, 0.0)
 
     freeze_limits = True
 
@@ -80,35 +82,45 @@ def test_intrinsic_waveform_agreement() -> None:
     t_wave = lf_waveform_time.intrinsic_waveform
     f_wave = lf_waveform_freq.intrinsic_waveform
 
-    FTdF = InterpolatedUnivariateSpline(f_wave.TF, 1. / f_wave.TFp, k=3, ext=3)(t_wave.T)
-    TFpT = InterpolatedUnivariateSpline(t_wave.FT, 1. / t_wave.FTd, k=3, ext=3)(f_wave.F)
+    FTdF = InterpolatedUnivariateSpline(f_wave.TF, 1.0 / f_wave.TFp, k=3, ext=3)(t_wave.T)
+    TFpT = InterpolatedUnivariateSpline(t_wave.FT, 1.0 / t_wave.FTd, k=3, ext=3)(f_wave.F)
     AmpTF = InterpolatedUnivariateSpline(f_wave.TF, f_wave.AF / np.sqrt(np.abs(f_wave.TFp)), k=3, ext=1)(t_wave.T)
 
     # check all the agreements that do not depend on wavefront time
-    assert_allclose(FTdF, t_wave.FTd, atol=1.e-20, rtol=1.e-10)
-    assert_allclose(np.gradient(f_wave.TF, wc.DF)[2:-1], f_wave.TFp[2:-1], atol=1.e-20, rtol=1.e-10)
-    assert_allclose(np.gradient(f_wave.PF, wc.DF)[2:-1] / (2 * np.pi), f_wave.TF[2:-1], atol=1.e-7, rtol=1.e-10)
-    assert_allclose(TFpT[(f_wave.TF > 0.) & (wc.Tobs > f_wave.TF)], f_wave.TFp[(f_wave.TF > 0.) & (wc.Tobs > f_wave.TF)], atol=1.e-20, rtol=1.e-10)
-    assert_allclose(FTdF, t_wave.FTd, atol=1.e-20, rtol=1.e-10)
-    assert_allclose(t_wave.AT, AmpTF, atol=1.e-5, rtol=1.e-10)
+    assert_allclose(FTdF, t_wave.FTd, atol=1.0e-20, rtol=1.0e-10)
+    assert_allclose(np.gradient(f_wave.TF, wc.DF)[2:-1], f_wave.TFp[2:-1], atol=1.0e-20, rtol=1.0e-10)
+    assert_allclose(np.gradient(f_wave.PF, wc.DF)[2:-1] / (2 * np.pi), f_wave.TF[2:-1], atol=1.0e-7, rtol=1.0e-10)
+    assert_allclose(
+        TFpT[(f_wave.TF > 0.0) & (wc.Tobs > f_wave.TF)],
+        f_wave.TFp[(f_wave.TF > 0.0) & (wc.Tobs > f_wave.TF)],
+        atol=1.0e-20,
+        rtol=1.0e-10,
+    )
+    assert_allclose(FTdF, t_wave.FTd, atol=1.0e-20, rtol=1.0e-10)
+    assert_allclose(t_wave.AT, AmpTF, atol=1.0e-5, rtol=1.0e-10)
 
-    assert_allclose(np.gradient(t_wave.FT, lf_waveform_time.wavefront_time), t_wave.FTd, atol=1.e-20, rtol=1.e-10)
-    assert_allclose(np.gradient(t_wave.PT, lf_waveform_time.wavefront_time)[1:-1] / (2 * np.pi), t_wave.FT[1:-1], atol=1.e-20, rtol=1.e-10)
+    assert_allclose(np.gradient(t_wave.FT, lf_waveform_time.wavefront_time), t_wave.FTd, atol=1.0e-20, rtol=1.0e-10)
+    assert_allclose(
+        np.gradient(t_wave.PT, lf_waveform_time.wavefront_time)[1:-1] / (2 * np.pi),
+        t_wave.FT[1:-1],
+        atol=1.0e-20,
+        rtol=1.0e-10,
+    )
 
-    PTF_base = -f_wave.PF + 2. * np.pi * f_wave.F * f_wave.TF - np.pi / 4.
+    PTF_base = -f_wave.PF + 2.0 * np.pi * f_wave.F * f_wave.TF - np.pi / 4.0
 
     PTF = InterpolatedUnivariateSpline(f_wave.TF, PTF_base, k=3, ext=3)(lf_waveform_time.wavefront_time)
     FTF = InterpolatedUnivariateSpline(f_wave.TF, f_wave.F, k=3, ext=1)(lf_waveform_time.wavefront_time)
 
-    PFT_base = -t_wave.PT + 2. * np.pi * lf_waveform_time.wavefront_time * t_wave.FT - np.pi / 4.
+    PFT_base = -t_wave.PT + 2.0 * np.pi * lf_waveform_time.wavefront_time * t_wave.FT - np.pi / 4.0
     PFT = InterpolatedUnivariateSpline(t_wave.FT, PFT_base, k=3, ext=3)(f_wave.F)
     TFT = InterpolatedUnivariateSpline(t_wave.FT, lf_waveform_time.wavefront_time, k=3, ext=1)(f_wave.F)
 
-    assert_allclose(FTF, t_wave.FT, atol=1.e-20, rtol=1.e-10)
-    assert_allclose(PTF, t_wave.PT, atol=1.e-20, rtol=1.e-10)
-    mask = (f_wave.TF > 0.) & (wc.Tobs > f_wave.TF)
-    assert_allclose(TFT[mask], f_wave.TF[mask], atol=2.e-9, rtol=1.e-10)
-    assert_allclose(PFT[mask], f_wave.PF[mask], atol=1.e-5, rtol=1.e-10)
+    assert_allclose(FTF, t_wave.FT, atol=1.0e-20, rtol=1.0e-10)
+    assert_allclose(PTF, t_wave.PT, atol=1.0e-20, rtol=1.0e-10)
+    mask = (f_wave.TF > 0.0) & (wc.Tobs > f_wave.TF)
+    assert_allclose(TFT[mask], f_wave.TF[mask], atol=2.0e-9, rtol=1.0e-10)
+    assert_allclose(PFT[mask], f_wave.PF[mask], atol=1.0e-5, rtol=1.0e-10)
 
 
 def test_intrinsic_update_consistent1_time() -> None:
@@ -121,7 +133,7 @@ def test_intrinsic_update_consistent1_time() -> None:
     wc = get_wavelet_model(config)
     lc = get_lisa_constants(config)
 
-    nt_lim_waveform = PixelGenericRange(0, wc.Nt, wc.DT, 0.)
+    nt_lim_waveform = PixelGenericRange(0, wc.Nt, wc.DT, 0.0)
 
     fdot_mult1 = 0.1
     fdot1 = 3.105 * fdot_mult1 * wc.DF / wc.Tw  # used an irrational fraction to ensure the fdot lands between samples
@@ -131,24 +143,28 @@ def test_intrinsic_update_consistent1_time() -> None:
 
     f0 = 16 * wc.DF
 
-    tp1 = wc.Tobs / 2.
-    tp2 = 1.05 * wc.Tobs / 2.
+    tp1 = wc.Tobs / 2.0
+    tp2 = 1.05 * wc.Tobs / 2.0
 
     fp1 = f0 + fdot1 * tp1  # ensures that frequency starts positive
     fp2 = f0 + fdot2 * tp1  # ensures that frequency starts positive
 
-    gamma1 = fp1 / 8.
+    gamma1 = fp1 / 8.0
     tau1 = gamma1 / fdot1
 
-    gamma2 = fp2 / 8.
+    gamma2 = fp2 / 8.0
     tau2 = gamma2 / fdot2
 
     # Setup the intrinsic parameters for the binary source
-    intrinsic1 = LinearChirpletIntrinsicParams(10000., 0.1, fp1, tp1, tau1, gamma1)
-    intrinsic2 = LinearChirpletIntrinsicParams(15000., 0.2, fp2, tp2, tau2, gamma2)
+    intrinsic1 = LinearChirpletIntrinsicParams(10000.0, 0.1, fp1, tp1, tau1, gamma1)
+    intrinsic2 = LinearChirpletIntrinsicParams(15000.0, 0.2, fp2, tp2, tau2, gamma2)
 
-    extrinsic1 = ExtrinsicParams(costh=0.1, phi=0.1, cosi=0.2, psi=0.3)  # Replace this with a real extrinsic param object if needed
-    extrinsic2 = ExtrinsicParams(costh=0.2, phi=0.3, cosi=0.1, psi=0.2)  # Replace this with a real extrinsic param object if needed
+    extrinsic1 = ExtrinsicParams(
+        costh=0.1, phi=0.1, cosi=0.2, psi=0.3
+    )  # Replace this with a real extrinsic param object if needed
+    extrinsic2 = ExtrinsicParams(
+        costh=0.2, phi=0.3, cosi=0.1, psi=0.2
+    )  # Replace this with a real extrinsic param object if needed
 
     # Bundle parameters
     params1 = SourceParams(
@@ -273,24 +289,28 @@ def test_intrinsic_update_consistent1_freq(freeze_limits: bool) -> None:
 
     f0 = 16 * wc.DF
 
-    tp1 = wc.Tobs / 2.
-    tp2 = 1.05 * wc.Tobs / 2.
+    tp1 = wc.Tobs / 2.0
+    tp2 = 1.05 * wc.Tobs / 2.0
 
     fp1 = f0 + fdot1 * tp1  # ensures that frequency starts positive
     fp2 = f0 + fdot2 * tp1  # ensures that frequency starts positive
 
-    gamma1 = fp1 / 8.
+    gamma1 = fp1 / 8.0
     tau1 = gamma1 / fdot1
 
-    gamma2 = fp2 / 8.
+    gamma2 = fp2 / 8.0
     tau2 = gamma2 / fdot2
 
     # Setup the intrinsic parameters for the binary source
-    intrinsic1 = LinearChirpletIntrinsicParams(10000., 0.1, fp1, tp1, tau1, gamma1)
-    intrinsic2 = LinearChirpletIntrinsicParams(15000., 0.2, fp2, tp2, tau2, gamma2)
+    intrinsic1 = LinearChirpletIntrinsicParams(10000.0, 0.1, fp1, tp1, tau1, gamma1)
+    intrinsic2 = LinearChirpletIntrinsicParams(15000.0, 0.2, fp2, tp2, tau2, gamma2)
 
-    extrinsic1 = ExtrinsicParams(costh=0.1, phi=0.1, cosi=0.2, psi=0.3)  # Replace this with a real extrinsic param object if needed
-    extrinsic2 = ExtrinsicParams(costh=0.2, phi=0.3, cosi=0.1, psi=0.2)  # Replace this with a real extrinsic param object if needed
+    extrinsic1 = ExtrinsicParams(
+        costh=0.1, phi=0.1, cosi=0.2, psi=0.3
+    )  # Replace this with a real extrinsic param object if needed
+    extrinsic2 = ExtrinsicParams(
+        costh=0.2, phi=0.3, cosi=0.1, psi=0.2
+    )  # Replace this with a real extrinsic param object if needed
 
     # Bundle parameters
     params1 = SourceParams(
@@ -303,7 +323,7 @@ def test_intrinsic_update_consistent1_freq(freeze_limits: bool) -> None:
         extrinsic=extrinsic2,
     )
 
-    NF_lim = PixelGenericRange(0, wc.Nf, wc.DF, 0.)
+    NF_lim = PixelGenericRange(0, wc.Nf, wc.DF, 0.0)
 
     lf_waveform_freq11 = LinearChirpletSourceWaveformFreq(
         params=params1,
@@ -431,6 +451,7 @@ def test_intrinsic_update_consistent1_freq(freeze_limits: bool) -> None:
     assert_match_freq(lf_waveform_freq11, lf_waveform_freq12)
     assert_match_freq(lf_waveform_freq22, lf_waveform_freq21)
 
+
 # TODO none of these functions actually call the chirplet functions
 
 
@@ -465,36 +486,46 @@ def test_sincos_low_wdm_match(m: int, use_tukey: bool, use_cos: bool) -> None:
     wave_got_freq = transform_wavelet_freq(hs_freq, wc.Nf, wc.Nt)
     print(wc.dt, wc.Nt, wc.Nf, wave_got_time[0, m], wave_got_freq[0, m], np.sum(hs**2) / (np.sqrt(wc.Nf) * wc.Nt) * 2)
 
-    matchsigf_sigt = 1 - np.sum(wave_got_freq * wave_got_time) / np.sqrt(np.sum(wave_got_freq**2) * np.sum(wave_got_time**2))
+    matchsigf_sigt = 1 - np.sum(wave_got_freq * wave_got_time) / np.sqrt(
+        np.sum(wave_got_freq**2) * np.sum(wave_got_time**2)
+    )
 
-    assert matchsigf_sigt < 1.e-7
-    assert_allclose(wave_got_time, wave_got_freq, atol=1.e-4, rtol=1.e-4)
+    assert matchsigf_sigt < 1.0e-7
+    assert_allclose(wave_got_time, wave_got_freq, atol=1.0e-4, rtol=1.0e-4)
 
     if not use_tukey:
-        assert_allclose(wave_got_time[:, 0:m], 0., atol=1.e-8)
-        assert_allclose(wave_got_time[:, m + 1:], 0., atol=1.e-8)
-        assert_allclose(wave_got_freq[:, 0:m], 0., atol=1.e-8)
-        assert_allclose(wave_got_freq[:, m + 1:], 0., atol=1.e-8)
+        assert_allclose(wave_got_time[:, 0:m], 0.0, atol=1.0e-8)
+        assert_allclose(wave_got_time[:, m + 1 :], 0.0, atol=1.0e-8)
+        assert_allclose(wave_got_freq[:, 0:m], 0.0, atol=1.0e-8)
+        assert_allclose(wave_got_freq[:, m + 1 :], 0.0, atol=1.0e-8)
 
         alt1 = not (m % 2 == 1) ^ use_cos  # or (not (m%2==1) and not use_cos)
         if alt1:
-            assert_allclose(wave_got_time[::2, m], 0., atol=1.e-8)
-            assert_allclose(wave_got_time[1::2, m], wave_got_time[wc.Nt // 2 + 1, m], atol=1.e-8, rtol=1.e-8)
-            assert_allclose(wave_got_freq[::2, m], 0., atol=1.e-8)
-            assert_allclose(wave_got_freq[1::2, m], wave_got_freq[wc.Nt // 2 + 1, m], atol=1.e-8, rtol=1.e-8)
-            sign = (-1)**(use_cos)
-            assert_allclose(wave_got_time[1::2, m], sign * np.sum(hs**2) / (np.sqrt(wc.Nf) * wc.Nt) * 2, atol=1.e-8, rtol=1.e-8)
-            assert_allclose(wave_got_freq[1::2, m], sign * np.sum(hs**2) / (np.sqrt(wc.Nf) * wc.Nt) * 2, atol=1.e-8, rtol=1.e-8)
+            assert_allclose(wave_got_time[::2, m], 0.0, atol=1.0e-8)
+            assert_allclose(wave_got_time[1::2, m], wave_got_time[wc.Nt // 2 + 1, m], atol=1.0e-8, rtol=1.0e-8)
+            assert_allclose(wave_got_freq[::2, m], 0.0, atol=1.0e-8)
+            assert_allclose(wave_got_freq[1::2, m], wave_got_freq[wc.Nt // 2 + 1, m], atol=1.0e-8, rtol=1.0e-8)
+            sign = (-1) ** (use_cos)
+            assert_allclose(
+                wave_got_time[1::2, m], sign * np.sum(hs**2) / (np.sqrt(wc.Nf) * wc.Nt) * 2, atol=1.0e-8, rtol=1.0e-8
+            )
+            assert_allclose(
+                wave_got_freq[1::2, m], sign * np.sum(hs**2) / (np.sqrt(wc.Nf) * wc.Nt) * 2, atol=1.0e-8, rtol=1.0e-8
+            )
         else:
-            assert_allclose(wave_got_time[1::2, m], 0., atol=1.e-8)
-            assert_allclose(wave_got_time[::2, m], wave_got_time[wc.Nt // 2, m], atol=1.e-8, rtol=1.e-8)
-            assert_allclose(wave_got_freq[1::2, m], 0., atol=1.e-8)
-            assert_allclose(wave_got_freq[::2, m], wave_got_freq[wc.Nt // 2, m], atol=1.e8, rtol=1.e-8)
-            assert_allclose(wave_got_time[::2, m], np.sum(hs**2) / (np.sqrt(wc.Nf) * wc.Nt) * 2, atol=1.e-8, rtol=1.e-8)
-            assert_allclose(wave_got_freq[::2, m], np.sum(hs**2) / (np.sqrt(wc.Nf) * wc.Nt) * 2, atol=1.e-8, rtol=1.e-8)
+            assert_allclose(wave_got_time[1::2, m], 0.0, atol=1.0e-8)
+            assert_allclose(wave_got_time[::2, m], wave_got_time[wc.Nt // 2, m], atol=1.0e-8, rtol=1.0e-8)
+            assert_allclose(wave_got_freq[1::2, m], 0.0, atol=1.0e-8)
+            assert_allclose(wave_got_freq[::2, m], wave_got_freq[wc.Nt // 2, m], atol=1.0e8, rtol=1.0e-8)
+            assert_allclose(
+                wave_got_time[::2, m], np.sum(hs**2) / (np.sqrt(wc.Nf) * wc.Nt) * 2, atol=1.0e-8, rtol=1.0e-8
+            )
+            assert_allclose(
+                wave_got_freq[::2, m], np.sum(hs**2) / (np.sqrt(wc.Nf) * wc.Nt) * 2, atol=1.0e-8, rtol=1.0e-8
+            )
 
 
-@pytest.mark.parametrize('dt_loc', [7.5, 15., 30.])
+@pytest.mark.parametrize('dt_loc', [7.5, 15.0, 30.0])
 @pytest.mark.parametrize('Nt_loc', [256, 512])
 @pytest.mark.parametrize('Nf_loc', [1024, 2048])
 @pytest.mark.parametrize('m', [7, 8])
@@ -526,28 +557,34 @@ def test_sincos_wdm_match(dt_loc: float, Nt_loc: int, Nf_loc: int, m: int, use_c
     wave_got_freq = transform_wavelet_freq(hs_freq, wc.Nf, wc.Nt)
     print(wc.dt, wc.Nt, wc.Nf, wave_got_time[0, m], wave_got_freq[0, m], np.sum(hs**2) / (np.sqrt(wc.Nf) * wc.Nt) * 2)
 
-    matchsigf_sigt = 1 - np.sum(wave_got_freq * wave_got_time) / np.sqrt(np.sum(wave_got_freq**2) * np.sum(wave_got_time**2))
+    matchsigf_sigt = 1 - np.sum(wave_got_freq * wave_got_time) / np.sqrt(
+        np.sum(wave_got_freq**2) * np.sum(wave_got_time**2)
+    )
 
-    assert matchsigf_sigt < 1.e-7
-    assert_allclose(wave_got_time, wave_got_freq, atol=1.e-8, rtol=1.e-8)
-    assert_allclose(wave_got_time[:, 0:m], 0., atol=1.e-8)
-    assert_allclose(wave_got_time[:, m + 1:], 0., atol=1.e-8)
-    assert_allclose(wave_got_freq[:, 0:m], 0., atol=1.e-8)
-    assert_allclose(wave_got_freq[:, m + 1:], 0., atol=1.e-8)
+    assert matchsigf_sigt < 1.0e-7
+    assert_allclose(wave_got_time, wave_got_freq, atol=1.0e-8, rtol=1.0e-8)
+    assert_allclose(wave_got_time[:, 0:m], 0.0, atol=1.0e-8)
+    assert_allclose(wave_got_time[:, m + 1 :], 0.0, atol=1.0e-8)
+    assert_allclose(wave_got_freq[:, 0:m], 0.0, atol=1.0e-8)
+    assert_allclose(wave_got_freq[:, m + 1 :], 0.0, atol=1.0e-8)
 
     alt1 = not (m % 2 == 1) ^ use_cos  # or (not (m%2==1) and not use_cos)
     if alt1:
-        assert_allclose(wave_got_time[::2, m], 0., atol=1.e-8)
-        assert_allclose(wave_got_time[1::2, m], wave_got_time[wc.Nt // 2 + 1, m], atol=1.e-8, rtol=1.e-8)
-        assert_allclose(wave_got_freq[::2, m], 0., atol=1.e-8)
-        assert_allclose(wave_got_freq[1::2, m], wave_got_freq[wc.Nt // 2 + 1, m], atol=1.e-8, rtol=1.e-8)
-        sign = (-1)**(use_cos)
-        assert_allclose(wave_got_time[1::2, m], sign * np.sum(hs**2) / (np.sqrt(wc.Nf) * wc.Nt) * 2, atol=1.e-8, rtol=1.e-8)
-        assert_allclose(wave_got_freq[1::2, m], sign * np.sum(hs**2) / (np.sqrt(wc.Nf) * wc.Nt) * 2, atol=1.e-8, rtol=1.e-8)
+        assert_allclose(wave_got_time[::2, m], 0.0, atol=1.0e-8)
+        assert_allclose(wave_got_time[1::2, m], wave_got_time[wc.Nt // 2 + 1, m], atol=1.0e-8, rtol=1.0e-8)
+        assert_allclose(wave_got_freq[::2, m], 0.0, atol=1.0e-8)
+        assert_allclose(wave_got_freq[1::2, m], wave_got_freq[wc.Nt // 2 + 1, m], atol=1.0e-8, rtol=1.0e-8)
+        sign = (-1) ** (use_cos)
+        assert_allclose(
+            wave_got_time[1::2, m], sign * np.sum(hs**2) / (np.sqrt(wc.Nf) * wc.Nt) * 2, atol=1.0e-8, rtol=1.0e-8
+        )
+        assert_allclose(
+            wave_got_freq[1::2, m], sign * np.sum(hs**2) / (np.sqrt(wc.Nf) * wc.Nt) * 2, atol=1.0e-8, rtol=1.0e-8
+        )
     else:
-        assert_allclose(wave_got_time[1::2, m], 0., atol=1.e-8)
-        assert_allclose(wave_got_time[::2, m], wave_got_time[wc.Nt // 2, m], atol=1.e-8, rtol=1.e-8)
-        assert_allclose(wave_got_freq[1::2, m], 0., atol=1.e-8)
-        assert_allclose(wave_got_freq[::2, m], wave_got_freq[wc.Nt // 2, m], atol=1.e8, rtol=1.e-8)
-        assert_allclose(wave_got_time[::2, m], np.sum(hs**2) / (np.sqrt(wc.Nf) * wc.Nt) * 2, atol=1.e-8, rtol=1.e-8)
-        assert_allclose(wave_got_freq[::2, m], np.sum(hs**2) / (np.sqrt(wc.Nf) * wc.Nt) * 2, atol=1.e-8, rtol=1.e-8)
+        assert_allclose(wave_got_time[1::2, m], 0.0, atol=1.0e-8)
+        assert_allclose(wave_got_time[::2, m], wave_got_time[wc.Nt // 2, m], atol=1.0e-8, rtol=1.0e-8)
+        assert_allclose(wave_got_freq[1::2, m], 0.0, atol=1.0e-8)
+        assert_allclose(wave_got_freq[::2, m], wave_got_freq[wc.Nt // 2, m], atol=1.0e8, rtol=1.0e-8)
+        assert_allclose(wave_got_time[::2, m], np.sum(hs**2) / (np.sqrt(wc.Nf) * wc.Nt) * 2, atol=1.0e-8, rtol=1.0e-8)
+        assert_allclose(wave_got_freq[::2, m], np.sum(hs**2) / (np.sqrt(wc.Nf) * wc.Nt) * 2, atol=1.0e-8, rtol=1.0e-8)

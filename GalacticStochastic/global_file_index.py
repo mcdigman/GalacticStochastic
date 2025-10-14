@@ -45,7 +45,9 @@ def get_galaxy_filename(config: dict[str, Any]) -> str:
     return str(config_files['galaxy_dir']) + str(config_files['galaxy_file'])
 
 
-def get_processed_galactic_filename(config: dict[str, Any], wc: WDMWaveletConstants, *, preprocess_mode: int = 2) -> str:
+def get_processed_galactic_filename(
+    config: dict[str, Any], wc: WDMWaveletConstants, *, preprocess_mode: int = 2
+) -> str:
     """Get the filename where the iterative fit results are stored.
 
     Parameters
@@ -74,7 +76,9 @@ def get_processed_galactic_filename(config: dict[str, Any], wc: WDMWaveletConsta
     return galaxy_dir + file_prefix + '_Nf=' + str(wc.Nf) + '_Nt=' + str(wc.Nt) + ('_dt=%.2f' % (wc.dt)) + '.hdf5'
 
 
-def _source_mask_read_helper(hf_sky: h5py.Group, key: str, fmin: float, fmax: float) -> tuple[int, NDArray[np.floating]]:
+def _source_mask_read_helper(
+    hf_sky: h5py.Group, key: str, fmin: float, fmax: float
+) -> tuple[int, NDArray[np.floating]]:
     """
     Read and filter galactic binary parameters from an HDF5 group by frequency range.
 
@@ -222,15 +226,23 @@ def get_full_galactic_params(config: dict[str, Any]) -> tuple[NDArray[np.floatin
     if np.any(np.all(params_gb == 0.0, axis=0)):
         warn('Some parameters are always zero', stacklevel=2)
     assert np.all(params_gb[:, 0] > 0.0), 'Some binaries have non-positive amplitudes'
-    assert np.all((-np.pi / 2 <= params_gb[:, 1]) & (params_gb[:, 1] <= np.pi / 2)), 'Ecliptic latitude not bounded in expected range'
-    assert np.all((params_gb[:, 2] >= 0.0) & (params_gb[:, 2] <= 2 * np.pi)), 'Ecliptic longitude not bounded in expected range'
+    assert np.all((-np.pi / 2 <= params_gb[:, 1]) & (params_gb[:, 1] <= np.pi / 2)), (
+        'Ecliptic latitude not bounded in expected range'
+    )
+    assert np.all((params_gb[:, 2] >= 0.0) & (params_gb[:, 2] <= 2 * np.pi)), (
+        'Ecliptic longitude not bounded in expected range'
+    )
     assert np.all(params_gb[:, 3] > 0.0), 'Some binaries have non-positive frequencies'
     if np.any(np.abs(params_gb[:, 4]) * gc.SECSYEAR * 10 > 0.001):
         warn('Some binaries have large frequency derivatives', stacklevel=2)
     print('Largest frequency derivative', np.max(np.abs(params_gb[:, 4])))
     assert np.all((params_gb[:, 5] >= 0.0) & (params_gb[:, 5] <= np.pi)), 'Inclination not bounded in expected range'
-    assert np.all((params_gb[:, 6] >= 0.0) & (params_gb[:, 6] <= 2 * np.pi)), 'Initial phase not bounded in expected range'
-    assert np.all((params_gb[:, 7] >= 0.0) & (params_gb[:, 7] <= 2 * np.pi)), 'Polarization phase not bounded in expected range'
+    assert np.all((params_gb[:, 6] >= 0.0) & (params_gb[:, 6] <= 2 * np.pi)), (
+        'Initial phase not bounded in expected range'
+    )
+    assert np.all((params_gb[:, 7] >= 0.0) & (params_gb[:, 7] <= 2 * np.pi)), (
+        'Polarization phase not bounded in expected range'
+    )
     return params_gb, ns_got
 
 
@@ -314,7 +326,7 @@ def load_processed_galactic_file(
             msg = 'Unrecognized hdf5 file format'
             raise TypeError(msg)
     except (OSError, KeyError) as e:
-        msg = f'Could not find processed galactic binary file {filename_in} with snr_thresh={snr_thresh}, nt_range={nt_range}, cyclo_mode={cyclo_mode}'
+        msg = f'Could not find file {filename_in}'
         raise FileNotFoundError(msg) from e
 
     ifm.load_hdf5(hf_run)
@@ -483,7 +495,9 @@ def store_processed_gb_file(
     # sha256_hex_gb = _get_file_hash(filename_source_gb)
 
     if hash_mode == 1 and 'filename_source_gb_sha256' in hf_out.attrs:
-        assert hf_out.attrs['filename_source_gb_sha256'] == sha256_hex_gb, 'Processed file was generated from a different source galactic binary file than the one currently specified'
+        assert hf_out.attrs['filename_source_gb_sha256'] == sha256_hex_gb, (
+            'Processed file was generated from a different source galactic binary file than the one currently specified'
+        )
         print('Processed file source galactic binary sha256 checksum matches current source galactic binary file')
 
     hf_out.attrs['filename_source_gb_sha256'] = sha256_hex_gb
@@ -494,11 +508,18 @@ def store_processed_gb_file(
         with h5py.File(filename_gb_init, 'r') as hf_prelim:
             try:
                 sha256_hex_gb_prelim = hf_prelim.attrs['filename_source_gb_sha256']
-                assert sha256_hex_gb_prelim == sha256_hex_gb, 'Pre-processed file was generated from a different source galactic binary file than the one currently specified'
-                print('Pre-processed file source galactic binary sha256 checksum matches current source galactic binary file')
+                assert sha256_hex_gb_prelim == sha256_hex_gb, (
+                    'Pre-processed file was generated from a different source galactic binary file'
+                )
+                print(
+                    'Pre-processed file source galactic binary sha256 checksum matches source galactic binary file'
+                )
                 del sha256_hex_gb_prelim
             except KeyError:
-                warn('Pre-processed file did not record a sha256 checksum, cannot verify it matches source galactic binary file', stacklevel=2)
+                warn(
+                    'Pre-processed file did not record a sha256 checksum, cannot verify source galactic binary file',
+                    stacklevel=2,
+                )
 
             # get old recorded hashes from the pre-processed file if they exist
             list_temp: list[str] = []
@@ -511,7 +532,6 @@ def store_processed_gb_file(
     del sha256_hex_gb
 
     if not skip_init:
-
         sha256_hex_gb_init = _get_file_hash(filename_gb_init)
         # with Path(filename_gb_init).open('rb') as f:
         #    digest = hashlib.file_digest(f, 'sha256')

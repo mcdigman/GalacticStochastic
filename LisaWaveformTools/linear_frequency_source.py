@@ -45,7 +45,9 @@ class LinearFrequencyIntrinsicParams(NamedTuple):
 N_LINEAR_FREQUENCY_PACKED = 4
 
 
-def _load_intrinsic_linear_frequency_from_packed_helper(params_packed: NDArray[np.floating]) -> LinearFrequencyIntrinsicParams:
+def _load_intrinsic_linear_frequency_from_packed_helper(
+    params_packed: NDArray[np.floating],
+) -> LinearFrequencyIntrinsicParams:
     assert len(params_packed.shape) == 1
     assert params_packed.size == N_LINEAR_FREQUENCY_PACKED
     amp0_t = params_packed[0]
@@ -93,7 +95,9 @@ class LinearFrequencyParamsManager(AbstractIntrinsicParamsManager[LinearFrequenc
 
 # TODO check factor of 2pi
 @njit()
-def linear_frequency_intrinsic(waveform: StationaryWaveformTime, intrinsic_params: LinearFrequencyIntrinsicParams, t_in: NDArray[np.float64]) -> None:
+def linear_frequency_intrinsic(
+    waveform: StationaryWaveformTime, intrinsic_params: LinearFrequencyIntrinsicParams, t_in: NDArray[np.float64]
+) -> None:
     """
     Get time domain intrinsic_waveform for a linearly increasing frequency source with constant amplitude.
 
@@ -128,13 +132,13 @@ def linear_frequency_intrinsic(waveform: StationaryWaveformTime, intrinsic_param
         t = t_in[n]
         FT[n] = intrinsic_params.F0 + intrinsic_params.FTd0 * t
         FTd[n] = intrinsic_params.FTd0
-        PT[n] = -intrinsic_params.phi0 + 2 * np.pi * intrinsic_params.F0 * t + np.pi * intrinsic_params.FTd0 * t ** 2
+        PT[n] = -intrinsic_params.phi0 + 2 * np.pi * intrinsic_params.F0 * t + np.pi * intrinsic_params.FTd0 * t**2
         AT[n] = intrinsic_params.amp0_t
 
 
 # TODO do consistency checks
 class LinearFrequencySourceWaveformTime(StationarySourceWaveformTime[LinearFrequencyIntrinsicParams, ExtrinsicParams]):
-    """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain."""
+    """Store a binary intrinsic_waveform with linearly increasing frequency and constant time domain amplitude."""
 
     @override
     def _update_intrinsic(self) -> None:
@@ -148,7 +152,9 @@ class LinearFrequencySourceWaveformTime(StationarySourceWaveformTime[LinearFrequ
         self._consistent_intrinsic = True
 
     @override
-    def _create_intrinsic_params_manager(self, params_intrinsic: LinearFrequencyIntrinsicParams) -> LinearFrequencyParamsManager:
+    def _create_intrinsic_params_manager(
+        self, params_intrinsic: LinearFrequencyIntrinsicParams
+    ) -> LinearFrequencyParamsManager:
         return LinearFrequencyParamsManager(params_intrinsic)
 
 
@@ -158,9 +164,29 @@ class LinearFrequencyWaveletWaveformTime(BinaryWaveletTaylorTime[LinearFrequency
     Uses the Taylor time method.
     """
 
-    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, *, wavelet_mode: int = 1, response_mode: int = 0, table_cache_mode: str = 'check', table_output_mode: str = 'skip') -> None:
+    def __init__(
+        self,
+        params: SourceParams,
+        wc: WDMWaveletConstants,
+        lc: LISAConstants,
+        nt_lim_waveform: PixelGenericRange,
+        *,
+        wavelet_mode: int = 1,
+        response_mode: int = 0,
+        table_cache_mode: str = 'check',
+        table_output_mode: str = 'skip',
+    ) -> None:
         """Construct a binary wavelet object."""
         # get the intrinsic_waveform
         source_waveform = LinearFrequencySourceWaveformTime(params, nt_lim_waveform, lc, response_mode=response_mode)
 
-        super().__init__(params, wc, lc, nt_lim_waveform, source_waveform, wavelet_mode=wavelet_mode, table_cache_mode=table_cache_mode, table_output_mode=table_output_mode)
+        super().__init__(
+            params,
+            wc,
+            lc,
+            nt_lim_waveform,
+            source_waveform,
+            wavelet_mode=wavelet_mode,
+            table_cache_mode=table_cache_mode,
+            table_output_mode=table_output_mode,
+        )

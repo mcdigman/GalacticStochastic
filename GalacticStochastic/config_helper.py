@@ -10,7 +10,9 @@ from LisaWaveformTools.lisa_config import LISAConstants, get_lisa_constants
 from WaveletWaveforms.wdm_config import WDMWaveletConstants, get_wavelet_model
 
 
-def get_config_objects_from_dict(config: dict[str, Any]) -> tuple[dict[str, Any], WDMWaveletConstants, LISAConstants, IterationConfig, int]:
+def get_config_objects_from_dict(
+    config: dict[str, Any],
+) -> tuple[dict[str, Any], WDMWaveletConstants, LISAConstants, IterationConfig, int]:
     """
     Load configuration objects from a configuration dictionary.
 
@@ -93,7 +95,9 @@ def get_config_dict_from_file(toml_filename: str) -> dict[str, Any]:
     return config
 
 
-def get_config_objects(toml_filename: str) -> tuple[dict[str, Any], WDMWaveletConstants, LISAConstants, IterationConfig, int]:
+def get_config_objects(
+    toml_filename: str,
+) -> tuple[dict[str, Any], WDMWaveletConstants, LISAConstants, IterationConfig, int]:
     """
     Load configuration objects from a TOML file.
 

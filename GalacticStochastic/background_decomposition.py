@@ -18,7 +18,11 @@ if TYPE_CHECKING:
 
 
 def _check_correct_component_shape(
-    nc: int, wc: WDMWaveletConstants, galactic_component: NDArray[np.floating], *, shape_mode: int = 0,
+    nc: int,
+    wc: WDMWaveletConstants,
+    galactic_component: NDArray[np.floating],
+    *,
+    shape_mode: int = 0,
 ) -> NDArray[np.floating]:
     """
     Check and reshape a galactic background component to the correct shape.
@@ -236,21 +240,31 @@ class BGDecomposition:
 
         if self._storage_mode == 0:
             _ = hf_background.create_dataset(
-                'galactic_below_low', data=self.get_galactic_below_low(), compression='gzip',
+                'galactic_below_low',
+                data=self.get_galactic_below_low(),
+                compression='gzip',
             )
             _ = hf_background.create_dataset(
-                'galactic_above', data=self.get_galactic_coadd_resolvable(), compression='gzip',
+                'galactic_above',
+                data=self.get_galactic_coadd_resolvable(),
+                compression='gzip',
             )
             _ = hf_background.create_dataset(
-                'galactic_undecided', data=self.get_galactic_coadd_undecided(), compression='gzip',
+                'galactic_undecided',
+                data=self.get_galactic_coadd_undecided(),
+                compression='gzip',
             )
         elif self._storage_mode == 1:
             # track just faint part and everything else combined, useful for preliminary
             _ = hf_background.create_dataset(
-                'galactic_below_low', data=self.get_galactic_below_low(), compression='gzip',
+                'galactic_below_low',
+                data=self.get_galactic_below_low(),
+                compression='gzip',
             )
             _ = hf_background.create_dataset(
-                'galactic_potentially_resolvable', data=self.get_galactic_coadd_potentially_resolvable(), compression='gzip',
+                'galactic_potentially_resolvable',
+                data=self.get_galactic_coadd_potentially_resolvable(),
+                compression='gzip',
             )
         return hf_background
 
@@ -358,7 +372,9 @@ class BGDecomposition:
             raise ValueError(msg)
 
         if self._storage_mode == 0:
-            self._galactic_below[:] = 0.0  # reset to zero, since we cannot separate the two components and will not write this one
+            self._galactic_below[:] = (
+                0.0  # reset to zero, since we cannot separate the two components and will not write this one
+            )
 
             galactic_below_low_temp = hf_background['galactic_below_low']
             assert isinstance(galactic_below_low_temp, h5py.Dataset)
@@ -379,8 +395,12 @@ class BGDecomposition:
             self._galactic_undecided[:] = galactic_undecided
 
         elif self._storage_mode == 1:
-            self._galactic_below[:] = 0.0  # reset to zero, since we cannot separate the two components and will not write this one
-            self._galactic_above[:] = 0.0  # reset to zero, since we cannot separate the two components and will not write this one
+            self._galactic_below[:] = (
+                0.0  # reset to zero, since we cannot separate the two components and will not write this one
+            )
+            self._galactic_above[:] = (
+                0.0  # reset to zero, since we cannot separate the two components and will not write this one
+            )
 
             galactic_below_low_temp = hf_background['galactic_below_low']
             assert isinstance(galactic_below_low_temp, h5py.Dataset)
@@ -407,7 +427,10 @@ class BGDecomposition:
         self._power_galactic_total = []
 
     def _output_shape_select(
-        self, representation: NDArray[np.floating], *, shape_mode: int = 0,
+        self,
+        representation: NDArray[np.floating],
+        *,
+        shape_mode: int = 0,
     ) -> NDArray[np.floating]:
         r"""
         Select and reshape the output array to the desired shape for galactic background components.
@@ -520,7 +543,9 @@ class BGDecomposition:
         res = self._galactic_floor + self._galactic_below
         return self._output_shape_select(res, shape_mode=shape_mode)
 
-    def get_galactic_coadd_potentially_resolvable(self, *, bypass_check: bool = False, shape_mode: int = 0) -> NDArray[np.floating]:
+    def get_galactic_coadd_potentially_resolvable(
+        self, *, bypass_check: bool = False, shape_mode: int = 0
+    ) -> NDArray[np.floating]:
         r"""
         Get coadded signal from the potentially resolvable (bright or undecided) galactic binaries.
 
@@ -541,7 +566,9 @@ class BGDecomposition:
         """
         if not bypass_check:
             self.state_check()
-        res = self.get_galactic_coadd_undecided(bypass_check=True) + self.get_galactic_coadd_resolvable(bypass_check=True)
+        res = self.get_galactic_coadd_undecided(bypass_check=True) + self.get_galactic_coadd_resolvable(
+            bypass_check=True
+        )
         return self._output_shape_select(res, shape_mode=shape_mode)
 
     def get_galactic_coadd_resolvable(self, *, bypass_check: bool = False, shape_mode: int = 0) -> NDArray[np.floating]:

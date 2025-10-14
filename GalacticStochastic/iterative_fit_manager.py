@@ -76,7 +76,9 @@ class IterativeFitManager(StateManager):
         self.state_check()
 
     @override
-    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'iterative_manager', group_mode: int = 0) -> h5py.Group:
+    def store_hdf5(
+        self, hf_in: h5py.Group, *, group_name: str = 'iterative_manager', group_mode: int = 0
+    ) -> h5py.Group:
         """
         Store attributes, configuration, and results to an HDF5 file.
 
@@ -175,10 +177,18 @@ class IterativeFitManager(StateManager):
         self._n_full_converged = int(n_full_converged_temp)
 
         assert hf_manager.attrs['creator_name'] == self.__class__.__name__, 'incorrect creator name found in hdf5 file'
-        assert hf_manager.attrs['inclusion_state_name'] == self.bis.__class__.__name__, 'incorrect inclusion state name found in hdf5 file'
-        assert hf_manager.attrs['fit_state_name'] == self.fit_state.__class__.__name__, 'incorrect fit state name found in hdf5 file'
-        assert hf_manager.attrs['noise_manager_name'] == self.noise_manager.__class__.__name__, 'incorrect noise manager name found in hdf5 file'
-        assert hf_manager.attrs['ic_name'] == self.ic.__class__.__name__, 'incorrect iteration config name found in hdf5 file'
+        assert hf_manager.attrs['inclusion_state_name'] == self.bis.__class__.__name__, (
+            'incorrect inclusion state name found in hdf5 file'
+        )
+        assert hf_manager.attrs['fit_state_name'] == self.fit_state.__class__.__name__, (
+            'incorrect fit state name found in hdf5 file'
+        )
+        assert hf_manager.attrs['noise_manager_name'] == self.noise_manager.__class__.__name__, (
+            'incorrect noise manager name found in hdf5 file'
+        )
+        assert hf_manager.attrs['ic_name'] == self.ic.__class__.__name__, (
+            'incorrect iteration config name found in hdf5 file'
+        )
 
         hf_ic = hf_manager['ic']
         if not isinstance(hf_ic, h5py.Group):
@@ -187,7 +197,9 @@ class IterativeFitManager(StateManager):
 
         if self.fit_state.preprocess_mode != 1:
             for key in self.ic._fields:
-                assert np.all(getattr(self.ic, key) == hf_ic.attrs[key]), f'ic attribute {key} does not match saved value'
+                assert np.all(getattr(self.ic, key) == hf_ic.attrs[key]), (
+                    f'ic attribute {key} does not match saved value'
+                )
 
         self.bis.load_hdf5(hf_manager)
         self.noise_manager.load_hdf5(hf_manager)

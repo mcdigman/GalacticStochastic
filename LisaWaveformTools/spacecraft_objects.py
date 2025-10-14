@@ -1,4 +1,5 @@
 """Various objects for the spacecraft and detector response calculations."""
+
 from typing import NamedTuple
 
 import numpy as np
@@ -241,7 +242,8 @@ class SpacecraftSeparationWaveProjection(NamedTuple):
     k_sc_sc_sep : numpy.ndarray
         Dot products of the wave vector with the separation vectors between each spacecraft pair, shape (n_arm, n_arm)
     k_sc_gc_sep : numpy.ndarray
-        Dot products of the wave vector with the separation vectors between spacecraft and the guiding center, shape (n_arm,)
+        Dot products of the wave vector with the separation vectors between spacecraft and the guiding center
+        shape (n_arm,)
     """
 
     k_sc_sc_sep: NDArray[np.floating]

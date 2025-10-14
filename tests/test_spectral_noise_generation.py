@@ -59,7 +59,9 @@ def test_noise_normalization_flat(noise_curve_mode: int, distort_mult: int) -> N
 
     for itrc in range(nc_noise):
         noise_realization_time[:, itrc] = inverse_wavelet_time(noise_wave[:, :, itrc], Nf, Nt)
-        fpsd, psd_loc = scipy.signal.welch(noise_realization_time[:, itrc], fs=1. / dt, nperseg=2 * Nf, scaling='density', window='tukey')
+        fpsd, psd_loc = scipy.signal.welch(
+            noise_realization_time[:, itrc], fs=1.0 / dt, nperseg=2 * Nf, scaling='density', window='tukey'
+        )
         psd_interp[:, itrc] = InterpolatedUnivariateSpline(fpsd, psd_loc, k=3, ext=1)(fs_fft)
         # plt.plot(noise_realization_time[:, 0]**2)
         # plt.show()
@@ -77,28 +79,51 @@ def test_noise_normalization_flat(noise_curve_mode: int, distort_mult: int) -> N
         # plt.loglog(np.sqrt(np.abs(psd_interp[arglim_min:arglim, itrc])))
         # plt.loglog(np.abs(spectra_need[arglim_min:arglim, itrc]))
         # plt.show()
-        print(arglim_min, wc.Nt, wc.Nt, 1. / wc.DT, 1. / wc.Tobs, 1. / wc.Tw, fs_fft[arglim])
+        print(arglim_min, wc.Nt, wc.Nt, 1.0 / wc.DT, 1.0 / wc.Tobs, 1.0 / wc.Tw, fs_fft[arglim])
         print(wc.mult)
         print(psd_interp[:, itrc])
         print(np.std(np.real(noise_realization_freq[arglim_min:arglim, itrc] / spectra_need[arglim_min:arglim, itrc])))
         print(np.std(np.imag(noise_realization_freq[arglim_min:arglim, itrc] / spectra_need[arglim_min:arglim, itrc])))
-        print(np.std(np.real(noise_realization_freq[arglim_min:arglim, itrc] / np.sqrt(psd_interp[arglim_min:arglim, itrc]))))
-        print(np.std(np.imag(noise_realization_freq[arglim_min:arglim, itrc] / np.sqrt(psd_interp[arglim_min:arglim, itrc]))))
-        print(np.sqrt(2 * wc.dt), 2 * dt, np.sqrt(Nf), np.sqrt(ND // 2) / np.sqrt(2 * wc.dt), np.sqrt(wc.Nf) * (np.sqrt(2 * wc.dt)), np.sqrt(12318.0 / Nf))
-        corr_real = np.corrcoef(np.real(noise_realization_freq[arglim_min:arglim, itrc]), np.imag(noise_realization_freq[arglim_min:arglim, itrc]))
+        print(
+            np.std(
+                np.real(noise_realization_freq[arglim_min:arglim, itrc] / np.sqrt(psd_interp[arglim_min:arglim, itrc]))
+            )
+        )
+        print(
+            np.std(
+                np.imag(noise_realization_freq[arglim_min:arglim, itrc] / np.sqrt(psd_interp[arglim_min:arglim, itrc]))
+            )
+        )
+        print(
+            np.sqrt(2 * wc.dt),
+            2 * dt,
+            np.sqrt(Nf),
+            np.sqrt(ND // 2) / np.sqrt(2 * wc.dt),
+            np.sqrt(wc.Nf) * (np.sqrt(2 * wc.dt)),
+            np.sqrt(12318.0 / Nf),
+        )
+        corr_real = np.corrcoef(
+            np.real(noise_realization_freq[arglim_min:arglim, itrc]),
+            np.imag(noise_realization_freq[arglim_min:arglim, itrc]),
+        )
         print(corr_real)
         angle_got = np.angle(noise_realization_freq[arglim_min:arglim, itrc])
-        assert_allclose(corr_real[0, 1], 0., atol=2.e-3)
-        assert_allclose(np.mean(angle_got), 0., atol=float(4. / np.sqrt(angle_got.size)))
-        assert_allclose(spectra_need[arglim_min:arglim, itrc], np.sqrt(psd_interp[arglim_min:arglim, itrc]), atol=1.e-40, rtol=3.e-1)
+        assert_allclose(corr_real[0, 1], 0.0, atol=2.0e-3)
+        assert_allclose(np.mean(angle_got), 0.0, atol=float(4.0 / np.sqrt(angle_got.size)))
+        assert_allclose(
+            spectra_need[arglim_min:arglim, itrc],
+            np.sqrt(psd_interp[arglim_min:arglim, itrc]),
+            atol=1.0e-40,
+            rtol=3.0e-1,
+        )
         _ = unit_normal_battery(
             np.real(noise_realization_freq[arglim_min:arglim, itrc] / spectra_need[arglim_min:arglim, itrc]),
-            mult=1.,
+            mult=1.0,
             do_assert=True,
         )
         _ = unit_normal_battery(
             np.imag(noise_realization_freq[arglim_min:arglim, itrc] / spectra_need[arglim_min:arglim, itrc]),
-            mult=1.,
+            mult=1.0,
             do_assert=True,
         )
 
@@ -114,12 +139,12 @@ def test_noise_normalization_flat(noise_curve_mode: int, distort_mult: int) -> N
         nrm = float(np.sqrt(ND // 2) / np.sqrt(2 * wc.dt))
         arglim = int(np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs))
         _ = unit_normal_battery(
-            np.real(noise_realization_freq_var[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
+            np.real(noise_realization_freq_var[Nt // 2 : arglim, itrc] / spectra_need[Nt // 2 : arglim, itrc]),
             mult=nrm,
             do_assert=True,
         )
         _ = unit_normal_battery(
-            np.imag(noise_realization_freq_var[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
+            np.imag(noise_realization_freq_var[Nt // 2 : arglim, itrc] / spectra_need[Nt // 2 : arglim, itrc]),
             mult=nrm,
             do_assert=True,
         )
@@ -158,11 +183,17 @@ def test_unit_noise_generation_stat(scale_mult: float) -> None:
 
     for itrc in range(nc_noise):
         noise_realization_freq = inverse_wavelet_freq(noise_realization[:, :, itrc], wc.Nf, wc.Nt)
-        _ = unit_normal_battery(np.asarray(np.real(noise_realization_freq), dtype=np.float64), mult=freq_mult, do_assert=True)
-        _ = unit_normal_battery(np.asarray(np.imag(noise_realization_freq), dtype=np.float64), mult=freq_mult, do_assert=True)
+        _ = unit_normal_battery(
+            np.asarray(np.real(noise_realization_freq), dtype=np.float64), mult=freq_mult, do_assert=True
+        )
+        _ = unit_normal_battery(
+            np.asarray(np.imag(noise_realization_freq), dtype=np.float64), mult=freq_mult, do_assert=True
+        )
         noise_realization_time = np.asarray(fft.irfft(noise_realization_freq), dtype=np.float64)
         _ = unit_normal_battery(noise_realization_time, mult=sq_scale_mult, do_assert=True)
-        noise_realization_time = np.asarray(inverse_wavelet_time(noise_realization[:, :, itrc], wc.Nf, wc.Nt), dtype=np.float64)
+        noise_realization_time = np.asarray(
+            inverse_wavelet_time(noise_realization[:, :, itrc], wc.Nf, wc.Nt), dtype=np.float64
+        )
         _ = unit_normal_battery(noise_realization_time, mult=sq_scale_mult, do_assert=True)
 
 
@@ -214,7 +245,9 @@ def test_unit_noise_generation_cyclo_time(var_select: str) -> None:
     for itrc in range(nc_noise):
         for itrt in range(wc.Nt):
             _ = unit_normal_battery(
-                noise_realization_var[itrt, :, itrc].flatten(), mult=float(np.sqrt(r_cyclo[itrt, itrc])), do_assert=True,
+                noise_realization_var[itrt, :, itrc].flatten(),
+                mult=float(np.sqrt(r_cyclo[itrt, itrc])),
+                do_assert=True,
             )
 
     for itrc in range(nc_noise):
@@ -271,12 +304,12 @@ def test_noise_normalization_match() -> None:
         # plt.loglog(np.abs(spectra_need[Nt // 2:arglim, itrc]))
         # plt.show()
         _ = unit_normal_battery(
-            np.real(noise_realization_freq[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
+            np.real(noise_realization_freq[Nt // 2 : arglim, itrc] / spectra_need[Nt // 2 : arglim, itrc]),
             mult=nrm,
             do_assert=True,
         )
         _ = unit_normal_battery(
-            np.imag(noise_realization_freq[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
+            np.imag(noise_realization_freq[Nt // 2 : arglim, itrc] / spectra_need[Nt // 2 : arglim, itrc]),
             mult=nrm,
             do_assert=True,
         )
@@ -292,12 +325,12 @@ def test_noise_normalization_match() -> None:
         # also dont't hit the frequencies with big dips
         arglim = np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs)
         _ = unit_normal_battery(
-            np.real(noise_realization_freq_var[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
+            np.real(noise_realization_freq_var[Nt // 2 : arglim, itrc] / spectra_need[Nt // 2 : arglim, itrc]),
             mult=nrm,
             do_assert=True,
         )
         _ = unit_normal_battery(
-            np.imag(noise_realization_freq_var[Nt // 2:arglim, itrc] / spectra_need[Nt // 2:arglim, itrc]),
+            np.imag(noise_realization_freq_var[Nt // 2 : arglim, itrc] / spectra_need[Nt // 2 : arglim, itrc]),
             mult=nrm,
             do_assert=True,
         )

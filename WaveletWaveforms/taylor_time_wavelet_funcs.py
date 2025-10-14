@@ -33,7 +33,7 @@ def wavemaket(
     This function updates the `wavelet_waveform` object in place with values derived from the
     supplied time-domain intrinsic_waveform over the pixel range set in
     `_nt_lim_waveform`. `_wc` is an object with configuration parameters for the wavelet decomposition.
-    Precomputed Taylor expansion coefficients, used to interpolate intrinsic_waveform values, are looked up from `taylor_table`.
+    Precomputed Taylor expansion coefficients looked up from `taylor_table' are used to interpolate  values.
 
     Parameters
     ----------
@@ -143,10 +143,14 @@ def wavemaket(
                         assert taylor_table.evc[n_ind + 1, jj2 + 1] != 0.0
 
                         y: float = (1.0 - dx) * taylor_table.evc[n_ind, jj1] + dx * taylor_table.evc[n_ind, jj1 + 1]
-                        yy: float = (1.0 - dx) * taylor_table.evc[n_ind + 1, jj2] + dx * taylor_table.evc[n_ind + 1, jj2 + 1]
+                        yy: float = (1.0 - dx) * taylor_table.evc[n_ind + 1, jj2] + dx * taylor_table.evc[
+                            n_ind + 1, jj2 + 1
+                        ]
 
                         z: float = (1.0 - dx) * taylor_table.evs[n_ind, jj1] + dx * taylor_table.evs[n_ind, jj1 + 1]
-                        zz: float = (1.0 - dx) * taylor_table.evs[n_ind + 1, jj2] + dx * taylor_table.evs[n_ind + 1, jj2 + 1]
+                        zz: float = (1.0 - dx) * taylor_table.evs[n_ind + 1, jj2] + dx * taylor_table.evs[
+                            n_ind + 1, jj2 + 1
+                        ]
 
                         # interpolate over fdot
                         y = (1.0 - dy) * y + dy * yy

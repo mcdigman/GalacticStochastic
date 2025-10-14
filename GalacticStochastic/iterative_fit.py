@@ -1,4 +1,5 @@
 """Run or fetch the iterative fit loop for the binaries in the galactic background."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
@@ -151,9 +152,9 @@ def fetch_or_run_iterative_loop(
     if preprocess_mode in (0, 2):
         # fetch mode options if we are in a state where the preliminary file is needed
         # 0: run the loop from scratch, stop if the preliminary file does not exist
-        # 1: try to fetch the final file, if it does not exist run the loop, stop if the preliminary file does not exist
-        # 2: try to fetch the final file, if it does not exist abort, stop if the preliminary file does not exist
-        # 3: try to fetch the final file, if it does not exist run the loop, if the preliminary file does not exist run the loop to create it
+        # 1: try to fetch the final file, else run the loop, stop if the preliminary file does not exist
+        # 2: try to fetch the final file, else abort, stop if the preliminary file does not exist
+        # 3: try to fetch the final file, else run the loop, if the preliminary file does not exist create it
         # 4: run the loop from scratch, do not use the preliminary file
         if fetch_mode in (0, 1, 2):
             fetch_mode_prelim = 2
@@ -166,7 +167,20 @@ def fetch_or_run_iterative_loop(
             raise ValueError(msg)
 
         nt_range_prelim = (0, wc.Nt)
-        ifm_prelim = fetch_or_run_iterative_loop(config, cyclo_mode=1, nt_range_snr=nt_range_prelim, fetch_mode=fetch_mode_prelim, preprocess_mode=1, output_mode=output_mode, wc_in=wc_in, lc_in=lc, ic_in=ic_in, instrument_random_seed_in=instrument_random_seed_in, params_gb_in=params_gb, custom_params=custom_params)
+        ifm_prelim = fetch_or_run_iterative_loop(
+            config,
+            cyclo_mode=1,
+            nt_range_snr=nt_range_prelim,
+            fetch_mode=fetch_mode_prelim,
+            preprocess_mode=1,
+            output_mode=output_mode,
+            wc_in=wc_in,
+            lc_in=lc,
+            ic_in=ic_in,
+            instrument_random_seed_in=instrument_random_seed_in,
+            params_gb_in=params_gb,
+            custom_params=custom_params,
+        )
 
         galactic_below_in = ifm_prelim.noise_manager.bgd.get_galactic_below_low()
         snrs_tot_in = ifm_prelim.bis.get_final_snrs_tot_upper()
@@ -215,7 +229,9 @@ def fetch_or_run_iterative_loop(
         instrument_random_seed=instrument_random_seed,
     )
 
-    bis = BinaryInclusionState(wc, ic, lc, params_gb, noise_manager, fit_state, nt_lim_waveform, snrs_tot_in=snrs_tot_in)
+    bis = BinaryInclusionState(
+        wc, ic, lc, params_gb, noise_manager, fit_state, nt_lim_waveform, snrs_tot_in=snrs_tot_in
+    )
 
     del snrs_tot_in
 

@@ -1,4 +1,5 @@
 """Functions that relate the dense and sparse representations of waveforms."""
+
 from typing import NamedTuple
 
 import numpy as np
@@ -37,6 +38,7 @@ class SparseWaveletWaveform(NamedTuple):
         be set in the sparse representation,
         which is determined by the shape of the interpolation table
     """
+
     wave_value: NDArray[np.floating]
     pixel_index: NDArray[np.int64]
     n_set: NDArray[np.integer]
@@ -47,6 +49,7 @@ class PixelGenericRange(NamedTuple):
     """
     NamedTuple object to contain range of pixels for analysis.
     """
+
     nx_min: int
     nx_max: int
     dx: float
@@ -110,7 +113,9 @@ def wavelet_sparse_to_dense(wavelet_waveform: SparseWaveletWaveform, wc: WDMWave
 
 
 @njit()
-def whiten_sparse_data(wavelet_waveform: SparseWaveletWaveform, inv_chol_S: NDArray[np.floating], wc: WDMWaveletConstants) -> SparseWaveletWaveform:
+def whiten_sparse_data(
+    wavelet_waveform: SparseWaveletWaveform, inv_chol_S: NDArray[np.floating], wc: WDMWaveletConstants
+) -> SparseWaveletWaveform:
     # initialize the array
     n_set = wavelet_waveform.n_set
     pixel_index = wavelet_waveform.pixel_index
@@ -148,7 +153,13 @@ def whiten_sparse_data(wavelet_waveform: SparseWaveletWaveform, inv_chol_S: NDAr
 
 
 @njit()
-def wavelet_dense_select_sparse(dense_waveform: NDArray[np.floating], wavelet_waveform: SparseWaveletWaveform, wc: WDMWaveletConstants, *, inplace_mode: int = 0) -> SparseWaveletWaveform:
+def wavelet_dense_select_sparse(
+    dense_waveform: NDArray[np.floating],
+    wavelet_waveform: SparseWaveletWaveform,
+    wc: WDMWaveletConstants,
+    *,
+    inplace_mode: int = 0,
+) -> SparseWaveletWaveform:
     """Select sparse elements with matching indices from a dense waveform.
 
     Output is written to a new object if inplace_mode=0, if inplace_mode=1 a new object is created.

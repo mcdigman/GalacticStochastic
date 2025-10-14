@@ -1,10 +1,19 @@
 """Abstract class for stationary wave approximation-based TDI intrinsic_waveform models."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Generic, NamedTuple, TypeVar, cast
 
-from LisaWaveformTools.source_params import AbstractExtrinsicParamsManager, AbstractIntrinsicParamsManager, ExtrinsicParams, ExtrinsicParamsManager, ExtrinsicParamsType, IntrinsicParamsType, SourceParams
+from LisaWaveformTools.source_params import (
+    AbstractExtrinsicParamsManager,
+    AbstractIntrinsicParamsManager,
+    ExtrinsicParams,
+    ExtrinsicParamsManager,
+    ExtrinsicParamsType,
+    IntrinsicParamsType,
+    SourceParams,
+)
 
 if TYPE_CHECKING:
     import h5py
@@ -37,7 +46,9 @@ class StationaryWaveformGeneric(NamedTuple):
 
 
 # Subclasses can be either in time or frequency domain
-StationaryWaveformType = TypeVar('StationaryWaveformType', bound=StationaryWaveformTime | StationaryWaveformFreq | StationaryWaveformGeneric)
+StationaryWaveformType = TypeVar(
+    'StationaryWaveformType', bound=StationaryWaveformTime | StationaryWaveformFreq | StationaryWaveformGeneric
+)
 
 StationarySourceWaveformType = TypeVar('StationarySourceWaveformType')
 
@@ -46,10 +57,14 @@ class StationarySourceWaveform(Generic[StationaryWaveformType, IntrinsicParamsTy
     """Abstract base class for intrinsic_waveform models to be used in the stationary wave approximation."""
 
     @abstractmethod
-    def _create_intrinsic_params_manager(self, params_intrinsic: IntrinsicParamsType) -> AbstractIntrinsicParamsManager[IntrinsicParamsType]:
+    def _create_intrinsic_params_manager(
+        self, params_intrinsic: IntrinsicParamsType
+    ) -> AbstractIntrinsicParamsManager[IntrinsicParamsType]:
         """Get an intrinsic parameter manager object."""
 
-    def _create_extrinsic_params_manager(self, params_extrinsic: ExtrinsicParamsType) -> AbstractExtrinsicParamsManager[ExtrinsicParamsType] | ExtrinsicParamsManager:
+    def _create_extrinsic_params_manager(
+        self, params_extrinsic: ExtrinsicParamsType
+    ) -> AbstractExtrinsicParamsManager[ExtrinsicParamsType] | ExtrinsicParamsManager:
         """Get an intrinsic parameter manager object."""
         if not isinstance(params_extrinsic, ExtrinsicParams):
             msg = """No implementation for input type"""
@@ -78,8 +93,12 @@ class StationarySourceWaveform(Generic[StationaryWaveformType, IntrinsicParamsTy
 
         intrinsic: IntrinsicParamsType = cast('IntrinsicParamsType', params.intrinsic)
         extrinsic: ExtrinsicParamsType = cast('ExtrinsicParamsType', params.extrinsic)
-        self._intrinsic_params_manager: AbstractIntrinsicParamsManager[IntrinsicParamsType] = self._create_intrinsic_params_manager(intrinsic)
-        self._extrinsic_params_manager: AbstractExtrinsicParamsManager[ExtrinsicParamsType] | ExtrinsicParamsManager = self._create_extrinsic_params_manager(extrinsic)
+        self._intrinsic_params_manager: AbstractIntrinsicParamsManager[IntrinsicParamsType] = (
+            self._create_intrinsic_params_manager(intrinsic)
+        )
+        self._extrinsic_params_manager: AbstractExtrinsicParamsManager[ExtrinsicParamsType] | ExtrinsicParamsManager = (
+            self._create_extrinsic_params_manager(extrinsic)
+        )
 
         self._intrinsic_waveform: StationaryWaveformType = intrinsic_waveform
         self._tdi_waveform: StationaryWaveformType = tdi_waveform

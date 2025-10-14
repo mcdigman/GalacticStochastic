@@ -22,7 +22,7 @@ class IterativeFitState(StateManager):
         Parameters
         ----------
         ic : IterationConfig
-            Configuration object specifying the parameters for the iterative fit, including maximum iterations and storage mode.
+            Configuration object specifying the parameters for the iterative fit, including maximum iterations.
         preprocess_mode : int
             Mode for preprocessing:
             - 0: No preprocessing (default, use full number of iterations).
@@ -200,7 +200,9 @@ class IterativeFitState(StateManager):
             raise ValueError(msg)
 
         assert hf_state.attrs['creator_name'] == self.__class__.__name__, 'incorrect creator name found in hdf5 file'
-        assert hf_state.attrs['ic_name'] == self._ic.__class__.__name__, 'incorrect iteration config name found in hdf5 file'
+        assert hf_state.attrs['ic_name'] == self._ic.__class__.__name__, (
+            'incorrect iteration config name found in hdf5 file'
+        )
 
         hf_ic = hf_state['ic']
         if not isinstance(hf_ic, h5py.Group):
@@ -508,7 +510,9 @@ class IterativeFitState(StateManager):
                 else:
                     force_converge_loc = False
                 print(
-                    'bright adaptation predicted initial converged at ' + str(self._itrn) + ' next iteration will be check iteration',
+                    'bright adaptation predicted initial converged at '
+                    + str(self._itrn)
+                    + ' next iteration will be check iteration',
                 )
                 self.bright_state_request = (True, False, faint_converged_in, force_converge_loc)
 

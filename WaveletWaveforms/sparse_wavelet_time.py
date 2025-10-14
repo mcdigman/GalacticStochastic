@@ -48,11 +48,17 @@ def _update_bounds_helper(m_pixel: NDArray[np.integer], wc: WDMWaveletConstants)
     # currently assumes frequency is generally increasing
     nt_mins: NDArray[np.integer] = (np.argmax(m_pixel > -1, axis=-1)).astype(np.int64)
     nt_maxs: NDArray[np.integer] = (wc.Nt - np.argmax(m_pixel[:, ::-1] < wc.Nf, axis=-1)).astype(np.int64)
-    return PixelGenericRange(int(np.max(nt_mins)), int(np.min(nt_maxs)), wc.DT, 0.)
+    return PixelGenericRange(int(np.max(nt_mins)), int(np.min(nt_maxs)), wc.DT, 0.0)
 
 
 @njit(fastmath=True)
-def _sparse_time_assign_loop(m_pixel: NDArray[np.integer], nt_lim: PixelGenericRange, waveform: StationaryWaveformTime, sparse_table: SparseTimeCoefficientTable, wc: WDMWaveletConstants) -> NDArray[np.complexfloating]:
+def _sparse_time_assign_loop(
+    m_pixel: NDArray[np.integer],
+    nt_lim: PixelGenericRange,
+    waveform: StationaryWaveformTime,
+    sparse_table: SparseTimeCoefficientTable,
+    wc: WDMWaveletConstants,
+) -> NDArray[np.complexfloating]:
     """Pack the array that will be fourier transformed."""
     nc_waveform = m_pixel.shape[0]
     assert wc.L % 2 == 0
@@ -98,7 +104,13 @@ def _sparse_time_assign_loop(m_pixel: NDArray[np.integer], nt_lim: PixelGenericR
 
 
 @njit(fastmath=True)
-def _sparse_time_unpack_loop(wavelet_waveform: SparseWaveletWaveform, m_pixel: NDArray[np.integer], nt_lim: PixelGenericRange, DX_trans: NDArray[np.complexfloating], wc: WDMWaveletConstants) -> None:
+def _sparse_time_unpack_loop(
+    wavelet_waveform: SparseWaveletWaveform,
+    m_pixel: NDArray[np.integer],
+    nt_lim: PixelGenericRange,
+    DX_trans: NDArray[np.complexfloating],
+    wc: WDMWaveletConstants,
+) -> None:
     """Unpack the array after it has been fourier transformed."""
     assert len(m_pixel.shape) == 2
     assert m_pixel.shape[1] <= nt_lim.nx_max - nt_lim.nx_min
@@ -122,7 +134,7 @@ def _sparse_time_unpack_loop(wavelet_waveform: SparseWaveletWaveform, m_pixel: N
             mc: int = int(m_pixel[itrc, n])
 
             # NOTE The positive and negative loops can be fused but it changes the order of the pixel indices.
-            # Fusion is mainly an advantage if we don't have to track mm for each iteration (for parallelization/vectorization)
+            # Fusion is mainly an advantage if we don't have to track mm for each iteration (for vectorization)
             # Such as by using mm = n_itr * kx + j for neg and mm = n_itr*kx + j + half_kx for pos, as currently written
             # but if done in fixed order some pixels will not be set
             # so we need to ensure all later methods can efficiently handle -1 at pixel_index
@@ -181,7 +193,12 @@ def get_empty_sparse_sparse_wavelet_time_waveform(nc: int, wc: WDMWaveletConstan
     return SparseWaveletWaveform(wave_value, pixel_index, n_set, n_pixel_max)
 
 
-def make_sparse_wavelet_time(wave: StationarySourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType], wavelet_waveform: SparseWaveletWaveform, sparse_table: SparseTimeCoefficientTable, wc: WDMWaveletConstants) -> None:
+def make_sparse_wavelet_time(
+    wave: StationarySourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType],
+    wavelet_waveform: SparseWaveletWaveform,
+    sparse_table: SparseTimeCoefficientTable,
+    wc: WDMWaveletConstants,
+) -> None:
     """Calculate the wavelet waveform using the sparse time domain method."""
     # have sped this up by computing cos(Phase[k]), sin(Phase[k])
     # and passing in pre-computed arrays for cos(2.*np.pi*(double)(j*mq)/(double)(L))

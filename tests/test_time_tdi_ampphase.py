@@ -37,7 +37,17 @@ wc_in = get_wavelet_model(config_in)
 taylor_time_table = get_taylor_table_time(wc_in, cache_mode='check', output_mode='hf')
 
 
-def get_waveform_helper(p_input: float, f_input: float, fp_input: float, fpp_input: float, amp_input: float, nt_loc: int, DT: float, nc_waveform: int, max_f: float) -> tuple[StationaryWaveformTime, StationaryWaveformTime, int]:
+def get_waveform_helper(
+    p_input: float,
+    f_input: float,
+    fp_input: float,
+    fpp_input: float,
+    amp_input: float,
+    nt_loc: int,
+    DT: float,
+    nc_waveform: int,
+    max_f: float,
+) -> tuple[StationaryWaveformTime, StationaryWaveformTime, int]:
     """Help get intrinsic_waveform objects."""
     T = np.arange(nt_loc) * DT
     PT = 2 * np.pi * (f_input + 1.0 / 2.0 * fp_input * T + 1.0 / 6.0 * fpp_input * T**2) * T + p_input
@@ -66,7 +76,9 @@ def get_waveform_helper(p_input: float, f_input: float, fp_input: float, fpp_inp
     return waveform, AET_waveform, arg_cut
 
 
-def get_RR_t_mult(rr_model: str, nt_loc: int, nf_loc: int, dt: float) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
+def get_RR_t_mult(
+    rr_model: str, nt_loc: int, nf_loc: int, dt: float
+) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
     """Get a multiplier for RR and II for testing"""
     if rr_model == 'const':
         RR_t_mult: NDArray[np.floating] = np.full(nt_loc * nf_loc, 1.0)
@@ -94,23 +106,23 @@ def get_RR_t_mult(rr_model: str, nt_loc: int, nf_loc: int, dt: float) -> tuple[N
             nt_loc * nf_loc,
         )
     elif rr_model == 'quad2':
-        RR_t_mult = np.linspace(-1.0, 1.0, (nt_loc + 1) * nf_loc)[nf_loc :] ** 2
-        II_t_mult = np.linspace(-1.0, 1.0, (nt_loc + 1) * nf_loc)[nf_loc :] ** 2
+        RR_t_mult = np.linspace(-1.0, 1.0, (nt_loc + 1) * nf_loc)[nf_loc:] ** 2
+        II_t_mult = np.linspace(-1.0, 1.0, (nt_loc + 1) * nf_loc)[nf_loc:] ** 2
     elif rr_model == 'sin1':
-        RR_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :])
-        II_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :])
+        RR_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc:])
+        II_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc:])
     elif rr_model == 'sin2':
-        RR_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :])
-        II_t_mult = np.cos(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :])
+        RR_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc:])
+        II_t_mult = np.cos(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc:])
     elif rr_model == 'sin3':
-        RR_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :])
-        II_t_mult = -np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :])
+        RR_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc:])
+        II_t_mult = -np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc:])
     elif rr_model == 'sin4':
-        RR_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :])
-        II_t_mult = np.sin(2 * np.pi * (np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :] + 2.0 / nt_loc))
+        RR_t_mult = np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc:])
+        II_t_mult = np.sin(2 * np.pi * (np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc:] + 2.0 / nt_loc))
     elif rr_model == 'sin5':
-        RR_t_mult = -np.cos(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :])
-        II_t_mult = -np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc :])
+        RR_t_mult = -np.cos(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc:])
+        II_t_mult = -np.sin(2 * np.pi * np.linspace(1.0, -1.0, (nt_loc + 1) * nf_loc)[nf_loc:])
     else:
         msg = 'unrecognized option for rr_model=' + str(rr_model)
         raise ValueError(msg)
@@ -146,7 +158,8 @@ def get_RR_t_mult(rr_model: str, nt_loc: int, nf_loc: int, dt: float) -> tuple[N
 )
 @pytest.mark.parametrize('f0p_mult', [0.0, 0.001, 0.01, 1.0 / 2.0, 1.0, 10.0])
 @pytest.mark.parametrize(
-    'rr_model', ['const', 'lin1', 'lin2', 'lin3', 'lin10', 'lin11', 'lin12', 'lin13', 'lin14', 'lin15', 'lin16'],
+    'rr_model',
+    ['const', 'lin1', 'lin2', 'lin3', 'lin10', 'lin11', 'lin12', 'lin13', 'lin14', 'lin15', 'lin16'],
 )
 # @pytest.mark.skip()
 def test_ExtractAmpPhase_inplace_basic(f0_mult: float, rr_model: str, f0p_mult: float) -> None:
@@ -263,7 +276,10 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult: float, rr_model: str, f0p_mult: 
 
     # Check that the inputs respect expected derivatives
     assert_allclose(
-        np.gradient(waveform.PT, T, edge_order=2) / (2 * np.pi), waveform.FT, atol=1.0e-12 * f_input, rtol=1.0e-12,
+        np.gradient(waveform.PT, T, edge_order=2) / (2 * np.pi),
+        waveform.FT,
+        atol=1.0e-12 * f_input,
+        rtol=1.0e-12,
     )
     assert_allclose(np.gradient(waveform.FT, T, edge_order=2), waveform.FTd, atol=1.0e-19 * f_input, rtol=1.0e-10)
 
@@ -274,10 +290,16 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult: float, rr_model: str, f0p_mult: 
     for itrc in range(nc_waveform):
         # check the computed dRR and dII match
         assert_allclose(
-            spacecraft_channels.dRR[itrc], np.gradient(RR[itrc], T, edge_order=1), atol=1.0e-14, rtol=1.0e-14,
+            spacecraft_channels.dRR[itrc],
+            np.gradient(RR[itrc], T, edge_order=1),
+            atol=1.0e-14,
+            rtol=1.0e-14,
         )
         assert_allclose(
-            spacecraft_channels.dII[itrc], np.gradient(II[itrc], T, edge_order=1), atol=1.0e-14, rtol=1.0e-14,
+            spacecraft_channels.dII[itrc],
+            np.gradient(II[itrc], T, edge_order=1),
+            atol=1.0e-14,
+            rtol=1.0e-14,
         )
 
     # Checks that should work for all test variants
@@ -371,7 +393,10 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult: float, rr_model: str, f0p_mult: 
             rtol=1.0e-13,
         )
         assert_allclose(
-            AET_waveform.FT[itrc] - dp_offset1, f_input + fp_input * T, atol=1.0e-11 * f_input, rtol=1.0e-12,
+            AET_waveform.FT[itrc] - dp_offset1,
+            f_input + fp_input * T,
+            atol=1.0e-11 * f_input,
+            rtol=1.0e-12,
         )
         assert_allclose(AET_waveform.FTd[itrc] - ddp_offset2, fp_input, atol=1.0e-7 * f_input / wc.DT, rtol=1.0e-8)
 
@@ -516,17 +541,25 @@ def test_time_tdi_inplace_nearzero(f0_mult: float, rr_model: str, f0p_mult: floa
         II_t_mult = np.linspace(-1.0, 1.0, nt_loc + 1)[1:]
     elif rr_model == 'lin17':
         RR_t_mult = np.linspace(
-            0.17946632189870892, 0.17946632189870892 - 4.633410079678654e-08 * wc.DT * nt_loc, nt_loc,
+            0.17946632189870892,
+            0.17946632189870892 - 4.633410079678654e-08 * wc.DT * nt_loc,
+            nt_loc,
         )
         II_t_mult = np.linspace(
-            0.005095443502715089, 0.005095443502715089 - 1.1460665211908961e-07 * wc.DT * nt_loc, nt_loc,
+            0.005095443502715089,
+            0.005095443502715089 - 1.1460665211908961e-07 * wc.DT * nt_loc,
+            nt_loc,
         )
     elif rr_model == 'lin18':
         II_t_mult = -np.linspace(
-            0.17946632189870892, 0.17946632189870892 - 4.633410079678654e-08 * wc.DT * nt_loc, nt_loc,
+            0.17946632189870892,
+            0.17946632189870892 - 4.633410079678654e-08 * wc.DT * nt_loc,
+            nt_loc,
         )
         RR_t_mult = -np.linspace(
-            0.005095443502715089, 0.005095443502715089 - 1.1460665211908961e-07 * wc.DT * nt_loc, nt_loc,
+            0.005095443502715089,
+            0.005095443502715089 - 1.1460665211908961e-07 * wc.DT * nt_loc,
+            nt_loc,
         )
     elif rr_model == 'quad1':
         RR_t_mult = np.linspace(-1.0, 1.0, nt_loc + 1)[1:] ** 2
@@ -583,7 +616,10 @@ def test_time_tdi_inplace_nearzero(f0_mult: float, rr_model: str, f0p_mult: floa
 
     # Check that the inputs respect expected derivatives
     assert_allclose(
-        np.gradient(waveform.PT, T, edge_order=2) / (2 * np.pi), waveform.FT, atol=1.0e-12 * f_input, rtol=1.0e-12,
+        np.gradient(waveform.PT, T, edge_order=2) / (2 * np.pi),
+        waveform.FT,
+        atol=1.0e-12 * f_input,
+        rtol=1.0e-12,
     )
     assert_allclose(np.gradient(waveform.FT, T, edge_order=2), waveform.FTd, atol=1.0e-19 * f_input, rtol=1.0e-10)
 
@@ -594,10 +630,16 @@ def test_time_tdi_inplace_nearzero(f0_mult: float, rr_model: str, f0p_mult: floa
     for itrc in range(nc_waveform):
         # check the computed dRR and dII match
         assert_allclose(
-            spacecraft_channels.dRR[itrc], np.gradient(RR[itrc], T, edge_order=1), atol=1.0e-14, rtol=1.0e-14,
+            spacecraft_channels.dRR[itrc],
+            np.gradient(RR[itrc], T, edge_order=1),
+            atol=1.0e-14,
+            rtol=1.0e-14,
         )
         assert_allclose(
-            spacecraft_channels.dII[itrc], np.gradient(II[itrc], T, edge_order=1), atol=1.0e-14, rtol=1.0e-14,
+            spacecraft_channels.dII[itrc],
+            np.gradient(II[itrc], T, edge_order=1),
+            atol=1.0e-14,
+            rtol=1.0e-14,
         )
 
     # Checks that should work for all test variants
@@ -661,7 +703,10 @@ def test_time_tdi_inplace_nearzero(f0_mult: float, rr_model: str, f0p_mult: floa
         # assert_allclose(tdi_waveform.PT[itrc] - p_offset0, 2*np.pi*(f_input+1./2*fp_input*T)*T,
         #   atol=1.e-13*2*np.pi*f_input*T.max(),rtol=1.e-13)
         assert_allclose(
-            AET_waveform.FT[itrc] - dp_offset1, f_input + fp_input * T, atol=1.0e-11 * f_input, rtol=1.0e-12,
+            AET_waveform.FT[itrc] - dp_offset1,
+            f_input + fp_input * T,
+            atol=1.0e-11 * f_input,
+            rtol=1.0e-12,
         )
         assert_allclose(AET_waveform.FTd[itrc] - ddp_offset1, fp_input, atol=1.0e-7 * f_input / wc.DT, rtol=1.0e-5)
 
@@ -725,16 +770,32 @@ def test_time_tdi_inplace_transform(f0_mult: float, rr_model: str, f0p_mult: flo
     nc_waveform = lc.nc_waveform
 
     # Create fake input data for a pure sine wave
-    p_input = np.pi / 2.
+    p_input = np.pi / 2.0
     f_input = wc.DF * wc.Nf * f0_mult
     fp_input = f0p_mult * f_input / wc.Tobs
-    fpp_input = 0.
+    fpp_input = 0.0
     amp_input = 1.0
     waveform, AET_waveform, _ = get_waveform_helper(
-        p_input, f_input, fp_input, fpp_input, amp_input, nt_loc, wc.DT, nc_waveform, max_f=1 / (2 * wc.dt) - 1 / wc.Tobs,
+        p_input,
+        f_input,
+        fp_input,
+        fpp_input,
+        amp_input,
+        nt_loc,
+        wc.DT,
+        nc_waveform,
+        max_f=1 / (2 * wc.dt) - 1 / wc.Tobs,
     )
     waveform_fine, AET_waveform_fine, arg_cut_fine = get_waveform_helper(
-        p_input, f_input, fp_input, fpp_input, amp_input, nt_loc * wc.Nf, wc.dt, nc_waveform, max_f=1 / (2 * wc.dt) - 1 / wc.Tobs,
+        p_input,
+        f_input,
+        fp_input,
+        fpp_input,
+        amp_input,
+        nt_loc * wc.Nf,
+        wc.dt,
+        nc_waveform,
+        max_f=1 / (2 * wc.dt) - 1 / wc.Tobs,
     )
     T = waveform.T
     T_fine = waveform_fine.T

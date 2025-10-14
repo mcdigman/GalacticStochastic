@@ -72,7 +72,9 @@ def plot_noise_spectrum_evolve(ifm: IterativeFitManager) -> None:
         '--',
         alpha=0.7,
     )
-    _ = ax.loglog(np.arange(1, wc.Nf) * wc.DF, np.mean(ifm.noise_manager.noise_upper.get_S()[:, 1:, 0:2], axis=0).mean(axis=1).T)
+    _ = ax.loglog(
+        np.arange(1, wc.Nf) * wc.DF, np.mean(ifm.noise_manager.noise_upper.get_S()[:, 1:, 0:2], axis=0).mean(axis=1).T
+    )
     _ = ax.loglog(np.arange(1, wc.Nf) * wc.DF, S_stat_m[1:, 0], 'k--', zorder=-100)
     ax.tick_params(axis='both', direction='in', which='both', top=True, right=True)
     _ = plt.legend(labels=['initial', '1', '2', '3', '4', 'base'])

@@ -8,9 +8,18 @@ import h5py
 
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.source_params import ExtrinsicParamsType, IntrinsicParamsType, SourceParams
-from LisaWaveformTools.stationary_source_waveform import StationarySourceWaveform, StationaryWaveformTime, StationaryWaveformType
+from LisaWaveformTools.stationary_source_waveform import (
+    StationarySourceWaveform,
+    StationaryWaveformTime,
+    StationaryWaveformType,
+)
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, SparseWaveletWaveform
-from WaveletWaveforms.sparse_wavelet_time import SparseTimeCoefficientTable, get_empty_sparse_sparse_wavelet_time_waveform, get_sparse_table_helper, make_sparse_wavelet_time
+from WaveletWaveforms.sparse_wavelet_time import (
+    SparseTimeCoefficientTable,
+    get_empty_sparse_sparse_wavelet_time_waveform,
+    get_sparse_table_helper,
+    make_sparse_wavelet_time,
+)
 from WaveletWaveforms.taylor_time_coefficients import (
     WaveletTaylorTimeCoeffs,
     get_empty_sparse_taylor_time_waveform,
@@ -23,12 +32,19 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 class SparseWaveletSourceWaveform(Generic[StationaryWaveformType, IntrinsicParamsType, ExtrinsicParamsType], ABC):
     """Abstract base class for sparse wavelet waveforms."""
 
-    def __init__(self, params: SourceParams, wavelet_waveform: SparseWaveletWaveform, source_waveform: StationarySourceWaveform[StationaryWaveformType, IntrinsicParamsType, ExtrinsicParamsType]) -> None:
+    def __init__(
+        self,
+        params: SourceParams,
+        wavelet_waveform: SparseWaveletWaveform,
+        source_waveform: StationarySourceWaveform[StationaryWaveformType, IntrinsicParamsType, ExtrinsicParamsType],
+    ) -> None:
         """Initialize the sparse wavelet intrinsic_waveform."""
         self._consistent: bool = False
         self._params: SourceParams = params
         self._wavelet_waveform: SparseWaveletWaveform = wavelet_waveform
-        self._source_waveform: StationarySourceWaveform[StationaryWaveformType, IntrinsicParamsType, ExtrinsicParamsType] = source_waveform
+        self._source_waveform: StationarySourceWaveform[
+            StationaryWaveformType, IntrinsicParamsType, ExtrinsicParamsType
+        ] = source_waveform
 
         self.update_params(params)
 
@@ -89,7 +105,9 @@ class SparseWaveletSourceWaveform(Generic[StationaryWaveformType, IntrinsicParam
         return self._source_waveform.consistent and self.params == self._source_waveform.params
 
     @property
-    def source_waveform(self) -> StationarySourceWaveform[StationaryWaveformType, IntrinsicParamsType, ExtrinsicParamsType]:
+    def source_waveform(
+        self,
+    ) -> StationarySourceWaveform[StationaryWaveformType, IntrinsicParamsType, ExtrinsicParamsType]:
         """Get the current source parameters."""
         if not self.consistent_source:
             msg = 'Source waveform is not consistent with the requested source parameters.'
@@ -98,7 +116,10 @@ class SparseWaveletSourceWaveform(Generic[StationaryWaveformType, IntrinsicParam
         return self._source_waveform
 
     @source_waveform.setter
-    def source_waveform(self, source_waveform_in: StationarySourceWaveform[StationaryWaveformType, IntrinsicParamsType, ExtrinsicParamsType]) -> None:
+    def source_waveform(
+        self,
+        source_waveform_in: StationarySourceWaveform[StationaryWaveformType, IntrinsicParamsType, ExtrinsicParamsType],
+    ) -> None:
         """Set the source waveform. If called directly without
         calling `update_params`, the internal representation will not be consistent.
         """
@@ -128,7 +149,8 @@ class SparseWaveletSourceWaveform(Generic[StationaryWaveformType, IntrinsicParam
 
     def update_params(self, params_in: SourceParams) -> None:
         """Update the internal wavelet representation to match the input parameters.
-        This will update both the source intrinsic_waveform and the wavelet intrinsic_waveform to match the new parameters.
+
+        Update both the source intrinsic_waveform and the wavelet intrinsic_waveform to match the new parameters.
         """
         # Store the new parameters
         self.params = params_in
@@ -159,10 +181,24 @@ class SparseWaveletSourceWaveform(Generic[StationaryWaveformType, IntrinsicParam
         return self._consistent and self.consistent_source
 
 
-class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType]):
+class BinaryWaveletTaylorTime(
+    SparseWaveletSourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType]
+):
     """Store a sparse binary wavelet for a time domain taylor waveform."""
 
-    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, source_waveform: StationarySourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType], *, wavelet_mode: int = 1, storage_mode: int = 0, table_cache_mode: str = 'check', table_output_mode: str = 'skip') -> None:
+    def __init__(
+        self,
+        params: SourceParams,
+        wc: WDMWaveletConstants,
+        lc: LISAConstants,
+        nt_lim_waveform: PixelGenericRange,
+        source_waveform: StationarySourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType],
+        *,
+        wavelet_mode: int = 1,
+        storage_mode: int = 0,
+        table_cache_mode: str = 'check',
+        table_output_mode: str = 'skip',
+    ) -> None:
         """Construct a sparse binary wavelet for a time domain taylor intrinsic_waveform with interpolation."""
         if storage_mode not in (0, 1):
             msg = 'Unrecognized option for storage_mode'
@@ -177,7 +213,9 @@ class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform[StationaryWaveformTime
 
         # get a blank wavelet intrinsic_waveform with the correct size for the sparse taylor time method
         # when consistent is set to True, it will be the correct intrinsic_waveform
-        wavelet_waveform_loc: SparseWaveletWaveform = get_empty_sparse_taylor_time_waveform(int(self._lc.nc_waveform), wc)
+        wavelet_waveform_loc: SparseWaveletWaveform = get_empty_sparse_taylor_time_waveform(
+            int(self._lc.nc_waveform), wc
+        )
 
         # interpolation for wavelet taylor expansion
         # TODO need better way of setting whether cache is checked, whether to output, and whether to store in hdf5
@@ -249,10 +287,22 @@ class BinaryWaveletTaylorTime(SparseWaveletSourceWaveform[StationaryWaveformTime
             raise NotImplementedError(msg)
 
 
-class BinaryWaveletSparseTime(SparseWaveletSourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType]):
+class BinaryWaveletSparseTime(
+    SparseWaveletSourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType]
+):
     """Store a sparse binary wavelet for a time domain sparse waveform."""
 
-    def __init__(self, params: SourceParams, wc: WDMWaveletConstants, lc: LISAConstants, nt_lim_waveform: PixelGenericRange, source_waveform: StationarySourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType], *, storage_mode: int = 0, wavelet_mode: int = 0) -> None:
+    def __init__(
+        self,
+        params: SourceParams,
+        wc: WDMWaveletConstants,
+        lc: LISAConstants,
+        nt_lim_waveform: PixelGenericRange,
+        source_waveform: StationarySourceWaveform[StationaryWaveformTime, IntrinsicParamsType, ExtrinsicParamsType],
+        *,
+        storage_mode: int = 0,
+        wavelet_mode: int = 0,
+    ) -> None:
         """Construct a sparse binary wavelet for a time domain taylor intrinsic_waveform with interpolation."""
         self._wc: WDMWaveletConstants = wc
         self._lc: LISAConstants = lc
@@ -262,7 +312,9 @@ class BinaryWaveletSparseTime(SparseWaveletSourceWaveform[StationaryWaveformTime
 
         # get a blank wavelet intrinsic_waveform with the correct size for the sparse taylor time method
         # when consistent is set to True, it will be the correct intrinsic_waveform
-        wavelet_waveform_loc: SparseWaveletWaveform = get_empty_sparse_sparse_wavelet_time_waveform(int(self._lc.nc_waveform), wc)
+        wavelet_waveform_loc: SparseWaveletWaveform = get_empty_sparse_sparse_wavelet_time_waveform(
+            int(self._lc.nc_waveform), wc
+        )
 
         # interpolation for wavelet taylor expansion
         self._sparse_table: SparseTimeCoefficientTable = get_sparse_table_helper(self._wc)

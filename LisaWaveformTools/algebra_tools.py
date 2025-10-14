@@ -59,7 +59,13 @@ def gradient_uniform_inplace(ys: NDArray[np.floating], result: NDArray[np.floati
 
 @njit()
 def stabilized_gradient_uniform_inplace(
-    x: NDArray[np.floating], dxdt: NDArray[np.floating], y: NDArray[np.floating], dydt: NDArray[np.floating], dt: float, nx_min: int = 0, nx_max: int = -1,
+    x: NDArray[np.floating],
+    dxdt: NDArray[np.floating],
+    y: NDArray[np.floating],
+    dydt: NDArray[np.floating],
+    dt: float,
+    nx_min: int = 0,
+    nx_max: int = -1,
 ) -> None:
     """Get a second-order central stabilized gradient of y and store it in dydt.
 
@@ -116,7 +122,9 @@ def stabilized_gradient_uniform_inplace(
 
     for itrc in range(nc_channel):
         dydt[itrc, nx_min] = (y[itrc, nx_min + 1] - y[itrc, nx_min] - x[nx_min + 1] + x[nx_min]) / dt + dxdt[nx_min]
-        dydt[itrc, nx_max - 1] = (y[itrc, nx_max - 1] - y[itrc, nx_max - 2] - x[nx_max - 1] + x[nx_max - 2]) / dt + dxdt[nx_max - 1]
+        dydt[itrc, nx_max - 1] = (
+            y[itrc, nx_max - 1] - y[itrc, nx_max - 2] - x[nx_max - 1] + x[nx_max - 2]
+        ) / dt + dxdt[nx_max - 1]
 
     for n in prange(nx_min + 1, nx_max - 1):
         x_shift = -x[n + 1] + x[n - 1]

@@ -19,10 +19,9 @@ def instrument_noise1(f: NDArray[np.floating], lc: LISAConstants) -> NDArray[np.
     rolla: NDArray[np.floating] = (1.0 + pow((4.0e-4 / f), 2.0)) * (1.0 + pow((f / 8.0e-3), 4.0))
     rollw: NDArray[np.floating] = 1.0 + pow((2.0e-3 / f), 4.0)
     scale_part: NDArray[np.floating] = LC * 16.0 / 3.0 * pow(np.sin(fonfs), 2.0) / pow(2.0 * lc.Larm, 2.0)
-    add_part: NDArray[np.floating] = (
-            (2.0 + np.cos(fonfs)) * Sps * rollw
-            + 2.0 * (3.0 + 2.0 * np.cos(fonfs) + np.cos(2.0 * fonfs)) * (Sacc / pow(2.0 * np.pi * f, 4.0) * rolla)
-        )
+    add_part: NDArray[np.floating] = (2.0 + np.cos(fonfs)) * Sps * rollw + 2.0 * (
+        3.0 + 2.0 * np.cos(fonfs) + np.cos(2.0 * fonfs)
+    ) * (Sacc / pow(2.0 * np.pi * f, 4.0) * rolla)
     # Calculate the power spectral density of the detector noise at the given frequency
     # not and exact match to the LDC, but within 10%
     return scale_part * add_part
@@ -63,7 +62,9 @@ def instrument_noise_AET(f: NDArray[np.floating], lc: LISAConstants) -> NDArray[
 
 
 def instrument_noise_AET_wdm_loop(
-    phif: NDArray[np.floating], lc: LISAConstants, wc: WDMWaveletConstants,
+    phif: NDArray[np.floating],
+    lc: LISAConstants,
+    wc: WDMWaveletConstants,
 ) -> NDArray[np.floating]:
     """Help get the the instrument noise in the wdm wavelet basis."""
     # realistically this really only needs run once and is fast enough without jit
@@ -87,7 +88,7 @@ def instrument_noise_AET_wdm_loop(
     S_inst_m = np.zeros((wc.Nf, S_inst_long.shape[-1]))
     # apply window in loop
     for m in range(wc.Nf):
-        S_inst_m[m] = np.dot(phif2, S_inst_long[m * half_Nt:(m + 2) * half_Nt])
+        S_inst_m[m] = np.dot(phif2, S_inst_long[m * half_Nt : (m + 2) * half_Nt])
 
     return S_inst_m
 
@@ -112,7 +113,7 @@ def instrument_noise_AET_wdm_m(lc: LISAConstants, wc: WDMWaveletConstants) -> ND
     # TODO why no plus 1?
     ls: NDArray[np.integer] = np.arange(-wc.Nt // 2, wc.Nt // 2)
     fs: NDArray[np.floating] = ls / wc.Tobs
-    phif: NDArray[np.floating] = (np.sqrt(wc.dt) * phitilde_vec(2 * np.pi * fs * wc.dt, wc.Nf, wc.nx))
+    phif: NDArray[np.floating] = np.sqrt(wc.dt) * phitilde_vec(2 * np.pi * fs * wc.dt, wc.Nf, wc.nx)
 
     # TODO check ad hoc normalization factor
     return instrument_noise_AET_wdm_loop(phif, lc, wc)

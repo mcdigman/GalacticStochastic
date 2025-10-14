@@ -14,7 +14,9 @@ from LisaWaveformTools.stationary_source_waveform import StationaryWaveformFreq
 
 # TODO check factor of 2pi
 @njit()
-def linear_frequency_intrinsic_freq(waveform: StationaryWaveformFreq, intrinsic_params: LinearFrequencyIntrinsicParams, f_in: NDArray[np.floating]) -> None:
+def linear_frequency_intrinsic_freq(
+    waveform: StationaryWaveformFreq, intrinsic_params: LinearFrequencyIntrinsicParams, f_in: NDArray[np.floating]
+) -> None:
     """
     Get time domain intrinsic_waveform for a linearly increasing frequency source with constant amplitude.
 
@@ -51,17 +53,25 @@ def linear_frequency_intrinsic_freq(waveform: StationaryWaveformFreq, intrinsic_
     for n in range(nf_loc):
         f = f_in[n]
         TF[n] = -intrinsic_params.F0 / intrinsic_params.FTd0 + f / intrinsic_params.FTd0
-        TFp[n] = 1. / intrinsic_params.FTd0
-        PF[n] = intrinsic_params.phi0 - np.pi / 4. + intrinsic_params.F0**2 * np.pi / intrinsic_params.FTd0 - 2 * np.pi * intrinsic_params.F0 / intrinsic_params.FTd0 * f + np.pi / intrinsic_params.FTd0 * f**2
+        TFp[n] = 1.0 / intrinsic_params.FTd0
+        PF[n] = (
+            intrinsic_params.phi0
+            - np.pi / 4.0
+            + intrinsic_params.F0**2 * np.pi / intrinsic_params.FTd0
+            - 2 * np.pi * intrinsic_params.F0 / intrinsic_params.FTd0 * f
+            + np.pi / intrinsic_params.FTd0 * f**2
+        )
         AF[n] = intrinsic_params.amp0_t / np.sqrt(intrinsic_params.FTd0)
 
 
 # TODO do consistency checks
 class LinearFrequencySourceWaveformFreq(StationarySourceWaveformFreq[LinearFrequencyIntrinsicParams, ExtrinsicParams]):
-    """Store a binary intrinsic_waveform with linearly increasing frequency and constant amplitude in the time domain."""
+    """Store a source with linearly increasing frequency and constant amplitude in the frequency domain."""
 
     @override
-    def _create_intrinsic_params_manager(self, params_intrinsic: LinearFrequencyIntrinsicParams) -> LinearFrequencyParamsManager:
+    def _create_intrinsic_params_manager(
+        self, params_intrinsic: LinearFrequencyIntrinsicParams
+    ) -> LinearFrequencyParamsManager:
         return LinearFrequencyParamsManager(params_intrinsic)
 
     @override

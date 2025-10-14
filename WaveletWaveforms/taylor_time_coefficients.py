@@ -133,7 +133,9 @@ def wavelet(wc: WDMWaveletConstants, m: int, nrm: float, *, n_in: int = -1) -> N
 
 
 @njit(parallel=True)
-def get_taylor_table_time_helper(wavelet_norm: NDArray[np.floating], wc: WDMWaveletConstants) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
+def get_taylor_table_time_helper(
+    wavelet_norm: NDArray[np.floating], wc: WDMWaveletConstants
+) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
     """
     Compute cosine and sine Taylor expansion coefficient tables for a grid of frequency derivative values.
 
@@ -222,7 +224,14 @@ def get_wavelet_norm(wc: WDMWaveletConstants) -> NDArray[np.floating]:
     return wavelet(wc, kwave, nrm)
 
 
-def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str = 'skip', output_mode: str = 'skip', cache_dir: str = 'coeffs/', filename_base: str = 'taylor_time_table_') -> WaveletTaylorTimeCoeffs:
+def get_taylor_table_time(
+    wc: WDMWaveletConstants,
+    *,
+    cache_mode: str = 'skip',
+    output_mode: str = 'skip',
+    cache_dir: str = 'coeffs/',
+    filename_base: str = 'taylor_time_table_',
+) -> WaveletTaylorTimeCoeffs:
     """
     Construct or retrieve the precomputed table of Taylor-expansion coefficients.
 
@@ -344,7 +353,6 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str = 'skip', 
         raise NotImplementedError(msg)
 
     if not cache_good:
-
         fd = wc.DF / wc.Tw * wc.dfdot * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)  # set f-dot increments
 
         max_fd = np.max(np.abs(fd))
@@ -352,11 +360,13 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str = 'skip', 
             msg = 'Requested interpolation grid exceeds valid range of time domain taylor approximation'
             raise ValueError(msg)
 
-        if not np.any(fd == 0.):
+        if not np.any(fd == 0.0):
             msg = 'Requested frequency derivative grid does not contain zero; results may be unexpected'
             raise ValueError(msg)
 
-        print('DT=%e DF=%.14e DOM/2pi=%.14e fd1=%e fd-1=%e' % (wc.DT, wc.DF, wc.DOM / (2 * np.pi), fd[1], fd[wc.Nfd - 1]))
+        print(
+            'DT=%e DF=%.14e DOM/2pi=%.14e fd1=%e fd-1=%e' % (wc.DT, wc.DF, wc.DOM / (2 * np.pi), fd[1], fd[wc.Nfd - 1])
+        )
 
         Nfsam = ((wc.BW + np.abs(fd) * wc.Tw) / wc.df_bw).astype(np.int64)
         odd_mask = np.mod(Nfsam, 2) != 0
@@ -401,7 +411,9 @@ def get_taylor_table_time(wc: WDMWaveletConstants, *, cache_mode: str = 'skip', 
 
 
 @njit()
-def get_taylor_time_pixel_direct(fa: float, fda: float, k_in: int, wavelet_norm: NDArray[np.floating], wc: WDMWaveletConstants) -> tuple[float, float]:
+def get_taylor_time_pixel_direct(
+    fa: float, fda: float, k_in: int, wavelet_norm: NDArray[np.floating], wc: WDMWaveletConstants
+) -> tuple[float, float]:
     """
     Compute Taylor expansion coefficients for a single time pixel in the wavelet domain.
 

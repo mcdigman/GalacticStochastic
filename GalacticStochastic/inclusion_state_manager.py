@@ -68,7 +68,14 @@ def unpack_params_gb(params_in: NDArray[np.floating]) -> SourceParams:
 
 
 @njit()
-def _snrs_tot_load_helper(snrs_upper: NDArray[np.floating], snrs_lower: NDArray[np.floating], snrs_tot_upper: NDArray[np.floating], snrs_tot_lower: NDArray[np.floating], lower_mode: int = 0, itrn: int = -1) -> None:
+def _snrs_tot_load_helper(
+    snrs_upper: NDArray[np.floating],
+    snrs_lower: NDArray[np.floating],
+    snrs_tot_upper: NDArray[np.floating],
+    snrs_tot_lower: NDArray[np.floating],
+    lower_mode: int = 0,
+    itrn: int = -1,
+) -> None:
     """Load the total snrs from the components with the exact numerical operation done in the storage helper.
 
     Parameters
@@ -169,7 +176,11 @@ class BinaryInclusionState(StateManager):
         assert self._fmin_binary < self._fmax_binary, 'No frequency range in inputs'
 
         if snrs_tot_in is not None:
-            faints_in = (snrs_tot_in < self._ic.snr_min_preprocess) | (params_gb_in[:, 3] >= self._fmax_binary) | (params_gb_in[:, 3] < self._fmin_binary)
+            faints_in = (
+                (snrs_tot_in < self._ic.snr_min_preprocess)
+                | (params_gb_in[:, 3] >= self._fmax_binary)
+                | (params_gb_in[:, 3] < self._fmin_binary)
+            )
         else:
             faints_in = (params_gb_in[:, 3] >= self._fmax_binary) | (params_gb_in[:, 3] < self._fmin_binary)
 
@@ -193,15 +204,21 @@ class BinaryInclusionState(StateManager):
         del params_gb_in
         del faints_in
 
-        self._snrs_upper: NDArray[np.floating] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use, self._lc.nc_snr))
+        self._snrs_upper: NDArray[np.floating] = np.zeros(
+            (self._fit_state.get_n_itr_cut(), self._n_bin_use, self._lc.nc_snr)
+        )
         self._snrs_tot_upper: NDArray[np.floating] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use))
 
-        self._snrs_lower: NDArray[np.floating] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use, self._lc.nc_snr))
+        self._snrs_lower: NDArray[np.floating] = np.zeros(
+            (self._fit_state.get_n_itr_cut(), self._n_bin_use, self._lc.nc_snr)
+        )
         self._snrs_tot_lower: NDArray[np.floating] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use))
 
         self._brights: NDArray[np.bool_] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use), dtype=np.bool_)
         self._decided: NDArray[np.bool_] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use), dtype=np.bool_)
-        self._faints_cur: NDArray[np.bool_] = np.zeros((self._fit_state.get_n_itr_cut(), self._n_bin_use), dtype=np.bool_)
+        self._faints_cur: NDArray[np.bool_] = np.zeros(
+            (self._fit_state.get_n_itr_cut(), self._n_bin_use), dtype=np.bool_
+        )
 
         # TODO recover handling for background with zero binaries in a sensible way
         if self._params_gb.shape[0] == 0:
@@ -212,7 +229,9 @@ class BinaryInclusionState(StateManager):
         else:
             params0_sel = self._params_gb[0]
         params0: SourceParams = unpack_params_gb(params0_sel)
-        self._waveform_manager: LinearFrequencyWaveletWaveformTime = LinearFrequencyWaveletWaveformTime(params0, self._wc, self._lc, self._nt_lim_waveform, table_cache_mode='check', table_output_mode='skip')
+        self._waveform_manager: LinearFrequencyWaveletWaveformTime = LinearFrequencyWaveletWaveformTime(
+            params0, self._wc, self._lc, self._nt_lim_waveform, table_cache_mode='check', table_output_mode='skip'
+        )
 
         del params0
         del params0_sel
@@ -223,7 +242,9 @@ class BinaryInclusionState(StateManager):
         self._n_brights_cur: NDArray[np.integer] = np.zeros(self._fit_state.get_n_itr_cut() + 1, dtype=np.int64)
 
     @override
-    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'inclusion_state', group_mode: int = 0, noise_recurse: int = 1) -> h5py.Group:
+    def store_hdf5(
+        self, hf_in: h5py.Group, *, group_name: str = 'inclusion_state', group_mode: int = 0, noise_recurse: int = 1
+    ) -> h5py.Group:
         """
         Store attributes, configuration, and results to an HDF5 file.
 
@@ -284,7 +305,8 @@ class BinaryInclusionState(StateManager):
         active_mask[self._argbinmap] = True
         _ = hf_include.create_dataset('active_mask', data=active_mask, compression='gzip')
         if self._fit_state.preprocess_mode != 1:
-            # don't store these things if were are in the initial preprocessing stage because, they are meaningless and potentially a large array.
+            # don't store these things if were are in the initial preprocessing stage
+            # because, they are meaningless and potentially a large array.
             _ = hf_include.create_dataset('snrs_old', data=self._snrs_old, compression='gzip')
         _ = hf_include.create_dataset('faints_old', data=self._faints_old, compression='gzip')
         _ = hf_include.create_dataset('faints_cur', data=self._faints_cur[: self._itrn], compression='gzip')
@@ -300,8 +322,12 @@ class BinaryInclusionState(StateManager):
 
         if storage_mode in (1, 3):
             # store last snrs
-            _ = hf_include.create_dataset('snrs_upper', data=self._snrs_upper[self._itrn - 1 : self._itrn], compression='gzip')
-            _ = hf_include.create_dataset('snrs_lower', data=self._snrs_lower[self._itrn - 1 : self._itrn], compression='gzip')
+            _ = hf_include.create_dataset(
+                'snrs_upper', data=self._snrs_upper[self._itrn - 1 : self._itrn], compression='gzip'
+            )
+            _ = hf_include.create_dataset(
+                'snrs_lower', data=self._snrs_lower[self._itrn - 1 : self._itrn], compression='gzip'
+            )
 
         if storage_mode in (2, 3):
             # store full params
@@ -309,11 +335,15 @@ class BinaryInclusionState(StateManager):
 
         if storage_mode == 5:
             # store last snr for upper channel only
-            _ = hf_include.create_dataset('snrs_upper', data=self._snrs_upper[self._itrn - 1 : self._itrn], compression='gzip')
+            _ = hf_include.create_dataset(
+                'snrs_upper', data=self._snrs_upper[self._itrn - 1 : self._itrn], compression='gzip'
+            )
 
         if storage_mode == 4:
             # lowest possible storage, store only last total snr for upper channel
-            _ = hf_include.create_dataset('snrs_tot_upper', data=np.array([self._snrs_tot_upper[self._itrn - 1]]), compression='gzip')
+            _ = hf_include.create_dataset(
+                'snrs_tot_upper', data=np.array([self._snrs_tot_upper[self._itrn - 1]]), compression='gzip'
+            )
 
         # option to skip storing the noise manager in case it is redundant
         if noise_recurse == 0:
@@ -365,10 +395,16 @@ class BinaryInclusionState(StateManager):
             which iteration to load itotal the snr for
             if -1, load all of them (default)
         """
-        _snrs_tot_load_helper(self._snrs_upper, self._snrs_lower, self._snrs_tot_upper, self._snrs_tot_lower, lower_mode=lower_mode, itrn=itrn)
+        _snrs_tot_load_helper(
+            self._snrs_upper,
+            self._snrs_lower,
+            self._snrs_tot_upper,
+            self._snrs_tot_lower,
+            lower_mode=lower_mode,
+            itrn=itrn,
+        )
 
     def _load_snr_from_file_helper(self, hf_include: h5py.Group, storage_mode: int, *, lower_mode: int = 0) -> None:
-
         assert lower_mode in (0, 1, 2)
         if lower_mode == 2:
             # copy lower from upper
@@ -416,11 +452,11 @@ class BinaryInclusionState(StateManager):
                 assert snrs_tot_upper_last.size == 1
                 # did not record division into channels, just put all the power into the first channel
                 self._snrs_upper[self._itrn - 1, :, 0] = snrs_tot_upper_last[0]
-                self._snrs_upper[self._itrn - 1, :, 1:] = 0.
+                self._snrs_upper[self._itrn - 1, :, 1:] = 0.0
                 self._snrs_tot_load(lower_mode, itrn=self._itrn - 1)
             else:
                 # nothing recorded here
-                self._snrs_lower[self._itrn - 1, :, :] = 0.
+                self._snrs_lower[self._itrn - 1, :, :] = 0.0
                 self._snrs_tot_load(lower_mode, itrn=self._itrn - 1)
 
     @override
@@ -485,17 +521,35 @@ class BinaryInclusionState(StateManager):
         assert isinstance(fmax_binary_val, float), 'fmax_binary must be float'
         self._fmax_binary = float(fmax_binary_val)
 
-        assert hf_include.attrs['noise_manager_name'] == self._noise_manager.__class__.__name__, 'incorrect noise manager name found in hdf5 file'
-        assert hf_include.attrs['fit_state_name'] == self._fit_state.__class__.__name__, 'incorrect fit state name found in hdf5 file'
-        assert hf_include.attrs['waveform_manager_name'] == self._waveform_manager.__class__.__name__, 'incorrect waveform manager name found in hdf5 file'
-        assert hf_include.attrs['wc_name'] == self._wc.__class__.__name__, 'incorrect wavelet constants name found in hdf5 file'
-        assert hf_include.attrs['lc_name'] == self._lc.__class__.__name__, 'incorrect lisa constants name found in hdf5 file'
-        assert hf_include.attrs['ic_name'] == self._ic.__class__.__name__, 'incorrect iteration config name found in hdf5 file'
-        assert hf_include.attrs['nt_lim_name'] == self._nt_lim_waveform.__class__.__name__, 'incorrect nt_lim_waveform name found in hdf5 file'
+        assert hf_include.attrs['noise_manager_name'] == self._noise_manager.__class__.__name__, (
+            'incorrect noise manager name found in hdf5 file'
+        )
+        assert hf_include.attrs['fit_state_name'] == self._fit_state.__class__.__name__, (
+            'incorrect fit state name found in hdf5 file'
+        )
+        assert hf_include.attrs['waveform_manager_name'] == self._waveform_manager.__class__.__name__, (
+            'incorrect waveform manager name found in hdf5 file'
+        )
+        assert hf_include.attrs['wc_name'] == self._wc.__class__.__name__, (
+            'incorrect wavelet constants name found in hdf5 file'
+        )
+        assert hf_include.attrs['lc_name'] == self._lc.__class__.__name__, (
+            'incorrect lisa constants name found in hdf5 file'
+        )
+        assert hf_include.attrs['ic_name'] == self._ic.__class__.__name__, (
+            'incorrect iteration config name found in hdf5 file'
+        )
+        assert hf_include.attrs['nt_lim_name'] == self._nt_lim_waveform.__class__.__name__, (
+            'incorrect nt_lim_waveform name found in hdf5 file'
+        )
         if self._fit_state.preprocess_mode == 0:
-            assert storage_mode == self._ic.inclusion_state_storage_mode, 'storage mode in hdf5 file does not match current config'
+            assert storage_mode == self._ic.inclusion_state_storage_mode, (
+                'storage mode in hdf5 file does not match current config'
+            )
         else:
-            assert storage_mode == self._ic.inclusion_state_storage_mode_prelim, 'storage mode in hdf5 file does not match current config'
+            assert storage_mode == self._ic.inclusion_state_storage_mode_prelim, (
+                'storage mode in hdf5 file does not match current config'
+            )
 
         try:
             argbbinmap_temp = hf_include['argbinmap']
@@ -582,20 +636,28 @@ class BinaryInclusionState(StateManager):
             self._decided[:] = False
             self._brights[:] = False
 
-        # shouldn't need to load the waveform manager, because it is reconstructed each time it is used, as long as the type is correct
+        # shouldn't need to load the waveform manager, because it is reconstructed each time it is used
 
         for key in self._wc._fields:
-            assert getattr(self._wc, key) == hf_include['wc'].attrs[key], f'wavelet constant attribute {key} does not match saved value'
+            assert getattr(self._wc, key) == hf_include['wc'].attrs[key], (
+                f'wavelet constant attribute {key} does not match saved value'
+            )
 
         for key in self._lc._fields:
-            assert getattr(self._lc, key) == hf_include['lc'].attrs[key], f'lisa constant attribute {key} does not match saved value'
+            assert getattr(self._lc, key) == hf_include['lc'].attrs[key], (
+                f'lisa constant attribute {key} does not match saved value'
+            )
 
         if self._fit_state.preprocess_mode != 1:
             for key in self._ic._fields:
-                assert np.all(getattr(self._ic, key) == hf_include['ic'].attrs[key]), f'iteration config attribute {key} does not match saved value'
+                assert np.all(getattr(self._ic, key) == hf_include['ic'].attrs[key]), (
+                    f'iteration config attribute {key} does not match saved value'
+                )
 
         for key in self._nt_lim_waveform._fields:
-            assert getattr(self._nt_lim_waveform, key) == hf_include['nt_lim_waveform'].attrs[key], f'nt_lim_waveform attribute {key} does not match saved value'
+            assert getattr(self._nt_lim_waveform, key) == hf_include['nt_lim_waveform'].attrs[key], (
+                f'nt_lim_waveform attribute {key} does not match saved value'
+            )
 
     @property
     def params_gb(self) -> NDArray[np.floating]:
@@ -702,7 +764,7 @@ class BinaryInclusionState(StateManager):
         return delta_brights
 
     def convergence_decision_helper(self) -> tuple[tuple[bool, bool, bool], int, int]:
-        """Decide if the bright binaries are oscillating without converging, and get the change in number of bright and faint binaries.
+        """Decide if the bright binaries are oscillating, and get the change in number of bright and faint binaries.
 
         Returns
         -------
@@ -712,8 +774,8 @@ class BinaryInclusionState(StateManager):
                 - cycling: True if the bright binaries are oscillating without converging.
                 - converged_or_cycling: True if the bright binaries have converged or are oscillating.
                 - old_match: True if the current bright binary set matches that from two iterations ago.
-            - An integer from _delta_faint_check_helper: The change in the number of faint binaries between the last two iterations.
-            - An integer from _delta_bright_check_helper: The change in the number of bright binaries between the last two iterations.
+            - The change in the number of faint binaries between the last two iterations.
+            - The change in the number of bright binaries between the last two iterations.
         """
         return (self._oscillation_check_helper(), self._delta_faint_check_helper(), self._delta_bright_check_helper())
 
@@ -880,7 +942,7 @@ class BinaryInclusionState(StateManager):
         """
         snrs_temp = self._snrs_tot_upper[self._itrn - 1, :]
         # make the array the length of *all* the binaries, including ones that have been masked out
-        snrs_full = np.full(self._n_tot, -1.)
+        snrs_full = np.full(self._n_tot, -1.0)
         snrs_full[self._argbinmap] = snrs_temp
         return snrs_full
 
@@ -915,7 +977,8 @@ class BinaryInclusionState(StateManager):
             if counter % 10000 == 0:
                 tcb = perf_counter()
                 print(
-                    'Starting binary # %11d of %11d to consider at t=%9.2f s of iteration %4d' % (counter, idxbs.size, (tcb - tib), self._itrn),
+                    'Starting binary # %11d of %11d to consider at t=%9.2f s of iteration %4d'
+                    % (counter, idxbs.size, (tcb - tib), self._itrn),
                 )
 
             self._run_binary_coadd(int(itrb))
@@ -943,17 +1006,23 @@ class BinaryInclusionState(StateManager):
     @override
     def print_report(self) -> None:
         """Do any printing desired after convergence has been achieved and the loop ends."""
-        t_obs_consider_yr = (self._noise_manager.nt_lim_snr.nx_max - self._noise_manager.nt_lim_snr.nx_min) * self._wc.DT / gc.SECSYEAR
+        t_obs_consider_yr = (
+            (self._noise_manager.nt_lim_snr.nx_max - self._noise_manager.nt_lim_snr.nx_min) * self._wc.DT / gc.SECSYEAR
+        )
         n_consider = self._n_bin_use
         n_faint = int(self._faints_old.sum())
         n_faint2 = int(self._faints_cur[self._itrn - 1].sum())
         n_bright = int(self._brights[self._itrn - 1].sum())
-        n_ambiguous = int((~(self._faints_old | self._brights[self._itrn - 1] | self._faints_cur[self._itrn - 1])).sum())
-        print(
-            'Out of %10d total binaries, %10d were deemed undetectable by a previous run, %10d were considered here.' % (self._n_tot, self._n_tot - n_consider, n_consider),
+        n_ambiguous = int(
+            (~(self._faints_old | self._brights[self._itrn - 1] | self._faints_cur[self._itrn - 1])).sum()
         )
         print(
-            'The iterative procedure deemed (%5.3f yr observation at threshold snr=%5.3f):' % (t_obs_consider_yr, self._ic.snr_thresh),
+            'Out of %10d total binaries, %10d were deemed undetectable by a previous run, %10d were considered here.'
+            % (self._n_tot, self._n_tot - n_consider, n_consider),
+        )
+        print(
+            'The iterative procedure deemed (%5.3f yr observation at threshold snr=%5.3f):'
+            % (t_obs_consider_yr, self._ic.snr_thresh),
         )
         print('       %10d undetectable due to instrument noise' % n_faint)
         print('       %10d undetectable due to galactic confusion' % n_faint2)

@@ -13,7 +13,12 @@ from numpy.typing import NDArray
 from scipy.integrate import cumulative_trapezoid as cumtrapz
 from scipy.signal import butter, filtfilt, hilbert
 from WDMWaveletTransforms.transform_freq_funcs import tukey
-from WDMWaveletTransforms.wavelet_transforms import inverse_wavelet_freq, inverse_wavelet_freq_time, transform_wavelet_freq, transform_wavelet_freq_time
+from WDMWaveletTransforms.wavelet_transforms import (
+    inverse_wavelet_freq,
+    inverse_wavelet_freq_time,
+    transform_wavelet_freq,
+    transform_wavelet_freq_time,
+)
 
 from LisaWaveformTools.lisa_config import LISAConstants, get_lisa_constants
 from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
@@ -40,14 +45,35 @@ def tukey_waveform_amp(AET_waveform: StationaryWaveformTime, tukey_alpha: float,
         AT[itrc, arg_cut:] = 0.0
 
 
-def get_aet_waveform_helper(lc: LISAConstants, rr_model: str, p_input: float, f_input: float, fp_input: float, fpp_input: float, amp_input: float, nc_waveform: int, f_high_cut: float, tukey_alpha: float, nt_loc: int, dt_loc: float) -> tuple[StationaryWaveformTime, int]:
+def get_aet_waveform_helper(
+    lc: LISAConstants,
+    rr_model: str,
+    p_input: float,
+    f_input: float,
+    fp_input: float,
+    fpp_input: float,
+    amp_input: float,
+    nc_waveform: int,
+    f_high_cut: float,
+    tukey_alpha: float,
+    nt_loc: int,
+    dt_loc: float,
+) -> tuple[StationaryWaveformTime, int]:
     # ensure the RRs and IIs are scaled diferently in different channels
     RR_scale_mult = np.array([1.0])
     II_scale_mult = np.array([1.0])
 
     # generate the intrinsic_waveform in the wavelet domain and transform it
     waveform, AET_waveform, arg_cut = get_waveform_helper(
-        p_input, f_input, fp_input, fpp_input, amp_input, nt_loc, dt_loc, nc_waveform, max_f=f_high_cut,
+        p_input,
+        f_input,
+        fp_input,
+        fpp_input,
+        amp_input,
+        nt_loc,
+        dt_loc,
+        nc_waveform,
+        max_f=f_high_cut,
     )
     T = waveform.T
     er = EdgeRiseModel(-np.inf, np.inf)
@@ -67,8 +93,26 @@ def get_aet_waveform_helper(lc: LISAConstants, rr_model: str, p_input: float, f_
     return AET_waveform, arg_cut
 
 
-def get_wavelet_alternative_representation_helper(wavelet_waveform: SparseWaveletWaveform, wc: WDMWaveletConstants, tukey_alpha: float, f_lowpass: float, min_mag_mult: float = 1.e-2) -> tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.complexfloating], NDArray[np.floating], NDArray[np.floating], NDArray[np.floating], NDArray[np.floating], NDArray[np.floating], NDArray[np.floating], int, int]:
-    b, a = butter(4, f_lowpass, fs=1. / wc.dt, btype='low', analog=False)
+def get_wavelet_alternative_representation_helper(
+    wavelet_waveform: SparseWaveletWaveform,
+    wc: WDMWaveletConstants,
+    tukey_alpha: float,
+    f_lowpass: float,
+    min_mag_mult: float = 1.0e-2,
+) -> tuple[
+    NDArray[np.floating],
+    NDArray[np.floating],
+    NDArray[np.complexfloating],
+    NDArray[np.floating],
+    NDArray[np.floating],
+    NDArray[np.floating],
+    NDArray[np.floating],
+    NDArray[np.floating],
+    NDArray[np.floating],
+    int,
+    int,
+]:
+    b, a = butter(4, f_lowpass, fs=1.0 / wc.dt, btype='low', analog=False)
     nd_loc = wc.Nt * wc.Nf
     nc_waveform = wavelet_waveform.n_set.size
     wavelet_dense: NDArray[np.floating] = np.zeros((nd_loc, nc_waveform))
@@ -77,7 +121,7 @@ def get_wavelet_alternative_representation_helper(wavelet_waveform: SparseWavele
 
     # cut off the signal completely if it drops to zero
     t_sum = np.sum(wavelet_dense**2, axis=(1, 2))
-    nt_max_active = wc.Nt - np.argmax(t_sum[::-1] > 0.)
+    nt_max_active = wc.Nt - np.argmax(t_sum[::-1] > 0.0)
     nt_max_cut = wc.Nt * wc.Nf
     if nt_max_active < wc.Nt:
         nt_max_cut = min(nt_max_cut, int(np.ceil(nt_max_active * wc.Nf + wc.Tw / wc.dt + 1)))
@@ -95,7 +139,7 @@ def get_wavelet_alternative_representation_helper(wavelet_waveform: SparseWavele
 
     analytic = np.asarray(hilbert(signal_time, axis=0), dtype=np.complex128)
 
-    analytic[nt_max_cut:] = 0.
+    analytic[nt_max_cut:] = 0.0
 
     if nt_max_cut < wc.Nt * wc.Nf:
         for itrc in range(nc_waveform):
@@ -112,7 +156,7 @@ def get_wavelet_alternative_representation_helper(wavelet_waveform: SparseWavele
     for itrc in range(nc_waveform):
         tukey(envelope[:, itrc], tukey_alpha, nt_max_cut)
 
-    envelope[nt_max_cut:] = 0.
+    envelope[nt_max_cut:] = 0.0
 
     for itrc in range(nc_waveform):
         tukey(f_envelope[:, itrc], tukey_alpha, nt_max_cut)
@@ -122,7 +166,7 @@ def get_wavelet_alternative_representation_helper(wavelet_waveform: SparseWavele
     for itrc in range(nc_waveform):
         tukey(f_envelope[:, itrc], tukey_alpha, nt_max_cut)
 
-    f_envelope[nt_max_cut:] = 0.
+    f_envelope[nt_max_cut:] = 0.0
 
     for itrc in range(nc_waveform):
         tukey(fd_envelope[:, itrc], tukey_alpha, nt_max_cut)
@@ -137,9 +181,9 @@ def get_wavelet_alternative_representation_helper(wavelet_waveform: SparseWavele
 
     p_envelope = np.asarray(filtfilt(b, a, f_envelope, axis=0), dtype=np.float64)
 
-    p_envelope[nt_max_cut:] = 0.
+    p_envelope[nt_max_cut:] = 0.0
 
-    fd_envelope[nt_max_cut:] = 0.
+    fd_envelope[nt_max_cut:] = 0.0
 
     mag_got: NDArray[np.floating] = np.abs(signal_freq)
 
@@ -155,8 +199,8 @@ def get_wavelet_alternative_representation_helper(wavelet_waveform: SparseWavele
     itr_high_cut: int = int(max(itr_low_cut, int(mag_got.shape[0] - np.argmax(mag_got[::-1, 0] >= min_mag))))
 
     # trim out irrelevant/numerically unstable fft angles at faint amplitudes
-    angle_got[:itr_low_cut] = 0.
-    angle_got[itr_high_cut:] = 0.
+    angle_got[:itr_low_cut] = 0.0
+    angle_got[itr_high_cut:] = 0.0
 
     # unwrap the fft phases by 2 pi
     angle_got = np.unwrap(angle_got, axis=0)
@@ -164,10 +208,29 @@ def get_wavelet_alternative_representation_helper(wavelet_waveform: SparseWavele
     # standardize the factors of 2 pi to the predicted peak frequency
     angle_got -= angle_got[arg_peak] - angle_got[arg_peak] % (2 * np.pi)
 
-    return wavelet_dense, signal_time, signal_freq, mag_got, angle_got, envelope, p_envelope, f_envelope, fd_envelope, itr_low_cut, itr_high_cut
+    return (
+        wavelet_dense,
+        signal_time,
+        signal_freq,
+        mag_got,
+        angle_got,
+        envelope,
+        p_envelope,
+        f_envelope,
+        fd_envelope,
+        itr_low_cut,
+        itr_high_cut,
+    )
 
 
-def multishape_method_match_helper(p_offset: float, f0_mult: float, f0p_mult: float, f0pp_mult: float, rr_model: str, gridsize2_mult: int) -> None:
+def multishape_method_match_helper(
+    p_offset: float,
+    f0_mult: float,
+    f0p_mult: float,
+    f0pp_mult: float,
+    rr_model: str,
+    gridsize2_mult: int,
+) -> None:
     # get the config for the first (Nf, Nt) pair
     toml_filename_in = 'tests/wavemaket_test_config1.toml'
 
@@ -193,7 +256,7 @@ def multishape_method_match_helper(p_offset: float, f0_mult: float, f0p_mult: fl
 
     f_high_cut = 1 / (2 * wc.dt) - 1 / wc.Tobs
     nc_waveform = 1
-    tukey_alpha_in = 0.
+    tukey_alpha_in = 0.0
     tukey_alpha = 0.1
 
     # Create fake input data for a pure sine wave
@@ -206,7 +269,20 @@ def multishape_method_match_helper(p_offset: float, f0_mult: float, f0p_mult: fl
 
     f_lowpass = 10 * wc.df_bw  # f_input / 2000.0 #wc1.DF*(wc1.Nf/4)
 
-    AET_waveform, _ = get_aet_waveform_helper(lc, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha_in, wc.Nt, wc.DT)
+    AET_waveform, _ = get_aet_waveform_helper(
+        lc,
+        rr_model,
+        p_input,
+        f_input,
+        fp_input,
+        fpp_input,
+        amp_input,
+        nc_waveform,
+        f_high_cut,
+        tukey_alpha_in,
+        wc.Nt,
+        wc.DT,
+    )
 
     # get the sparse wavelet intrinsic_waveform
     wavelet_waveform1 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc)
@@ -220,8 +296,32 @@ def multishape_method_match_helper(p_offset: float, f0_mult: float, f0p_mult: fl
 
     wavemaket_direct(wavelet_waveform2, AET_waveform, nt_lim, wc, taylor_time_table)
 
-    wavelet_dense1, _, signal_freq1, mag_got1, angle_got1, envelope1, p_envelope1, f_envelope1, fd_envelope1, itr_low_cut1, itr_high_cut1 = get_wavelet_alternative_representation_helper(wavelet_waveform1, wc, tukey_alpha, f_lowpass, 8.e-2)
-    wavelet_dense2, _, signal_freq2, mag_got2, angle_got2, envelope2, p_envelope2, f_envelope2, fd_envelope2, itr_low_cut2, itr_high_cut2 = get_wavelet_alternative_representation_helper(wavelet_waveform2, wc, tukey_alpha, f_lowpass, 8.e-2)
+    (
+        wavelet_dense1,
+        _,
+        signal_freq1,
+        mag_got1,
+        angle_got1,
+        envelope1,
+        p_envelope1,
+        f_envelope1,
+        fd_envelope1,
+        itr_low_cut1,
+        itr_high_cut1,
+    ) = get_wavelet_alternative_representation_helper(wavelet_waveform1, wc, tukey_alpha, f_lowpass, 8.0e-2)
+    (
+        wavelet_dense2,
+        _,
+        signal_freq2,
+        mag_got2,
+        angle_got2,
+        envelope2,
+        p_envelope2,
+        f_envelope2,
+        fd_envelope2,
+        itr_low_cut2,
+        itr_high_cut2,
+    ) = get_wavelet_alternative_representation_helper(wavelet_waveform2, wc, tukey_alpha, f_lowpass, 8.0e-2)
     itr_low_cut = max(itr_low_cut1, itr_low_cut2)
     itr_high_cut = min(itr_high_cut1, itr_high_cut2)
 
@@ -230,13 +330,15 @@ def multishape_method_match_helper(p_offset: float, f0_mult: float, f0p_mult: fl
 
     mag_peak = mag_got1.max()
 
-    angle_got_diff = (angle_got1[itr_low_cut:itr_high_cut] - angle_got2[itr_low_cut:itr_high_cut] + np.pi) % (2 * np.pi) - np.pi
+    angle_got_diff = (angle_got1[itr_low_cut:itr_high_cut] - angle_got2[itr_low_cut:itr_high_cut] + np.pi) % (
+        2 * np.pi
+    ) - np.pi
 
     # check the full signals are similar in the part of the intrinsic_waveform that is bright
     diff_bright = signal_freq2[itr_low_cut:itr_high_cut, 0] - signal_freq1[itr_low_cut:itr_high_cut, 0]
-    abs_diff_bright = np.abs(diff_bright)**2
+    abs_diff_bright = np.abs(diff_bright) ** 2
 
-    power_got_bright_freq = np.sum(mag_got1[itr_low_cut:itr_high_cut]**2)
+    power_got_bright_freq = np.sum(mag_got1[itr_low_cut:itr_high_cut] ** 2)
     bright_power_diff = np.sum(abs_diff_bright) / power_got_bright_freq
 
     # check the total signal power is similar
@@ -245,45 +347,103 @@ def multishape_method_match_helper(p_offset: float, f0_mult: float, f0p_mult: fl
     power_diff = np.abs((power_got1 - power_got2) / power_got1)
 
     angle_got_diff_mean = np.mean(angle_got_diff, axis=0)
-    assert_allclose(envelope1, envelope2, atol=1.e-2, rtol=1.e-2)
+    assert_allclose(envelope1, envelope2, atol=1.0e-2, rtol=1.0e-2)
 
-    assert_allclose(f_envelope1, f_envelope2, atol=1.e-2 * f_input, rtol=1.e-4)
-    assert_allclose(np.mean(f_envelope1 - f_envelope2), 0., atol=1.e-3 * f_input)
+    assert_allclose(f_envelope1, f_envelope2, atol=1.0e-2 * f_input, rtol=1.0e-4)
+    assert_allclose(np.mean(f_envelope1 - f_envelope2), 0.0, atol=1.0e-3 * f_input)
 
-    assert_allclose(dp_envelope, 0., atol=1.e-1)
+    assert_allclose(dp_envelope, 0.0, atol=1.0e-1)
 
     # check no systematic difference in the phase accumulate
-    assert_allclose(np.abs(angle_got_diff_mean), 0., atol=5.e-3)
+    assert_allclose(np.abs(angle_got_diff_mean), 0.0, atol=5.0e-3)
 
     # check magnitudes match in the mutually bright range
-    assert_allclose(mag_got1[itr_low_cut:itr_high_cut] / mag_peak, mag_got2[itr_low_cut:itr_high_cut] / mag_peak, atol=3.e-2, rtol=1.e-3)
+    assert_allclose(
+        mag_got1[itr_low_cut:itr_high_cut] / mag_peak,
+        mag_got2[itr_low_cut:itr_high_cut] / mag_peak,
+        atol=3.0e-2,
+        rtol=1.0e-3,
+    )
 
-    assert bright_power_diff < 1.e-3
-    assert power_diff < 5.e-2
+    assert bright_power_diff < 1.0e-3
+    assert power_diff < 5.0e-2
 
-    assert_allclose(fd_envelope1, fd_envelope2, atol=1.e2 * f_input / wc.Tobs, rtol=1.e-4)
-    assert_allclose(np.mean(fd_envelope1 - fd_envelope2), 0., atol=2.e-2 * max(float(np.max(np.abs(fd_envelope1))), float(np.max(np.abs(fd_envelope2)))))
+    assert_allclose(fd_envelope1, fd_envelope2, atol=1.0e2 * f_input / wc.Tobs, rtol=1.0e-4)
+    assert_allclose(
+        np.mean(fd_envelope1 - fd_envelope2),
+        0.0,
+        atol=2.0e-2 * max(float(np.max(np.abs(fd_envelope1))), float(np.max(np.abs(fd_envelope2)))),
+    )
 
-    mask = (wavelet_dense1 != 0.) & (wavelet_dense2 != 0.)
-    assert_allclose(wavelet_dense1[mask], wavelet_dense2[mask], atol=6.e-3, rtol=1.e-10)
+    mask = (wavelet_dense1 != 0.0) & (wavelet_dense2 != 0.0)
+    assert_allclose(wavelet_dense1[mask], wavelet_dense2[mask], atol=6.0e-3, rtol=1.0e-10)
 
     # check phases match in the mutually bright range
-    assert_allclose(angle_got_diff, 0., atol=1.e-1, rtol=1.e-2)
+    assert_allclose(angle_got_diff, 0.0, atol=1.0e-1, rtol=1.0e-2)
 
 
 @pytest.mark.parametrize(
     'f0_mult',
     [
-        0.4, 0.5,
+        0.4,
+        0.5,
     ],
 )
-@pytest.mark.parametrize('f0p_mult', [-31., 31., -20., 20., -15., 15., -10., 10., -9.999999, 9.999999, -3.25, 3.25, -3.75, 3.75, 1. / 3., -1. / 3., 2. / 3., -2. / 3., -2.000001, 2.000001, -2., 2., -1.99999, 1.99999, -1.5, 1.5, -1.00001, 1.00001, -1., 1., -0.99999, 0.99999, -0.5, 0.5, -0.001, 0., 0.001])
+@pytest.mark.parametrize(
+    'f0p_mult',
+    [
+        -31.0,
+        31.0,
+        -20.0,
+        20.0,
+        -15.0,
+        15.0,
+        -10.0,
+        10.0,
+        -9.999999,
+        9.999999,
+        -3.25,
+        3.25,
+        -3.75,
+        3.75,
+        1.0 / 3.0,
+        -1.0 / 3.0,
+        2.0 / 3.0,
+        -2.0 / 3.0,
+        -2.000001,
+        2.000001,
+        -2.0,
+        2.0,
+        -1.99999,
+        1.99999,
+        -1.5,
+        1.5,
+        -1.00001,
+        1.00001,
+        -1.0,
+        1.0,
+        -0.99999,
+        0.99999,
+        -0.5,
+        0.5,
+        -0.001,
+        0.0,
+        0.001,
+    ],
+)
 @pytest.mark.parametrize('f0pp_mult', [0.0])
 @pytest.mark.parametrize('rr_model', ['const'])
 @pytest.mark.parametrize('gridsize2_mult', [1])
-@pytest.mark.parametrize('p_offset', [0., np.pi / 2.])
+@pytest.mark.parametrize('p_offset', [0.0, np.pi / 2.0])
 # @pytest.mark.skip
-def test_wavemaket_method_match_slopes(p_offset: float, f0_mult: float, f0p_mult: float, f0pp_mult: float, rr_model: str, gridsize2_mult: int) -> None:
+def test_wavemaket_method_match_slopes(
+    p_offset: float,
+    f0_mult: float,
+    f0p_mult: float,
+    f0pp_mult: float,
+    rr_model: str,
+    gridsize2_mult: int,
+) -> None:
     """Test whether the signal computed in the time domain matches computing
     it in the wavelet domain with several different pixel grid sizes for a galactic binary
     with a moderately large second derivative:
@@ -294,16 +454,24 @@ def test_wavemaket_method_match_slopes(p_offset: float, f0_mult: float, f0p_mult
 @pytest.mark.parametrize(
     'f0_mult',
     [
-        0.4, 0.5,
+        0.4,
+        0.5,
     ],
 )
-@pytest.mark.parametrize('f0p_mult', [0.])
+@pytest.mark.parametrize('f0p_mult', [0.0])
 @pytest.mark.parametrize('f0pp_mult', [-0.1, 0.1, 0.0])
 @pytest.mark.parametrize('rr_model', ['const'])
 @pytest.mark.parametrize('gridsize2_mult', [32, 16, 8, 4, 2, 1, 0.5])
-@pytest.mark.parametrize('p_offset', [np.pi / 2., 0.])
+@pytest.mark.parametrize('p_offset', [np.pi / 2.0, 0.0])
 # @pytest.mark.skip
-def test_wavemaket_multishape_method_match(p_offset: float, f0_mult: float, f0p_mult: float, f0pp_mult: float, rr_model: str, gridsize2_mult: int) -> None:
+def test_wavemaket_multishape_method_match(
+    p_offset: float,
+    f0_mult: float,
+    f0p_mult: float,
+    f0pp_mult: float,
+    rr_model: str,
+    gridsize2_mult: int,
+) -> None:
     """Test whether the signal computed in the time domain matches computing
     it in the wavelet domain with several different pixel grid sizes for a galactic binary
     with a moderately large second derivative:
@@ -315,10 +483,11 @@ def test_wavemaket_multishape_method_match(p_offset: float, f0_mult: float, f0p_
 @pytest.mark.parametrize(
     'f0_mult',
     [
-        0.4, 0.5,
+        0.4,
+        0.5,
     ],
 )
-@pytest.mark.parametrize('p_offset', [0., np.pi / 2.])
+@pytest.mark.parametrize('p_offset', [0.0, np.pi / 2.0])
 # @pytest.mark.skip
 def test_wavemaket_extreme_size(p_offset: float, f0_mult: float, direct: bool) -> None:
     """Test with maximally rapid oscillations in FTd that integrate out to constant frequency"""
@@ -332,7 +501,7 @@ def test_wavemaket_extreme_size(p_offset: float, f0_mult: float, direct: bool) -
     taylor_time_table = get_taylor_table_time(wc, cache_mode='check', output_mode='hf')
 
     f_lowpass = 10 * wc.df_bw  # f_input / 2000.0 #wc1.DF*(wc1.Nf/4)
-    b, a = butter(4, f_lowpass, fs=1. / wc.dt, btype='low', analog=False)
+    b, a = butter(4, f_lowpass, fs=1.0 / wc.dt, btype='low', analog=False)
 
     nc_waveform = 1
     tukey_alpha = 0.1
@@ -346,14 +515,14 @@ def test_wavemaket_extreme_size(p_offset: float, f0_mult: float, direct: bool) -
     T = np.arange(wc.Nt) * wc.DT
 
     T_fine = wc.dt * np.arange(0, nd_loc)
-    fd_design = 1.0 * dfmax * (-1)**(np.arange(0, nd_loc) // (64 * wc.Nf))
+    fd_design = 1.0 * dfmax * (-1) ** (np.arange(0, nd_loc) // (64 * wc.Nf))
     # fd_design = dfmax*np.cos(w_design*T_fine)
     f_design = cumtrapz(fd_design, T_fine, initial=0)
     p_design = 2 * np.pi * cumtrapz(f_design, T_fine, initial=0) + p_offset
     f_design += f_input
     p_design += 2 * np.pi * (f_input * T_fine)
     assert_allclose(f_design, cumtrapz(fd_design, T_fine, initial=0) + f_input)
-    a_design = np.full(nd_loc, 1.)
+    a_design = np.full(nd_loc, 1.0)
     time_design = a_design * np.cos(p_design)
 
     envelope_design = np.abs(hilbert(time_design, axis=0))
@@ -366,16 +535,16 @@ def test_wavemaket_extreme_size(p_offset: float, f0_mult: float, direct: bool) -
     AET_AT = np.zeros((nc_waveform, wc.Nt))
 
     # amplitude constants
-    AET_AT[0, :] = a_design[::wc.Nf]
-    AET_FTd[0, :] = fd_design[::wc.Nf]
-    AET_FT[0, :] = f_design[::wc.Nf]
-    AET_PT[0, :] = p_design[::wc.Nf]
+    AET_AT[0, :] = a_design[:: wc.Nf]
+    AET_FTd[0, :] = fd_design[:: wc.Nf]
+    AET_FT[0, :] = f_design[:: wc.Nf]
+    AET_PT[0, :] = p_design[:: wc.Nf]
 
     AET_waveform = StationaryWaveformTime(T, AET_PT, AET_FT, AET_FTd, AET_AT)
 
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(nc_waveform, wc)
 
-    nt_lim = PixelGenericRange(0, wc.Nt, wc.DT, 0.)
+    nt_lim = PixelGenericRange(0, wc.Nt, wc.DT, 0.0)
 
     if direct:
         wavemaket_direct(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table)
@@ -383,7 +552,9 @@ def test_wavemaket_extreme_size(p_offset: float, f0_mult: float, direct: bool) -
         wavemaket(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table, force_nulls=False)
     print(wavelet_waveform.n_set)
 
-    wavelet_dense, _, _, _, _, envelope, _, f_envelope, fd_envelope, _, _ = get_wavelet_alternative_representation_helper(wavelet_waveform, wc, tukey_alpha, f_lowpass)
+    wavelet_dense, _, _, _, _, envelope, _, f_envelope, fd_envelope, _, _ = (
+        get_wavelet_alternative_representation_helper(wavelet_waveform, wc, tukey_alpha, f_lowpass)
+    )
 
     # mimic filtering for plotting
 
@@ -407,35 +578,59 @@ def test_wavemaket_extreme_size(p_offset: float, f0_mult: float, direct: bool) -
 
     p_design = np.asarray(filtfilt(b, a, p_design, axis=0))
 
-    assert_allclose(f_envelope[:, 0], f_design, atol=1.e-2 * np.max(f_design), rtol=1.e-2)
-    assert_allclose(envelope[:, 0], envelope_design, atol=1.e-1 * np.max(envelope_design), rtol=1.e-1)
-    assert_allclose(fd_envelope[:, 0], fd_design, atol=2.e-2 * float(np.max(fd_design)), rtol=1.e-2)
-    mask = wavelet_dense[:, :, 0] != 0.
+    assert_allclose(f_envelope[:, 0], f_design, atol=1.0e-2 * np.max(f_design), rtol=1.0e-2)
+    assert_allclose(envelope[:, 0], envelope_design, atol=1.0e-1 * np.max(envelope_design), rtol=1.0e-1)
+    assert_allclose(fd_envelope[:, 0], fd_design, atol=2.0e-2 * float(np.max(fd_design)), rtol=1.0e-2)
+    mask = wavelet_dense[:, :, 0] != 0.0
 
     # can't guarantee all pixels are good because of the corners, but most should be
-    n_close: int = int(np.isclose(wavelet_dense[mask, 0], wavelet_design[mask], atol=1.e-1 * float(np.max(np.abs(wavelet_design))), rtol=1.e-1).sum())
+    n_close: int = int(
+        np.isclose(
+            wavelet_dense[mask, 0],
+            wavelet_design[mask],
+            atol=1.0e-1 * float(np.max(np.abs(wavelet_design))),
+            rtol=1.0e-1,
+        ).sum(),
+    )
     assert n_close > 0.99 * float(mask.sum())
 
-    match = np.sum(wavelet_design * wavelet_dense[:, :, 0]) / np.sqrt(np.sum(wavelet_design**2)) / np.sqrt(np.sum(wavelet_design**2))
-    resid = np.sum((wavelet_design - wavelet_dense[:, :, 0])**2) / np.sqrt(np.sum(wavelet_design**2)) / np.sqrt(np.sum(wavelet_design**2))
-    assert_allclose(resid, 0., atol=1.e-1)
+    match = (
+        np.sum(wavelet_design * wavelet_dense[:, :, 0])
+        / np.sqrt(np.sum(wavelet_design**2))
+        / np.sqrt(np.sum(wavelet_design**2))
+    )
+    resid = (
+        np.sum((wavelet_design - wavelet_dense[:, :, 0]) ** 2)
+        / np.sqrt(np.sum(wavelet_design**2))
+        / np.sqrt(np.sum(wavelet_design**2))
+    )
+    assert_allclose(resid, 0.0, atol=1.0e-1)
     assert match > 0.9
 
 
 @pytest.mark.parametrize(
     'f0_mult',
     [
-        0.4, 0.57,
+        0.4,
+        0.57,
     ],
 )
-@pytest.mark.parametrize('f0p_mult', [0.])
+@pytest.mark.parametrize('f0p_mult', [0.0])
 @pytest.mark.parametrize('f0pp_mult', [1.0, -0.1])
 @pytest.mark.parametrize('rr_model', ['const'])
 @pytest.mark.parametrize('gridsize2_mult', [32, 16, 8, 4, 2, 0.5])
-@pytest.mark.parametrize('p_offset', [0., np.pi / 2.])
+@pytest.mark.parametrize('p_offset', [0.0, np.pi / 2.0])
 @pytest.mark.parametrize('direct', [True, False])
 # @pytest.mark.skip
-def test_wavemaket_dimension_comparison_midevolve2(p_offset: float, f0_mult: float, f0p_mult: float, f0pp_mult: float, rr_model: str, gridsize2_mult: int, direct: bool) -> None:
+def test_wavemaket_dimension_comparison_midevolve2(
+    p_offset: float,
+    f0_mult: float,
+    f0p_mult: float,
+    f0pp_mult: float,
+    rr_model: str,
+    gridsize2_mult: int,
+    direct: bool,
+) -> None:
     """Test whether the signal computed in the time domain matches computing
     it in the wavelet domain with several different pixel grid sizes for a galactic binary
     with a moderately large second derivative:
@@ -499,8 +694,34 @@ def test_wavemaket_dimension_comparison_midevolve2(p_offset: float, f0_mult: flo
 
     f_lowpass = 10 * wc1.df_bw  # f_input / 2000.0 #wc1.DF*(wc1.Nf/4)
 
-    AET_waveform1, _ = get_aet_waveform_helper(lc1, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha_in, wc1.Nt, wc1.DT)
-    AET_waveform2, _ = get_aet_waveform_helper(lc2, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha_in, wc2.Nt, wc2.DT)
+    AET_waveform1, _ = get_aet_waveform_helper(
+        lc1,
+        rr_model,
+        p_input,
+        f_input,
+        fp_input,
+        fpp_input,
+        amp_input,
+        nc_waveform,
+        f_high_cut,
+        tukey_alpha_in,
+        wc1.Nt,
+        wc1.DT,
+    )
+    AET_waveform2, _ = get_aet_waveform_helper(
+        lc2,
+        rr_model,
+        p_input,
+        f_input,
+        fp_input,
+        fpp_input,
+        amp_input,
+        nc_waveform,
+        f_high_cut,
+        tukey_alpha_in,
+        wc2.Nt,
+        wc2.DT,
+    )
 
     # get the sparse wavelet intrinsic_waveform
     wavelet_waveform1 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc1)
@@ -516,8 +737,32 @@ def test_wavemaket_dimension_comparison_midevolve2(p_offset: float, f0_mult: flo
         wavemaket(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1, force_nulls=False)
         wavemaket(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2, force_nulls=False)
 
-    wavelet_dense1, _, signal_freq1, mag_got1, angle_got1, envelope1, p_envelope1, f_envelope1, fd_envelope1, itr_low_cut1, itr_high_cut1 = get_wavelet_alternative_representation_helper(wavelet_waveform1, wc1, tukey_alpha, f_lowpass, 8.e-2)
-    wavelet_dense2, _, signal_freq2, mag_got2, angle_got2, envelope2, p_envelope2, f_envelope2, fd_envelope2, itr_low_cut2, itr_high_cut2 = get_wavelet_alternative_representation_helper(wavelet_waveform2, wc2, tukey_alpha, f_lowpass, 8.e-2)
+    (
+        wavelet_dense1,
+        _,
+        signal_freq1,
+        mag_got1,
+        angle_got1,
+        envelope1,
+        p_envelope1,
+        f_envelope1,
+        fd_envelope1,
+        itr_low_cut1,
+        itr_high_cut1,
+    ) = get_wavelet_alternative_representation_helper(wavelet_waveform1, wc1, tukey_alpha, f_lowpass, 8.0e-2)
+    (
+        wavelet_dense2,
+        _,
+        signal_freq2,
+        mag_got2,
+        angle_got2,
+        envelope2,
+        p_envelope2,
+        f_envelope2,
+        fd_envelope2,
+        itr_low_cut2,
+        itr_high_cut2,
+    ) = get_wavelet_alternative_representation_helper(wavelet_waveform2, wc2, tukey_alpha, f_lowpass, 8.0e-2)
     itr_low_cut = max(itr_low_cut1, itr_low_cut2)
     itr_high_cut = min(itr_high_cut1, itr_high_cut2)
 
@@ -526,13 +771,15 @@ def test_wavemaket_dimension_comparison_midevolve2(p_offset: float, f0_mult: flo
 
     mag_peak = mag_got1.max()
 
-    angle_got_diff = (angle_got1[itr_low_cut:itr_high_cut] - angle_got2[itr_low_cut:itr_high_cut] + np.pi) % (2 * np.pi) - np.pi
+    angle_got_diff = (angle_got1[itr_low_cut:itr_high_cut] - angle_got2[itr_low_cut:itr_high_cut] + np.pi) % (
+        2 * np.pi
+    ) - np.pi
 
     # check the full signals are similar in the part of the intrinsic_waveform that is bright
     diff_bright = signal_freq2[itr_low_cut:itr_high_cut, 0] - signal_freq1[itr_low_cut:itr_high_cut, 0]
-    abs_diff_bright = np.abs(diff_bright)**2
+    abs_diff_bright = np.abs(diff_bright) ** 2
 
-    power_got_bright_freq = np.sum(mag_got1[itr_low_cut:itr_high_cut]**2)
+    power_got_bright_freq = np.sum(mag_got1[itr_low_cut:itr_high_cut] ** 2)
     bright_power_diff = np.sum(abs_diff_bright) / power_got_bright_freq
 
     # check the total signal power is similar
@@ -542,42 +789,63 @@ def test_wavemaket_dimension_comparison_midevolve2(p_offset: float, f0_mult: flo
 
     angle_got_diff_mean = np.mean(angle_got_diff, axis=0)
 
-    assert_allclose(envelope1, envelope2, atol=1.e-2, rtol=1.e-2)
-    assert_allclose(f_envelope1, f_envelope2, atol=2.e-2 * f_input, rtol=1.e-4)
-    assert_allclose(np.mean(f_envelope1 - f_envelope2), 0., atol=2.e-5 * f_input)
+    assert_allclose(envelope1, envelope2, atol=1.0e-2, rtol=1.0e-2)
+    assert_allclose(f_envelope1, f_envelope2, atol=2.0e-2 * f_input, rtol=1.0e-4)
+    assert_allclose(np.mean(f_envelope1 - f_envelope2), 0.0, atol=2.0e-5 * f_input)
 
     max_fd_envelope: float = max(float(np.max(np.abs(fd_envelope1))), float(np.max(np.abs(fd_envelope2))))
-    assert_allclose(fd_envelope1, fd_envelope2, atol=5.e-1 * max_fd_envelope, rtol=1.e-4)
-    assert_allclose(np.mean(fd_envelope1 - fd_envelope2), 0., atol=1.e-3 * max_fd_envelope)
+    assert_allclose(fd_envelope1, fd_envelope2, atol=5.0e-1 * max_fd_envelope, rtol=1.0e-4)
+    assert_allclose(np.mean(fd_envelope1 - fd_envelope2), 0.0, atol=1.0e-3 * max_fd_envelope)
 
-    assert_allclose(dp_envelope, 0., atol=1.e-1)
+    assert_allclose(dp_envelope, 0.0, atol=1.0e-1)
 
     # check phases match in the mutually bright range
-    assert_allclose(angle_got_diff, 0., atol=4.e-1, rtol=1.e-2)
+    assert_allclose(angle_got_diff, 0.0, atol=4.0e-1, rtol=1.0e-2)
 
     # check no systematic difference in the phase accumulate
-    assert_allclose(np.abs(angle_got_diff_mean), 0., atol=5.e-3)
+    assert_allclose(np.abs(angle_got_diff_mean), 0.0, atol=5.0e-3)
 
     # check magnitudes match in the mutually bright range
-    assert_allclose(mag_got1[itr_low_cut:itr_high_cut] / mag_peak, mag_got2[itr_low_cut:itr_high_cut] / mag_peak, atol=6.e-2, rtol=6.e-2)
-    assert bright_power_diff < 1.e-3
-    assert power_diff < 5.e-2
+    assert_allclose(
+        mag_got1[itr_low_cut:itr_high_cut] / mag_peak,
+        mag_got2[itr_low_cut:itr_high_cut] / mag_peak,
+        atol=6.0e-2,
+        rtol=6.0e-2,
+    )
+    assert bright_power_diff < 1.0e-3
+    assert power_diff < 5.0e-2
 
 
 @pytest.mark.parametrize(
     'f0_mult',
     [
-        0.1, 1 / 16, 9 / 128, 5 / 64, 3 / 32, 1 / 8, 3 / 16, 1 / 4, 1 / 2,
+        0.1,
+        1 / 16,
+        9 / 128,
+        5 / 64,
+        3 / 32,
+        1 / 8,
+        3 / 16,
+        1 / 4,
+        1 / 2,
     ],
 )
-@pytest.mark.parametrize('f0p_mult', [0., 0.001])
-@pytest.mark.parametrize('f0pp_mult', [0., 0.001])
+@pytest.mark.parametrize('f0p_mult', [0.0, 0.001])
+@pytest.mark.parametrize('f0pp_mult', [0.0, 0.001])
 @pytest.mark.parametrize('rr_model', ['const'])
 @pytest.mark.parametrize('gridsize2_mult', [16, 8, 4, 2, 0.5])
-@pytest.mark.parametrize('p_offset', [0., np.pi / 2.])
+@pytest.mark.parametrize('p_offset', [0.0, np.pi / 2.0])
 @pytest.mark.parametrize('direct', [True, False])
 # @pytest.mark.skip
-def test_wavemaket_dimension_comparison_slowevolve(p_offset: float, f0_mult: float, f0p_mult: float, f0pp_mult: float, rr_model: str, gridsize2_mult: int, direct: bool) -> None:
+def test_wavemaket_dimension_comparison_slowevolve(
+    p_offset: float,
+    f0_mult: float,
+    f0p_mult: float,
+    f0pp_mult: float,
+    rr_model: str,
+    gridsize2_mult: int,
+    direct: bool,
+) -> None:
     """Test whether the signal computed in the time domain matches computing
     it in the wavelet domain with several different pixel grid sizes for a galactic binary
     with a moderately large second derivative:
@@ -628,15 +896,41 @@ def test_wavemaket_dimension_comparison_slowevolve(p_offset: float, f0_mult: flo
 
     f_lowpass = 10 * wc1.df_bw  # f_input / 2000.0 #wc1.DF*(wc1.Nf/4)
 
-    AET_waveform1, _ = get_aet_waveform_helper(lc1, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha_in, wc1.Nt, wc1.DT)
-    AET_waveform2, _ = get_aet_waveform_helper(lc2, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha_in, wc2.Nt, wc2.DT)
+    AET_waveform1, _ = get_aet_waveform_helper(
+        lc1,
+        rr_model,
+        p_input,
+        f_input,
+        fp_input,
+        fpp_input,
+        amp_input,
+        nc_waveform,
+        f_high_cut,
+        tukey_alpha_in,
+        wc1.Nt,
+        wc1.DT,
+    )
+    AET_waveform2, _ = get_aet_waveform_helper(
+        lc2,
+        rr_model,
+        p_input,
+        f_input,
+        fp_input,
+        fpp_input,
+        amp_input,
+        nc_waveform,
+        f_high_cut,
+        tukey_alpha_in,
+        wc2.Nt,
+        wc2.DT,
+    )
 
     # get the sparse wavelet intrinsic_waveform
     wavelet_waveform1 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc1)
     wavelet_waveform2 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc2)
 
-    nt_lim1 = PixelGenericRange(0, wc1.Nt, wc1.DT, 0.)
-    nt_lim2 = PixelGenericRange(0, wc2.Nt, wc2.DT, 0.)
+    nt_lim1 = PixelGenericRange(0, wc1.Nt, wc1.DT, 0.0)
+    nt_lim2 = PixelGenericRange(0, wc2.Nt, wc2.DT, 0.0)
 
     # call wavemaket
     if direct:
@@ -646,8 +940,32 @@ def test_wavemaket_dimension_comparison_slowevolve(p_offset: float, f0_mult: flo
         wavemaket(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1, force_nulls=False)
         wavemaket(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2, force_nulls=False)
 
-    wavelet_dense1, _, signal_freq1, mag_got1, angle_got1, envelope1, p_envelope1, f_envelope1, fd_envelope1, itr_low_cut1, itr_high_cut1 = get_wavelet_alternative_representation_helper(wavelet_waveform1, wc1, tukey_alpha, f_lowpass, 8.e-2)
-    wavelet_dense2, _, signal_freq2, mag_got2, angle_got2, envelope2, p_envelope2, f_envelope2, fd_envelope2, itr_low_cut2, itr_high_cut2 = get_wavelet_alternative_representation_helper(wavelet_waveform2, wc2, tukey_alpha, f_lowpass, 8.e-2)
+    (
+        wavelet_dense1,
+        _,
+        signal_freq1,
+        mag_got1,
+        angle_got1,
+        envelope1,
+        p_envelope1,
+        f_envelope1,
+        fd_envelope1,
+        itr_low_cut1,
+        itr_high_cut1,
+    ) = get_wavelet_alternative_representation_helper(wavelet_waveform1, wc1, tukey_alpha, f_lowpass, 8.0e-2)
+    (
+        wavelet_dense2,
+        _,
+        signal_freq2,
+        mag_got2,
+        angle_got2,
+        envelope2,
+        p_envelope2,
+        f_envelope2,
+        fd_envelope2,
+        itr_low_cut2,
+        itr_high_cut2,
+    ) = get_wavelet_alternative_representation_helper(wavelet_waveform2, wc2, tukey_alpha, f_lowpass, 8.0e-2)
     itr_low_cut = max(itr_low_cut1, itr_low_cut2)
     itr_high_cut = min(itr_high_cut1, itr_high_cut2)
 
@@ -674,26 +992,28 @@ def test_wavemaket_dimension_comparison_slowevolve(p_offset: float, f0_mult: flo
     # plt.show()
     # assert False
 
-    assert_allclose(envelope1, envelope2, atol=1.e-2, rtol=1.e-2)
-    assert_allclose(f_envelope1, f_envelope2, atol=1.e-2 * f_input, rtol=1.e-4)
-    assert_allclose(np.mean(f_envelope1 - f_envelope2), 0., atol=6.e-5 * f_input)
+    assert_allclose(envelope1, envelope2, atol=1.0e-2, rtol=1.0e-2)
+    assert_allclose(f_envelope1, f_envelope2, atol=1.0e-2 * f_input, rtol=1.0e-4)
+    assert_allclose(np.mean(f_envelope1 - f_envelope2), 0.0, atol=6.0e-5 * f_input)
 
-    assert_allclose(fd_envelope1, fd_envelope2, atol=1.e2 * f_input / wc1.Tobs, rtol=1.e-4)
-    assert_allclose(np.mean(fd_envelope1 - fd_envelope2), 0., atol=1.e-4 * f_input / wc1.Tobs)
+    assert_allclose(fd_envelope1, fd_envelope2, atol=1.0e2 * f_input / wc1.Tobs, rtol=1.0e-4)
+    assert_allclose(np.mean(fd_envelope1 - fd_envelope2), 0.0, atol=1.0e-4 * f_input / wc1.Tobs)
 
     # check the average time domain phase also agrees
     dp_envelope = (np.mean(p_envelope1 - p_envelope2, axis=0) + np.pi) % (2 * np.pi) - np.pi
-    assert_allclose(dp_envelope, 0., atol=1.e-1)
+    assert_allclose(dp_envelope, 0.0, atol=1.0e-1)
 
     mag_peak = mag_got1.max()
 
-    angle_got_diff = (angle_got1[itr_low_cut:itr_high_cut] - angle_got2[itr_low_cut:itr_high_cut] + np.pi) % (2 * np.pi) - np.pi
+    angle_got_diff = (angle_got1[itr_low_cut:itr_high_cut] - angle_got2[itr_low_cut:itr_high_cut] + np.pi) % (
+        2 * np.pi
+    ) - np.pi
 
     # check the full signals are similar in the part of the intrinsic_waveform that is bright
     diff_bright = signal_freq2[itr_low_cut:itr_high_cut, 0] - signal_freq1[itr_low_cut:itr_high_cut, 0]
-    abs_diff_bright = np.abs(diff_bright)**2
+    abs_diff_bright = np.abs(diff_bright) ** 2
 
-    power_got_bright_freq = np.sum(mag_got1[itr_low_cut:itr_high_cut]**2)
+    power_got_bright_freq = np.sum(mag_got1[itr_low_cut:itr_high_cut] ** 2)
     bright_power_diff = np.sum(abs_diff_bright) / power_got_bright_freq
 
     # check the total signal power is similar
@@ -704,15 +1024,20 @@ def test_wavemaket_dimension_comparison_slowevolve(p_offset: float, f0_mult: flo
     angle_got_diff_mean = np.mean(angle_got_diff, axis=0)
 
     # check phases match in the mutually bright range
-    assert_allclose(angle_got_diff, 0., atol=3.e-1, rtol=1.e-2)
+    assert_allclose(angle_got_diff, 0.0, atol=3.0e-1, rtol=1.0e-2)
 
     # check no systematic difference in the phase accumulate
-    assert_allclose(np.abs(angle_got_diff_mean), 0., atol=1.e-1)
+    assert_allclose(np.abs(angle_got_diff_mean), 0.0, atol=1.0e-1)
 
     # check magnitudes match in the mutually bright range
-    assert_allclose(mag_got1[itr_low_cut:itr_high_cut] / mag_peak, mag_got2[itr_low_cut:itr_high_cut] / mag_peak, atol=3.e-2, rtol=1.e-3)
-    assert bright_power_diff < 1.e-3
-    assert power_diff < 5.e-2
+    assert_allclose(
+        mag_got1[itr_low_cut:itr_high_cut] / mag_peak,
+        mag_got2[itr_low_cut:itr_high_cut] / mag_peak,
+        atol=3.0e-2,
+        rtol=1.0e-3,
+    )
+    assert bright_power_diff < 1.0e-3
+    assert power_diff < 5.0e-2
 
 
 @pytest.mark.parametrize(
@@ -721,14 +1046,22 @@ def test_wavemaket_dimension_comparison_slowevolve(p_offset: float, f0_mult: flo
         0.5,
     ],
 )
-@pytest.mark.parametrize('f0p_mult', [0.])
+@pytest.mark.parametrize('f0p_mult', [0.0])
 @pytest.mark.parametrize('f0pp_mult', [0.1])
 @pytest.mark.parametrize('rr_model', ['const'])
 @pytest.mark.parametrize('gridsize2_mult', [32, 16, 8, 4, 2, 0.5])
-@pytest.mark.parametrize('p_offset', [0., np.pi / 2.])
+@pytest.mark.parametrize('p_offset', [0.0, np.pi / 2.0])
 @pytest.mark.parametrize('direct', [True, False])
 # @pytest.mark.skip
-def test_wavemaket_dimension_comparison_midevolve(p_offset: float, f0_mult: float, f0p_mult: float, f0pp_mult: float, rr_model: str, gridsize2_mult: int, direct: bool) -> None:
+def test_wavemaket_dimension_comparison_midevolve(
+    p_offset: float,
+    f0_mult: float,
+    f0p_mult: float,
+    f0pp_mult: float,
+    rr_model: str,
+    gridsize2_mult: int,
+    direct: bool,
+) -> None:
     """Test whether the signal computed in the time domain matches computing
     it in the wavelet domain with several different pixel grid sizes for a galactic binary
     with a moderately large second derivative:
@@ -779,8 +1112,34 @@ def test_wavemaket_dimension_comparison_midevolve(p_offset: float, f0_mult: floa
 
     f_lowpass = 10 * wc1.df_bw  # f_input / 2000.0 #wc1.DF*(wc1.Nf/4)
 
-    AET_waveform1, _ = get_aet_waveform_helper(lc1, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha_in, wc1.Nt, wc1.DT)
-    AET_waveform2, _ = get_aet_waveform_helper(lc2, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha_in, wc2.Nt, wc2.DT)
+    AET_waveform1, _ = get_aet_waveform_helper(
+        lc1,
+        rr_model,
+        p_input,
+        f_input,
+        fp_input,
+        fpp_input,
+        amp_input,
+        nc_waveform,
+        f_high_cut,
+        tukey_alpha_in,
+        wc1.Nt,
+        wc1.DT,
+    )
+    AET_waveform2, _ = get_aet_waveform_helper(
+        lc2,
+        rr_model,
+        p_input,
+        f_input,
+        fp_input,
+        fpp_input,
+        amp_input,
+        nc_waveform,
+        f_high_cut,
+        tukey_alpha_in,
+        wc2.Nt,
+        wc2.DT,
+    )
 
     # get the sparse wavelet intrinsic_waveform
     wavelet_waveform1 = get_empty_sparse_taylor_time_waveform(nc_waveform, wc1)
@@ -797,32 +1156,58 @@ def test_wavemaket_dimension_comparison_midevolve(p_offset: float, f0_mult: floa
         wavemaket(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1, force_nulls=False)
         wavemaket(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2, force_nulls=False)
 
-    wavelet_dense1, _, signal_freq1, mag_got1, angle_got1, envelope1, p_envelope1, f_envelope1, fd_envelope1, itr_low_cut1, itr_high_cut1 = get_wavelet_alternative_representation_helper(wavelet_waveform1, wc1, tukey_alpha, f_lowpass, 8.e-2)
-    wavelet_dense2, _, signal_freq2, mag_got2, angle_got2, envelope2, p_envelope2, f_envelope2, fd_envelope2, itr_low_cut2, itr_high_cut2 = get_wavelet_alternative_representation_helper(wavelet_waveform2, wc2, tukey_alpha, f_lowpass, 8.e-2)
+    (
+        wavelet_dense1,
+        _,
+        signal_freq1,
+        mag_got1,
+        angle_got1,
+        envelope1,
+        p_envelope1,
+        f_envelope1,
+        fd_envelope1,
+        itr_low_cut1,
+        itr_high_cut1,
+    ) = get_wavelet_alternative_representation_helper(wavelet_waveform1, wc1, tukey_alpha, f_lowpass, 8.0e-2)
+    (
+        wavelet_dense2,
+        _,
+        signal_freq2,
+        mag_got2,
+        angle_got2,
+        envelope2,
+        p_envelope2,
+        f_envelope2,
+        fd_envelope2,
+        itr_low_cut2,
+        itr_high_cut2,
+    ) = get_wavelet_alternative_representation_helper(wavelet_waveform2, wc2, tukey_alpha, f_lowpass, 8.0e-2)
     itr_low_cut = max(itr_low_cut1, itr_low_cut2)
     itr_high_cut = min(itr_high_cut1, itr_high_cut2)
 
-    assert_allclose(envelope1, envelope2, atol=1.e-2, rtol=1.e-2)
+    assert_allclose(envelope1, envelope2, atol=1.0e-2, rtol=1.0e-2)
 
-    assert_allclose(f_envelope1, f_envelope2, atol=1.e-2 * f_input, rtol=1.e-4)
-    assert_allclose(np.mean(f_envelope1 - f_envelope2), 0., atol=5.e-6 * f_input)
+    assert_allclose(f_envelope1, f_envelope2, atol=1.0e-2 * f_input, rtol=1.0e-4)
+    assert_allclose(np.mean(f_envelope1 - f_envelope2), 0.0, atol=5.0e-6 * f_input)
 
-    assert_allclose(fd_envelope1, fd_envelope2, atol=1.e1 * f_input / wc1.Tobs, rtol=1.e-4)
-    assert_allclose(np.mean(fd_envelope1 - fd_envelope2), 0., atol=1.e-4 * f_input / wc1.Tobs)
+    assert_allclose(fd_envelope1, fd_envelope2, atol=1.0e1 * f_input / wc1.Tobs, rtol=1.0e-4)
+    assert_allclose(np.mean(fd_envelope1 - fd_envelope2), 0.0, atol=1.0e-4 * f_input / wc1.Tobs)
 
     # check the average time domain phase also agrees
     dp_envelope = (np.mean(p_envelope1 - p_envelope2, axis=0) + np.pi) % (2 * np.pi) - np.pi
-    assert_allclose(dp_envelope, 0., atol=1.e-1)
+    assert_allclose(dp_envelope, 0.0, atol=1.0e-1)
 
     mag_peak = mag_got1.max()
 
-    angle_got_diff = (angle_got1[itr_low_cut:itr_high_cut] - angle_got2[itr_low_cut:itr_high_cut] + np.pi) % (2 * np.pi) - np.pi
+    angle_got_diff = (angle_got1[itr_low_cut:itr_high_cut] - angle_got2[itr_low_cut:itr_high_cut] + np.pi) % (
+        2 * np.pi
+    ) - np.pi
 
     # check the full signals are similar in the part of the intrinsic_waveform that is bright
     diff_bright = signal_freq2[itr_low_cut:itr_high_cut, 0] - signal_freq1[itr_low_cut:itr_high_cut, 0]
-    abs_diff_bright = np.abs(diff_bright)**2
+    abs_diff_bright = np.abs(diff_bright) ** 2
 
-    power_got_bright_freq = np.sum(mag_got1[itr_low_cut:itr_high_cut]**2)
+    power_got_bright_freq = np.sum(mag_got1[itr_low_cut:itr_high_cut] ** 2)
     bright_power_diff = np.sum(abs_diff_bright) / power_got_bright_freq
 
     # check the total signal power is similar
@@ -833,15 +1218,20 @@ def test_wavemaket_dimension_comparison_midevolve(p_offset: float, f0_mult: floa
     angle_got_diff_mean = np.mean(angle_got_diff, axis=0)
 
     # check phases match in the mutually bright range
-    assert_allclose(angle_got_diff, 0., atol=1.e-1, rtol=1.e-2)
+    assert_allclose(angle_got_diff, 0.0, atol=1.0e-1, rtol=1.0e-2)
 
     # check no systematic difference in the phase accumulate
-    assert_allclose(np.abs(angle_got_diff_mean), 0., atol=1.e-3)
+    assert_allclose(np.abs(angle_got_diff_mean), 0.0, atol=1.0e-3)
 
     # check magnitudes match in the mutually bright range
-    assert_allclose(mag_got1[itr_low_cut:itr_high_cut] / mag_peak, mag_got2[itr_low_cut:itr_high_cut] / mag_peak, atol=3.e-2, rtol=1.e-3)
-    assert bright_power_diff < 1.e-3
-    assert power_diff < 1.e-2
+    assert_allclose(
+        mag_got1[itr_low_cut:itr_high_cut] / mag_peak,
+        mag_got2[itr_low_cut:itr_high_cut] / mag_peak,
+        atol=3.0e-2,
+        rtol=1.0e-3,
+    )
+    assert bright_power_diff < 1.0e-3
+    assert power_diff < 1.0e-2
 
 
 @pytest.mark.parametrize(
@@ -850,7 +1240,7 @@ def test_wavemaket_dimension_comparison_midevolve(p_offset: float, f0_mult: floa
         0.4,
     ],
 )
-@pytest.mark.parametrize('f0p_mult', [0.])
+@pytest.mark.parametrize('f0p_mult', [0.0])
 @pytest.mark.parametrize('f0pp_mult', [-0.8])
 @pytest.mark.parametrize('rr_model', ['const'])
 # @pytest.mark.skip
@@ -879,13 +1269,26 @@ def test_wavemaket_1d(f0_mult: float, f0p_mult: float, f0pp_mult: float, rr_mode
     tukey_alpha = 0.2
 
     # Create fake input data for a pure sine wave
-    p_input = 0.
+    p_input = 0.0
     f_input = wc1.DF * wc1.Nf * f0_mult
     fp_input = f0p_mult * f_input / wc1.Tobs
     fpp_input = f0pp_mult * f_input / wc1.Tobs**2
     amp_input = 1.0
 
-    AET_waveform_fine, _ = get_aet_waveform_helper(lc1, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha, nd_loc, dt_loc)
+    AET_waveform_fine, _ = get_aet_waveform_helper(
+        lc1,
+        rr_model,
+        p_input,
+        f_input,
+        fp_input,
+        fpp_input,
+        amp_input,
+        nc_waveform,
+        f_high_cut,
+        tukey_alpha,
+        nd_loc,
+        dt_loc,
+    )
 
     # get the time domain signal from the fine sampling
     # signal should be pure cos
@@ -901,29 +1304,50 @@ def test_wavemaket_1d(f0_mult: float, f0p_mult: float, f0pp_mult: float, rr_mode
     for itrc in range(nc_waveform):
         signal_wave_pred_cos[:, :, itrc] = transform_wavelet_freq(signal_freq_pred_cos[:, itrc], wc1.Nf, nt_loc)
 
-    AET_waveform, arg_cut = get_aet_waveform_helper(lc1, rr_model, p_input, f_input, fp_input, fpp_input, amp_input, nc_waveform, f_high_cut, tukey_alpha, nt_loc, wc1.DT)
+    AET_waveform, arg_cut = get_aet_waveform_helper(
+        lc1,
+        rr_model,
+        p_input,
+        f_input,
+        fp_input,
+        fpp_input,
+        amp_input,
+        nc_waveform,
+        f_high_cut,
+        tukey_alpha,
+        nt_loc,
+        wc1.DT,
+    )
 
     # get the sparse wavelet intrinsic_waveform
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(nc_waveform, wc1)
 
     # call wavemaket
-    nt_lim1 = PixelGenericRange(0, wc1.Nt, wc1.DT, 0.)
+    nt_lim1 = PixelGenericRange(0, wc1.Nt, wc1.DT, 0.0)
     wavemaket(wavelet_waveform, AET_waveform, nt_lim1, wc1, taylor_time_table1, force_nulls=False)
     print(wavelet_waveform.n_set)
-    wavelet_dense, signal_time, signal_freq, mag_got, angle_got, _, _, _, _, itr_low_cut, itr_high_cut = get_wavelet_alternative_representation_helper(wavelet_waveform, wc1, tukey_alpha, f_lowpass, 1.e-3)
+    wavelet_dense, signal_time, signal_freq, mag_got, angle_got, _, _, _, _, itr_low_cut, itr_high_cut = (
+        get_wavelet_alternative_representation_helper(wavelet_waveform, wc1, tukey_alpha, f_lowpass, 1.0e-3)
+    )
 
     # isolate just the predicted wavelet values that we are in the sparse representation
     wavelet_waveform_sparse_cos = get_empty_sparse_taylor_time_waveform(nc_waveform, wc1)
     for itrc in range(nc_waveform):
-        wave_pred_sparse_cos = signal_wave_pred_cos.reshape((nt_loc * wc1.Nf, nc_waveform))[wavelet_waveform.pixel_index[itrc, :wavelet_waveform.n_set[itrc]], itrc]
+        wave_pred_sparse_cos = signal_wave_pred_cos.reshape((nt_loc * wc1.Nf, nc_waveform))[
+            wavelet_waveform.pixel_index[itrc, : wavelet_waveform.n_set[itrc]],
+            itrc,
+        ]
 
-        wavelet_waveform_sparse_cos.wave_value[itrc, :wavelet_waveform.n_set[itrc]] = wave_pred_sparse_cos
+        wavelet_waveform_sparse_cos.wave_value[itrc, : wavelet_waveform.n_set[itrc]] = wave_pred_sparse_cos
 
-        wavelet_waveform_sparse_cos.pixel_index[itrc, :wavelet_waveform.n_set[itrc]] = wavelet_waveform.pixel_index[itrc, :wavelet_waveform.n_set[itrc]]
+        wavelet_waveform_sparse_cos.pixel_index[itrc, : wavelet_waveform.n_set[itrc]] = wavelet_waveform.pixel_index[
+            itrc,
+            : wavelet_waveform.n_set[itrc],
+        ]
 
         wavelet_waveform_sparse_cos.n_set[itrc] = wavelet_waveform.n_set[itrc]
 
-        wave_got_sparse = wavelet_waveform.wave_value[itrc, :wavelet_waveform.n_set[itrc]]
+        wave_got_sparse = wavelet_waveform.wave_value[itrc, : wavelet_waveform.n_set[itrc]]
 
     # get dense representation of just the part of the intrinsic_waveform that matches
     signal_wave_pred_cos_matched: NDArray[np.floating] = np.zeros((nt_loc * wc1.Nf, nc_waveform))
@@ -938,12 +1362,20 @@ def test_wavemaket_1d(f0_mult: float, f0p_mult: float, f0pp_mult: float, rr_mode
     # get the frequency domain signal from the wavelets for just the pixels mutually on
     signal_freq_cos_matched = np.zeros((nd_loc // 2 + 1, nc_waveform), dtype=np.complex128)
     for itrc in range(nc_waveform):
-        signal_freq_cos_matched[:, itrc] = inverse_wavelet_freq(signal_wave_pred_cos_matched[:, :, itrc], wc1.Nf, nt_loc)
+        signal_freq_cos_matched[:, itrc] = inverse_wavelet_freq(
+            signal_wave_pred_cos_matched[:, :, itrc],
+            wc1.Nf,
+            nt_loc,
+        )
 
     # get the time domain signal from the wavelets for just the pixels mutually on
     signal_time_cos_matched = np.zeros((nd_loc, nc_waveform))
     for itrc in range(nc_waveform):
-        signal_time_cos_matched[:, itrc] = inverse_wavelet_freq_time(signal_wave_pred_cos_matched[:, :, itrc], wc1.Nf, nt_loc)
+        signal_time_cos_matched[:, itrc] = inverse_wavelet_freq_time(
+            signal_wave_pred_cos_matched[:, :, itrc],
+            wc1.Nf,
+            nt_loc,
+        )
 
     # compare the frequency domain representations for the pixels that match
     mag_pred = np.abs(signal_freq_cos_matched[:, 0])
@@ -963,15 +1395,15 @@ def test_wavemaket_1d(f0_mult: float, f0p_mult: float, f0pp_mult: float, rr_mode
     angle_pred -= angle_pred[arg_peak] - angle_pred[arg_peak] % (2 * np.pi)
 
     # trim out irrelevant/numerically unstable fft angles at faint amplitudes
-    angle_pred[:itr_low_cut] = 0.
-    angle_got[:itr_low_cut] = 0.
-    angle_pred[itr_high_cut:] = 0.
-    angle_got[itr_high_cut:] = 0.
+    angle_pred[:itr_low_cut] = 0.0
+    angle_got[:itr_low_cut] = 0.0
+    angle_pred[itr_high_cut:] = 0.0
+    angle_got[itr_high_cut:] = 0.0
 
     # check the full signals are similar in the part of the intrinsic_waveform that is bright
-    abs_diff_bright = np.abs(signal_freq_pred_cos[:, 0] - signal_freq[:, 0])[itr_low_cut:itr_high_cut]**2
+    abs_diff_bright = np.abs(signal_freq_pred_cos[:, 0] - signal_freq[:, 0])[itr_low_cut:itr_high_cut] ** 2
 
-    power_got_bright_freq = np.sum(mag_got[itr_low_cut:itr_high_cut]**2)
+    power_got_bright_freq = np.sum(mag_got[itr_low_cut:itr_high_cut] ** 2)
     bright_power_diff = np.sum(abs_diff_bright) / power_got_bright_freq
 
     # check the total signal power is similar
@@ -980,25 +1412,29 @@ def test_wavemaket_1d(f0_mult: float, f0p_mult: float, f0pp_mult: float, rr_mode
     power_diff = np.abs((power_got - power_pred) / power_got)
 
     # maximum predicted wavelet value to scale closeness check
-    wave_pred_sparse_cos = wavelet_waveform_sparse_cos.wave_value[0, :wavelet_waveform.n_set[0]]
-    wave_got_sparse = wavelet_waveform.wave_value[0, :wavelet_waveform.n_set[0]]
-    max_wave: float = max(float(np.max(np.abs(wave_pred_sparse_cos))), 1.e-5)
+    wave_pred_sparse_cos = wavelet_waveform_sparse_cos.wave_value[0, : wavelet_waveform.n_set[0]]
+    wave_got_sparse = wavelet_waveform.wave_value[0, : wavelet_waveform.n_set[0]]
+    max_wave: float = max(float(np.max(np.abs(wave_pred_sparse_cos))), 1.0e-5)
 
     nrm_sparse_got = np.linalg.norm(wave_got_sparse)
     nrm_sparse_cos = np.linalg.norm(wave_pred_sparse_cos)
     match_sparse_cos = np.sum(wave_got_sparse * wave_pred_sparse_cos) / (nrm_sparse_got * nrm_sparse_cos)
-    resid_sparse = np.sum((wave_got_sparse - wave_pred_sparse_cos)**2) / (nrm_sparse_got * nrm_sparse_cos)
+    resid_sparse = np.sum((wave_got_sparse - wave_pred_sparse_cos) ** 2) / (nrm_sparse_got * nrm_sparse_cos)
 
     # scaled maximum value at an unpredicted point
-    residual_maximum = np.sqrt(np.max(signal_wave_pred_cos_unmatched[:, :, 0]**2)) / max_wave
+    residual_maximum = np.sqrt(np.max(signal_wave_pred_cos_unmatched[:, :, 0] ** 2)) / max_wave
     # scaled rms value for unpredicted points
-    residual_rms = np.sqrt(np.mean(signal_wave_pred_cos_unmatched[:, :, 0]**2)) / max_wave
+    residual_rms = np.sqrt(np.mean(signal_wave_pred_cos_unmatched[:, :, 0] ** 2)) / max_wave
 
     # isolate stricter comparison to just the part largely unaffected by windowing
     nt_low_center = int((tukey_alpha + 0.05) * arg_cut)
     nt_high_center = max(int(arg_cut - nt_low_center), nt_low_center)
-    residual_max_center = np.sqrt(np.max(signal_wave_pred_cos_unmatched[nt_low_center:nt_high_center, :, 0]**2)) / max_wave
-    residual_rms_center = np.sqrt(np.mean(signal_wave_pred_cos_unmatched[nt_low_center:nt_high_center, :, 0]**2)) / max_wave
+    residual_max_center = (
+        np.sqrt(np.max(signal_wave_pred_cos_unmatched[nt_low_center:nt_high_center, :, 0] ** 2)) / max_wave
+    )
+    residual_rms_center = (
+        np.sqrt(np.mean(signal_wave_pred_cos_unmatched[nt_low_center:nt_high_center, :, 0] ** 2)) / max_wave
+    )
 
     match_cos = np.sum(signal_time * signal_time_pred_cos) / (
         np.linalg.norm(signal_time) * np.linalg.norm(signal_time_pred_cos)
@@ -1020,28 +1456,38 @@ def test_wavemaket_1d(f0_mult: float, f0p_mult: float, f0pp_mult: float, rr_mode
     print(power_got, power_pred, power_diff)
     print(power_got_bright_freq, bright_power_diff)
     # check angles match in the mutually bright range
-    assert_allclose(angle_pred[itr_low_cut:itr_high_cut], angle_got[itr_low_cut:itr_high_cut, 0], atol=1.e-2, rtol=3.e-2)
+    assert_allclose(
+        angle_pred[itr_low_cut:itr_high_cut],
+        angle_got[itr_low_cut:itr_high_cut, 0],
+        atol=1.0e-2,
+        rtol=3.0e-2,
+    )
     # check magnitudes match in the mutually bright range
-    assert_allclose(mag_pred[itr_low_cut:itr_high_cut] / mag_peak, mag_got[itr_low_cut:itr_high_cut, 0] / mag_peak, atol=3.e-2, rtol=1.e-3)
-    assert bright_power_diff < 1.e-3
-    assert power_diff < 1.e-2
+    assert_allclose(
+        mag_pred[itr_low_cut:itr_high_cut] / mag_peak,
+        mag_got[itr_low_cut:itr_high_cut, 0] / mag_peak,
+        atol=3.0e-2,
+        rtol=1.0e-3,
+    )
+    assert bright_power_diff < 1.0e-3
+    assert power_diff < 1.0e-2
 
-    assert_allclose(wave_got_sparse, wave_pred_sparse_cos, atol=3.e-2 * max_wave, rtol=1.e-3)
+    assert_allclose(wave_got_sparse, wave_pred_sparse_cos, atol=3.0e-2 * max_wave, rtol=1.0e-3)
 
     assert resid_sparse < 4.0e-3
     assert match_sparse_cos > 0.998
 
-    assert residual_maximum < 2.e-3
-    assert residual_rms < 1.e-5
+    assert residual_maximum < 2.0e-3
+    assert residual_rms < 1.0e-5
 
     # assert residual_max_center < 1.e-12
     # assert residual_rms_center < 1.e-13
 
-    assert residual_max_center < 1.e-3
-    assert residual_rms_center < 1.e-5
+    assert residual_max_center < 1.0e-3
+    assert residual_rms_center < 1.0e-5
     assert resid < 4.0e-3
     assert match_cos > 0.998
-    assert resid_matched < 4.e-3
+    assert resid_matched < 4.0e-3
 
 
 if __name__ == '__main__':

@@ -86,7 +86,7 @@ def get_wavelet_model(config: dict[str, Any]) -> WDMWaveletConstants:
 
     # filter steepness of wavelet transform
     nx = float(config_wc['nx'])
-    assert nx > 0.
+    assert nx > 0.0
 
     # reduced filter length; must be a power of 2
     L = int(config_wc['L'])
@@ -127,7 +127,7 @@ def get_wavelet_model(config: dict[str, Any]) -> WDMWaveletConstants:
 
     # Nyquist angular frequency (Radians per time)
     OM = float(np.pi / dt)
-    assert OM > 0.
+    assert OM > 0.0
 
     # 2 pi times DF (radians/time)
     DOM = float(OM / Nf)
@@ -159,7 +159,7 @@ def get_wavelet_model(config: dict[str, Any]) -> WDMWaveletConstants:
     assert_allclose(B, np.pi / (2 * dt * Nf))
     assert_allclose(A, np.pi / (4 * dt * Nf))
     assert_allclose(BW, 3 / (4 * dt * Nf))
-    assert_allclose(dfd, dfdot / (4 * dt**2 * mult * Nf ** 2))
+    assert_allclose(dfd, dfdot / (4 * dt**2 * mult * Nf**2))
     assert_allclose(Tw, 2 * dt * mult * Nf)
 
     return WDMWaveletConstants(
