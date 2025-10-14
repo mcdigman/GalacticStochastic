@@ -173,7 +173,7 @@ def test_noise_generation_scaling_direct(channel_mult: tuple[float, float, float
 
     data_noise2 = signal_noise2 + noise_noise2
 
-    # cov_need = 2 * np.mean(signal_noise_noise_noise2)  # mean of signal_noise is zero
+    # cov_need = 2 * signal_noise_noise_noise2.mean()  # mean of signal_noise is zero
 
     data_signal2 = signal_signal2 + signal_noise2
 
@@ -189,60 +189,42 @@ def test_noise_generation_scaling_direct(channel_mult: tuple[float, float, float
 
     n_set_tot2: int = int(np.sum(wavelet_waveform2.n_set))
 
-    print(
-        '2 likelihood mean, std, min, max',
-        np.mean(log_likelihood2),
-        np.std(log_likelihood2),
-        np.min(log_likelihood2),
-        np.max(log_likelihood2),
-    )
+    print('2 likelihood mean, std, min, max', log_likelihood2.mean(), log_likelihood2.std(), log_likelihood2.min(), log_likelihood2.max())
     print('2 likelihood expect', log_likelihood_mean_exp2)
-    print(
-        '2 signal*noise mean, std, min, max',
-        np.mean(signal_noise2),
-        np.std(signal_noise2),
-        np.min(signal_noise2),
-        np.max(signal_noise2),
-    )
-    print(
-        '2 noise*noise mean, std, min, max',
-        np.mean(noise_noise2),
-        np.std(noise_noise2),
-        np.min(noise_noise2),
-        np.max(noise_noise2),
-    )
+    print('2 signal*noise mean, std, min, max', signal_noise2.mean(), signal_noise2.std(), signal_noise2.min(), signal_noise2.max())
+    print('2 noise*noise mean, std, min, max', noise_noise2.mean(), noise_noise2.std(), noise_noise2.min(), noise_noise2.max())
     print(
         '2 data*signal mean, std, min, max',
-        np.mean(data_signal2),
-        np.std(data_signal2),
-        np.min(data_signal2),
-        np.max(data_signal2),
+        data_signal2.mean(),
+        data_signal2.std(),
+        data_signal2.min(),
+        data_signal2.max(),
     )
     print(
         '2 data*noise mean, std, min, max',
-        np.mean(data_noise2),
-        np.std(data_noise2),
-        np.min(data_noise2),
-        np.max(data_noise2),
+        data_noise2.mean(),
+        data_noise2.std(),
+        data_noise2.min(),
+        data_noise2.max(),
     )
     print(
         '2 data*data mean, std, min, max',
-        np.mean(data_data2),
-        np.std(data_data2),
-        np.min(data_data2),
-        np.max(data_data2),
+        data_data2.mean(),
+        data_data2.std(),
+        data_data2.min(),
+        data_data2.max(),
     )
     print(
         '2 data*data mean diff, std',
-        (np.mean(data_data2) - n_set_tot2 - signal_signal2.mean()) / np.sqrt(2 * n_set_tot2 + 2 * snr_tot2**2),
-        np.std(data_data2) / np.sqrt(2 * n_set_tot2 + 2 * snr_tot2**2),
+        (data_data2.mean() - n_set_tot2 - signal_signal2.mean()) / np.sqrt(2 * n_set_tot2 + 2 * snr_tot2**2),
+        data_data2.std() / np.sqrt(2 * n_set_tot2 + 2 * snr_tot2**2),
     )
     print(
         '2 signal noise noise noise mean, std, min, max',
-        np.mean(signal_noise_noise_noise2),
-        np.std(signal_noise_noise_noise2),
-        np.min(signal_noise_noise_noise2),
-        np.max(signal_noise_noise_noise2),
+        signal_noise_noise_noise2.mean(),
+        signal_noise_noise_noise2.std(),
+        signal_noise_noise_noise2.min(),
+        signal_noise_noise_noise2.max(),
     )
     print(
         '2 data*data exp, std',
@@ -250,9 +232,9 @@ def test_noise_generation_scaling_direct(channel_mult: tuple[float, float, float
         np.sqrt(2.0) / np.sqrt(n_seed) / np.sqrt(2 * n_set_tot2 + 2 * snr_tot2**2),
     )
     print('2 snr channels, total', snr_channel2, snr_tot2)
-    print('2 signal*signal', np.mean(signal_signal2))
+    print('2 signal*signal', signal_signal2.mean())
     print('2 set, total', wavelet_waveform2.n_set, n_set_tot2)
-    print('2 (signal* noise std)/(total snr)', np.std(signal_noise2) / snr_tot2)
+    print('2 (signal* noise std)/(total snr)', signal_noise2.std() / snr_tot2)
     std_data_data: float = float(np.sqrt(4 * snr_tot2**2 + 2 * n_set_tot2))
     # print('2 cov', cov_need, 2 * snr_tot2 * 15.0, cov_got, cov_got2, std_data_data)
 
@@ -273,7 +255,7 @@ def test_noise_generation_scaling_direct(channel_mult: tuple[float, float, float
     # plt.show()
     # var_data_data = 2*var(signal noise) + var(noise noise) + 4 * cov(signal noise, noise noise)
     # std_data_data = np.sqrt(2*snr_tot2**2 + 2*n_set_tot2 + 4 * cov(signal noise, noise noise))
-    # print(std_data_data, np.sqrt(2*n_set_tot2 + 4*snr_tot2**2 + 4 * cov_got), np.std(data_data2))
+    # print(std_data_data, np.sqrt(2*n_set_tot2 + 4*snr_tot2**2 + 4 * cov_got), data_data2.std())
 
     assert_allclose(snr_tot2**2, 2 * log_likelihood_mean_exp2, atol=1.0e-10, rtol=1.0e-10)
 
@@ -492,109 +474,33 @@ def test_noise_generation_scaling_compare(channel_mult: tuple[float, float, floa
     snr_channel2 = noise_manager2.get_sparse_snrs(wavelet_waveform2, nt_lim_snr2)
     snr_tot2 = float(np.linalg.norm(snr_channel2))
 
-    print(
-        '1 likelihood mean, std, min, max',
-        np.mean(log_likelihood1),
-        np.std(log_likelihood1),
-        np.min(log_likelihood1),
-        np.max(log_likelihood1),
-    )
+    print('1 likelihood mean, std, min, max', log_likelihood1.mean(), log_likelihood1.std(), log_likelihood1.min(), log_likelihood1.max())
     print('1 likelihood expect', log_likelihood_mean_exp1)
-    print(
-        '1 signal*noise mean, std, min, max',
-        np.mean(signal_noise1),
-        np.std(signal_noise1),
-        np.min(signal_noise1),
-        np.max(signal_noise1),
-    )
-    print(
-        '1 noise*noise mean, std, min, max',
-        np.mean(noise_noise1),
-        np.std(noise_noise1),
-        np.min(noise_noise1),
-        np.max(noise_noise1),
-    )
-    print(
-        '1 data*signal mean, std, min, max',
-        np.mean(data_signal1),
-        np.std(data_signal1),
-        np.min(data_signal1),
-        np.max(data_signal1),
-    )
-    print(
-        '1 data*noise mean, std, min, max',
-        np.mean(data_noise1),
-        np.std(data_noise1),
-        np.min(data_noise1),
-        np.max(data_noise1),
-    )
-    print(
-        '1 data*data mean, std, min, max',
-        np.mean(data_data1),
-        np.std(data_data1),
-        np.min(data_data1),
-        np.max(data_data1),
-    )
+    print('1 signal*noise mean, std, min, max', signal_noise1.mean(), signal_noise1.std(), signal_noise1.min(), signal_noise1.max())
+    print('1 noise*noise mean, std, min, max', noise_noise1.mean(), noise_noise1.std(), noise_noise1.min(), noise_noise1.max())
+    print('1 data*signal mean, std, min, max', data_signal1.mean(), data_signal1.std(), data_signal1.min(), data_signal1.max())
+    print('1 data*noise mean, std, min, max', data_noise1.mean(), data_noise1.std(), data_noise1.min(), data_noise1.max())
+    print('1 data*data mean, std, min, max', data_data1.mean(), data_data1.std(), data_data1.min(), data_data1.max())
     print('1 snr channels, total', snr_channel1, snr_tot1)
-    print('1 signal*signal', np.mean(signal_signal1))
+    print('1 signal*signal', signal_signal1.mean())
     n_set_tot1 = np.sum(wavelet_waveform1.n_set)
     print('1 set, total', wavelet_waveform1.n_set, n_set_tot1)
-    print('1 (signal* noise std)/(total snr)', np.std(signal_noise1) / snr_tot1)
+    print('1 (signal* noise std)/(total snr)', signal_noise1.std() / snr_tot1)
 
-    print(
-        '2 likelihood mean, std, min, max',
-        np.mean(log_likelihood2),
-        np.std(log_likelihood2),
-        np.min(log_likelihood2),
-        np.max(log_likelihood2),
-    )
+    print('2 likelihood mean, std, min, max', log_likelihood2.mean(), log_likelihood2.std(), log_likelihood2.min(), log_likelihood2.max())
     print('2 likelihood expect', log_likelihood_mean_exp2)
-    print(
-        '2 signal*noise mean, std, min, max',
-        np.mean(signal_noise2),
-        np.std(signal_noise2),
-        np.min(signal_noise2),
-        np.max(signal_noise2),
-    )
-    print(
-        '2 noise*noise mean, std, min, max',
-        np.mean(noise_noise2),
-        np.std(noise_noise2),
-        np.min(noise_noise2),
-        np.max(noise_noise2),
-    )
-    print(
-        '2 data*signal mean, std, min, max',
-        np.mean(data_signal2),
-        np.std(data_signal2),
-        np.min(data_signal2),
-        np.max(data_signal2),
-    )
-    print(
-        '2 data*noise mean, std, min, max',
-        np.mean(data_noise2),
-        np.std(data_noise2),
-        np.min(data_noise2),
-        np.max(data_noise2),
-    )
-    print(
-        '2 data*data mean, std, min, max',
-        np.mean(data_data2),
-        np.std(data_data2),
-        np.min(data_data2),
-        np.max(data_data2),
-    )
+    print('2 signal*noise mean, std, min, max', signal_noise2.mean(), signal_noise2.std(), signal_noise2.min(), signal_noise2.max())
+    print('2 noise*noise mean, std, min, max', noise_noise2.mean(), noise_noise2.std(), noise_noise2.min(), noise_noise2.max())
+    print('2 data*signal mean, std, min, max', data_signal2.mean(), data_signal2.std(), data_signal2.min(), data_signal2.max())
+    print('2 data*noise mean, std, min, max', data_noise2.mean(), data_noise2.std(), data_noise2.min(), data_noise2.max())
+    print('2 data*data mean, std, min, max', data_data2.mean(), data_data2.std(), data_data2.min(), data_data2.max())
     print('2 snr channels, total', snr_channel2, snr_tot2)
-    print('2 signal*signal', np.mean(signal_signal2))
+    print('2 signal*signal', signal_signal2.mean())
     n_set_tot2 = np.sum(wavelet_waveform2.n_set)
     print('2 set, total', wavelet_waveform2.n_set, n_set_tot2)
-    print('2 (signal* noise std)/(total snr)', np.std(signal_noise2) / snr_tot2)
+    print('2 (signal* noise std)/(total snr)', signal_noise2.std() / snr_tot2)
 
-    print(
-        '12 snr rat^2, exp likelihood rat',
-        (snr_tot1 / snr_tot2) ** 2,
-        log_likelihood_mean_exp1 / log_likelihood_mean_exp2,
-    )
+    print('12 snr rat^2, exp likelihood rat', (snr_tot1 / snr_tot2) ** 2, log_likelihood_mean_exp1 / log_likelihood_mean_exp2)
 
     assert_allclose(snr_tot1**2, 2 * log_likelihood_mean_exp1, atol=1.0e-10, rtol=1.0e-10)
     assert_allclose(snr_tot2**2, 2 * log_likelihood_mean_exp2, atol=1.0e-10, rtol=1.0e-10)
@@ -618,15 +524,15 @@ def test_noise_generation_scaling_compare(channel_mult: tuple[float, float, floa
 
     # check if means of likelihoods match each other
     assert_allclose(
-        np.mean(log_likelihood1) - signal_signal1 / 2,
-        np.mean(log_likelihood2) - signal_signal2 / 2,
+        log_likelihood1.mean() - signal_signal1 / 2,
+        log_likelihood2.mean() - signal_signal2 / 2,
         atol=float(5.0 * np.sqrt(snr_tot1**2 + snr_tot2**2)),
         rtol=1.0e-10,
     )
 
     # check if stds of likelihoods match each other
-    rat1 = np.std(signal_noise1) / snr_tot1
-    rat2 = np.std(signal_noise2) / snr_tot2
+    rat1 = signal_noise1.std() / snr_tot1
+    rat2 = signal_noise2.std() / snr_tot2
     assert_allclose(
         rat1 - 1.0, rat2 - 1.0, atol=float(5.0 * np.sqrt(2 / n_seed) * np.sqrt(rat1**2 + rat2**2)), rtol=1.0e-10
     )
@@ -826,8 +732,8 @@ def test_noise_whiten_consistency(channel_mult: tuple[float, float, float, float
         noise_sparse1_white = wavelet_dense_select_sparse(noise_real1_white, wavelet_waveform1, wc1, inplace_mode=0)
         noise_sparse2_white = wavelet_dense_select_sparse(noise_real2_white, wavelet_waveform2, wc2, inplace_mode=0)
 
-        pixel_dist1 = noise_sparse1_white.wave_value[:, : np.min(noise_sparse1_white.n_set)].flatten()
-        pixel_dist2 = noise_sparse2_white.wave_value[:, : np.min(noise_sparse2_white.n_set)].flatten()
+        pixel_dist1 = noise_sparse1_white.wave_value[:, : noise_sparse1_white.n_set.min()].flatten()
+        pixel_dist2 = noise_sparse2_white.wave_value[:, : noise_sparse2_white.n_set.min()].flatten()
 
         _ = unit_normal_battery(pixel_dist1, do_assert=True)
         _ = unit_normal_battery(pixel_dist2, do_assert=True)
