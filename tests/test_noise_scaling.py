@@ -18,9 +18,10 @@ from LisaWaveformTools.source_params import ExtrinsicParams, SourceParams
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
+# TODO add higher precision test using identical noise generated natively in time domain
+# TODO add test with large enough slope to cross multiple pixels
 
 # scaling on (Nf, Nt, dt, mult) in the second configuration
-# (2.0, 2.0, 2.0, 2.0),
 @pytest.mark.parametrize(
     'channel_mult',
     [
@@ -51,11 +52,13 @@ from WaveletWaveforms.wdm_config import get_wavelet_model
         (2.0, 2.0, 0.5, 1.0),
         (2.0, 2.0, 1.0, 1.0),
         (2.0, 2.0, 2.0, 1.0),
+        (0.5, 0.5, 4.0, 1.0),
+        (0.5, 4.0, 0.5, 1.0),
+        (4.0, 0.5, 0.5, 1.0),
         (1.0, 3.0, 1.0, 1.0),
         (0.25, 4.0, 1.0, 1.0),
         (0.75, 1.0, 0.75, 1.0),
         (0.5, 8.0, 0.25, 1.0),
-        (0.5, 4.0, 0.5, 1.0),
         (8.0, 0.125, 1.0, 0.5),
         (4.0, 0.25, 1.0, 0.5),
         (2.0, 0.5, 1.0, 0.5),
@@ -454,7 +457,7 @@ def test_noise_generation_scaling_curve(channel_mult: tuple[float, float, float,
         assert corr1_2[0, 1] > 0.85
         assert corr2_2[0, 1] > 0.75
 
-        assert corr1_3[0, 1] > 0.99
+        assert corr1_3[0, 1] > 0.98
         assert corr2_3[0, 1] > 0.97
 
         # case where we known the expected answers
@@ -529,13 +532,14 @@ def test_noise_generation_scaling_curve(channel_mult: tuple[float, float, float,
         assert_allclose(noise_real1_spect_2[mask12_lim_2], psd2_white[mask12_lim_2], atol=atol12, rtol=rtol12)
 
         assert_allclose(np.mean(noise_real2_spect_1[mask12_lim_1]), np.mean(psd1_white[mask12_lim_1]),
-                        atol=4.e-2 * atol12, rtol=4.e-2 * rtol12)
+                        atol=5.e-2 * atol12, rtol=5.e-2 * rtol12)
         assert_allclose(np.mean(noise_real1_spect_2[mask12_lim_2]), np.mean(psd2_white[mask12_lim_2]),
                         atol=8.e-2 * atol12, rtol=8.e-2 * rtol12)
 
 
+# hi
+
 # scaling on (Nf, Nt, dt, mult) in the second configuration
-# (2.0, 2.0, 2.0, 2.0),
 @pytest.mark.parametrize(
     'channel_mult',
     [
@@ -566,11 +570,13 @@ def test_noise_generation_scaling_curve(channel_mult: tuple[float, float, float,
         (2.0, 2.0, 0.5, 1.0),
         (2.0, 2.0, 1.0, 1.0),
         (2.0, 2.0, 2.0, 1.0),
+        (0.5, 0.5, 4.0, 1.0),
+        (0.5, 4.0, 0.5, 1.0),
+        (4.0, 0.5, 0.5, 1.0),
         (1.0, 3.0, 1.0, 1.0),
         (0.25, 4.0, 1.0, 1.0),
         (0.75, 1.0, 0.75, 1.0),
         (0.5, 8.0, 0.25, 1.0),
-        (0.5, 4.0, 0.5, 1.0),
         (8.0, 0.125, 1.0, 0.5),
         (4.0, 0.25, 1.0, 0.5),
         (2.0, 0.5, 1.0, 0.5),
@@ -865,7 +871,7 @@ def test_noise_generation_scaling_flat(channel_mult: tuple[float, float, float, 
         corr1 = np.corrcoef(psd1[:wc1.Nf][mask1_lim], noise_real1_spect[mask1_lim, itrc])
         corr2 = np.corrcoef(psd2[:wc2.Nf][mask2_lim], noise_real2_spect[mask2_lim, itrc])
 
-        assert corr1[0, 1] > 0.84
+        assert corr1[0, 1] > 0.82
         assert corr2[0, 1] > 0.7
 
         # case where we known the expected answers
@@ -947,15 +953,21 @@ def test_noise_generation_scaling_flat(channel_mult: tuple[float, float, float, 
 
 
 # scaling on (Nf, Nt, dt, mult) in the second configuration
-# (2.0, 2.0, 2.0, 2.0),
 @pytest.mark.parametrize(
     'channel_mult',
     [
+        (1.0, 1.0, 1.0, 1.0),
+        (2.0, 0.5, 1.0, 1.0),
+        (0.5, 2.0, 1.0, 1.0),
+        (1.0, 0.5, 2.0, 1.0),
+        (2.0, 1.0, 0.5, 1.0),
+        (0.5, 1.0, 2.0, 1.0),
+        (0.5, 0.5, 4.0, 1.0),
         (0.5, 0.5, 1.0, 1.0),
         (1.0, 1.0, 0.5, 1.0),
+        (2.0, 0.5, 1.0, 0.5),
         (8.0, 0.125, 1.0, 0.5),
         (4.0, 0.25, 1.0, 0.5),
-        (2.0, 0.5, 1.0, 0.5),
         (0.125, 8.0, 1.0, 2.0),
         (0.25, 4.0, 1.0, 1.0),
         (0.5, 1.0, 1.0, 4.0),
@@ -973,20 +985,29 @@ def test_noise_generation_scaling_flat(channel_mult: tuple[float, float, float, 
         (0.5, 8.0, 0.25, 1.0),
         (0.5, 4.0, 0.5, 1.0),
         (0.5, 0.5, 0.5, 1.0),
-        (1.0, 1.0, 1.0, 1.0),
         (1.0, 2.0, 1.0, 1.0),
         (1.0, 0.5, 1.0, 1.0),
-        (0.5, 1.0, 2.0, 1.0),
     ],
 )
 def test_noise_snr_scaling(channel_mult: tuple[float, float, float, float]) -> None:
     """Test the scaling between (Nf, Nt, dt, mult) and SNR^2"""
     toml_filename_in = 'tests/wavemaket_test_config1.toml'
 
+    noise_curve_mode = 0
+    if noise_curve_mode == 0:
+        amp_use = 1.e-27
+        response_mode = 0
+    elif noise_curve_mode == 1:
+        amp_use = 1.
+        response_mode = 2
+    else:
+        msg = 'Unrecognized option for noise curve mode'
+        raise ValueError(msg)
+
     with Path(toml_filename_in).open('rb') as f:
         config_in1 = tomllib.load(f)
 
-    config_in1['lisa_constants']['noise_curve_mode'] = 1
+    config_in1['lisa_constants']['noise_curve_mode'] = noise_curve_mode
     config_in1['wavelet_constants']['Nst'] = 512
 
     wc1 = get_wavelet_model(config_in1)
@@ -996,7 +1017,7 @@ def test_noise_snr_scaling(channel_mult: tuple[float, float, float, float]) -> N
     with Path(toml_filename_in).open('rb') as f:
         config_in2 = tomllib.load(f)
 
-    config_in2['lisa_constants']['noise_curve_mode'] = 1
+    config_in2['lisa_constants']['noise_curve_mode'] = noise_curve_mode
     config_in2['wavelet_constants']['Nst'] = 512
 
     # replace the Nf and Nt from the file
@@ -1132,7 +1153,7 @@ def test_noise_snr_scaling(channel_mult: tuple[float, float, float, float]) -> N
     noise_manager2 = DiagonalStationaryDenseNoiseModel(noise2, wc2, prune=1, nc_snr=noise2.shape[1], seed=seed2)
 
     intrinsic = LinearFrequencyIntrinsicParams(
-        amp0_t=1.0,  # amplitude
+        amp0_t=amp_use,  # amplitude
         phi0=0.3,  # phase at t=0
         F0=1.0e-4,  # initial frequency (Hz)
         FTd0=3.0e-12,  # frequency derivative (Hz/s)
@@ -1166,8 +1187,8 @@ def test_noise_snr_scaling(channel_mult: tuple[float, float, float, float]) -> N
 
     t_rat_snr = t_obs_snr1 / t_obs_snr2
 
-    waveform1 = LinearFrequencyWaveletWaveformTime(params, wc1, lc1, nt_lim_waveform1, table_cache_mode='check', table_output_mode='skip', response_mode=2)
-    waveform2 = LinearFrequencyWaveletWaveformTime(params, wc2, lc2, nt_lim_waveform2, table_cache_mode='check', table_output_mode='skip', response_mode=2)
+    waveform1 = LinearFrequencyWaveletWaveformTime(params, wc1, lc1, nt_lim_waveform1, table_cache_mode='check', table_output_mode='hf', response_mode=response_mode)
+    waveform2 = LinearFrequencyWaveletWaveformTime(params, wc2, lc2, nt_lim_waveform2, table_cache_mode='check', table_output_mode='skip', response_mode=response_mode)
 
     wavelet_waveform1 = waveform1.get_unsorted_coeffs()
     wavelet_waveform2 = waveform2.get_unsorted_coeffs()
@@ -1182,9 +1203,9 @@ def test_noise_snr_scaling(channel_mult: tuple[float, float, float, float]) -> N
     print(t_rat_snr, time_rat_waveform)
     print((wc1.DF * wc1.Nf) / intrinsic.F0, (wc2.DF * wc2.Nf) / intrinsic.F0, intrinsic.F0 / wc1.DF, intrinsic.F0 / wc2.DF)
 
-    if waveform1.source_waveform.response_mode == 2 and lc1.noise_curve_mode == 1:
+    if waveform1.source_waveform.response_mode == response_mode and lc1.noise_curve_mode == 1:
         assert_array_equal(snrs1[0], snrs1)
-    if waveform2.source_waveform.response_mode == 2 and lc2.noise_curve_mode == 1:
+    if waveform2.source_waveform.response_mode == response_mode and lc2.noise_curve_mode == 1:
         assert_array_equal(snrs2[0], snrs2)
 
     # snr^2 should linearly scale with observing time

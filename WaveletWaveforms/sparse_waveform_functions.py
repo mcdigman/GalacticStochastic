@@ -84,19 +84,22 @@ def wavelet_sparse_to_dense(wavelet_waveform: SparseWaveletWaveform, wc: WDMWave
     pixel_index = wavelet_waveform.pixel_index
     wave_value = wavelet_waveform.wave_value
     nc_waveform = wavelet_waveform.n_set.size
+    n_pixel_max = wavelet_waveform.n_pixel_max
 
     # input size validation
     assert len(pixel_index.shape) == 2
     assert len(n_set.shape) == 1
     assert pixel_index.shape == wave_value.shape
-    assert pixel_index.shape[1] == wavelet_waveform.n_pixel_max
+    assert pixel_index.shape[1] == n_pixel_max
     assert pixel_index.shape[0] == nc_waveform
+    assert np.all(n_set >= 0)
+    assert np.all(n_set <= n_pixel_max)
 
     result = np.zeros((wc.Nt, wc.Nf, nc_waveform))
 
     # unpack the signal
     for itrc in range(nc_waveform):
-        assert n_set[itrc] <= wavelet_waveform.n_pixel_max
+        assert n_set[itrc] <= n_pixel_max
         for itrp in range(n_set[itrc]):
             assert pixel_index[itrc, itrp] != -1
             i = pixel_index[itrc, itrp] % wc.Nf
@@ -104,3 +107,92 @@ def wavelet_sparse_to_dense(wavelet_waveform: SparseWaveletWaveform, wc: WDMWave
             result[j, i, itrc] = wave_value[itrc, itrp]
 
     return result
+
+
+@njit()
+def whiten_sparse_data(wavelet_waveform: SparseWaveletWaveform, inv_chol_S: NDArray[np.floating], wc: WDMWaveletConstants) -> SparseWaveletWaveform:
+    # initialize the array
+    n_set = wavelet_waveform.n_set
+    pixel_index = wavelet_waveform.pixel_index
+    wave_value = wavelet_waveform.wave_value
+    nc_waveform = wavelet_waveform.n_set.size
+    n_pixel_max = wavelet_waveform.n_pixel_max
+
+    # input size validation
+    assert len(pixel_index.shape) == 2
+    assert len(n_set.shape) == 1
+    assert pixel_index.shape == wave_value.shape
+    assert pixel_index.shape[1] == n_pixel_max
+    assert pixel_index.shape[0] == nc_waveform
+    print(inv_chol_S.shape)
+    print(wc.Nt, wc.Nf)
+    assert len(inv_chol_S.shape) == 3
+    assert inv_chol_S.shape[0] == wc.Nt
+    assert inv_chol_S.shape[1] == wc.Nf
+    assert inv_chol_S.shape[2] == nc_waveform
+    assert np.all(n_set >= 0)
+    assert np.all(n_set <= n_pixel_max)
+
+    wave_value_new = np.zeros_like(wave_value)
+
+    # unpack the signal
+    for itrc in range(nc_waveform):
+        assert n_set[itrc] <= n_pixel_max
+        for itrp in range(n_set[itrc]):
+            assert pixel_index[itrc, itrp] != -1
+            i = pixel_index[itrc, itrp] % wc.Nf
+            j = (pixel_index[itrc, itrp] - i) // wc.Nf
+            wave_value_new[itrc, itrp] = wave_value[itrc, itrp] * inv_chol_S[j, i, itrc]
+
+    return SparseWaveletWaveform(wave_value_new, pixel_index, n_set, n_pixel_max)
+
+
+@njit()
+def wavelet_dense_select_sparse(dense_waveform: NDArray[np.floating], wavelet_waveform: SparseWaveletWaveform, wc: WDMWaveletConstants, *, inplace_mode: int = 0) -> SparseWaveletWaveform:
+    """Select sparse elements with matching indices from a dense waveform.
+
+    Output is written to a new object if inplace_mode=0, if inplace_mode=1 a new object is created.
+    """
+    # initialize the array
+    n_set = wavelet_waveform.n_set
+    pixel_index = wavelet_waveform.pixel_index
+    wave_value = wavelet_waveform.wave_value
+    nc_waveform = wavelet_waveform.n_set.size
+    n_pixel_max = wavelet_waveform.n_pixel_max
+
+    # input size validation
+    assert len(pixel_index.shape) == 2
+    assert len(n_set.shape) == 1
+    assert pixel_index.shape == wave_value.shape
+    assert pixel_index.shape[1] == n_pixel_max
+    assert pixel_index.shape[0] == nc_waveform
+    assert len(dense_waveform.shape) == 3
+    assert dense_waveform.shape[0] == wc.Nt
+    assert dense_waveform.shape[1] == wc.Nf
+    assert dense_waveform.shape[2] == nc_waveform
+    assert np.all(n_set >= 0)
+    assert np.all(n_set <= n_pixel_max)
+
+    # input parameter validation
+    assert inplace_mode in (0, 1), 'Use inplace_mode=0 to create a new waveform objects, inplace_mode=1 to overwrite'
+
+    if inplace_mode == 0:
+        # create a new sparse output array
+        waveform_out = SparseWaveletWaveform(np.zeros_like(wave_value), pixel_index, n_set, n_pixel_max)
+    else:
+        # reuse the sparse input array
+        waveform_out = wavelet_waveform
+
+    # ensure that the write happens in place on the array that was stored in the output array
+    wave_value_new = waveform_out.wave_value
+
+    # unpack the signal
+    for itrc in range(nc_waveform):
+        assert n_set[itrc] <= n_pixel_max
+        for itrp in range(n_set[itrc]):
+            assert pixel_index[itrc, itrp] != -1
+            i = pixel_index[itrc, itrp] % wc.Nf
+            j = (pixel_index[itrc, itrp] - i) // wc.Nf
+            wave_value_new[itrc, itrp] = dense_waveform[j, i, itrc]
+
+    return waveform_out

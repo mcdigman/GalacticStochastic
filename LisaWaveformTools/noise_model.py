@@ -51,9 +51,40 @@ def get_sparse_snr_helper(
             j_loc: int = j_itrs[mm]
             i_loc: int = i_itrs[mm]
             if nt_lim_snr.nx_min <= j_loc < nt_lim_snr.nx_max:
-                mult: float = inv_chol_S[j_loc, i_loc, itrc] * wave_value_loc[mm]
-                snr2s[itrc] += mult * mult
+                signal_white: float = inv_chol_S[j_loc, i_loc, itrc] * wave_value_loc[mm]
+                snr2s[itrc] += signal_white * signal_white
     return np.sqrt(snr2s)
+
+
+@njit()
+def get_sparse_likelihood_helper_prewhitened(
+    wavelet_waveform: SparseWaveletWaveform,
+    wavelet_data_white: NDArray[np.floating],
+    nt_lim_snr: PixelGenericRange,
+    wc: WDMWaveletConstants,
+    inv_chol_S: NDArray[np.floating],
+    nc_snr: int,
+) -> NDArray[np.floating]:
+    """
+    Calculate the log likelihood contribution for each TDI channel for a given intrinsic_waveform.
+    """
+    likelihoods = np.zeros(nc_snr)
+    for itrc in range(nc_snr):
+        n_pixel_loc: int = int(wavelet_waveform.n_set[itrc])
+        pixel_index_loc: NDArray[np.integer] = wavelet_waveform.pixel_index[itrc, : n_pixel_loc]
+        wave_value_loc: NDArray[np.floating] = wavelet_waveform.wave_value[itrc, :]
+        i_itrs: NDArray[np.integer] = np.mod(pixel_index_loc, wc.Nf)
+        j_itrs: NDArray[np.integer] = (pixel_index_loc - i_itrs) // wc.Nf
+        for mm in range(n_pixel_loc):
+            j_loc: int = j_itrs[mm]
+            i_loc: int = i_itrs[mm]
+            if nt_lim_snr.nx_min <= j_loc < nt_lim_snr.nx_max:
+                signal_white: float = inv_chol_S[j_loc, i_loc, itrc] * wave_value_loc[mm]
+                data_white: float = wavelet_data_white[j_loc, i_loc, itrc]
+                signal_part = - signal_white ** 2 / 2
+                data_part = data_white * signal_white
+                likelihoods[itrc] += signal_part + data_part
+    return likelihoods
 
 
 class DenseNoiseModel(ABC):
@@ -169,7 +200,7 @@ class DenseNoiseModel(ABC):
         """Get the number of noise channels."""
         return self._nc_noise
 
-    def generate_dense_noise(self, white_mode: int = 0) -> NDArray[np.floating]:
+    def generate_dense_noise(self, white_mode: int = 0, seed_override: int = -2) -> NDArray[np.floating]:
         """
         Generate random noise for full matrix.
 
@@ -177,7 +208,12 @@ class DenseNoiseModel(ABC):
         ----------
         white_mode: int
             if white_mode=0, return the instrument noise unwhitened
-            if white_mode=1, return the instrument noise completely whitened
+            if white_mode=1, return the whitened instrument noise
+
+        seed_override: int
+            if seed=-2, start generation from the seed stored when the object was created
+            if seed=-1, generate a new seed
+            if seed>=0, start seed from specified seed
 
         Returns
         -------
@@ -190,11 +226,24 @@ class DenseNoiseModel(ABC):
         if white_mode not in (0, 1):
             msg = 'Unrecognized option for white_mode'
             raise ValueError(msg)
+
+        if seed_override < -2:
+            msg = 'Seed override specification must be -2, -1, or a non-negative integer'
+            raise ValueError(msg)
+
         noise_res = np.zeros((self._wc.Nt, self._wc.Nf, self._nc_noise))
-        if self.seed == -1:
+
+        # TODO add option to generate new realizations from old seed deterministically
+
+        if seed_override == -2:
+            seed_loc = self.seed
+        else:
+            seed_loc = seed_override
+
+        if seed_loc == -1:
             rng = np.random.default_rng()
         else:
-            rng = np.random.default_rng(self.seed)
+            rng = np.random.default_rng(seed_loc)
 
         if white_mode == 0:
             chol_S = self.get_chol_S()
@@ -203,6 +252,8 @@ class DenseNoiseModel(ABC):
         if white_mode == 1:
             for j in range(self._wc.Nt):
                 noise_res[j, :, :] = rng.normal(0.0, 1.0, (self._wc.Nf, self._nc_noise))
+                # wipe pruned values, but still need to get them to advance the rng state
+                noise_res[j, :self.prune, :] = 0.
         return noise_res
 
     def get_S_stat_m(self) -> NDArray[np.floating]:
