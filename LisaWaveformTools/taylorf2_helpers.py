@@ -71,7 +71,7 @@ def TaylorF2_inplace(intrinsic_waveform: StationaryWaveformFreq, params_intrinsi
     psi_i: float = float(2 * np.pi * TTRef * f_i - np.pi / 4 + c0 / nu_i**5 * (1 + c1 * nu_i**2 + c2 * nu_i**3 + c3 * nu_i**4 + c4 * (1 + 3 * np.log(nu_i / nu_lso)) * nu_i**5 + (c5 - 6848 / 21 * np.log(4 * nu_i)) * nu_i**6 + c6 * nu_i**7))
     psi_ref: float = -2 * phic - psi_i - np.pi / 4
 
-    Amp: float = float(np.sqrt(5 / 6) / np.pi**(2 / 3) * Mc**(5 / 6) / np.exp(log_dl))
+    a0: float = float(1 / 2 * np.sqrt(5 / 6) / np.pi**(2 / 3) * Mc**(5 / 6) / np.exp(log_dl))
     for n in range(nf_lim.nx_min, nf_lim.nx_max):
         nu: float = float((np.pi * Mt * FS[n])**(1 / 3))
         m4: float = float(1 + 3 * np.log(nu / nu_lso))
@@ -82,9 +82,9 @@ def TaylorF2_inplace(intrinsic_waveform: StationaryWaveformFreq, params_intrinsi
         TS[n] = TTRef - p0 / nu**8 * (1 + p1 * nu**2 + p2 * nu**3 + p3 * nu**4 + p4 * nu**5 + (ap5 + p5) * nu**6 + p6 * nu**7)
         TPS[n] = f0 / nu**11 * (1 + f1 * nu**2 + f2 * nu**3 + f3 * nu**4 + f4 * nu**5 + (f5 + fp5) * nu**6 + f6 * nu**7)
         if amplitude_pn_mode == 0:
-            AS[n] = Amp * FS[n]**(-7 / 6)
+            AS[n] = a0 * FS[n]**(-7 / 6)
         else:
-            AS[n] = Amp * (FS[n]**(-7 / 6) + (9 / 40 * np.pi**(2 / 3)) * (Mt**(2 / 3) * c1) * FS[n]**(-1 / 2) + np.pi / 8 * (Mt * c2) * FS[n]**(-1 / 6))
+            AS[n] = a0 * (FS[n]**(-7 / 6) + (9 / 40 * np.pi**(2 / 3)) * (Mt**(2 / 3) * c1) * FS[n]**(-1 / 2) + np.pi / 8 * (Mt * c2) * FS[n]**(-1 / 6))
     return float(TTRef)
 
 
@@ -250,7 +250,7 @@ def TaylorF2_eccentric_inplace(intrinsic_waveform: StationaryWaveformFreq, param
         )
     psi_ref: float = -2 * phic - psi_i - np.pi / 4
 
-    Amp: float = float(np.sqrt(5 / 6) / np.pi**(2 / 3) * Mc**(5 / 6) / np.exp(log_dl))
+    a0: float = float(1 / 2 * np.sqrt(5 / 6) / np.pi**(2 / 3) * Mc**(5 / 6) / np.exp(log_dl))
     for n in range(nf_lim.nx_min, nf_lim.nx_max):
         nu: float = float((np.pi * Mt * FS[n])**(1 / 3))
 
@@ -351,9 +351,9 @@ def TaylorF2_eccentric_inplace(intrinsic_waveform: StationaryWaveformFreq, param
         # TODO carry out amp to appropriate order
         if amplitude_pn_mode == 0:
             # in the paper, amplitude is carried out to 0pn order
-            AS[n] = Amp * FS[n]**(-7 / 6)
+            AS[n] = a0 * FS[n]**(-7 / 6)
         else:
-            AS[n] = Amp * (FS[n]**(-7 / 6) + (9 / 40 * np.pi**(2 / 3)) * (Mt**(2 / 3) * c1) * FS[n]**(-1 / 2) + np.pi / 8 * (Mt * c2) * FS[n]**(-1 / 6))
+            AS[n] = a0 * (FS[n]**(-7 / 6) + (9 / 40 * np.pi**(2 / 3)) * (Mt**(2 / 3) * c1) * FS[n]**(-1 / 2) + np.pi / 8 * (Mt * c2) * FS[n]**(-1 / 6))
 
     return float(TTRef)
 

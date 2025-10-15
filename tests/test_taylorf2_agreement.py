@@ -3,7 +3,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
+import pytest
 import tomllib
+from numpy.testing import assert_allclose
 
 from LisaWaveformTools.binary_params_manager import M_SUN_SEC, PC_M, BinaryIntrinsicParamsManager
 from LisaWaveformTools.lisa_config import get_lisa_constants
@@ -16,8 +18,17 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
-def test_taylorf2_agreement() -> None:
+@pytest.mark.parametrize('model1_idx', [0, 1])
+@pytest.mark.parametrize('model2_idx', [1, 2])
+@pytest.mark.parametrize('tc_mode', [0, 1])
+def test_taylorf2_agreement_zero(model1_idx: int, model2_idx: int, tc_mode: int) -> None:
     """Test agreement between TaylorF2 waveform and LinearFrequency waveform for low-mass, low-fdot sources."""
+    if model1_idx >= model2_idx:
+        # Nothing to test, or redundant with order
+        return
+    model_list = ('taylorf2_basic', 'taylorf2_eccentric', 'taylorf2_aligned')
+    model1 = model_list[model1_idx]
+    model2 = model_list[model2_idx]
     toml_filename = 'tests/galactic_fit_test_config1.toml'
 
     with Path(toml_filename).open('rb') as f:
@@ -47,13 +58,39 @@ def test_taylorf2_agreement() -> None:
 
     source_params = SourceParams(intrinsic=intrinsic, extrinsic=extrinsic)
 
+    amplitude_pn_mode = 0
+    include_pn_ss3 = 0
+    t_obs = wc.Tobs
+
     # Create TaylorF2 waveform source
-    taylorf2_waveform = TaylorF2WaveformFreq(
+    taylorf2_waveform1 = TaylorF2WaveformFreq(
         params=source_params,
         lc=lc,
         nf_lim_absolute=PixelGenericRange(1, wc.Nf, wc.DF, 0.0),
         freeze_limits=1,
-        t_obs=31536000.0  # Observation time of 1 year in seconds
+        t_obs=t_obs,
+        model_select=model1,
+        amplitude_pn_mode=amplitude_pn_mode,
+        include_pn_ss3=include_pn_ss3,
+        tc_mode=tc_mode,
+    )
+    taylorf2_waveform2 = TaylorF2WaveformFreq(
+        params=source_params,
+        lc=lc,
+        nf_lim_absolute=PixelGenericRange(1, wc.Nf, wc.DF, 0.0),
+        freeze_limits=1,
+        t_obs=t_obs,
+        model_select=model2,
+        amplitude_pn_mode=amplitude_pn_mode,
+        include_pn_ss3=include_pn_ss3,
+        tc_mode=tc_mode,
     )
 
-    print(taylorf2_waveform.intrinsic_waveform)
+    waveform1 = taylorf2_waveform1.intrinsic_waveform
+    waveform2 = taylorf2_waveform2.intrinsic_waveform
+    assert_allclose(waveform1.F, waveform2.F, atol=1.e-100, rtol=1.e-10)
+    assert_allclose(waveform1.TF, waveform2.TF, atol=1.e-100, rtol=1.e-10)
+    assert_allclose(waveform1.TFp, waveform2.TFp, atol=1.e-100, rtol=1.e-10)
+    assert_allclose(waveform1.PF, waveform2.PF, atol=1.e-100, rtol=1.e-10)
+    assert_allclose(waveform1.AF, waveform2.AF, atol=1.e-100, rtol=1.e-10)
+    assert_allclose(taylorf2_waveform1.TTRef, taylorf2_waveform2.TTRef, atol=1.e-100, rtol=1.e-10)
