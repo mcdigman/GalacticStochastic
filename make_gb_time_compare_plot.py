@@ -27,7 +27,7 @@ if __name__ == '__main__':
     smooth_targ_length = 0.25
     _: Any
     # filename_config = 'default_parameters.toml'
-    filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters.toml'
+    filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters_format4.toml'
 
     config, wc, lc, ic, instrument_random_seed = config_helper.get_config_objects(filename_config)
 
@@ -97,7 +97,8 @@ if __name__ == '__main__':
     ax.set_prop_cycle(None)
     _ = ax.loglog(fs[1:], wc.dt * (S_inst_m[1:, 0]), 'k--')
     ax.tick_params(axis='both', direction='in', which='both', top=True, right=True)
-    _ = plt.ylim([wc.dt * 2.0e-44, wc.dt * 2.0e-43])
+    # _ = plt.ylim([wc.dt * 2.0e-44, wc.dt * 2.0e-43])
+    _ = plt.ylim([1.e-43, 2.0e-39])
     _ = plt.xlim([3.0e-4, 6.0e-3])
     _ = plt.xlabel('f [Hz]')
     _ = plt.ylabel(r'$S^{AE}(f)$ [Hz$^{-1}$]')

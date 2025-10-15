@@ -79,7 +79,7 @@ def white_plot_ax(ax_in: plt.Axes, title: str, data: NDArray[np.floating], exten
 
 if __name__ == '__main__':
     # filename_config = 'default_parameters.toml'
-    filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters.toml'
+    filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters_format4.toml'
 
     config, wc, lc, ic, instrument_random_seed = config_helper.get_config_objects(filename_config)
 

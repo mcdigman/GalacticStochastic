@@ -942,9 +942,56 @@ class BinaryInclusionState(StateManager):
         """
         snrs_temp = self._snrs_tot_upper[self._itrn - 1, :]
         # make the array the length of *all* the binaries, including ones that have been masked out
-        snrs_full = np.full(self._n_tot, -1.0)
+        snrs_full = np.full(self._n_tot, fill_value=-1.0)
         snrs_full[self._argbinmap] = snrs_temp
         return snrs_full
+
+    def get_faint_old(self) -> NDArray[np.bool_]:
+        """Get the binaries that were deemed faint in the first iteration.
+
+        Assume binaries that are masked are faint.
+
+        Returns
+        -------
+        NDArray[np.bool_]
+            The value for whether this binary was deemed faint on the first iteration,
+            with True inserted for binaries which were not stored because they were masked already
+        """
+        # make the array the length of *all* the binaries, including ones that have been masked out
+        faints_full = np.full(self._n_tot, fill_value=True, dtype=np.bool_)
+        faints_full[self._argbinmap] = self._faints_old
+        return faints_full
+
+    def get_faint(self) -> NDArray[np.bool_]:
+        """Get the binaries that are deemed faint after all current iterative fit steps.
+
+        Assume binaries that are masked were faint.
+
+        Returns
+        -------
+        NDArray[np.bool_]
+            The value for whether this binary is deemed faint,
+            with True inserted for binaries which were not stored because they were masked already
+        """
+        faints_full = self.get_faint_old()
+        faints_full[self._argbinmap] = faints_full[self._argbinmap] | self._faints_cur[self._itrn - 1]
+        return faints_full
+
+    def get_bright(self) -> NDArray[np.bool_]:
+        """Get the binaries that are deemed bright on the last iteration.
+
+        Assume binaries that are masked are not bright.
+
+        Returns
+        -------
+        NDArray[np.bool_]
+            The value for whether this binary is deemed bright,
+            with False inserted for binaries which were not stored because they were masked already
+        """
+        # make the array the length of *all* the binaries, including ones that have been masked out
+        brights_full = np.full(self._n_tot, fill_value=False, dtype=np.bool_)
+        brights_full[self._argbinmap] = self._brights[self._itrn - 1]
+        return brights_full
 
     @override
     def advance_state(self) -> None:
