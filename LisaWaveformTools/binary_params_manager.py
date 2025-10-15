@@ -1,10 +1,14 @@
 """Manage intrinsic parameters of black hole binaries."""
-from typing import NamedTuple, override
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, NamedTuple, override
 
 import numpy as np
-from numpy.typing import NDArray
 
 from LisaWaveformTools.source_params import AbstractIntrinsicParamsManager
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 M_SUN_SEC = 4.925491025543575903411922162094833998e-6  # Geometrized solar mass, s
 M_SUN_KG = 1.988546954961461467461011951140572744e30  # Solar mass, kg
@@ -177,9 +181,17 @@ def _validate_intrinsic_binary_helper(params: BinaryIntrinsicParams) -> bool:
 class BinaryIntrinsicParamsManager(AbstractIntrinsicParamsManager[BinaryIntrinsicParams]):
     """Manage creation, translation, and handling of ExtrinsicParams objects."""
 
-    def __init__(self, params_load: BinaryIntrinsicParams) -> None:
+    def __init__(self, params_load_in: NDArray[np.floating] | BinaryIntrinsicParams) -> None:
         """Construct parameter from intrinsic parameters named tuple."""
         self._n_packed: int = N_BINARY_PACKED
+        if isinstance(params_load_in, BinaryIntrinsicParams):
+            params_load = params_load_in
+        elif isinstance(params_load_in, np.ndarray):
+            assert params_load_in.shape == (N_BINARY_PACKED,)
+            params_load = _load_intrinsic_binary_from_packed_helper(params_load_in)
+        else:
+            msg = 'params_load must be of type BinaryIntrinsicParams or ndarray'
+            raise TypeError(msg)
         super().__init__(params_load)
 
     @property

@@ -2,9 +2,9 @@
 
 from typing import override
 
-from LisaWaveformTools.binary_params_manager import BinaryIntrinsicParams
+from LisaWaveformTools.binary_params_manager import BinaryIntrinsicParams, BinaryIntrinsicParamsManager
 from LisaWaveformTools.lisa_config import LISAConstants
-from LisaWaveformTools.source_params import ExtrinsicParams, SourceParams
+from LisaWaveformTools.source_params import AbstractIntrinsicParamsManager, ExtrinsicParams, SourceParams
 from LisaWaveformTools.stationary_freq_source import StationarySourceWaveformFreq
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformFreq
 from LisaWaveformTools.taylorf2_helpers import TaylorF2_aligned_inplace, TaylorF2_eccentric_inplace, TaylorF2_inplace
@@ -24,7 +24,7 @@ def taylorf2_intrinsic_freq(
     raise ValueError(msg)
 
 
-class StationaryTaylorF2WaveformFreq(StationarySourceWaveformFreq[BinaryIntrinsicParams, ExtrinsicParams]):
+class TaylorF2WaveformFreq(StationarySourceWaveformFreq[BinaryIntrinsicParams, ExtrinsicParams]):
     """Store a taylorf2 waveform in the frequency domain and update it."""
 
     @override
@@ -38,9 +38,17 @@ class StationaryTaylorF2WaveformFreq(StationarySourceWaveformFreq[BinaryIntrinsi
         n_pad_F: int = 10,
         *,
         mf_taylor_anchor: float = 1.0e-5,
+        model_select: str = 'taylorf2_aligned',
+        amplitude_pn_mode: int = 2,
+        include_pn_ss3: int = 0,
+        tc_mode: int = 0,
     ) -> None:
         """Construct a waveform for a binary using the TaylorF2 model."""
         self.mf_taylor_anchor: float = mf_taylor_anchor
+        self.model_select = model_select
+        self.amplitude_pn_mode = amplitude_pn_mode
+        self.include_pn_ss3 = include_pn_ss3
+        self.tc_mode = tc_mode
         super().__init__(params, lc, nf_lim_absolute, freeze_limits, t_obs, n_pad_F=n_pad_F)
 
     @override
@@ -57,7 +65,7 @@ class StationaryTaylorF2WaveformFreq(StationarySourceWaveformFreq[BinaryIntrinsi
 
         # TODO proper selectable waveform model everywhere it is used
 
-        self.TTRef: float = taylorf2_intrinsic_freq(self.intrinsic_waveform, self.params.intrinsic, self.nf_lim, model_select='taylorf2_aligned', amplitude_pn_mode=2, include_pn_ss3=0, tc_mode=1, t_offset=tc)
+        self.TTRef: float = taylorf2_intrinsic_freq(self.intrinsic_waveform, self.params.intrinsic, self.nf_lim, model_select=self.model_select, amplitude_pn_mode=self.amplitude_pn_mode, include_pn_ss3=self.include_pn_ss3, tc_mode=self.tc_mode, t_offset=tc)
         itrFCut_new = self.itrFCut
         # TODO set itrFCut_new if we need it
 
@@ -69,3 +77,6 @@ class StationaryTaylorF2WaveformFreq(StationarySourceWaveformFreq[BinaryIntrinsi
             self._update_bounds()
         # TODO investigate it blow up difference at f->0 can be mitigated
         self._consistent_intrinsic: bool = True
+
+    def _create_intrinsic_params_manager(self, params_intrinsic: BinaryIntrinsicParams) -> AbstractIntrinsicParamsManager[BinaryIntrinsicParams]:
+        return BinaryIntrinsicParamsManager(params_intrinsic)
