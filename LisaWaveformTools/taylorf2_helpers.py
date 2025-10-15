@@ -1,10 +1,10 @@
 """Functions to compute rigid adiabatic response in frequency domain."""
 
-from typing import NamedTuple
 
 import numpy as np
 from numba import njit
 
+from LisaWaveformTools.binary_params_manager import BinaryIntrinsicParams
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformFreq
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
@@ -16,42 +16,8 @@ GAMMA = 0.57721566490153286060651209008240243104215933593992  # Euler-Mascheroni
 # TODO allow efficient selection of model without calling inplace methods
 
 
-class TaylorF2BasicParams(NamedTuple):
-    """Basic TaylorF2 parameters without spin or eccentricity."""
-
-    Mt: float
-    Mc: float
-    f_i: float
-    log_dl: float
-    phic: float
-
-
-class TaylorF2AlignedSpinParams(NamedTuple):
-    """TaylorF2 parameters with aligned spin but no eccentricity."""
-
-    Mt: float
-    Mc: float
-    f_i: float
-    log_dl: float
-    phic: float
-    chis: float
-    chia: float
-    tc: float
-
-
-class TaylorF2EccParams(NamedTuple):
-    """TaylorF2 parameters with eccentricity but no spin."""
-
-    Mt: float
-    Mc: float
-    f_i: float
-    log_dl: float
-    phic: float
-    e0: float
-
-
 @njit()
-def TaylorF2_inplace(intrinsic_waveform: StationaryWaveformFreq, params_intrinsic: TaylorF2BasicParams, nf_lim: PixelGenericRange, t_offset: float = 0., tc_mode: int = 0) -> float:
+def TaylorF2_inplace(intrinsic_waveform: StationaryWaveformFreq, params_intrinsic: BinaryIntrinsicParams, nf_lim: PixelGenericRange, t_offset: float = 0., tc_mode: int = 0) -> float:
     """Compute TaylorF2 model to 2PN order.
 
     DOI: 10.1103/PhysRevD.80.084043
@@ -63,11 +29,11 @@ def TaylorF2_inplace(intrinsic_waveform: StationaryWaveformFreq, params_intrinsi
     TPS = intrinsic_waveform.TFp
     AS = intrinsic_waveform.AF
 
-    Mt = float(params_intrinsic.Mt)
-    Mc = float(params_intrinsic.Mc)
-    f_i = float(params_intrinsic.f_i)
-    phic = float(params_intrinsic.phic)
-    log_dl = float(params_intrinsic.log_dl)
+    Mt = params_intrinsic.mass_total_detector_sec
+    Mc = params_intrinsic.mass_chirp_detector_sec
+    f_i = params_intrinsic.frequency_i_hz
+    phic = params_intrinsic.phase_c
+    log_dl = params_intrinsic.ln_luminosity_distance_m
 
     eta: float = float((Mc / Mt)**(5 / 3))
     f_lso: float = 1 / (6**(3 / 2) * np.pi * Mt)
@@ -124,17 +90,17 @@ def TaylorF2_inplace(intrinsic_waveform: StationaryWaveformFreq, params_intrinsi
 
 
 @njit()
-def TaylorF2_eccentric_inplace(intrinsic_waveform: StationaryWaveformFreq, params_intrinsic: TaylorF2EccParams, nf_lim: PixelGenericRange, amplitude_pn: int = 0, t_offset: float = 0., tc_mode: int = 0) -> float:
+def TaylorF2_eccentric_inplace(intrinsic_waveform: StationaryWaveformFreq, params_intrinsic: BinaryIntrinsicParams, nf_lim: PixelGenericRange, amplitude_pn: int = 0, t_offset: float = 0., tc_mode: int = 0) -> float:
     """Compute TaylorF2 model with eccentricity but no spin.
 
     From DOI: 10.1103/PhysRevD.93.124061
     """
-    Mc = float(params_intrinsic.Mc)
-    Mt = float(params_intrinsic.Mt)
-    f_i = float(params_intrinsic.f_i)
-    phic = float(params_intrinsic.phic)
-    log_dl = float(params_intrinsic.log_dl)
-    eta = float((Mc / Mt)**(5 / 3))
+    Mc = params_intrinsic.mass_chirp_detector_sec
+    Mt = params_intrinsic.mass_total_detector_sec
+    f_i = params_intrinsic.frequency_i_hz
+    phic = params_intrinsic.phase_c
+    log_dl = params_intrinsic.ln_luminosity_distance_m
+    eta = params_intrinsic.symmetric_mass_ratio
     # note that psi_i and psi_ref are slightly different from the no eccentricity case, but it seems to just be a convention that cancels in the results
     # see cutler 1998 for fisher analytics
     # see arXiv : 2001.11412 v1.pdf
@@ -172,7 +138,7 @@ def TaylorF2_eccentric_inplace(intrinsic_waveform: StationaryWaveformFreq, param
 
     nu_i: float = (np.pi * Mt * f_i)**(1 / 3)
 
-    y0 = -(2355 / 1462) * params_intrinsic.e0**2
+    y0 = -(2355 / 1462) * params_intrinsic.eccentricity_i**2
     y01 = (299076223 / 81976608) + (18766963 / 2927736) * eta
     y02 = -(2819123 / 282600) * np.pi
     y03 = (16237683263 / 3330429696) \
@@ -393,13 +359,12 @@ def TaylorF2_eccentric_inplace(intrinsic_waveform: StationaryWaveformFreq, param
 
 
 @njit()
-def TaylorF2_eccentricity_solve(params_intrinsic: TaylorF2EccParams, f_i2: float) -> float:
+def TaylorF2_eccentricity_solve(params_intrinsic: BinaryIntrinsicParams, f_i2: float) -> float:
     """Get an inferred eccentricity at a later frequency based on the taylorf2 eccentricity model."""
-    e01 = params_intrinsic.e0
-    Mt = float(params_intrinsic.Mt)
-    Mc = float(params_intrinsic.Mc)
-    f_i = float(params_intrinsic.f_i)
-    eta = float((Mc / Mt)**(5 / 3))
+    e01 = params_intrinsic.eccentricity_i
+    Mt = params_intrinsic.mass_total_detector_sec
+    f_i = params_intrinsic.frequency_i_hz
+    eta = params_intrinsic.symmetric_mass_ratio
     # note that psi_i and psi_ref are slightly different from the no eccentricity case, but it seems to just be a convention that cancels in the results
     # see cutler 1998 for fisher analytics
     # see arXiv : 2001.11412 v1.pdf
@@ -525,21 +490,19 @@ def TaylorF2_eccentricity_solve(params_intrinsic: TaylorF2EccParams, f_i2: float
             - (30107981 * nu_i2**6) / 13188000 + ddy05 * nu_i2**6 + ddy13 * nu_i2**6 + ddy22 * nu_i2**6 + ddy31 * nu_i2**6 + ddy50 * nu_i2**6 - (44512 * nu_i2**6 * np.log(4 * nu_i2)) / 2355
           )
 
-    # return params_intrinsic.e02_derived
     return float(np.sqrt(-24 / 157 * ddy0_derived))
 
 
 @njit()
-def TaylorF2_eccentric_TTRef(params_intrinsic: TaylorF2EccParams) -> float:
+def TaylorF2_eccentric_TTRef(params_intrinsic: BinaryIntrinsicParams) -> float:
     """
     Get just TTRef for input parameters.
 
     DOI: 10.1103/PhysRevD.93.124061
     """
-    Mt = float(params_intrinsic.Mt)
-    Mc = float(params_intrinsic.Mc)
-    f_i = float(params_intrinsic.f_i)
-    eta = float((Mc / Mt)**(5 / 3))
+    Mt = params_intrinsic.mass_total_detector_sec
+    f_i = params_intrinsic.frequency_i_hz
+    eta = params_intrinsic.symmetric_mass_ratio
     # note that psi_i and psi_ref are slightly different from the no eccentricity case, but it seems to just be a convention that cancels in the results
     # see cutler 1998 for fisher analytics
     # see arXiv : 2001.11412 v1.pdf
@@ -564,7 +527,7 @@ def TaylorF2_eccentric_TTRef(params_intrinsic: TaylorF2EccParams) -> float:
 
     nu_i: float = (np.pi * Mt * f_i)**(1 / 3)
 
-    y0 = -(2355 / 1462) * params_intrinsic.e0**2
+    y0 = -(2355 / 1462) * params_intrinsic.eccentricity_i**2
     y01 = (299076223 / 81976608) + (18766963 / 2927736) * eta
     y02 = -(2819123 / 282600) * np.pi
     y03 = (16237683263 / 3330429696) \
@@ -644,16 +607,16 @@ def TaylorF2_eccentric_TTRef(params_intrinsic: TaylorF2EccParams) -> float:
 
 
 @njit()
-def TaylorF2_time_fix_helper(params_intrinsic: TaylorF2AlignedSpinParams, delta: float) -> float:
+def TaylorF2_time_fix_helper(params_intrinsic: BinaryIntrinsicParams, delta: float) -> float:
     """Compute the reference time in the TaylorF2 model to 2PN order.
 
     DOI: 10.1103/PhysRevD.80.084043
     """
-    eta = float((1 - delta**2) / 4)
-    chis = float(params_intrinsic.chis)
-    chia = float(params_intrinsic.chia)
-    Mt = float(params_intrinsic.Mt)
-    f_i = float(params_intrinsic.f_i)
+    eta = params_intrinsic.symmetric_mass_ratio
+    chis = params_intrinsic.chi_s
+    chia = params_intrinsic.chi_a
+    Mt = params_intrinsic.mass_total_detector_sec
+    f_i = params_intrinsic.frequency_i_hz
 
     c0 = 3 / (128 * eta)
     c1 = 20 / 9 * (743 / 336 + 11 / 4 * eta)
@@ -681,24 +644,19 @@ def TaylorF2_time_fix_helper(params_intrinsic: TaylorF2AlignedSpinParams, delta:
 
 
 @njit()
-def TaylorF2_ref_time_match(params_intrinsic: TaylorF2AlignedSpinParams, include_pn_ss3: int = 0) -> float:
+def TaylorF2_ref_time_match(params_intrinsic: BinaryIntrinsicParams, include_pn_ss3: int = 0) -> float:
     """
     Compute the reference time in the TaylorF2 model to 2PN order.
 
     DOI: 10.1103/PhysRevD.80.084043
     """
     # TODO need to use imrphenomd instead
-    Mt = float(params_intrinsic.Mt)
-    Mc = float(params_intrinsic.Mc)
-    f_i = float(params_intrinsic.f_i)
-    chis = float(params_intrinsic.chis)
-    chia = float(params_intrinsic.chia)
-    eta = float((Mc / Mt)**(5 / 3))
-
-    if eta >= 0.25:
-        delta = 0.
-    else:
-        delta = np.sqrt(1 - 4 * eta)
+    Mt = params_intrinsic.mass_total_detector_sec
+    f_i = params_intrinsic.frequency_i_hz
+    chis = params_intrinsic.chi_s
+    chia = params_intrinsic.chi_a
+    eta = params_intrinsic.symmetric_mass_ratio
+    delta = params_intrinsic.mass_delta
 
     c0 = 3 / (128 * eta)
     c1 = 20 / 9 * (743 / 336 + 11 / 4 * eta)
@@ -733,7 +691,7 @@ def TaylorF2_ref_time_match(params_intrinsic: TaylorF2AlignedSpinParams, include
 
 
 @njit()
-def TaylorF2_aligned_inplace(intrinsic_waveform: StationaryWaveformFreq, params_intrinsic: TaylorF2AlignedSpinParams, nf_lim: PixelGenericRange, *, include_phenom_amp: int = 1, include_pn_ss3: int = 0, t_offset: float = 0., tc_mode: int = 0) -> float:
+def TaylorF2_aligned_inplace(intrinsic_waveform: StationaryWaveformFreq, params_intrinsic: BinaryIntrinsicParams, nf_lim: PixelGenericRange, *, include_phenom_amp: int = 1, include_pn_ss3: int = 0, t_offset: float = 0., tc_mode: int = 0) -> float:
     """
     Compute the TaylorF2 model to 3.5PN order.
 
@@ -750,19 +708,16 @@ def TaylorF2_aligned_inplace(intrinsic_waveform: StationaryWaveformFreq, params_
     # spins from arXiv : 1508.07253
     # TODO enforce keeping frequency below lso
     # TODO if this is always on a grid eliminate Fs argument
-    Mt = params_intrinsic.Mt
-    Mc = params_intrinsic.Mc
-    f_i = params_intrinsic.f_i
-    phic = params_intrinsic.phic
-    eta = float((Mc / Mt)**(5.0 / 3.0))
-    if eta >= 0.25:
-        delta = 0.
-    else:
-        delta = float(np.sqrt(1 - 4 * eta))
+    Mt = params_intrinsic.mass_total_detector_sec
+    Mc = params_intrinsic.mass_chirp_detector_sec
+    f_i = params_intrinsic.frequency_i_hz
+    phic = params_intrinsic.phase_c
+    eta = params_intrinsic.symmetric_mass_ratio
+    delta = params_intrinsic.mass_delta
 
-    chis = float(params_intrinsic.chis)
-    chia = float(params_intrinsic.chia)
-    log_dl = float(params_intrinsic.log_dl)
+    chis = params_intrinsic.chi_s
+    chia = params_intrinsic.chi_a
+    log_dl = params_intrinsic.ln_luminosity_distance_m
 
     f_lso: float = float(1 / (6**(3 / 2) * np.pi * Mt))
     nu_lso: float = float((np.pi * Mt * f_lso)**(1.0 / 3.0))

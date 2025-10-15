@@ -25,15 +25,15 @@ class BinaryIntrinsicParams(NamedTuple):
     symmetric_mass_ratio: float  # symmetric mass ratio m1*m2/(m1+m2)^2 [unitless]
     mass_ratio: float  # mass ratio m2/m1 [unitless]
     mass_delta: float  # m1-m2/(m1+m2) [unitless]
-    log_luminosity_distance_m: float  # log luminosity distance in m
+    ln_luminosity_distance_m: float  # log luminosity distance in m
     luminosity_distance_m: float  # luminosity distance in m [m]
     frequency_i_hz: float  # starting frequency [Hz]
     time_c_sec: float  # time to coalescence [s]
     phase_c: float  # phase at coalescence [rad]
     chi_s: float  # aligned spin
     chi_a: float  # antialigned spin
-    spin_1z: float  # z component of spin 1 (in the direction of the orbital angular momentum)
-    spin_2z: float  # z component of spin 2 (in the direction of the orbital angular momentum)
+    chi_1z: float  # z component of spin 1 (in the direction of the orbital angular momentum)
+    chi_2z: float  # z component of spin 2 (in the direction of the orbital angular momentum)
     chi_postnewtonian: float  # postnewtonian modification to effective spin
     chi_eff: float  # effective spin
     chi_postnewtonian_norm: float  # postnewtonian modification to effective spin, normalized
@@ -43,7 +43,7 @@ class BinaryIntrinsicParams(NamedTuple):
 
 def _packed_from_intrinsic_binary_helper(params: BinaryIntrinsicParams) -> NDArray[np.floating]:
     return np.array([
-        params.log_luminosity_distance_m,
+        params.ln_luminosity_distance_m,
         params.mass_total_detector_sec,
         params.mass_chirp_detector_sec,
         params.frequency_i_hz,
@@ -59,7 +59,7 @@ def _packed_from_intrinsic_binary_helper(params: BinaryIntrinsicParams) -> NDArr
 def _load_intrinsic_binary_from_packed_helper(params_packed: NDArray[np.floating], mass_ratio_eps: float = 1.e-14) -> BinaryIntrinsicParams:
     assert len(params_packed.shape) == 1
     assert params_packed.size == N_BINARY_PACKED
-    log_luminosity_distance_m = float(params_packed[0])
+    ln_luminosity_distance_m = float(params_packed[0])
     mass_total_detector_sec = float(params_packed[1])
     mass_chirp_detector_sec = float(params_packed[2])
     frequency_i_hz = float(params_packed[3])
@@ -101,17 +101,17 @@ def _load_intrinsic_binary_from_packed_helper(params_packed: NDArray[np.floating
         msg = f'Unphysical value of symmetric_mass_ratio: {symmetric_mass_ratio}'
         raise ValueError(msg)
 
-    luminosity_distance_m: float = float(np.exp(log_luminosity_distance_m))
+    luminosity_distance_m: float = float(np.exp(ln_luminosity_distance_m))
 
     pn_norm_loc: float = 1.0 - 76.0 / 113.0 * symmetric_mass_ratio
     chi_s: float = chi_postnewtonian_norm - chi_a * mass_delta / pn_norm_loc
     chi_postnewtonian: float = chi_postnewtonian_norm * pn_norm_loc
     chi_eff: float = chi_postnewtonian_norm - 76.0 / 113.0 * symmetric_mass_ratio * chi_a * mass_delta / pn_norm_loc
-    spin_1z: float = chi_s + chi_a
-    spin_2z: float = chi_s - chi_a
+    chi_1z: float = chi_s + chi_a
+    chi_2z: float = chi_s - chi_a
     assert np.isclose(chi_postnewtonian, pn_norm_loc * chi_s + chi_a * mass_delta), 'Inconsistent chi_postnewtonian'
-    assert -1.0 <= spin_1z <= 1.0, 'Spin 1 out of range [-1, 1]'
-    assert -1.0 <= spin_2z <= 1.0, 'Spin 2 out of range [-1, 1]'
+    assert -1.0 <= chi_1z <= 1.0, 'Spin 1 out of range [-1, 1]'
+    assert -1.0 <= chi_2z <= 1.0, 'Spin 2 out of range [-1, 1]'
     assert -1.0 <= chi_s <= 1.0, 'chi_s out of range [-1, 1]'
     assert -1.0 <= chi_a <= 1.0, 'chi_a out of range [-1, 1]'
 
@@ -123,15 +123,15 @@ def _load_intrinsic_binary_from_packed_helper(params_packed: NDArray[np.floating
         symmetric_mass_ratio=symmetric_mass_ratio,
         mass_ratio=mass_ratio,
         mass_delta=mass_delta,
-        log_luminosity_distance_m=log_luminosity_distance_m,
+        ln_luminosity_distance_m=ln_luminosity_distance_m,
         luminosity_distance_m=luminosity_distance_m,
         frequency_i_hz=frequency_i_hz,
         time_c_sec=time_c_sec,
         phase_c=phase_c,
         chi_s=chi_s,
         chi_a=chi_a,
-        spin_1z=spin_1z,
-        spin_2z=spin_2z,
+        chi_1z=chi_1z,
+        chi_2z=chi_2z,
         chi_postnewtonian=chi_postnewtonian,
         chi_eff=chi_eff,
         chi_postnewtonian_norm=chi_postnewtonian_norm,
@@ -162,9 +162,9 @@ def _validate_intrinsic_binary_helper(params: BinaryIntrinsicParams) -> bool:
         return False
     if not 0.0 <= params.chi_a <= 1.0:
         return False
-    if not -1.0 <= params.spin_1z <= 1.0:
+    if not -1.0 <= params.chi_1z <= 1.0:
         return False
-    if not -1.0 <= params.spin_2z <= 1.0:
+    if not -1.0 <= params.chi_2z <= 1.0:
         return False
     if not -1.0 <= params.chi_s <= 1.0:
         return False

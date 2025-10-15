@@ -2,14 +2,15 @@
 
 from typing import override
 
+from LisaWaveformTools.binary_params_manager import BinaryIntrinsicParams
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.source_params import ExtrinsicParams, SourceParams
 from LisaWaveformTools.stationary_freq_source import StationarySourceWaveformFreq
-from LisaWaveformTools.taylorf2_helpers import TaylorF2_aligned_inplace, TaylorF2AlignedSpinParams
+from LisaWaveformTools.taylorf2_helpers import TaylorF2_aligned_inplace
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 
-class StationaryTaylorF2WaveformFreq(StationarySourceWaveformFreq[TaylorF2AlignedSpinParams, ExtrinsicParams]):
+class StationaryTaylorF2WaveformFreq(StationarySourceWaveformFreq[BinaryIntrinsicParams, ExtrinsicParams]):
     """Store a taylorf2 waveform in the frequency domain and update it."""
 
     @override
@@ -32,12 +33,12 @@ class StationaryTaylorF2WaveformFreq(StationarySourceWaveformFreq[TaylorF2Aligne
     def _update_intrinsic(self) -> None:
         """Update the waveform to match intrinsic parameters."""
         # TODO check consistency of sign and factor of 2 on phic
-        if not isinstance(self.params.intrinsic, TaylorF2AlignedSpinParams):
-            msg = 'Intrinsic parameters must be of type TaylorF2AlignedSpinParams.'
+        if not isinstance(self.params.intrinsic, BinaryIntrinsicParams):
+            msg = 'Intrinsic parameters must be of type BinaryIntrinsic.'
             raise TypeError(msg)
 
         tc = (
-            self.params.intrinsic.tc
+            self.params.intrinsic.time_c_sec
         )  # -self.delta_tm #TODO make sure this is self consistent way to handle shifting merger time between frames
 
         # TODO proper selectable waveform model everywhere it is used
