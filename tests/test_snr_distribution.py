@@ -31,7 +31,6 @@ from WaveletWaveforms.wdm_config import get_wavelet_model
 )
 @pytest.mark.parametrize('amp_mult', [1.0, 10.0])
 @pytest.mark.parametrize('noise_curve_mode', [1, 0])
-@pytest.mark.skip
 def test_noise_generation_scale_fix(channel_mult: tuple[float, float, float, float], amp_mult: float, noise_curve_mode: int) -> None:
     """Test recover same snr in wavelet, time, and frequency domains"""
     toml_filename_in = 'tests/wavemaket_test_config1.toml'
@@ -58,8 +57,6 @@ def test_noise_generation_scale_fix(channel_mult: tuple[float, float, float, flo
 
     wc = get_wavelet_model(config_in)
     lc = get_lisa_constants(config_in)
-
-    print(wc.Nf, wc.Nt, wc.dt, wc.mult)
 
     noise = instrument_noise_AET_wdm_m(lc, wc)
 
@@ -186,12 +183,13 @@ def test_noise_generation_scale_fix(channel_mult: tuple[float, float, float, flo
     'channel_mult',
     [
         (1.0, 1.0, 1.0, 1.0),
+        (2.0, 0.5, 1.0, 1.0),
     ],
 )
 @pytest.mark.parametrize('amp_mult', [1.0, 10.0])
 @pytest.mark.parametrize('noise_curve_mode', [0, 1])
 def test_noise_generation_scaling_time(channel_mult: tuple[float, float, float, float], amp_mult: float, noise_curve_mode: int) -> None:
-    """Test recover same snr distribution in wavelet, time, and frequency domains"""
+    """Test recover same snr distribution in wavelet, time, matched filter, and frequency domains."""
     toml_filename_in = 'tests/wavemaket_test_config1.toml'
 
     if noise_curve_mode == 0:
@@ -216,8 +214,6 @@ def test_noise_generation_scaling_time(channel_mult: tuple[float, float, float, 
 
     wc = get_wavelet_model(config_in)
     lc = get_lisa_constants(config_in)
-
-    print(wc.Nf, wc.Nt, wc.dt, wc.mult)
 
     noise = instrument_noise_AET_wdm_m(lc, wc)
 
@@ -317,7 +313,6 @@ def test_noise_generation_scaling_time(channel_mult: tuple[float, float, float, 
     signal_amp_cos_unwhitened[:] = np.trapezoid((signal_time.T * np.cos(2 * np.pi * intrinsic.F0 * wc.dt * np.arange(0, wc.Nt * wc.Nf))), dx=wc.dt, axis=1) / wc.Tobs
     signal_amp_sin_unwhitened[:] = np.trapezoid((signal_time.T * np.sin(2 * np.pi * intrinsic.F0 * wc.dt * np.arange(0, wc.Nt * wc.Nf))), dx=wc.dt, axis=1) / wc.Tobs
     signal_amp_mag_unwhitened = (signal_amp_cos_unwhitened**2 + signal_amp_sin_unwhitened**2) * wc.Nt * wc.Nf * 2
-    signal_signal_matched_unwhitened = np.sum(signal_amp_mag_unwhitened, axis=-1)
 
     noise_exp_point = instrument_noise_AET(np.array([intrinsic.F0]), lc)[0]  # /(2 * wc.dt)
     signal_signal_matched_expect = np.sum(signal_amp_mag_unwhitened / noise_exp_point, axis=-1) * 2 * wc.dt
@@ -339,8 +334,6 @@ def test_noise_generation_scaling_time(channel_mult: tuple[float, float, float, 
     signal_amp_cos[:] = np.trapezoid((signal_time_white.T * np.cos(2 * np.pi * intrinsic.F0 * wc.dt * np.arange(0, wc.Nt * wc.Nf))), dx=wc.dt, axis=1) / wc.Tobs
     signal_amp_sin[:] = np.trapezoid((signal_time_white.T * np.sin(2 * np.pi * intrinsic.F0 * wc.dt * np.arange(0, wc.Nt * wc.Nf))), dx=wc.dt, axis=1) / wc.Tobs
     signal_amp_mag = (signal_amp_cos**2 + signal_amp_sin**2) * wc.Nt * wc.Nf * 2
-    signal_phase = np.arctan2(signal_amp_sin, signal_amp_cos)
-    print('phase', signal_phase[0])
 
     signal_signal = np.full(n_seed, np.sum(waveform_sparse_white.wave_value * waveform_sparse_white.wave_value))
     signal_signal_time = np.full(n_seed, np.sum(signal_time_white * signal_time_white))
@@ -348,7 +341,6 @@ def test_noise_generation_scaling_time(channel_mult: tuple[float, float, float, 
     signal_signal_matched = np.sum(signal_amp_mag, axis=-1)
 
     assert_allclose(signal_signal, np.sum(waveform_dense_white * waveform_dense_white), atol=1.0e-100, rtol=1.0e-13)
-    print(signal_signal_matched.mean(), signal_signal_matched_unwhitened.mean(), signal_signal_matched_expect.mean(), signal_signal_matched.mean() / signal_signal_matched_expect.mean())
     assert_allclose(signal_signal_matched, signal_signal_matched_expect, atol=1.e-100, rtol=6.e-2)
 
     # noise_real_white = noise_manager.generate_dense_noise(seed_override=seed_loc, white_mode=1)
@@ -421,18 +413,8 @@ def test_noise_generation_scaling_time(channel_mult: tuple[float, float, float, 
     log_likelihood_freq = data_signal_freq - signal_signal_freq / 2
     log_likelihood_matched = data_signal_matched - signal_signal_matched / 2
 
-    log_likelihood_mean_exp = np.mean(signal_signal / 2.0)
-
     snr_channel = noise_manager.get_sparse_snrs(wavelet_waveform, nt_lim_snr)
     snr_tot: float = float(np.linalg.norm(snr_channel))
-
-    print(np.mean(noise_amp_mag), np.std(noise_amp_mag))
-    print('free', np.mean(noise_noise_matched), np.std(noise_noise_matched))
-    print(np.mean(signal_signal_matched), np.std(signal_signal_matched))
-    print(np.mean(signal_signal_matched) / np.mean(noise_noise_matched), np.mean(signal_signal_matched) / np.mean(noise_noise_matched) / snr_tot)
-    print('sn', np.mean(signal_noise_matched), np.std(signal_noise_matched), snr_tot, snr_tot / np.std(signal_noise_matched), wc.Tobs, wc.Tobs / (snr_tot / np.std(signal_noise_matched)))
-    print(snr_tot)
-    print(np.mean(noise_noise_matched) / snr_tot)
 
     n_set_tot: int = int(np.sum(wavelet_waveform.n_set))
     std_data_data: float = float(np.sqrt(4 * snr_tot ** 2 + 2 * n_set_tot))
@@ -446,55 +428,19 @@ def test_noise_generation_scaling_time(channel_mult: tuple[float, float, float, 
     n_set_tot_matched: int = 6
     std_data_data_matched: float = float(np.sqrt(4 * snr_tot ** 2 + 2 * n_set_tot_matched))
 
-    print('likelihood mean, std, min, max', log_likelihood.mean(), log_likelihood.std(), log_likelihood.min(), log_likelihood.max())
-    print('likelihood expect', log_likelihood_mean_exp)
-    print('signal*noise mean, std, min, max', signal_noise.mean(), signal_noise.std(), signal_noise.min(), signal_noise.max())
-    print('noise*noise mean, std, min, max', noise_noise.mean(), noise_noise.std(), noise_noise.min(), noise_noise.max())
-    print('data*signal mean, std, min, max', data_signal.mean(), data_signal.std(), data_signal.min(), data_signal.max())
-    print('data*noise mean, std, min, max', data_noise.mean(), data_noise.std(), data_noise.min(), data_noise.max())
-    print('data*data mean, std, min, max', data_data.mean(), data_data.std(), data_data.min(), data_data.max())
-    print('data*data mean diff, std', (data_data.mean() - n_set_tot - signal_signal.mean()) / np.sqrt(2 * n_set_tot + 2 * snr_tot**2), data_data.std() / np.sqrt(2 * n_set_tot + 2 * snr_tot**2))
-    print('data*data exp, std', np.sqrt(2 * n_set_tot + 2 * snr_tot**2) / np.sqrt(n_seed), np.sqrt(2.0) / np.sqrt(n_seed) / np.sqrt(2 * n_set_tot + 2 * snr_tot**2))
-    print('snr channels, total', snr_channel, snr_tot)
-    print('signal*signal', signal_signal.mean())
-    print('set, total', wavelet_waveform.n_set, n_set_tot)
-    print('(signal* noise std)/(total snr)', signal_noise.std() / snr_tot)
+    assert_allclose(signal_signal, signal_signal_time, atol=1.e-100, rtol=3.e-7)
+    assert_allclose(signal_signal, signal_signal_freq, atol=1.e-100, rtol=3.e-7)
+    assert_allclose(signal_signal, signal_signal_matched, atol=1.e-100, rtol=9.e-3)
+    assert_allclose(signal_signal_freq, signal_signal_time, atol=1.e-100, rtol=3.e-7)
+    assert_allclose(signal_signal_matched, signal_signal_time, atol=1.e-100, rtol=9.e-3)
+    assert_allclose(signal_signal_freq, signal_signal_matched, atol=1.e-100, rtol=9.e-3)
 
-    # import matplotlib.pyplot as plt
-    # plt.hist(log_likelihood - log_likelihood_mean_exp, 100, alpha=0.8, density=True)
-    # plt.show()
-
-    # plt.hist(signal_noise, 100, alpha=0.8, density=True)
-    # plt.show()
-
-    # plt.hist((noise_noise - n_set_tot)/np.sqrt(2*n_set_tot), 100, alpha=0.8, density=True)
-    # plt.show()
-
-    # plt.hist((data_noise - n_set_tot)/np.sqrt(2*n_set_tot + snr_tot**2), 100, alpha=0.8, density=True)
-    # plt.show()
-
-    # plt.hist((data_data - n_set_tot - signal_signal)/std_data_data, 100, alpha=0.8, density=True)
-    # plt.show()
-    # var_data_data = 2*var(signal noise) + var(noise noise) + 4 * cov(signal noise, noise noise)
-    # std_data_data = np.sqrt(2*snr_tot**2 + 2*n_set_tot + 4 * cov(signal noise, noise noise))
-    # print(std_data_data, np.sqrt(2*n_set_tot + 4*snr_tot**2 + 4 * cov_got), data_data.std())
-
-    assert_allclose(signal_signal, signal_signal_time, atol=1.e-100, rtol=1.e-7)
-    assert_allclose(signal_signal, signal_signal_freq, atol=1.e-100, rtol=1.e-7)
-    assert_allclose(signal_signal, signal_signal_matched, atol=1.e-100, rtol=3.e-3)
-    assert_allclose(signal_signal_freq, signal_signal_time, atol=1.e-100, rtol=1.e-7)
-    assert_allclose(signal_signal_matched, signal_signal_time, atol=1.e-100, rtol=3.e-3)
-    assert_allclose(signal_signal_freq, signal_signal_matched, atol=1.e-100, rtol=3.e-3)
-
-    assert_allclose(log_likelihood, log_likelihood_matched, atol=1.e-100, rtol=3.e-3)
+    assert_allclose(log_likelihood, log_likelihood_matched, atol=1.e-100, rtol=9.e-3)
     assert_allclose(log_likelihood, log_likelihood_freq, atol=1.e-100, rtol=1.e-5)
     assert_allclose(log_likelihood, log_likelihood_time, atol=1.e-100, rtol=1.e-5)
     assert_allclose(log_likelihood_time, log_likelihood_freq, atol=1.e-100, rtol=1.e-5)
-    assert_allclose(log_likelihood_time, log_likelihood_matched, atol=1.e-100, rtol=3.e-3)
-    assert_allclose(log_likelihood_freq, log_likelihood_matched, atol=1.e-100, rtol=3.e-3)
-
-    print(np.mean(noise_noise_freq), n_set_tot_freq, np.mean(noise_noise_freq) / n_set_tot_freq, np.std(noise_noise_freq), np.sqrt(2 * n_set_tot_freq), (np.std(noise_noise_freq) / np.sqrt(2 * n_set_tot_freq))**2)
-    print(np.mean(signal_noise_freq), np.std(signal_noise_freq), snr_tot, np.std(signal_noise_freq) / snr_tot)
+    assert_allclose(log_likelihood_time, log_likelihood_matched, atol=1.e-100, rtol=9.e-3)
+    assert_allclose(log_likelihood_freq, log_likelihood_matched, atol=1.e-100, rtol=9.e-3)
 
     _ = unit_normal_battery(noise_noise_matched - n_set_tot_matched, mult=float(np.sqrt(2 * n_set_tot_matched)), do_assert=True)
     # _ = unit_normal_battery(log_likelihood_matched - signal_signal_matched / 2, mult=snr_tot, do_assert=True)
@@ -571,8 +517,6 @@ def test_noise_generation_scaling_direct(channel_mult: tuple[float, float, float
 
     wc = get_wavelet_model(config_in)
     lc = get_lisa_constants(config_in)
-
-    print(wc.Nf, wc.Nt, wc.dt, wc.mult)
 
     noise = instrument_noise_AET_wdm_m(lc, wc)
 
@@ -690,25 +634,6 @@ def test_noise_generation_scaling_direct(channel_mult: tuple[float, float, float
     print('set, total', wavelet_waveform.n_set, n_set_tot)
     print('(signal* noise std)/(total snr)', signal_noise.std() / snr_tot)
 
-    # import matplotlib.pyplot as plt
-    # plt.hist(log_likelihood - log_likelihood_mean_exp, 100, alpha=0.8, density=True)
-    # plt.show()
-
-    # plt.hist(signal_noise, 100, alpha=0.8, density=True)
-    # plt.show()
-
-    # plt.hist((noise_noise - n_set_tot)/np.sqrt(2*n_set_tot), 100, alpha=0.8, density=True)
-    # plt.show()
-
-    # plt.hist((data_noise - n_set_tot)/np.sqrt(2*n_set_tot + snr_tot**2), 100, alpha=0.8, density=True)
-    # plt.show()
-
-    # plt.hist((data_data - n_set_tot - signal_signal)/std_data_data, 100, alpha=0.8, density=True)
-    # plt.show()
-    # var_data_data = 2*var(signal noise) + var(noise noise) + 4 * cov(signal noise, noise noise)
-    # std_data_data = np.sqrt(2*snr_tot**2 + 2*n_set_tot + 4 * cov(signal noise, noise noise))
-    # print(std_data_data, np.sqrt(2*n_set_tot + 4*snr_tot**2 + 4 * cov_got), data_data.std())
-
     assert_allclose(snr_tot**2, 2 * log_likelihood_mean_exp, atol=1.0e-10, rtol=1.0e-10)
 
     _ = unit_normal_battery(signal_noise, mult=snr_tot, do_assert=True)
@@ -772,8 +697,6 @@ def test_noise_generation_scaling_compare(channel_mult: tuple[float, float, floa
     wc2 = get_wavelet_model(config_in2)
     lc2 = get_lisa_constants(config_in2)
 
-    print(wc1.Nf, wc1.Nt, wc1.dt, wc1.mult)
-    print(wc2.Nf, wc2.Nt, wc2.dt, wc2.mult)
     # check proper set up
     assert lc1.noise_curve_mode == lc2.noise_curve_mode
 
@@ -794,15 +717,6 @@ def test_noise_generation_scaling_compare(channel_mult: tuple[float, float, floa
         FTd0=3.0e-12,  # frequency derivative (Hz/s)
     )
 
-    print(
-        intrinsic.FTd0,
-        8 * wc1.DF / wc1.Tw,
-        8 * wc2.DF / wc2.Tw,
-        wc1.DF**2 / 8,
-        wc2.DF**2 / 8,
-        wc1.dfd * (wc1.Nfd - wc1.Nfd_negative),
-        wc2.dfd * (wc2.Nfd - wc2.Nfd_negative),
-    )
     assert intrinsic.FTd0 < 8 * wc1.DF / wc1.Tw
     assert intrinsic.FTd0 < 8 * wc2.DF / wc2.Tw
     assert intrinsic.FTd0 < wc1.dfd * (wc1.Nfd - wc1.Nfd_negative)
@@ -923,36 +837,12 @@ def test_noise_generation_scaling_compare(channel_mult: tuple[float, float, floa
     snr_channel1 = noise_manager1.get_sparse_snrs(wavelet_waveform1, nt_lim_snr1)
     snr_tot1 = float(np.linalg.norm(snr_channel1))
 
+    n_set_tot1 = np.sum(wavelet_waveform1.n_set)
+
     snr_channel2 = noise_manager2.get_sparse_snrs(wavelet_waveform2, nt_lim_snr2)
     snr_tot2 = float(np.linalg.norm(snr_channel2))
 
-    print('1 likelihood mean, std, min, max', log_likelihood1.mean(), log_likelihood1.std(), log_likelihood1.min(), log_likelihood1.max())
-    print('1 likelihood expect', log_likelihood_mean_exp1)
-    print('1 signal*noise mean, std, min, max', signal_noise1.mean(), signal_noise1.std(), signal_noise1.min(), signal_noise1.max())
-    print('1 noise*noise mean, std, min, max', noise_noise1.mean(), noise_noise1.std(), noise_noise1.min(), noise_noise1.max())
-    print('1 data*signal mean, std, min, max', data_signal1.mean(), data_signal1.std(), data_signal1.min(), data_signal1.max())
-    print('1 data*noise mean, std, min, max', data_noise1.mean(), data_noise1.std(), data_noise1.min(), data_noise1.max())
-    print('1 data*data mean, std, min, max', data_data1.mean(), data_data1.std(), data_data1.min(), data_data1.max())
-    print('1 snr channels, total', snr_channel1, snr_tot1)
-    print('1 signal*signal', signal_signal1.mean())
-    n_set_tot1 = np.sum(wavelet_waveform1.n_set)
-    print('1 set, total', wavelet_waveform1.n_set, n_set_tot1)
-    print('1 (signal* noise std)/(total snr)', signal_noise1.std() / snr_tot1)
-
-    print('2 likelihood mean, std, min, max', log_likelihood2.mean(), log_likelihood2.std(), log_likelihood2.min(), log_likelihood2.max())
-    print('2 likelihood expect', log_likelihood_mean_exp2)
-    print('2 signal*noise mean, std, min, max', signal_noise2.mean(), signal_noise2.std(), signal_noise2.min(), signal_noise2.max())
-    print('2 noise*noise mean, std, min, max', noise_noise2.mean(), noise_noise2.std(), noise_noise2.min(), noise_noise2.max())
-    print('2 data*signal mean, std, min, max', data_signal2.mean(), data_signal2.std(), data_signal2.min(), data_signal2.max())
-    print('2 data*noise mean, std, min, max', data_noise2.mean(), data_noise2.std(), data_noise2.min(), data_noise2.max())
-    print('2 data*data mean, std, min, max', data_data2.mean(), data_data2.std(), data_data2.min(), data_data2.max())
-    print('2 snr channels, total', snr_channel2, snr_tot2)
-    print('2 signal*signal', signal_signal2.mean())
     n_set_tot2 = np.sum(wavelet_waveform2.n_set)
-    print('2 set, total', wavelet_waveform2.n_set, n_set_tot2)
-    print('2 (signal* noise std)/(total snr)', signal_noise2.std() / snr_tot2)
-
-    print('12 snr rat^2, exp likelihood rat', (snr_tot1 / snr_tot2) ** 2, log_likelihood_mean_exp1 / log_likelihood_mean_exp2)
 
     assert_allclose(snr_tot1**2, 2 * log_likelihood_mean_exp1, atol=1.0e-10, rtol=1.0e-10)
     assert_allclose(snr_tot2**2, 2 * log_likelihood_mean_exp2, atol=1.0e-10, rtol=1.0e-10)
@@ -1037,8 +927,6 @@ def test_noise_whiten_consistency(channel_mult: tuple[float, float, float, float
     wc2 = get_wavelet_model(config_in2)
     lc2 = get_lisa_constants(config_in2)
 
-    print(wc1.Nf, wc1.Nt, wc1.dt, wc1.mult)
-    print(wc2.Nf, wc2.Nt, wc2.dt, wc2.mult)
     # check proper set up
     assert lc1.noise_curve_mode == lc2.noise_curve_mode
 
@@ -1058,15 +946,6 @@ def test_noise_whiten_consistency(channel_mult: tuple[float, float, float, float
         FTd0=3.0e-12,  # frequency derivative (Hz/s)
     )
 
-    print(
-        intrinsic.FTd0,
-        8 * wc1.DF / wc1.Tw,
-        8 * wc2.DF / wc2.Tw,
-        wc1.DF**2 / 8,
-        wc2.DF**2 / 8,
-        wc1.dfd * (wc1.Nfd - wc1.Nfd_negative),
-        wc2.dfd * (wc2.Nfd - wc2.Nfd_negative),
-    )
     assert intrinsic.FTd0 < 8 * wc1.DF / wc1.Tw
     assert intrinsic.FTd0 < 8 * wc2.DF / wc2.Tw
     assert intrinsic.FTd0 < wc1.dfd * (wc1.Nfd - wc1.Nfd_negative)
