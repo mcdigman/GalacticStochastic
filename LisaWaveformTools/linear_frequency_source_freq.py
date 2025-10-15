@@ -18,7 +18,7 @@ def linear_frequency_intrinsic_freq(
     waveform: StationaryWaveformFreq, intrinsic_params: LinearFrequencyIntrinsicParams, f_in: NDArray[np.floating]
 ) -> None:
     """
-    Get time domain intrinsic_waveform for a linearly increasing frequency source with constant amplitude.
+    Get frequency domain intrinsic_waveform for a linearly increasing frequency source with constant amplitude.
 
     For use in the stationary phase approximation. The actual intrinsic_waveform would be given:
     h = amp_t*np.cos(-phi0 + 2*pi*F0*t + pi*FTd0*t**2)
