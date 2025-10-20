@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, NamedTuple, override
 
 import numpy as np
+from numpy.testing import assert_allclose
 
 from LisaWaveformTools.source_params import AbstractIntrinsicParamsManager
 
@@ -23,9 +24,17 @@ class BinaryIntrinsicParams(NamedTuple):
     """Black hole binary intrinsic parameters."""
 
     mass_total_detector_sec: float  # total mass in detector frame [s]
+    mass_total_detector_kg: float  # total mass in detector frame [kg]
+    mass_total_detector_solar: float  # total mass in detector frame [solar mass]
     mass_chirp_detector_sec: float  # chirp mass in detector frame [s]
+    mass_chirp_detector_kg: float  # chirp mass in detector frame [kg]
+    mass_chirp_detector_solar: float  # chirp mass in detector frame [solar mass]
     mass_1_detector_sec: float  # mass primary in detector frame [s]
+    mass_1_detector_kg: float  # mass primary in detector frame [kg]
+    mass_1_detector_solar: float  # mass primary in detector frame [solar mass]
     mass_2_detector_sec: float  # mass secondary in detector frame [s]
+    mass_2_detector_kg: float  # mass secondary in detector frame [kg]
+    mass_2_detector_solar: float  # mass secondary in detector frame [solar mass]
     symmetric_mass_ratio: float  # symmetric mass ratio m1*m2/(m1+m2)^2 [unitless]
     mass_ratio: float  # mass ratio m2/m1 [unitless]
     mass_delta: float  # m1-m2/(m1+m2) [unitless]
@@ -113,17 +122,56 @@ def _load_intrinsic_binary_from_packed_helper(params_packed: NDArray[np.floating
     chi_eff: float = chi_postnewtonian_norm - 76.0 / 113.0 * symmetric_mass_ratio * chi_a * mass_delta / pn_norm_loc
     chi_1z: float = chi_s + chi_a
     chi_2z: float = chi_s - chi_a
-    assert np.isclose(chi_postnewtonian, pn_norm_loc * chi_s + chi_a * mass_delta), 'Inconsistent chi_postnewtonian'
+    assert_allclose(chi_postnewtonian, pn_norm_loc * chi_s + chi_a * mass_delta), 'Inconsistent chi_postnewtonian'
     assert -1.0 <= chi_1z <= 1.0, 'Spin 1 out of range [-1, 1]'
     assert -1.0 <= chi_2z <= 1.0, 'Spin 2 out of range [-1, 1]'
     assert -1.0 <= chi_s <= 1.0, 'chi_s out of range [-1, 1]'
     assert -1.0 <= chi_a <= 1.0, 'chi_a out of range [-1, 1]'
 
+    # mass conversions
+    mass_total_detector_solar = mass_total_detector_sec / M_SUN_SEC
+    mass_chirp_detector_solar = mass_chirp_detector_sec / M_SUN_SEC
+    mass_1_detector_solar = mass_1_detector_sec / M_SUN_SEC
+    mass_2_detector_solar = mass_2_detector_sec / M_SUN_SEC
+
+    mass_total_detector_kg = mass_total_detector_solar * M_SUN_KG
+    mass_chirp_detector_kg = mass_chirp_detector_solar * M_SUN_KG
+    mass_1_detector_kg = mass_1_detector_solar * M_SUN_KG
+    mass_2_detector_kg = mass_2_detector_solar * M_SUN_KG
+
+    # TODO these checks should be formalized as a test instaed
+    assert_allclose(mass_2_detector_sec / mass_1_detector_sec, mass_ratio)
+    assert_allclose(mass_2_detector_kg / mass_1_detector_kg, mass_ratio)
+    assert_allclose(mass_2_detector_solar / mass_1_detector_solar, mass_ratio)
+    assert_allclose(mass_2_detector_sec + mass_1_detector_sec, mass_total_detector_sec)
+    assert_allclose(mass_2_detector_kg + mass_1_detector_kg, mass_total_detector_kg)
+    assert_allclose(mass_2_detector_solar + mass_1_detector_solar, mass_total_detector_solar)
+    assert_allclose((mass_1_detector_sec - mass_2_detector_sec) / mass_total_detector_sec, mass_delta)
+    assert_allclose((mass_1_detector_kg - mass_2_detector_kg) / mass_total_detector_kg, mass_delta)
+    assert_allclose((mass_1_detector_solar - mass_2_detector_solar) / mass_total_detector_solar, mass_delta)
+    assert_allclose(float((mass_chirp_detector_sec / mass_total_detector_sec) ** (5.0 / 3.0)), symmetric_mass_ratio)
+    assert_allclose(float((mass_chirp_detector_kg / mass_total_detector_kg) ** (5.0 / 3.0)), symmetric_mass_ratio)
+    assert_allclose(float((mass_chirp_detector_solar / mass_total_detector_solar) ** (5.0 / 3.0)), symmetric_mass_ratio)
+    assert_allclose((mass_1_detector_sec * mass_2_detector_sec) ** (3.0 / 5.0) / (mass_1_detector_sec + mass_2_detector_sec) ** (1. / 5.), mass_chirp_detector_sec)
+    assert_allclose((mass_1_detector_kg * mass_2_detector_kg) ** (3.0 / 5.0) / (mass_1_detector_kg + mass_2_detector_kg) ** (1. / 5.), mass_chirp_detector_kg)
+    assert_allclose((mass_1_detector_solar * mass_2_detector_solar) ** (3.0 / 5.0) / (mass_1_detector_solar + mass_2_detector_solar) ** (1. / 5.), mass_chirp_detector_solar)
+    assert_allclose((mass_1_detector_sec * mass_2_detector_sec) / (mass_1_detector_sec + mass_2_detector_sec) ** 2, symmetric_mass_ratio)
+    assert_allclose((mass_1_detector_kg * mass_2_detector_kg) / (mass_1_detector_kg + mass_2_detector_kg) ** 2, symmetric_mass_ratio)
+    assert_allclose((mass_1_detector_solar * mass_2_detector_solar) / (mass_1_detector_solar + mass_2_detector_solar) ** 2, symmetric_mass_ratio)
+
     return BinaryIntrinsicParams(
         mass_total_detector_sec=mass_total_detector_sec,
+        mass_total_detector_kg=mass_total_detector_kg,
+        mass_total_detector_solar=mass_total_detector_solar,
         mass_chirp_detector_sec=mass_chirp_detector_sec,
+        mass_chirp_detector_kg=mass_chirp_detector_kg,
+        mass_chirp_detector_solar=mass_chirp_detector_solar,
         mass_1_detector_sec=mass_1_detector_sec,
+        mass_1_detector_kg=mass_1_detector_kg,
+        mass_1_detector_solar=mass_1_detector_solar,
         mass_2_detector_sec=mass_2_detector_sec,
+        mass_2_detector_kg=mass_2_detector_kg,
+        mass_2_detector_solar=mass_2_detector_solar,
         symmetric_mass_ratio=symmetric_mass_ratio,
         mass_ratio=mass_ratio,
         mass_delta=mass_delta,

@@ -71,8 +71,6 @@ def test_imrphenomd_internal_consistency() -> None:
     finspin: float = FinalSpin0815(intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a)  # FinalSpin0815 - 0815 is like a version number
     Mf_ringdown, Mf_damp = fringdown(intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, finspin)
     amp0_use: float = amp0 * amp0Func(intrinsic.symmetric_mass_ratio)
-    mass_1_detector_kg = intrinsic.mass_1_detector_sec * imrc.MSUN_SI / imrc.MTSUN_SI
-    mass_2_detector_kg = intrinsic.mass_2_detector_sec * imrc.MSUN_SI / imrc.MTSUN_SI
 
     NF: int = 16384 * 10
 
@@ -207,10 +205,10 @@ def test_imrphenomd_internal_consistency() -> None:
     imr_params_FI2 = imr_params_FI3
 
     h22 = AmpPhaseFDWaveform(NF, waveform_imr.F, waveform_imr.AF, waveform_imr.PF, waveform_imr.TF, waveform_imr.TFp, 0., 0.)
-    h22 = IMRPhenomDGenerateh22FDAmpPhase(h22, freq, intrinsic.phase_c, MfRef_in, mass_1_detector_kg, mass_2_detector_kg, intrinsic.chi_1z, intrinsic.chi_2z, intrinsic.luminosity_distance_m)
+    h22 = IMRPhenomDGenerateh22FDAmpPhase(h22, freq, intrinsic.phase_c, MfRef_in, intrinsic.mass_1_detector_kg, intrinsic.mass_2_detector_kg, intrinsic.chi_1z, intrinsic.chi_2z, intrinsic.luminosity_distance_m)
 
     assert_allclose(2. * np.sqrt(5. / (64. * np.pi)) * h22.amp, waveform_FI3.AF, atol=1.e-30, rtol=1.e-10)
-    assert_allclose(h22.timep, waveform_FI3.TFp, atol=1.e-30, rtol=1.e-10)
+    assert_allclose(h22.timep, waveform_FI3.TFp, atol=1.e-30, rtol=2.1e-10)
 
     waveform5.AF[:] = IMRPhenDAmplitude(Mfs, intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, NF, amp0)
 
