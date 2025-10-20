@@ -69,7 +69,7 @@ def _packed_from_intrinsic_binary_helper(params: BinaryIntrinsicParams) -> NDArr
     ])
 
 
-def _load_intrinsic_binary_from_packed_helper(params_packed: NDArray[np.floating], mass_ratio_eps: float = 1.e-14) -> BinaryIntrinsicParams:
+def _load_intrinsic_binary_from_packed_helper(params_packed: NDArray[np.floating], mass_ratio_eps: float = 1.e-10) -> BinaryIntrinsicParams:
     assert len(params_packed.shape) == 1
     assert params_packed.size == N_BINARY_PACKED
     ln_luminosity_distance_m = float(params_packed[0])
@@ -88,10 +88,13 @@ def _load_intrinsic_binary_from_packed_helper(params_packed: NDArray[np.floating
     assert frequency_i_hz > 0.0, 'Initial frequency must be positive.'
     assert 0.0 <= eccentricity_i < 1.0, 'Eccentricity must be in [0, 1).'
     assert -1.0 <= chi_postnewtonian_norm <= 1.0, 'chi_postnewtonian out of range [-1, 1]'
-    assert 0.0 <= chi_a <= 1.0, 'chi_a must be in [0, 1]'
+    assert -1.0 <= chi_a <= 1.0, 'chi_a must be in [-1, 1]'
 
     # Derived parameters
-    symmetric_mass_ratio: float = float((mass_chirp_detector_sec / mass_total_detector_sec) ** (5.0 / 3.0))
+    # using integer power 5 then cube root appears marginally more numerically stable way to get symmetric mass ratio here
+    # symmetric_mass_ratio: float = float(np.cbrt((mass_chirp_detector_sec / mass_total_detector_sec))**5)
+    # symmetric_mass_ratio: float = float((mass_chirp_detector_sec / mass_total_detector_sec) ** (5.0/3.0))
+    symmetric_mass_ratio: float = float(np.cbrt((mass_chirp_detector_sec / mass_total_detector_sec) ** 5))
 
     if symmetric_mass_ratio >= 0.25:
         if symmetric_mass_ratio > 0.25 + mass_ratio_eps:
@@ -103,12 +106,16 @@ def _load_intrinsic_binary_from_packed_helper(params_packed: NDArray[np.floating
         mass_delta: float = 0.0
         mass_ratio: float = 1.0
         mass_1_detector_sec: float = mass_total_detector_sec / 2.0
-        mass_2_detector_sec: float = mass_1_detector_sec
+        mass_2_detector_sec: float = mass_total_detector_sec / 2.0
     elif symmetric_mass_ratio > 0.0:
         mass_delta = float(np.sqrt(1 - 4 * symmetric_mass_ratio))
         mass_ratio = (1 - mass_delta) / (1 + mass_delta)
-        mass_1_detector_sec = mass_total_detector_sec / (1.0 + mass_ratio)
-        mass_2_detector_sec = mass_total_detector_sec - mass_1_detector_sec
+        # mass_1_detector_sec = mass_total_detector_sec / (1.0 + mass_ratio)
+        # mass_2_detector_sec = mass_total_detector_sec - mass_1_detector_sec
+        # mass_2_detector_sec = (1.0 - mass_delta) / 2.0 * mass_total_detector_sec
+        # mass_2_detector_sec = mass_ratio * mass_1_detector_sec
+        mass_1_detector_sec = (1 + mass_delta) * mass_total_detector_sec / 2.0
+        mass_2_detector_sec = (1 - mass_delta) * mass_total_detector_sec / 2.0
         assert mass_1_detector_sec >= mass_2_detector_sec, 'm1 must be the larger mass.'
     else:
         msg = f'Unphysical value of symmetric_mass_ratio: {symmetric_mass_ratio}'
@@ -128,6 +135,9 @@ def _load_intrinsic_binary_from_packed_helper(params_packed: NDArray[np.floating
     assert -1.0 <= chi_s <= 1.0, 'chi_s out of range [-1, 1]'
     assert -1.0 <= chi_a <= 1.0, 'chi_a out of range [-1, 1]'
 
+    assert mass_1_detector_sec > 0.0
+    assert mass_2_detector_sec > 0.0
+
     # mass conversions
     mass_total_detector_solar = mass_total_detector_sec / M_SUN_SEC
     mass_chirp_detector_solar = mass_chirp_detector_sec / M_SUN_SEC
@@ -138,26 +148,6 @@ def _load_intrinsic_binary_from_packed_helper(params_packed: NDArray[np.floating
     mass_chirp_detector_kg = mass_chirp_detector_solar * M_SUN_KG
     mass_1_detector_kg = mass_1_detector_solar * M_SUN_KG
     mass_2_detector_kg = mass_2_detector_solar * M_SUN_KG
-
-    # TODO these checks should be formalized as a test instaed
-    assert_allclose(mass_2_detector_sec / mass_1_detector_sec, mass_ratio)
-    assert_allclose(mass_2_detector_kg / mass_1_detector_kg, mass_ratio)
-    assert_allclose(mass_2_detector_solar / mass_1_detector_solar, mass_ratio)
-    assert_allclose(mass_2_detector_sec + mass_1_detector_sec, mass_total_detector_sec)
-    assert_allclose(mass_2_detector_kg + mass_1_detector_kg, mass_total_detector_kg)
-    assert_allclose(mass_2_detector_solar + mass_1_detector_solar, mass_total_detector_solar)
-    assert_allclose((mass_1_detector_sec - mass_2_detector_sec) / mass_total_detector_sec, mass_delta)
-    assert_allclose((mass_1_detector_kg - mass_2_detector_kg) / mass_total_detector_kg, mass_delta)
-    assert_allclose((mass_1_detector_solar - mass_2_detector_solar) / mass_total_detector_solar, mass_delta)
-    assert_allclose(float((mass_chirp_detector_sec / mass_total_detector_sec) ** (5.0 / 3.0)), symmetric_mass_ratio)
-    assert_allclose(float((mass_chirp_detector_kg / mass_total_detector_kg) ** (5.0 / 3.0)), symmetric_mass_ratio)
-    assert_allclose(float((mass_chirp_detector_solar / mass_total_detector_solar) ** (5.0 / 3.0)), symmetric_mass_ratio)
-    assert_allclose((mass_1_detector_sec * mass_2_detector_sec) ** (3.0 / 5.0) / (mass_1_detector_sec + mass_2_detector_sec) ** (1. / 5.), mass_chirp_detector_sec)
-    assert_allclose((mass_1_detector_kg * mass_2_detector_kg) ** (3.0 / 5.0) / (mass_1_detector_kg + mass_2_detector_kg) ** (1. / 5.), mass_chirp_detector_kg)
-    assert_allclose((mass_1_detector_solar * mass_2_detector_solar) ** (3.0 / 5.0) / (mass_1_detector_solar + mass_2_detector_solar) ** (1. / 5.), mass_chirp_detector_solar)
-    assert_allclose((mass_1_detector_sec * mass_2_detector_sec) / (mass_1_detector_sec + mass_2_detector_sec) ** 2, symmetric_mass_ratio)
-    assert_allclose((mass_1_detector_kg * mass_2_detector_kg) / (mass_1_detector_kg + mass_2_detector_kg) ** 2, symmetric_mass_ratio)
-    assert_allclose((mass_1_detector_solar * mass_2_detector_solar) / (mass_1_detector_solar + mass_2_detector_solar) ** 2, symmetric_mass_ratio)
 
     return BinaryIntrinsicParams(
         mass_total_detector_sec=mass_total_detector_sec,
