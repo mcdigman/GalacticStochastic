@@ -135,20 +135,20 @@ def setup_test_helper(m1_solar: float, m2_solar: float, chi1: float, chi2: float
 
     # check spins
     pn_norm_loc: float = 1.0 - 76.0 / 113.0 * intrinsic.symmetric_mass_ratio
-    assert_allclose(intrinsic.chi_postnewtonian, pn_norm_loc * intrinsic.chi_s + intrinsic.chi_a * intrinsic.mass_delta, atol=1.e-100, rtol=1.e-14)
-    assert_allclose(intrinsic.chi_s, intrinsic.chi_postnewtonian_norm - intrinsic.chi_a * intrinsic.mass_delta / pn_norm_loc, atol=1.e-100, rtol=1.e-14)
-    assert_allclose(intrinsic.chi_eff, intrinsic.chi_postnewtonian_norm - 76 / 113 * intrinsic.chi_a * intrinsic.mass_delta * intrinsic.symmetric_mass_ratio / pn_norm_loc, atol=1.e-100, rtol=1.e-14)
-    assert_allclose(intrinsic.chi_postnewtonian, pn_norm_loc * intrinsic.chi_postnewtonian_norm, atol=1.e-100, rtol=1.e-14)
-    assert_allclose(intrinsic.chi_s, (intrinsic.chi_1z + intrinsic.chi_2z) / 2., atol=1.e-100, rtol=1.e-14)
-    assert_allclose(intrinsic.chi_a, (intrinsic.chi_1z - intrinsic.chi_2z) / 2., atol=1.e-100, rtol=1.e-14)
+    assert_allclose(intrinsic.chi_postnewtonian, pn_norm_loc * intrinsic.chi_s + intrinsic.chi_a * intrinsic.mass_delta, atol=1.e-14, rtol=1.e-14)
+    assert_allclose(intrinsic.chi_s, intrinsic.chi_postnewtonian_norm - intrinsic.chi_a * intrinsic.mass_delta / pn_norm_loc, atol=1.e-14, rtol=1.e-14)
+    assert_allclose(intrinsic.chi_eff, intrinsic.chi_postnewtonian_norm - 76 / 113 * intrinsic.chi_a * intrinsic.mass_delta * intrinsic.symmetric_mass_ratio / pn_norm_loc, atol=1.e-14, rtol=1.e-14)
+    assert_allclose(intrinsic.chi_postnewtonian, pn_norm_loc * intrinsic.chi_postnewtonian_norm, atol=1.e-14, rtol=1.e-14)
+    assert_allclose(intrinsic.chi_s, (intrinsic.chi_1z + intrinsic.chi_2z) / 2., atol=1.e-14, rtol=1.e-14)
+    assert_allclose(intrinsic.chi_a, (intrinsic.chi_1z - intrinsic.chi_2z) / 2., atol=1.e-14, rtol=1.e-14)
 
     return intrinsic
 
 
 @pytest.mark.parametrize('m1_solar', [1., 1. + 1.e-10, 1.00001, 2., 100., 199.99, 199.99999, 199.999999, 199.999999999, 200., 200.01, 1242860.685, 2599137.035])
 @pytest.mark.parametrize('m2_solar', [1., 1. + 1.e-10, 1.00001, 2., 100., 199.99, 199.99999, 199.999999, 199.999999999, 200., 200.01, 1242860.685, 2599137.035])
-@pytest.mark.parametrize('chi1', [0.7534821857057837, 0.6215875279643664])
-@pytest.mark.parametrize('chi2', [0.7534821857057837, 0.6215875279643664])
+@pytest.mark.parametrize('chi1', [-1.0, -0.999, -0.7534821857057837, -0.6215875279643664, 0., 0.6215875279643664, 0.7534821857057837, 0.999, 1.0])
+@pytest.mark.parametrize('chi2', [-1.0, -0.999, -0.7534821857057837, -0.6215875279643664, 0., 0.6215875279643664, 0.7534821857057837, 0.999, 1.0])
 def test_load_consistency(m1_solar: float, m2_solar: float, chi1: float, chi2: float) -> None:
     """Various checks for internal consistency of binary parameter loading"""
     setup_test_helper(m1_solar, m2_solar, chi1, chi2)

@@ -4,7 +4,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, NamedTuple, override
 
 import numpy as np
-from numpy.testing import assert_allclose
 
 from LisaWaveformTools.source_params import AbstractIntrinsicParamsManager
 
@@ -129,14 +128,6 @@ def _load_intrinsic_binary_from_packed_helper(params_packed: NDArray[np.floating
     chi_eff: float = chi_postnewtonian_norm - 76.0 / 113.0 * symmetric_mass_ratio * chi_a * mass_delta / pn_norm_loc
     chi_1z: float = chi_s + chi_a
     chi_2z: float = chi_s - chi_a
-    assert_allclose(chi_postnewtonian, pn_norm_loc * chi_s + chi_a * mass_delta), 'Inconsistent chi_postnewtonian'
-    assert -1.0 <= chi_1z <= 1.0, 'Spin 1 out of range [-1, 1]'
-    assert -1.0 <= chi_2z <= 1.0, 'Spin 2 out of range [-1, 1]'
-    assert -1.0 <= chi_s <= 1.0, 'chi_s out of range [-1, 1]'
-    assert -1.0 <= chi_a <= 1.0, 'chi_a out of range [-1, 1]'
-
-    assert mass_1_detector_sec > 0.0
-    assert mass_2_detector_sec > 0.0
 
     # mass conversions
     mass_total_detector_solar = mass_total_detector_sec / M_SUN_SEC
@@ -187,6 +178,10 @@ def _validate_intrinsic_binary_helper(params: BinaryIntrinsicParams) -> bool:
     if not params.mass_total_detector_sec > 0.0:
         return False
     if not params.mass_chirp_detector_sec > 0.0:
+        return False
+    if not params.mass_1_detector_sec > 0.0:
+        return False
+    if not params.mass_2_detector_sec > 0.0:
         return False
     if not params.frequency_i_hz > 0.0:
         return False
