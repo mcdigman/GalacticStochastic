@@ -693,7 +693,7 @@ def TaylorF2_ref_time_match(params_intrinsic: BinaryIntrinsicParams, include_pn_
 
 
 @njit()
-def TaylorF2_aligned_inplace(intrinsic_waveform: StationaryWaveformFreq, params_intrinsic: BinaryIntrinsicParams, nf_lim: PixelGenericRange, *, amplitude_pn_mode: int = 2, include_pn_ss3: int = 0, t_offset: float = 0., tc_mode: int = 0) -> float:
+def TaylorF2_aligned_inplace(intrinsic_waveform: StationaryWaveformFreq, params_intrinsic: BinaryIntrinsicParams, nf_lim: PixelGenericRange, amplitude_pn_mode: int = 2, include_pn_ss3: int = 0, t_offset: float = 0., tc_mode: int = 0) -> float:
     """
     Compute the TaylorF2 model to 3.5PN order.
 

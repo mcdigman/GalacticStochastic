@@ -294,7 +294,7 @@ def AmpMRDAnsatzInplace(waveform: StationaryWaveformFreq, imr_params: IMRPhenomD
     waveform.AF[nf_lim.nx_min:nf_lim.nx_max] = imr_params.amp0 * fDMgamma3 / params.mass_total_detector_sec * gamma1 * 1 / (floc ** (7 / 6) * (fminfRD ** 2 + fDMgamma3 ** 2)) * np.exp(-(gamma2 / fDMgamma3) * fminfRD)
 
 
-@njit()
+# @njit()
 def AmpPhaseSeriesInsAnsatz(waveform: StationaryWaveformFreq, imr_params: IMRPhenomDParams, nf_lim: PixelGenericRange) -> None:
     """Ansatz for the inspiral phase. and amplitude
     We call the LAL TF2 coefficients here.
@@ -601,7 +601,7 @@ def IMRPhenDAmpPhaseFI_get_TTRef(params: BinaryIntrinsicParams, MfRef_in: float,
     return imr_params.TTRef
 
 
-@njit()
+# @njit()
 def IMRPhenDAmpPhase_tc(waveform: StationaryWaveformFreq, params: BinaryIntrinsicParams, nf_lim: PixelGenericRange, TTRef_in: float, phi0: float, amp_mult: float, MfRef_in: float = 0., MfRef_max: float = np.inf, imr_default_t: int = 0, t_offset: float = 0.) -> tuple[int, IMRPhenomDParams]:
     """Get both amplitude and phase in place at the same time given input TTRef_in"""
     # TODO reabsorb this now redundant function
@@ -663,7 +663,7 @@ def IMRPhenDAmpPhase_tc(waveform: StationaryWaveformFreq, params: BinaryIntrinsi
     return itrFCut, imr_params
 
 
-@njit()
+# @njit()
 def IMRPhenDAmpPhaseFI(waveform: StationaryWaveformFreq, params: BinaryIntrinsicParams, nf_lim: PixelGenericRange, MfRef_in: float, phi0: float, amp_mult: float, imr_default_t: int = 0, t_offset: float = 0., MfRef_max: float = np.inf, TTRef_in: float = np.nan) -> tuple[int, IMRPhenomDParams]:
     """Get both amplitude and phase in place at the same time given input FI at MfRef_in if imr_default_t is true, use the phasing convention from IMRPhenomD,
     otherwise try to set MfRef_in=Mf at t=0
