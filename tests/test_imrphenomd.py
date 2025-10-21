@@ -65,14 +65,124 @@ def setup_test_helper(m1_solar: float, m2_solar: float) -> tuple[BinaryIntrinsic
     return intrinsic, MfRef_in
 
 
-@pytest.mark.parametrize('m1_solar', [1242860.685, 2599137.035])
-@pytest.mark.parametrize('m2_solar', [1242860.685, 2599137.035])
-def test_imrphenomd_internal_consistency(m1_solar: float, m2_solar: float) -> None:
+@pytest.mark.parametrize('q', [0.4781820536061116, 0.999])
+def test_imrphenomd_derivative_consistency(q: float) -> None:
+    """Various checks for internal consistency of phase derivatives"""
+    m_tot_solar = 1242860.685 + 2599137.035
+    m1_solar = m_tot_solar / (1 + q)
+    m2_solar = m1_solar * q
+    intrinsic, MfRef_in = setup_test_helper(m1_solar, m2_solar)
+
+    amp0: float = 2. * np.sqrt(5. / (64. * np.pi)) * intrinsic.mass_total_detector_sec**2 / intrinsic.luminosity_distance_m * imrc.CLIGHT  # *imrc.MTSUN_SI**2#*imrc.MTSUN_SI**2*wc.CLIGHT
+    finspin: float = FinalSpin0815(intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a)  # FinalSpin0815 - 0815 is like a version number
+    Mf_ringdown, Mf_damp = fringdown(intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, finspin)
+    amp0_use: float = amp0 * amp0Func(intrinsic.symmetric_mass_ratio)
+
+    NF: int = 16384 * 10
+
+    DF: float = 0.99 * imrc.f_CUT / intrinsic.mass_total_detector_sec / NF
+    freq: NDArray[np.floating] = np.arange(1, NF + 1) * DF
+    Mfs: NDArray[np.floating] = freq * intrinsic.mass_total_detector_sec
+
+    nf_lim: PixelGenericRange = PixelGenericRange(0, NF, DF, DF)
+
+    waveform = StationaryWaveformFreq(freq, np.zeros(NF), np.zeros(NF), np.zeros(NF), np.zeros(NF))
+    _itrFCut, _imr_params = IMRPhenDAmpPhaseFI(waveform, intrinsic, nf_lim, MfRef_in=MfRef_in, phi0=intrinsic.phase_c, amp_mult=amp0, imr_default_t=1)
+
+    dm = intrinsic.mass_total_detector_sec / (2 * np.pi)
+
+    # check differences/integral
+    assert_allclose(np.diff(waveform.PF)[100:], ((waveform.TF[1:] + waveform.TF[:-1:]) / 2. * np.diff(Mfs) / dm)[100:], atol=1.e-12, rtol=1.e-4)
+    assert_allclose(np.diff(waveform.TF)[100:], ((waveform.TFp[1:] + waveform.TFp[:-1:]) / 2. * np.diff(Mfs) / intrinsic.mass_total_detector_sec)[100:],
+                    atol=1.e-12, rtol=5.e-3)
+
+    time_alt = gradient(waveform.PF, Mfs) * dm
+    time_alt2 = InterpolatedUnivariateSpline(Mfs, waveform.PF * dm, k=3, ext=2).derivative(1)(Mfs)
+    timep_alt = gradient(waveform.TF, Mfs) * intrinsic.mass_total_detector_sec
+    timep_alt2 = InterpolatedUnivariateSpline(Mfs, waveform.TF * intrinsic.mass_total_detector_sec, k=3, ext=2).derivative(1)(Mfs)
+
+    # check phase derivatives
+    assert_allclose(waveform.TF[20:], time_alt[20:], atol=1.e-6, rtol=1.3e-2)
+    assert_allclose(waveform.TF[20:], time_alt2[20:], atol=1.e-5, rtol=1.e-5)  # worse absolute accuracy at low frequency
+    assert_allclose(waveform.TF[0.1 * waveform.TF[-1] < waveform.TF], time_alt2[0.1 * waveform.TF[-1] < waveform.TF], atol=1.e-10, rtol=2.e-6)  # more concerned about relative accuracy at high frequency
+    assert_allclose(waveform.TF[0.1 * waveform.TF[-1] < waveform.TF], time_alt[0.1 * waveform.TF[-1] < waveform.TF], atol=1.e-10, rtol=3.e-5)
+    assert_allclose(waveform.TF[20:] - waveform.TF[10], time_alt2[20:] - waveform.TF[10], atol=1.e-10, rtol=2.e-6)  # absorb absolute differences
+    assert_allclose(waveform.TF[20:] - waveform.TF[10], time_alt[20:] - waveform.TF[10], atol=1.e-10, rtol=9.e-4)  # absorb absolute differences
+
+    # check time derivatives
+    assert_allclose(waveform.TFp[20:], timep_alt[20:], atol=1.e-6, rtol=3.e-2)
+    assert_allclose(waveform.TFp[20:], timep_alt2[20:], atol=1.e-5, rtol=2.e-2)
+    assert_allclose(waveform.TFp[NF // 2:], timep_alt2[NF // 2:], atol=1.e-10, rtol=3.e-6)
+    assert_allclose(waveform.TFp[NF // 2:], timep_alt[NF // 2:], atol=1.e-10, rtol=3.e-4)
+
+    # use knowledge of low-frequency behavior
+    time_alt3 = dm / Mfs ** (5 / 3) * (InterpolatedUnivariateSpline(Mfs, waveform.PF * Mfs ** (5 / 3), k=3, ext=2).derivative(1)(Mfs) - waveform.PF * Mfs ** (2 / 3) * (5 / 3))
+    timep_alt3 = intrinsic.mass_total_detector_sec / Mfs ** (8 / 3) * (InterpolatedUnivariateSpline(Mfs, waveform.TF * Mfs ** (8 / 3), k=3, ext=2).derivative(1)(Mfs) - waveform.TF * Mfs ** (5 / 3) * (8 / 3))
+    assert np.sum(~np.isclose(waveform.TFp, timep_alt3, atol=1.e-10, rtol=1.e-4)) < 15
+    assert_allclose(waveform.TFp, timep_alt3, atol=1.e-10, rtol=2.e-2)
+    assert_allclose(waveform.TF, time_alt3, atol=2.e-6, rtol=8.e-4)
+
+
+@pytest.mark.parametrize('q', [0.4781820536061116, 0.999])
+def test_imrphenomd_derivative_consistency2(q: float) -> None:
+    """Checks for the consistency of derivatives with a finer DF grid"""
+    m_tot_solar = 1242860.685 + 2599137.035
+    m1_solar = m_tot_solar / (1 + q)
+    m2_solar = m1_solar * q
+    intrinsic, MfRef_in = setup_test_helper(m1_solar, m2_solar)
+
+    amp0: float = 2. * np.sqrt(5. / (64. * np.pi)) * intrinsic.mass_total_detector_sec**2 / intrinsic.luminosity_distance_m * imrc.CLIGHT  # *imrc.MTSUN_SI**2#*imrc.MTSUN_SI**2*wc.CLIGHT
+    finspin: float = FinalSpin0815(intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a)  # FinalSpin0815 - 0815 is like a version number
+    Mf_ringdown, Mf_damp = fringdown(intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, finspin)
+    amp0_use: float = amp0 * amp0Func(intrinsic.symmetric_mass_ratio)
+
+    NF: int = 16384 * 100
+
+    freq: NDArray[np.floating] = np.linspace(1.e-4, 0.99, NF) * imrc.f_CUT / intrinsic.mass_total_detector_sec
+    DF: float = float(freq[1] - freq[0])
+    Mfs: NDArray[np.floating] = freq * intrinsic.mass_total_detector_sec
+
+    nf_lim: PixelGenericRange = PixelGenericRange(0, NF, DF, DF)
+
+    waveform = StationaryWaveformFreq(freq, np.zeros(NF), np.zeros(NF), np.zeros(NF), np.zeros(NF))
+    _itrFCut, _imr_params = IMRPhenDAmpPhaseFI(waveform, intrinsic, nf_lim, MfRef_in=MfRef_in, phi0=intrinsic.phase_c, amp_mult=amp0, imr_default_t=1)
+
+    dm = intrinsic.mass_total_detector_sec / (2 * np.pi)
+
+    time_alt = gradient(waveform.PF, Mfs) * dm
+    time_alt2 = InterpolatedUnivariateSpline(Mfs, waveform.PF * dm, k=3, ext=2).derivative(1)(Mfs)
+    timep_alt = gradient(waveform.TF, Mfs) * intrinsic.mass_total_detector_sec
+    timep_alt2 = InterpolatedUnivariateSpline(Mfs, waveform.TF * intrinsic.mass_total_detector_sec, k=3, ext=2).derivative(1)(Mfs)
+
+    # check phase derivatives
+    # assert_allclose(waveform.TF[20:], time_alt[20:], atol=1.e-6, rtol=1.3e-2)
+    assert_allclose(waveform.TF[20:], time_alt2[20:], atol=8.e-5, rtol=1.e-5)  # worse absolute accuracy at low frequency
+    assert_allclose(waveform.TF[0.1 * waveform.TF[-1] < waveform.TF], time_alt2[0.1 * waveform.TF[-1] < waveform.TF], atol=8.e-5, rtol=2.e-6)  # more concerned about relative accuracy at high frequency
+    # assert_allclose(waveform.TF[waveform.TF > 0.1 * waveform.TF[-1]], time_alt[waveform.TF > 0.1 * waveform.TF[-1]], atol=1.e-10, rtol=3.e-5)
+    assert_allclose(waveform.TF[20:] - waveform.TF[10], time_alt2[20:] - waveform.TF[10], atol=8.e-5, rtol=2.e-6)  # absorb absolute differences
+    # assert_allclose(waveform.TF[20:] - waveform.TF[10], time_alt[20:] - waveform.TF[10], atol=1.e-10, rtol=9.e-4)  # absorb absolute differences
+
+    # check time derivatives
+    # assert_allclose(waveform.TFp[20:], timep_alt[20:], atol=1.e-6, rtol=3.e-2)
+    assert_allclose(waveform.TFp[20:], timep_alt2[20:], atol=5.e-4, rtol=5.e-2)
+    assert_allclose(waveform.TFp[NF // 2:], timep_alt2[NF // 2:], atol=5.e-4, rtol=3.e-6)
+
+    # assert_allclose(waveform.TFp[NF // 2:], timep_alt[NF // 2:], atol=1.e-10, rtol=3.e-4)
+
+    # use knowledge of low-frequency behavior
+    time_alt3 = dm / Mfs ** (5 / 3) * (InterpolatedUnivariateSpline(Mfs, waveform.PF * Mfs ** (5 / 3), k=3, ext=2).derivative(1)(Mfs) - waveform.PF * Mfs ** (2 / 3) * (5 / 3))
+    timep_alt3 = intrinsic.mass_total_detector_sec / Mfs ** (8 / 3) * (InterpolatedUnivariateSpline(Mfs, waveform.TF * Mfs ** (8 / 3), k=3, ext=2).derivative(1)(Mfs) - waveform.TF * Mfs ** (5 / 3) * (8 / 3))
+    assert np.sum(~np.isclose(waveform.TFp, timep_alt3, atol=1.e-10, rtol=1.e-4)) < 15
+    assert_allclose(waveform.TFp, timep_alt3, atol=1.e-10, rtol=5.e-2)
+    assert_allclose(waveform.TF, time_alt3, atol=6.e-5, rtol=8.e-4)
+
+
+@pytest.mark.parametrize('q', [0.4781820536061116, 0.999])
+def test_imrphenomd_internal_consistency(q: float) -> None:
     """Various checks for internal consistency of imrphenomd"""
-    if m2_solar > m1_solar:
-        return
-    if m2_solar == m1_solar:
-        m2_solar = 0.999 * m1_solar
+    m_tot_solar = 1242860.685 + 2599137.035
+    m1_solar = m_tot_solar / (1 + q)
+    m2_solar = m1_solar * q
     intrinsic, MfRef_in = setup_test_helper(m1_solar, m2_solar)
 
     amp0: float = 2. * np.sqrt(5. / (64. * np.pi)) * intrinsic.mass_total_detector_sec**2 / intrinsic.luminosity_distance_m * imrc.CLIGHT  # *imrc.MTSUN_SI**2#*imrc.MTSUN_SI**2*wc.CLIGHT
