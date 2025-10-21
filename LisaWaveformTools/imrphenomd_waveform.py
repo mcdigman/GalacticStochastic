@@ -159,24 +159,26 @@ def get_imr_phenomd_params(params: BinaryIntrinsicParams, MfRef_in: float, MfRef
 def PhiInsPrefactorsMt(params: BinaryIntrinsicParams) -> PrefactorPhasingSeries:
     v, vlogv = PNPhasingSeriesTaylorF2(params.symmetric_mass_ratio, params.chi_s, params.chi_a)
     # PN phasing series
-    minus_five_thirds: float = v[0] / params.mass_total_detector_sec ** (5 / 3) / np.pi ** (5 / 3)
-    minus_one: float = v[2] / params.mass_total_detector_sec ** (3 / 3) / np.pi
-    minus_two_thirds: float = v[3] / params.mass_total_detector_sec ** (2 / 3) / np.pi ** (2 / 3)
-    minus_third: float = v[4] / params.mass_total_detector_sec ** (1 / 3) / np.pi ** (1 / 3)
+    cbrt_mass: float = np.cbrt(params.mass_total_detector_sec)
+    cbrt_scale: float = cbrt_mass * np.cbrt(np.pi)
+    minus_five_thirds: float = v[0] / cbrt_scale ** 5
+    minus_one: float = v[2] / cbrt_scale ** 3
+    minus_two_thirds: float = v[3] / cbrt_scale ** 2
+    minus_third: float = v[4] / cbrt_scale ** 1
     initial_phasing: float = v[5] - np.pi / 4
-    third: float = v[6] * params.mass_total_detector_sec ** (1 / 3) * np.pi ** (1 / 3)
-    two_thirds: float = v[7] * params.mass_total_detector_sec ** (2 / 3) * np.pi ** (2 / 3)
+    third: float = v[6] * cbrt_scale ** 1
+    two_thirds: float = v[7] * cbrt_scale ** 2
 
     zero_with_logv: float = vlogv[5]
-    third_with_logv: float = vlogv[6] * params.mass_total_detector_sec ** (1 / 3) * np.pi ** (1 / 3)
+    third_with_logv: float = vlogv[6] * cbrt_scale ** 1
 
     # higher order terms that were calibrated for PhenomD
     # TODO check pi on these terms
     sigmas = sigmaFits(params.symmetric_mass_ratio, params.chi_postnewtonian)
-    one: float = sigmas[0] / params.symmetric_mass_ratio * params.mass_total_detector_sec ** (3 / 3)
-    four_thirds: float = 3 / 4 * sigmas[1] / params.symmetric_mass_ratio * params.mass_total_detector_sec ** (4 / 3)
-    five_thirds: float = 3 / 5 * sigmas[2] / params.symmetric_mass_ratio * params.mass_total_detector_sec ** (5 / 3)
-    two: float = 1 / 2 * sigmas[3] / params.symmetric_mass_ratio * params.mass_total_detector_sec ** (6 / 3)
+    one: float = sigmas[0] / params.symmetric_mass_ratio * cbrt_mass ** 3
+    four_thirds: float = 3 / 4 * sigmas[1] / params.symmetric_mass_ratio * cbrt_mass ** 4
+    five_thirds: float = 3 / 5 * sigmas[2] / params.symmetric_mass_ratio * cbrt_mass ** 5
+    two: float = 1 / 2 * sigmas[3] / params.symmetric_mass_ratio * cbrt_mass ** 6
     seven_thirds: float = 0.
     eight_thirds: float = 0.
     three: float = 0.
@@ -210,24 +212,27 @@ def AmpInsPrefactorsMt(params: BinaryIntrinsicParams) -> PrefactorPhasingSeries:
     rho2 = rhos[1]
     rho3 = rhos[2]
 
-    two_thirds: float = 1 / 672 * np.pi ** (2 / 3) * params.mass_total_detector_sec ** (2 / 3) * (-969 + 1804 * params.symmetric_mass_ratio)
+    cbrt_mass: float = np.cbrt(params.mass_total_detector_sec)
+    cbrt_scale: float = cbrt_mass * np.cbrt(np.pi)
+
+    two_thirds: float = 1 / 672 * cbrt_scale ** 2 * (-969 + 1804 * params.symmetric_mass_ratio)
     one: float = 1 / 24 * np.pi * params.mass_total_detector_sec * (81 * (params.chi_s + params.chi_a * params.mass_delta) - 44 * params.chi_s * params.symmetric_mass_ratio)
-    four_thirds: float = 1 / 8128512 * np.pi ** (4 / 3) * params.mass_total_detector_sec ** (4 / 3) \
+    four_thirds: float = 1 / 8128512 * cbrt_scale ** 4 \
                   * (-27312085 - 41150592 * params.chi_a * params.chi_s * params.mass_delta
                      + 254016 * params.chi_s ** 2 * (-81 + 68 * params.symmetric_mass_ratio) + 254016 * params.chi_a ** 2 * (-81 + 256 * params.symmetric_mass_ratio)
                      + 24 * params.symmetric_mass_ratio * (-1975055 + 1473794 * params.symmetric_mass_ratio))
-    five_thirds: float = 1 / 16128 * np.pi ** (5 / 3) * params.mass_total_detector_sec ** (5 / 3) \
+    five_thirds: float = 1 / 16128 * cbrt_scale ** 5 \
                   * (params.chi_a * params.mass_delta * (285197 - 6316 * params.symmetric_mass_ratio) + params.chi_s * (285197 - 136 * params.symmetric_mass_ratio * (2703 + 262 * params.symmetric_mass_ratio))
                      + 21420 * np.pi * (-1 + 4 * params.symmetric_mass_ratio))
-    two: float = 1 / 60085960704 * params.mass_total_detector_sec ** 2 * np.pi ** 2 \
+    two: float = 1 / 60085960704 * cbrt_scale ** 6 \
           * (-1242641879927 + 6544617945468 * params.symmetric_mass_ratio
              + 931392 * params.chi_a ** 2 * (1614569 + 4 * params.symmetric_mass_ratio * (-1873643 + 832128 * params.symmetric_mass_ratio))
              + 1862784 * params.chi_a * params.mass_delta * (params.chi_s * (1614569 - 1991532 * params.symmetric_mass_ratio) + 83328 * np.pi)
              + 336 * (2772 * params.chi_s ** 2 * (1614569 + 16 * params.symmetric_mass_ratio * (-184173 + 57451 * params.symmetric_mass_ratio)) - 14902272 * params.chi_s * (-31 + 28 * params.symmetric_mass_ratio) * np.pi
                       + params.symmetric_mass_ratio * (params.symmetric_mass_ratio * (-3248849057 + 965246212 * params.symmetric_mass_ratio) - 763741440 * np.pi ** 2)))
-    seven_thirds: float = rho1 * params.mass_total_detector_sec ** (7 / 3)
-    eight_thirds: float = rho2 * params.mass_total_detector_sec ** (8 / 3)
-    three: float = rho3 * params.mass_total_detector_sec ** 3
+    seven_thirds: float = rho1 * cbrt_mass ** 7
+    eight_thirds: float = rho2 * cbrt_mass ** 8
+    three: float = rho3 * cbrt_mass ** 9
 
     prefactor_series = PrefactorPhasingSeries(
         0., 0., 0., 0., 0., 0.,
@@ -294,7 +299,7 @@ def AmpMRDAnsatzInplace(waveform: StationaryWaveformFreq, imr_params: IMRPhenomD
     waveform.AF[nf_lim.nx_min:nf_lim.nx_max] = imr_params.amp0 * fDMgamma3 / params.mass_total_detector_sec * gamma1 * 1 / (floc ** (7 / 6) * (fminfRD ** 2 + fDMgamma3 ** 2)) * np.exp(-(gamma2 / fDMgamma3) * fminfRD)
 
 
-# @njit()
+@njit()
 def AmpPhaseSeriesInsAnsatz(waveform: StationaryWaveformFreq, imr_params: IMRPhenomDParams, nf_lim: PixelGenericRange) -> None:
     """Ansatz for the inspiral phase. and amplitude
     We call the LAL TF2 coefficients here.
@@ -312,8 +317,8 @@ def AmpPhaseSeriesInsAnsatz(waveform: StationaryWaveformFreq, imr_params: IMRPhe
 
     for itrf in prange(nf_lim.nx_min, nf_lim.nx_max):
         f: float = waveform.F[itrf]
-        fv: float = f**(1 / 3)
-        logfv: float = 1 / 3 * np.log(params.mass_total_detector_sec * np.pi) + 1 / 3 * np.log(f)
+        fv: float = np.cbrt(f)
+        logfv: float = 1 / 3 * np.log(params.mass_total_detector_sec) + 1 / 3 * np.log(f) + 1 / 3 * np.log(np.pi)
 
         waveform.AF[itrf] = 1 / np.sqrt(fv**7) * (
                   imr_params.amp0
@@ -389,7 +394,7 @@ def PhiSeriesInsAnsatz(waveform: StationaryWaveformFreq, imr_params: IMRPhenomDP
     for itrf in prange(nf_lim.nx_min, nf_lim.nx_max):
         floc: float = waveform.F[itrf]
 
-        fv: float = floc**(1 / 3)
+        fv: float = np.cbrt(floc)
         logfv: float = 1 / 3 * np.log(np.pi * params.mass_total_detector_sec) + 1 / 3 * np.log(floc)
 
         waveform.PF[itrf] = 1 / fv ** 5 * (phi_prefactors.minus_five_thirds
@@ -555,7 +560,7 @@ def IMRPhenDPhaseFI(waveform: StationaryWaveformFreq, params: BinaryIntrinsicPar
     return itrFCut, imr_params
 
 
-# @njit()
+@njit()
 def IMRPhenDAmplitudeFI(waveform: StationaryWaveformFreq, params: BinaryIntrinsicParams, nf_lim: PixelGenericRange, amp_mult: float = 1., MfRef_in: float = 0., MfRef_max: float = np.inf, imr_default_t: int = 0, phi0: float = 0., TTRef_in: float = np.nan, t_offset: float = 0.) -> IMRPhenomDParams:
     """This function computes the IMR amplitude given phenom coefficients.
     Defined in VIII. Full IMR Waveforms arXiv:1508.07253
@@ -601,7 +606,7 @@ def IMRPhenDAmpPhaseFI_get_TTRef(params: BinaryIntrinsicParams, MfRef_in: float,
     return imr_params.TTRef
 
 
-# @njit()
+@njit()
 def IMRPhenDAmpPhase_tc(waveform: StationaryWaveformFreq, params: BinaryIntrinsicParams, nf_lim: PixelGenericRange, TTRef_in: float, phi0: float, amp_mult: float, MfRef_in: float = 0., MfRef_max: float = np.inf, imr_default_t: int = 0, t_offset: float = 0.) -> tuple[int, IMRPhenomDParams]:
     """Get both amplitude and phase in place at the same time given input TTRef_in"""
     # TODO reabsorb this now redundant function
@@ -663,7 +668,7 @@ def IMRPhenDAmpPhase_tc(waveform: StationaryWaveformFreq, params: BinaryIntrinsi
     return itrFCut, imr_params
 
 
-# @njit()
+@njit()
 def IMRPhenDAmpPhaseFI(waveform: StationaryWaveformFreq, params: BinaryIntrinsicParams, nf_lim: PixelGenericRange, MfRef_in: float, phi0: float, amp_mult: float, imr_default_t: int = 0, t_offset: float = 0., MfRef_max: float = np.inf, TTRef_in: float = np.nan) -> tuple[int, IMRPhenomDParams]:
     """Get both amplitude and phase in place at the same time given input FI at MfRef_in if imr_default_t is true, use the phasing convention from IMRPhenomD,
     otherwise try to set MfRef_in=Mf at t=0
