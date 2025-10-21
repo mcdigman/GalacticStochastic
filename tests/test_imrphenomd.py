@@ -19,6 +19,9 @@ from LisaWaveformTools.stationary_source_waveform import StationaryWaveformFreq
 from LisaWaveformTools.taylorf2_helpers import TaylorF2_aligned_inplace
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
+# TODO still need tests for correct anchoring of reference frequency, phase, and time
+# TODO test amplitude and amplitude derivatives
+
 
 def setup_test_helper(m1_solar: float, m2_solar: float) -> tuple[BinaryIntrinsicParams, float]:
 
@@ -628,6 +631,171 @@ def test_imrphenomd_ins_only_cross(q: float, waveform_method1: str, waveform_met
     assert_allclose(phi1_adj, phi2_adj, atol=1.e-9, rtol=1.e-6)
     assert_allclose(waveform1.TFp, waveform2.TFp, atol=1.e-100, rtol=1.e-6)
     assert_allclose(waveform1.AF, waveform2.AF, atol=1.e-100, rtol=1.e-6)
+
+
+@pytest.mark.parametrize('q', [0.4781820536061116])
+@pytest.mark.parametrize('waveform_method', ['old_mrd_ansatz', 'amp_phase_mrd_ansatz0', 'amp_phase_mrd_ansatz1', 'ampphasefull0', 'ampphasefull1', 'phasefull0', 'phasefull1', 'ampphasetc0', 'ampphasetc1'])
+def test_imrphenomd_derivative_consistency_mrd(q: float, waveform_method: str) -> None:
+    """Various checks for internal consistency of phase derivatives, restricted to mrd"""
+    m_tot_solar = 1242860.685 + 2599137.035
+    m1_solar = m_tot_solar / (1 + q)
+    m2_solar = m1_solar * q
+    intrinsic, MfRef_in = setup_test_helper(m1_solar, m2_solar)
+
+    NF: int = 16384 * 10
+
+    DF: float = 0.99 * imrc.f_CUT / intrinsic.mass_total_detector_sec / NF
+    freq: NDArray[np.floating] = np.arange(1, NF + 1) * DF
+    Mfs: NDArray[np.floating] = freq * intrinsic.mass_total_detector_sec
+
+    nf_lim: PixelGenericRange = PixelGenericRange(0, NF, DF, DF)
+
+    finspin: float = FinalSpin0815(intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a)  # FinalSpin0815 - 0815 is like a version number
+    Mf_ringdown, _ = fringdown(intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, finspin)
+    MfMRDJoinPhi: float = Mf_ringdown / 2.0
+
+    # only check up to inspiral-merger transition
+    itrfMRDPhi = int(np.searchsorted(freq, MfMRDJoinPhi / intrinsic.mass_total_detector_sec))
+    itr_anchor = itrfMRDPhi
+    itrlim_low = itrfMRDPhi
+    itrlim_high = NF
+
+    MfRef_in = Mfs[itr_anchor]
+
+    _, waveform = get_waveform(waveform_method, intrinsic, freq, Mfs, nf_lim, MfRef_in)
+
+    dm = intrinsic.mass_total_detector_sec / (2 * np.pi)
+
+    phi_adj = waveform.PF - 2 * np.pi * waveform.TF[itr_anchor] * (freq - freq[itr_anchor]) - waveform.PF[itr_anchor]
+
+    t_adj = waveform.TF - waveform.TF[itr_anchor]
+
+    t_adj_alt = gradient(phi_adj, Mfs, edge_order=2) * dm
+
+    tp_adj_alt = gradient(t_adj, freq, edge_order=2)
+    tp_alt = gradient(waveform.TF, freq, edge_order=2)
+    # import matplotlib.pyplot as plt
+    # plt.plot((t_adj[itrlim_low:itrlim_high]-t_adj_alt[itrlim_low:itrlim_high])/t_adj[itrlim_low:itrlim_high])
+    # plt.plot(t_adj_alt[itrlim_low:itrlim_high])
+    # plt.show()
+
+    # plt.plot(waveform.TFp[itrlim_low:itrlim_high] - tp_adj_alt[itrlim_low:itrlim_high])
+    # plt.show()
+
+    atol_t = 1.e-3 * float(np.abs(t_adj_alt[itr_anchor + 10] - t_adj_alt[itr_anchor - 1]))
+    atol_tp = 1.e-3 * float(np.abs(tp_adj_alt[itr_anchor + 10] - tp_adj_alt[itr_anchor - 1]))
+    assert_allclose(t_adj[itrlim_low:itrlim_high] - t_adj[itr_anchor], t_adj_alt[itrlim_low:itrlim_high] - t_adj_alt[itr_anchor], atol=atol_t, rtol=5.e-5)
+    assert_allclose(waveform.TFp[itrlim_low:itrlim_high], tp_adj_alt[itrlim_low:itrlim_high], atol=atol_tp, rtol=3.e-2)
+    assert_allclose(waveform.TFp[itrlim_low:itrlim_high], tp_alt[itrlim_low:itrlim_high], atol=atol_tp, rtol=3.e-2)
+
+
+@pytest.mark.parametrize('q', [0.4781820536061116])
+@pytest.mark.parametrize('waveform_method', ['old_int_ansatz', 'amp_phase_int_ansatz0', 'amp_phase_int_ansatz1', 'ampphasefull0', 'ampphasefull1', 'phasefull0', 'phasefull1', 'ampphasetc0', 'ampphasetc1'])
+def test_imrphenomd_derivative_consistency_int(q: float, waveform_method: str) -> None:
+    """Various checks for internal consistency of phase derivatives, restricted to int"""
+    m_tot_solar = 1242860.685 + 2599137.035
+    m1_solar = m_tot_solar / (1 + q)
+    m2_solar = m1_solar * q
+    intrinsic, MfRef_in = setup_test_helper(m1_solar, m2_solar)
+
+    NF: int = 16384 * 10
+
+    DF: float = 0.99 * imrc.f_CUT / intrinsic.mass_total_detector_sec / NF
+    freq: NDArray[np.floating] = np.arange(1, NF + 1) * DF
+    Mfs: NDArray[np.floating] = freq * intrinsic.mass_total_detector_sec
+
+    nf_lim: PixelGenericRange = PixelGenericRange(0, NF, DF, DF)
+
+    finspin: float = FinalSpin0815(intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a)  # FinalSpin0815 - 0815 is like a version number
+    Mf_ringdown, _ = fringdown(intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, finspin)
+    MfMRDJoinPhi: float = Mf_ringdown / 2.0
+
+    # only check up to inspiral-merger transition
+    itrfMRDPhi = int(np.searchsorted(freq, MfMRDJoinPhi / intrinsic.mass_total_detector_sec))
+    itrfIntPhi = int(np.searchsorted(freq, imrc.PHI_fJoin_INS / intrinsic.mass_total_detector_sec))
+    itr_anchor = itrfMRDPhi - 1
+    itrlim_low = itrfIntPhi
+    itrlim_high = itrfMRDPhi
+
+    MfRef_in = Mfs[itr_anchor]
+
+    _, waveform = get_waveform(waveform_method, intrinsic, freq, Mfs, nf_lim, MfRef_in)
+
+    dm = intrinsic.mass_total_detector_sec / (2 * np.pi)
+
+    phi_adj = waveform.PF - 2 * np.pi * waveform.TF[itr_anchor] * (freq - freq[itr_anchor]) - waveform.PF[itr_anchor]
+
+    t_adj = waveform.TF - waveform.TF[itr_anchor]
+
+    t_adj_alt = gradient(phi_adj, Mfs, edge_order=2) * dm
+
+    tp_adj_alt = gradient(t_adj, freq, edge_order=2)
+    tp_alt = gradient(waveform.TF, freq, edge_order=2)
+    # import matplotlib.pyplot as plt
+    # plt.plot((t_adj[itrlim_low:itrlim_high]-t_adj_alt[itrlim_low:itrlim_high])/t_adj[itrlim_low:itrlim_high])
+    # plt.plot(t_adj_alt[itrlim_low:itrlim_high])
+    # plt.show()
+
+    # plt.plot(waveform.TFp[itrlim_low:itrlim_high] - tp_adj_alt[itrlim_low:itrlim_high])
+    # plt.show()
+
+    atol_t = 1.e-3 * float(np.abs(t_adj_alt[itr_anchor - 10] - t_adj_alt[itr_anchor - 1]))
+    atol_tp = 1.e-3 * float(np.abs(tp_adj_alt[itr_anchor - 10] - tp_adj_alt[itr_anchor - 1]))
+    assert_allclose(t_adj[itrlim_low:itrlim_high] - t_adj[itr_anchor], t_adj_alt[itrlim_low:itrlim_high] - t_adj_alt[itr_anchor], atol=atol_t, rtol=5.e-5)
+    assert_allclose(waveform.TFp[itrlim_low:itrlim_high], tp_adj_alt[itrlim_low:itrlim_high], atol=atol_tp, rtol=3.e-2)
+    assert_allclose(waveform.TFp[itrlim_low:itrlim_high], tp_alt[itrlim_low:itrlim_high], atol=atol_tp, rtol=3.e-2)
+
+
+@pytest.mark.parametrize('q', [0.4781820536061116])
+@pytest.mark.parametrize('waveform_method', ['old_ins_ansatz', 'amp_phase_ins_ansatz0', 'amp_phase_ins_ansatz1', 'amp_phase_series_ins_ansatz0', 'amp_phase_series_ins_ansatz1', 'ampphasefull0', 'ampphasefull1', 'phasefull0', 'phasefull1', 'ampphasetc0', 'ampphasetc1'])
+def test_imrphenomd_derivative_consistency_ins(q: float, waveform_method: str) -> None:
+    """Various checks for internal consistency of phase derivatives, restricted to inspiral"""
+    m_tot_solar = 1242860.685 + 2599137.035
+    m1_solar = m_tot_solar / (1 + q)
+    m2_solar = m1_solar * q
+    intrinsic, MfRef_in = setup_test_helper(m1_solar, m2_solar)
+
+    NF: int = 16384 * 10
+
+    DF: float = 0.99 * imrc.f_CUT / intrinsic.mass_total_detector_sec / NF
+    freq: NDArray[np.floating] = np.arange(1, NF + 1) * DF
+    Mfs: NDArray[np.floating] = freq * intrinsic.mass_total_detector_sec
+
+    nf_lim: PixelGenericRange = PixelGenericRange(0, NF, DF, DF)
+
+    # only check up to inspiral-merger transition
+    itrfIntPhi = int(np.searchsorted(freq, imrc.PHI_fJoin_INS / intrinsic.mass_total_detector_sec))
+    itr_anchor = itrfIntPhi - 1
+    itrlim_low = 200
+    itrlim_high = itrfIntPhi
+
+    MfRef_in = Mfs[itr_anchor]
+
+    _, waveform = get_waveform(waveform_method, intrinsic, freq, Mfs, nf_lim, MfRef_in)
+
+    dm = intrinsic.mass_total_detector_sec / (2 * np.pi)
+
+    phi_adj = waveform.PF - 2 * np.pi * waveform.TF[itr_anchor] * (freq - freq[itr_anchor]) - waveform.PF[itr_anchor]
+
+    t_adj = waveform.TF - waveform.TF[itr_anchor]
+
+    t_adj_alt = gradient(phi_adj, Mfs, edge_order=2) * dm
+
+    tp_adj_alt = gradient(t_adj, freq, edge_order=2)
+    tp_alt = gradient(waveform.TF, freq, edge_order=2)
+    # import matplotlib.pyplot as plt
+    # plt.plot((t_adj[itrlim_low:itrlim_high]-t_adj_alt[itrlim_low:itrlim_high])/t_adj[itrlim_low:itrlim_high])
+    # plt.plot(t_adj_alt[itrlim_low:itrlim_high])
+    # plt.show()
+
+    # plt.plot(waveform.TFp[itrlim_low:itrlim_high] - tp_adj_alt[itrlim_low:itrlim_high])
+    # plt.show()
+
+    atol_t = 1.e-2 * float(np.abs(t_adj_alt[itr_anchor - 10] - t_adj_alt[itr_anchor - 1]))
+    atol_tp = 1.e-3 * float(np.abs(tp_adj_alt[itr_anchor - 10] - tp_adj_alt[itr_anchor - 1]))
+    assert_allclose(t_adj[itrlim_low:itrlim_high] - t_adj[itr_anchor], t_adj_alt[itrlim_low:itrlim_high] - t_adj_alt[itr_anchor], atol=atol_t, rtol=5.e-5)
+    assert_allclose(waveform.TFp[itrlim_low:itrlim_high], tp_adj_alt[itrlim_low:itrlim_high], atol=atol_tp, rtol=3.e-2)
+    assert_allclose(waveform.TFp[itrlim_low:itrlim_high], tp_alt[itrlim_low:itrlim_high], atol=atol_tp, rtol=3.e-2)
 
 
 @pytest.mark.parametrize('q', [0.4781820536061116, 0.999])
