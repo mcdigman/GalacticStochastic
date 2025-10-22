@@ -15,6 +15,8 @@ from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
+# TODO remove implicit dependence on global constants in PyIMRPhenomD.IMRPhenomD_const
+
 
 # from IMRPhenomD_internals import AmpIn
 class PrefactorPhasingSeries(NamedTuple):

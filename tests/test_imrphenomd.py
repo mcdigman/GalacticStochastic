@@ -151,7 +151,11 @@ def get_waveform(waveform_method: str, intrinsic: BinaryIntrinsicParams, freq: N
         waveform.AF[:] = AmpMRDAnsatz(Mfs, Mf_ringdown, Mf_damp, intrinsic.symmetric_mass_ratio, intrinsic.chi_postnewtonian, amp0_use)
     elif waveform_method == 'old_phase':
         ins_mode = 1
-        waveform.PF[:], waveform.TF[:], waveform.TFp[:], _t0, _MfRef, _itrFCut = IMRPhenDPhase(Mfs, intrinsic.mass_total_detector_sec, intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, NF, MfRef_in, intrinsic.phase_c)
+        # this method doesn't return TFp so get it another way
+        waveform.PF[:], waveform.TF[:], _t0, _MfRef, _itrFCut = IMRPhenDPhase(Mfs, intrinsic.mass_total_detector_sec, intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, NF, MfRef_in, intrinsic.phase_c)
+        waveform_temp = StationaryWaveformFreq(freq, np.zeros(NF), np.zeros(NF), np.zeros(NF), np.zeros(NF))
+        _itrFCut, _imr_params = IMRPhenDPhaseFI(waveform_temp, intrinsic, nf_lim, MfRef_in=MfRef_in, phi0=intrinsic.phase_c, amp_mult=amp0, imr_default_t=0)
+        waveform.TFp[:] = waveform_temp.TFp
         waveform.AF[:] = IMRPhenDAmplitude(Mfs, intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, NF, amp0)
     elif waveform_method == 'taylorf2':
         ins_mode = 1
