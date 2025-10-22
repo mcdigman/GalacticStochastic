@@ -9,7 +9,7 @@ from numpy.testing import assert_allclose
 from numpy.typing import NDArray
 from PyIMRPhenomD.IMRPhenomD import IMRPhenomDGenerateh22FDAmpPhase
 from PyIMRPhenomD.IMRPhenomD_fring_helper import QNMData_a, QNMData_fdamp, QNMData_fring, fdamp_interp, fring_interp
-from PyIMRPhenomD.IMRPhenomD_internals import AmpInsAnsatz, AmpIntAnsatz, AmpMRDAnsatz, AmpPhaseFDWaveform, DAmpInsAnsatz, DAmpMRDAnsatz, DDPhiInsAnsatzInt, DDPhiIntAnsatz, DDPhiMRD, DPhiInsAnsatzInt, DPhiIntAnsatz, DPhiMRD, FinalSpin0815, IMRPhenDAmplitude, IMRPhenDPhase, PhiInsAnsatzInt, PhiIntAnsatz, PhiMRDAnsatzInt, amp0Func, chiPN, fmaxCalc, fringdown
+from PyIMRPhenomD.IMRPhenomD_internals import AmpInsAnsatz, AmpIntAnsatz, AmpMRDAnsatz, AmpPhaseFDWaveform, DAmpInsAnsatz, DAmpIntAnsatz, DAmpMRDAnsatz, DDPhiInsAnsatzInt, DDPhiIntAnsatz, DDPhiMRD, DPhiInsAnsatzInt, DPhiIntAnsatz, DPhiMRD, FinalSpin0815, IMRPhenDAmplitude, IMRPhenDDAmplitude, IMRPhenDPhase, PhiInsAnsatzInt, PhiIntAnsatz, PhiMRDAnsatzInt, amp0Func, chiPN, fmaxCalc, fringdown
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 from LisaWaveformTools.algebra_tools import stabilized_gradient_uniform_inplace
@@ -20,15 +20,12 @@ from LisaWaveformTools.taylorf2_helpers import TaylorF2_aligned_inplace
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 # TODO still need tests for correct anchoring of reference frequency, phase, and time
-# TODO test amplitude and amplitude derivatives
-# TODO add more robust comparison to taylor results
+# TODO test amplitude normalization
 
 
-def setup_test_helper(m1_solar: float, m2_solar: float) -> tuple[BinaryIntrinsicParams, float]:
+def setup_test_helper(m1_solar: float, m2_solar: float, chi1: float = 0.7534821857057837, chi2: float = 0.6215875279643664) -> tuple[BinaryIntrinsicParams, float]:
 
     distance: float = 56.00578366287752 * 1.0e9 * imrc.PC_SI
-    chi1: float = 0.7534821857057837
-    chi2: float = 0.6215875279643664
     m1_sec: float = m1_solar * imrc.MTSUN_SI
     m2_sec: float = m2_solar * imrc.MTSUN_SI
     Mt_sec: float = m1_sec + m2_sec
@@ -67,7 +64,7 @@ def setup_test_helper(m1_solar: float, m2_solar: float) -> tuple[BinaryIntrinsic
 
 
 def get_waveform(waveform_method: str, intrinsic: BinaryIntrinsicParams, freq: NDArray[np.floating], Mfs: NDArray[np.floating], nf_lim: PixelGenericRange, MfRef_in: float) -> tuple[int, StationaryWaveformFreq]:
-    amp0: float = 2. * np.sqrt(5. / (64. * np.pi)) * intrinsic.mass_total_detector_sec**2 / intrinsic.luminosity_distance_m * imrc.CLIGHT  # *imrc.MTSUN_SI**2#*imrc.MTSUN_SI**2*wc.CLIGHT
+    amp0: float = 2. * np.sqrt(5. / (64. * np.pi)) * intrinsic.mass_total_detector_sec**2 / intrinsic.luminosity_distance_m  # * imrc.CLIGHT  # *imrc.MTSUN_SI**2#*imrc.MTSUN_SI**2*wc.CLIGHT
     finspin: float = FinalSpin0815(intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a)  # FinalSpin0815 - 0815 is like a version number
     Mf_ringdown, Mf_damp = fringdown(intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, finspin)
     amp0_use: float = amp0 * amp0Func(intrinsic.symmetric_mass_ratio)
@@ -156,10 +153,58 @@ def get_waveform(waveform_method: str, intrinsic: BinaryIntrinsicParams, freq: N
         ins_mode = 1
         waveform.PF[:], waveform.TF[:], waveform.TFp[:], _t0, _MfRef, _itrFCut = IMRPhenDPhase(Mfs, intrinsic.mass_total_detector_sec, intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, NF, MfRef_in, intrinsic.phase_c)
         waveform.AF[:] = IMRPhenDAmplitude(Mfs, intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, NF, amp0)
+    elif waveform_method == 'taylorf2':
+        ins_mode = 1
+        TaylorF2_aligned_inplace(waveform, intrinsic, nf_lim, amplitude_pn_mode=2, include_pn_ss3=0)
     else:
         msg = f'Unrecogized method {waveform_method}'
         raise ValueError(msg)
     return ins_mode, waveform
+
+
+@pytest.mark.parametrize('q', [0.4781820536061116])
+@pytest.mark.parametrize('waveform_method', ['taylorf2', 'old_phase', 'old_mrd_ansatz', 'old_int_ansatz', 'old_ins_ansatz', 'amp_phase_mrd_ansatz0', 'amp_phase_mrd_ansatz1', 'amp_phase_ins_ansatz0', 'amp_phase_ins_ansatz1', 'amp_phase_int_ansatz0', 'amp_phase_int_ansatz1', 'amp_phase_series_ins_ansatz0', 'amp_phase_series_ins_ansatz1', 'ampphasefull0', 'ampphasefull1', 'phasefull0', 'phasefull1', 'ampphasetc0', 'ampphasetc1'])
+def test_imrphenomd_amplitude_derivative_consistency(q: float, waveform_method: str) -> None:
+    """Check for internal consistency of amplitude derivatives."""
+    m_tot_solar = 1242860.685 + 2599137.035
+    m1_solar = m_tot_solar / (1 + q)
+    m2_solar = m1_solar * q
+    intrinsic, MfRef_in = setup_test_helper(m1_solar, m2_solar)
+    amp0: float = 2. * np.sqrt(5. / (64. * np.pi)) * intrinsic.mass_total_detector_sec**2 / intrinsic.luminosity_distance_m  # * imrc.CLIGHT  # *imrc.MTSUN_SI**2#*imrc.MTSUN_SI**2*wc.CLIGHT
+    amp0_use: float = amp0 * amp0Func(intrinsic.symmetric_mass_ratio)
+
+    NF: int = 16384 * 10
+
+    DF: float = 0.99 * imrc.f_CUT / intrinsic.mass_total_detector_sec / NF
+    freq: NDArray[np.floating] = np.arange(1, NF + 1) * DF
+    Mfs: NDArray[np.floating] = freq * intrinsic.mass_total_detector_sec
+
+    nf_lim: PixelGenericRange = PixelGenericRange(0, NF, DF, DF)
+
+    finspin: float = FinalSpin0815(intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a)  # FinalSpin0815 - 0815 is like a version number
+    Mf_ringdown, Mf_damp = fringdown(intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, finspin)
+
+    itrlim_low_amp = 30
+    itrlim_high_amp = NF - 1
+    itr_anchor = NF - 1
+
+    MfRef_in = Mfs[itr_anchor]
+
+    _, waveform = get_waveform(waveform_method, intrinsic, freq, Mfs, nf_lim, MfRef_in)
+    if waveform_method in ('old_phase', 'ampphasefull0', 'ampphasefull1', 'ampphasetc0', 'ampphasetc1', 'phasefull0', 'phasefull1'):
+        DAmps = IMRPhenDDAmplitude(Mfs, intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, NF, amp_mult=amp0)
+    elif waveform_method in ('old_mrd_ansatz', 'amp_phase_mrd_ansatz0', 'amp_phase_mrd_ansatz1'):
+        DAmps = DAmpMRDAnsatz(Mfs, Mf_ringdown, Mf_damp, intrinsic.symmetric_mass_ratio, intrinsic.chi_postnewtonian, amp0_use)
+    elif waveform_method in ('old_int_ansatz', 'amp_phase_int_ansatz0', 'amp_phase_int_ansatz1'):
+        DAmps = DAmpIntAnsatz(Mfs, Mf_ringdown, Mf_damp, intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, intrinsic.chi_postnewtonian, amp0_use)
+    elif waveform_method in ('old_ins_ansatz', 'taylorf2', 'amp_phase_series_ins_ansatz0', 'amp_phase_series_ins_ansatz1', 'amp_phase_ins_ansatz0', 'amp_phase_ins_ansatz1'):
+        DAmps = DAmpInsAnsatz(Mfs, intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, intrinsic.chi_postnewtonian, amp_mult=amp0_use)
+    else:
+        msg = f'Amplitude derivative availability not implemented for {waveform_method}'
+        raise NotImplementedError(msg)
+
+    DAmps_alt = np.gradient(waveform.AF * Mfs**(7. / 6.), Mfs)
+    assert_allclose(DAmps[itrlim_low_amp:itrlim_high_amp], DAmps_alt[itrlim_low_amp:itrlim_high_amp], atol=8.e-30, rtol=8.e-5)
 
 
 @pytest.mark.parametrize('q', [0.4781820536061116])
@@ -440,6 +485,73 @@ def test_imrphenomd_full_cross_inspiral(q: float, waveform_method1: str, wavefor
     assert_allclose(t1_adj[itrlim_low:itrlim_high], t2_adj[itrlim_low:itrlim_high], atol=1.e-10, rtol=1.e-6)
     assert_allclose(phi1_adj[itrlim_low:itrlim_high], phi2_adj[itrlim_low:itrlim_high], atol=1.e-9, rtol=1.e-6)
     assert_allclose(waveform1.AF[itrlim_low_amp:itrlim_high_amp], waveform2.AF[itrlim_low_amp:itrlim_high_amp], atol=1.e-100, rtol=1.e-6)
+
+
+@pytest.mark.parametrize('q', [0.4781820536061116])
+@pytest.mark.parametrize('waveform_method1', ['taylorf2'])
+@pytest.mark.parametrize('waveform_method2', ['amp_phase_ins_ansatz1', 'amp_phase_series_ins_ansatz1', 'amp_phase_ins_ansatz0', 'amp_phase_series_ins_ansatz0', 'old_ins_ansatz', 'old_phase', 'ampphasefull0', 'ampphasefull1', 'ampphasetc0', 'ampphasetc1', 'phasefull0', 'phasefull1'])
+def test_taylorf2_cross_inspiral(q: float, waveform_method1: str, waveform_method2: str) -> None:
+    """Various checks for cross consistency of taylorf2 and inspiral methods, eliminating phase and time absolute setpoints"""
+    # if waveform_method1 == waveform_method2:
+    #    return
+    m_tot_solar = 1242860.685 + 2599137.035
+    m1_solar = m_tot_solar / (1 + q)
+    m2_solar = m1_solar * q
+    # intrinsic, MfRef_in = setup_test_helper(m1_solar, m2_solar, chi1=0., chi2=0.)
+    intrinsic, MfRef_in = setup_test_helper(m1_solar, m2_solar)
+
+    NF: int = 16384 * 10
+
+    DF: float = 0.99 * imrc.f_CUT / intrinsic.mass_total_detector_sec / NF
+    freq: NDArray[np.floating] = np.arange(1, NF + 1) * DF
+    Mfs: NDArray[np.floating] = freq * intrinsic.mass_total_detector_sec
+
+    nf_lim: PixelGenericRange = PixelGenericRange(0, NF, DF, DF)
+
+    ins_mode1, waveform1 = get_waveform(waveform_method1, intrinsic, freq, Mfs, nf_lim, MfRef_in)
+    ins_mode2, waveform2 = get_waveform(waveform_method2, intrinsic, freq, Mfs, nf_lim, MfRef_in)
+    assert ins_mode1 == ins_mode2
+    assert ins_mode1 == 1
+
+    # only check up to inspiral-merger transition
+    itrfIntPhi = int(np.searchsorted(freq, imrc.PHI_fJoin_INS / intrinsic.mass_total_detector_sec))
+    itrfIntAmp = int(np.searchsorted(freq, imrc.AMP_fJoin_INS / intrinsic.mass_total_detector_sec))
+    itr_anchor = itrfIntPhi - 1
+    itrlim_low = 0
+    itrlim_high = itrfIntPhi
+    itrlim_low_amp = 0
+    itrlim_high_amp = itrfIntAmp
+
+    phi1_adj = waveform1.PF - 2 * np.pi * waveform1.TF[itr_anchor] * (freq - freq[itr_anchor]) - waveform1.PF[itr_anchor]
+    phi2_adj = waveform2.PF - 2 * np.pi * waveform2.TF[itr_anchor] * (freq - freq[itr_anchor]) - waveform2.PF[itr_anchor]
+
+    t1_adj = waveform1.TF - waveform1.TF[itr_anchor]
+    t2_adj = waveform2.TF - waveform2.TF[itr_anchor]
+
+    # import matplotlib.pyplot as plt
+    # plt.loglog(np.abs(phi1_adj[20:itrlim_high]))
+    # plt.plot(np.abs(phi2_adj[20:itrlim_high]))
+    # plt.show()
+    # plt.loglog(np.abs(t1_adj[20:itrlim_high]))
+    # plt.plot(np.abs(t2_adj[20:itrlim_high]))
+    # plt.show()
+    # plt.loglog(np.abs(waveform1.TFp[20:itrlim_high]))
+    # plt.loglog(np.abs(waveform2.TFp[20:itrlim_high]))
+    # plt.show()
+    # plt.loglog(np.abs(waveform1.AF*imrc.CLIGHT))
+    # plt.loglog(np.abs(waveform2.AF))
+    # plt.show()
+
+    atol_t = 1.e-3 * float(np.abs(t1_adj[itr_anchor - 10] - t1_adj[itr_anchor - 1]))
+    atol_tp = 1.e-3 * float(np.abs(waveform1.TFp[itr_anchor - 10] - waveform1.TFp[itr_anchor - 1]))
+
+    # anchor time and phase offsets, can test those are as expected separately
+    # amplitude model is exactly the same currently
+    assert_allclose(waveform1.AF[itrlim_low_amp:itrlim_high_amp], waveform2.AF[itrlim_low_amp:itrlim_high_amp], atol=1.e-100, rtol=1.e-10)
+    # other models are slightly different currently
+    assert_allclose(waveform1.TFp[itrlim_low:itrlim_high], waveform2.TFp[itrlim_low:itrlim_high], atol=atol_tp, rtol=1.3e-1)
+    assert_allclose(t1_adj[itrlim_low:itrlim_high], t2_adj[itrlim_low:itrlim_high], atol=atol_t, rtol=1.3e-1)
+    assert_allclose(phi1_adj[itrlim_low:itrlim_high], phi2_adj[itrlim_low:itrlim_high], atol=1.e-9, rtol=1.3e-1)
 
 
 @pytest.mark.parametrize('q', [0.4781820536061116])
@@ -752,7 +864,7 @@ def test_imrphenomd_derivative_consistency_int(q: float, waveform_method: str) -
 
 
 @pytest.mark.parametrize('q', [0.4781820536061116])
-@pytest.mark.parametrize('waveform_method', ['old_phase', 'old_ins_ansatz', 'amp_phase_ins_ansatz0', 'amp_phase_ins_ansatz1', 'amp_phase_series_ins_ansatz0', 'amp_phase_series_ins_ansatz1', 'ampphasefull0', 'ampphasefull1', 'phasefull0', 'phasefull1', 'ampphasetc0', 'ampphasetc1'])
+@pytest.mark.parametrize('waveform_method', ['taylorf2', 'old_phase', 'old_ins_ansatz', 'amp_phase_ins_ansatz0', 'amp_phase_ins_ansatz1', 'amp_phase_series_ins_ansatz0', 'amp_phase_series_ins_ansatz1', 'ampphasefull0', 'ampphasefull1', 'phasefull0', 'phasefull1', 'ampphasetc0', 'ampphasetc1'])
 def test_imrphenomd_derivative_consistency_ins(q: float, waveform_method: str) -> None:
     """Various checks for internal consistency of phase derivatives, restricted to inspiral"""
     m_tot_solar = 1242860.685 + 2599137.035
@@ -804,7 +916,7 @@ def test_imrphenomd_derivative_consistency_ins(q: float, waveform_method: str) -
 
 
 @pytest.mark.parametrize('q', [0.4781820536061116, 0.999])
-@pytest.mark.parametrize('waveform_method', ['old_phase', 'old_mrd_ansatz', 'old_int_ansatz', 'old_ins_ansatz', 'amp_phase_mrd_ansatz0', 'amp_phase_mrd_ansatz1', 'amp_phase_ins_ansatz0', 'amp_phase_ins_ansatz1', 'amp_phase_int_ansatz0', 'amp_phase_int_ansatz1', 'amp_phase_series_ins_ansatz0', 'amp_phase_series_ins_ansatz1', 'ampphasefull0', 'ampphasefull1', 'phasefull0', 'phasefull1', 'ampphasetc0', 'ampphasetc1'])
+@pytest.mark.parametrize('waveform_method', ['taylorf2', 'old_phase', 'old_mrd_ansatz', 'old_int_ansatz', 'old_ins_ansatz', 'amp_phase_mrd_ansatz0', 'amp_phase_mrd_ansatz1', 'amp_phase_ins_ansatz0', 'amp_phase_ins_ansatz1', 'amp_phase_int_ansatz0', 'amp_phase_int_ansatz1', 'amp_phase_series_ins_ansatz0', 'amp_phase_series_ins_ansatz1', 'ampphasefull0', 'ampphasefull1', 'phasefull0', 'phasefull1', 'ampphasetc0', 'ampphasetc1'])
 def test_imrphenomd_derivative_consistency(q: float, waveform_method: str) -> None:
     """Various checks for internal consistency of phase derivatives"""
     m_tot_solar = 1242860.685 + 2599137.035
@@ -878,7 +990,7 @@ def test_imrphenomd_derivative_consistency2(q: float) -> None:
     m2_solar = m1_solar * q
     intrinsic, MfRef_in = setup_test_helper(m1_solar, m2_solar)
 
-    amp0: float = 2. * np.sqrt(5. / (64. * np.pi)) * intrinsic.mass_total_detector_sec**2 / intrinsic.luminosity_distance_m * imrc.CLIGHT  # *imrc.MTSUN_SI**2#*imrc.MTSUN_SI**2*wc.CLIGHT
+    amp0: float = 2. * np.sqrt(5. / (64. * np.pi)) * intrinsic.mass_total_detector_sec**2 / intrinsic.luminosity_distance_m  # * imrc.CLIGHT  # *imrc.MTSUN_SI**2#*imrc.MTSUN_SI**2*wc.CLIGHT
 
     NF: int = 16384 * 100
 
@@ -928,7 +1040,7 @@ def test_imrphenomd_internal_consistency(q: float) -> None:
     m2_solar = m1_solar * q
     intrinsic, MfRef_in = setup_test_helper(m1_solar, m2_solar)
 
-    amp0: float = 2. * np.sqrt(5. / (64. * np.pi)) * intrinsic.mass_total_detector_sec**2 / intrinsic.luminosity_distance_m * imrc.CLIGHT  # *imrc.MTSUN_SI**2#*imrc.MTSUN_SI**2*wc.CLIGHT
+    amp0: float = 2. * np.sqrt(5. / (64. * np.pi)) * intrinsic.mass_total_detector_sec**2 / intrinsic.luminosity_distance_m  # * imrc.CLIGHT  # *imrc.MTSUN_SI**2#*imrc.MTSUN_SI**2*wc.CLIGHT
     finspin: float = FinalSpin0815(intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a)  # FinalSpin0815 - 0815 is like a version number
     Mf_ringdown, Mf_damp = fringdown(intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, finspin)
     amp0_use: float = amp0 * amp0Func(intrinsic.symmetric_mass_ratio)
@@ -984,22 +1096,9 @@ def test_imrphenomd_internal_consistency(q: float) -> None:
         assert_allclose(waveform5.AF[:30000], waveform4.AF[:30000], atol=1.e-16, rtol=1.e-6)
         assert_allclose(waveform1.AF, waveform6.AF, atol=1.e-30, rtol=1.e-6)
 
-        damp1 = DAmpInsAnsatz(Mfs, intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, intrinsic.chi_postnewtonian, amp_mult=amp0_use)
-        damp1_alt1 = gradient(waveform1.AF * Mfs**(7 / 6), Mfs)
-        damp1_alt2 = gradient(waveform5.AF * Mfs**(7 / 6), Mfs)
-        damp1_alt3 = gradient(waveform6.AF * Mfs**(7 / 6), Mfs)
-        if do_deriv_ins_test:
-            assert_allclose(damp1[20:], damp1_alt1[20:], atol=1.e-30, rtol=1.e-2)
-            assert_allclose(damp1[20:], damp1_alt2[20:], atol=1.e-30, rtol=1.e-2)
-            assert_allclose(damp1[20:], damp1_alt3[20:], atol=1.e-30, rtol=1.e-2)
-
         waveform2.AF[:] = AmpIntAnsatz(Mfs, Mf_ringdown, Mf_damp, intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, intrinsic.chi_postnewtonian, amp0_use)
 
         waveform3.AF[:] = AmpMRDAnsatz(Mfs, Mf_ringdown, Mf_damp, intrinsic.symmetric_mass_ratio, intrinsic.chi_postnewtonian, amp0_use)
-        damp3 = DAmpMRDAnsatz(Mfs, Mf_ringdown, Mf_damp, intrinsic.symmetric_mass_ratio, intrinsic.chi_postnewtonian, amp0_use)
-        damp3_alt = gradient(waveform3.AF * Mfs**(7 / 6), Mfs)
-        if do_deriv_ins_test:
-            assert_allclose(damp3, damp3_alt, atol=1.e-23, rtol=3.e-5)
 
         if do_deriv_ins_test:
             # assert np.sum(np.isclose(waveform3.AF, waveform2.AF, atol=1.e-30, rtol=1.e-3)) > 3000
@@ -1017,7 +1116,7 @@ def test_imrphenomd_internal_consistency(q: float) -> None:
     h22 = AmpPhaseFDWaveform(NF, waveform_imr.F, waveform_imr.AF, waveform_imr.PF, waveform_imr.TF, waveform_imr.TFp, 0., 0.)
     h22 = IMRPhenomDGenerateh22FDAmpPhase(h22, freq, intrinsic.phase_c, MfRef_in, intrinsic.mass_1_detector_kg, intrinsic.mass_2_detector_kg, intrinsic.chi_1z, intrinsic.chi_2z, intrinsic.luminosity_distance_m)
 
-    assert_allclose(2. * np.sqrt(5. / (64. * np.pi)) * h22.amp, waveform_FI3.AF, atol=1.e-30, rtol=1.e-10)
+    assert_allclose(2. * np.sqrt(5. / (64. * np.pi)) * h22.amp / imrc.CLIGHT, waveform_FI3.AF, atol=1.e-30, rtol=1.e-10)
     # assert_allclose(h22.timep, waveform_FI3.TFp, atol=1.e-30, rtol=2.1e-10)
 
     waveform5.AF[:] = IMRPhenDAmplitude(Mfs, intrinsic.symmetric_mass_ratio, intrinsic.chi_s, intrinsic.chi_a, NF, amp0)
