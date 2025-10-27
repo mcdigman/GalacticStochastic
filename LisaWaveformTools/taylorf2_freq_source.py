@@ -2,7 +2,10 @@
 
 from typing import override
 
+import numpy as np
+
 from LisaWaveformTools.binary_params_manager import BinaryIntrinsicParams, BinaryIntrinsicParamsManager
+from LisaWaveformTools.imrphenomd_waveform import IMRPhenDAmpPhaseFI
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.source_params import AbstractIntrinsicParamsManager, ExtrinsicParams, SourceParams
 from LisaWaveformTools.stationary_freq_source import StationarySourceWaveformFreq
@@ -20,6 +23,12 @@ def taylorf2_intrinsic_freq(
         return TaylorF2_eccentric_inplace(waveform, params_intrinsic, nf_lim, amplitude_pn_mode=amplitude_pn_mode, t_offset=t_offset, tc_mode=tc_mode)
     if model_select == 'taylorf2_aligned':
         return TaylorF2_aligned_inplace(waveform, params_intrinsic, nf_lim, amplitude_pn_mode=amplitude_pn_mode, include_pn_ss3=include_pn_ss3, t_offset=t_offset, tc_mode=tc_mode)
+    if model_select == 'imrphenomd':
+        # TODO respect tc_mode
+        amp0: float = 2. * float(np.sqrt(5. / (64. * np.pi))) * params_intrinsic.mass_total_detector_sec**2 / params_intrinsic.luminosity_distance_m
+        MfRef_in = params_intrinsic.frequency_i_hz * params_intrinsic.mass_total_detector_sec
+        _, imr_params = IMRPhenDAmpPhaseFI(waveform, params_intrinsic, nf_lim, MfRef_in=MfRef_in, phi0=-params_intrinsic.phase_c + np.pi / 16., amp_mult=amp0, imr_default_t=0)
+        return imr_params.TTRef
     msg = f'Unknown model_select value: {model_select}'
     raise ValueError(msg)
 

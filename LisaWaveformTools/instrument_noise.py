@@ -10,8 +10,10 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 def instrument_noise1(f: NDArray[np.floating], lc: LISAConstants) -> NDArray[np.floating]:
     # Power spectral density of the detector noise and transfer frequency
-    Sps: float = 9.0e-24  # should match sangria v2? Should it be backlinknoise or readoutnoise?
-    Sacc: float = 5.76e-30  # from sangria v2
+    # Sps: float = 9.0e-24  # should match sangria v2? Should it be backlinknoise or readoutnoise?
+    # Sacc: float = 5.76e-30  # from sangria v2
+    Sps = lc.Sps
+    Sacc = lc.Sacc
     fonfs: NDArray[np.floating] = f / lc.fstr
     # To match the LDC power spectra need a factor of 2 here. No idea why... (one sided/two sided?)
     LC: NDArray[np.floating] = 2.0 * fonfs * fonfs

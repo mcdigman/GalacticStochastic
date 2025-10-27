@@ -59,9 +59,7 @@ def test_noise_normalization_flat(noise_curve_mode: int, distort_mult: int) -> N
 
     for itrc in range(nc_noise):
         noise_realization_time[:, itrc] = inverse_wavelet_time(noise_wave[:, :, itrc], Nf, Nt)
-        fpsd, psd_loc = scipy.signal.welch(
-            noise_realization_time[:, itrc], fs=1.0 / dt, nperseg=2 * Nf, scaling='density', window='tukey'
-        )
+        fpsd, psd_loc = scipy.signal.welch(noise_realization_time[:, itrc], fs=1.0 / dt, nperseg=2 * Nf, scaling='density', window='tukey')
         psd_interp[:, itrc] = InterpolatedUnivariateSpline(fpsd, psd_loc, k=3, ext=1)(fs_fft)
         # plt.plot(noise_realization_time[:, 0]**2)
         # plt.show()

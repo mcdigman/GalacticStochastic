@@ -3,19 +3,23 @@ Get Taylor time-domain coefficients for wavelet transforms.
 
 C 2025 Matthew C. Digman
 """
+from __future__ import annotations
 
 from time import time
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import h5py
 import numpy as np
 import scipy.fft as spf
 from numba import njit, prange
-from numpy.typing import NDArray
 from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 
 from WaveletWaveforms.sparse_waveform_functions import SparseWaveletWaveform
-from WaveletWaveforms.wdm_config import WDMWaveletConstants
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+    from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 SECSYEAR = 24 * 365 * 3600  # Number of seconds in a calendar year
 
@@ -72,7 +76,7 @@ def get_empty_sparse_taylor_time_waveform(nc_waveform: int, wc: WDMWaveletConsta
     return SparseWaveletWaveform(wave_value, pixel_index, n_set, n_pixel_max)
 
 
-def wavelet(wc: WDMWaveletConstants, m: int, nrm: float, *, n_in: int = -1) -> NDArray[np.floating]:
+def wavelet(wc: WDMWaveletConstants, m: int | float, nrm: float, *, n_in: int = -1) -> NDArray[np.floating]:
     """
     Construct and normalize a wavelet basis function for the specified frequency bin.
 
@@ -84,11 +88,12 @@ def wavelet(wc: WDMWaveletConstants, m: int, nrm: float, *, n_in: int = -1) -> N
     wc : WDMWaveletConstants
         Wavelet decomposition configuration, specifying time sampling,
         frequency grid, windowing, and FFT parameters.
-    m : int
+    m : int | float
         The index of the frequency bin around which to center the wavelet.
+        Although it has units of an index, it is actually a frequency and so need not necessarily be an integer
+
     nrm : float
         Normalization factor to scale the resulting wavelet.
-
     Returns
     -------
     wave : np.ndarray
@@ -109,11 +114,11 @@ def wavelet(wc: WDMWaveletConstants, m: int, nrm: float, *, n_in: int = -1) -> N
     assert n_use % 2 == 0
 
     wave = np.zeros(n_use)
-    half_n_us = int(n_use // 2)
+    half_n_use = int(n_use // 2)
 
     DE = np.zeros(n_use, dtype=np.complex128)
 
-    om: NDArray[np.floating] = wc.dom * np.hstack([np.arange(0, half_n_us + 1), -np.arange(half_n_us - 1, 0, -1)])
+    om: NDArray[np.floating] = wc.dom * np.hstack([np.arange(0, half_n_use + 1), -np.arange(half_n_use - 1, 0, -1)])
     DE[:] = (
         np.sqrt(wc.dt)
         / np.sqrt(2.0)
@@ -127,8 +132,8 @@ def wavelet(wc: WDMWaveletConstants, m: int, nrm: float, *, n_in: int = -1) -> N
 
     del DE
 
-    wave[half_n_us:] = np.real(DE_fft[0:half_n_us])
-    wave[0:half_n_us] = np.real(DE_fft[half_n_us:])
+    wave[half_n_use:] = np.real(DE_fft[0:half_n_use])
+    wave[0:half_n_use] = np.real(DE_fft[half_n_use:])
     return 1.0 / nrm * wave
 
 
@@ -220,7 +225,8 @@ def get_wavelet_norm(wc: WDMWaveletConstants) -> NDArray[np.floating]:
 
     nrm: float = (1.0 / np.sqrt(2.0)) * float(np.linalg.norm(wave))
     # TODO check if this is the right way of getting the relevant m
-    kwave = int(wc.Nf // 16)
+    # kwave = int(wc.Nf // 16)
+    kwave: float = wc.Nf / 16
     return wavelet(wc, kwave, nrm)
 
 

@@ -1,4 +1,44 @@
-To generate a galaxy specified in an hdf5 file,
+GalacticStochastic is a python module which implements the iterative fitting procedure
+described in arXiv:2206.14813 to approximate the LISA foreground from unresolved galactic binaries.
+The code takes a Galaxy specified as an hdf5 file, input parameters specified in a a .toml configuration file,
+and outputs the results as a compressed hdf5 file. The state of the fit can be reloaded into memory from
+the output hdf5 file, unless certain options are chosen to reduce the memory size of the output file.
 
-python process_galaxy_preliminary.py
-python run_gb_iterative.py
+The code is structured to allow for reproducibility of results, easy modification of the input Galaxy,
+and the individual component objects have modular interfaces to allow for easy modification of the fitting procedure.
+
+Because there are typically a large number of binaries which individually have no chance of being detected
+but which all need to be added to the coadded galactic signal, the first iteration of the procedure is typically
+the most expensive iteration by far. Therefore, the code handles the first iteration differently.
+The first iteration is considered the 'preliminary' iteration, and allows the results
+from the first loop to be saved to an hdf5 file and reloaded separately from the rest of the fitting procedure.
+It should only exclude binaries that are virtually guaranteed to be undetectable. To accomplish this, it considers only
+instrument noise, and can use a different SNR cutoff and observation time window from later iterations.
+For example, if it were run with a lower cutoff snr of 5 and an observing time of 10 years, while later iterations
+are expected to use a cutoff snr of 7 and an observing time of 4 years, then there would be virtually zero chance
+of a binary being suppressed incorrectly by the preliminary iteration.
+Using a conservative cutoff allows the preliminary iteration to be run once and saved to disk.
+If the initially chosen cutoff is *too* conservative, a second preliminary iteration can be run with a less
+conservative cutoff, using the results of the first preliminary iteration to speed up the second preliminary iteration.
+
+Once a satisfactory preliminary iteration has been run and saved to disk, the main iterative fitting procedure
+can be run multiple times with different fitting parameters or time windows.
+
+The code is primarily run through the function
+`fetch_or_run_iterative_loop`, imported from `GalacticStochastic.iterative_loop`.
+The behavior of the function is controlled by the `fetch_mode` and `preprocess_mode` parameters,
+as documented in the function's docstring.
+
+To run the full procedure on a specified Galaxy and configuration file with a basic set of default arguments,
+use the script
+
+python run_iterative_procedure.py,
+
+which takes the configuration filename by modifying `config_filename`, and outputs the galaxy to the directory specified
+in the configuration file.
+I suggest copying and modifying a unique configuration file for each galaxy into the directory
+that the galaxy will be written to, making sure to change galaxy_dir
+in the configuration file to match the output directory. That way, if the configuration file for one galaxy needs to be
+modfied, it will not affect the configuration files for other galaxies.
+
+Care should be taken to change the galaxy directory, or else multiple galaxies may overwrite each other.

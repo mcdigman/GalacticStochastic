@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 # TODO remove implicit dependence on global constants in PyIMRPhenomD.IMRPhenomD_const
+# TODO make PixelGenericRange work to ignore values
 
 
 # from IMRPhenomD_internals import AmpIn

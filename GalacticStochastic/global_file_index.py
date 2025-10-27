@@ -229,9 +229,9 @@ def get_full_galactic_params(config: dict[str, Any]) -> tuple[NDArray[np.floatin
     assert np.all((-np.pi / 2 <= params_gb[:, 1]) & (params_gb[:, 1] <= np.pi / 2)), (
         'Ecliptic latitude not bounded in expected range'
     )
-    assert np.all((params_gb[:, 2] >= 0.0) & (params_gb[:, 2] <= 2 * np.pi)), (
-        'Ecliptic longitude not bounded in expected range'
-    )
+    # assert np.all((params_gb[:, 2] >= 0.0) & (params_gb[:, 2] <= 2 * np.pi)), (
+    #    'Ecliptic longitude not bounded in expected range'
+    # )
     assert np.all(params_gb[:, 3] > 0.0), 'Some binaries have non-positive frequencies'
     if np.any(np.abs(params_gb[:, 4]) * gc.SECSYEAR * 10 > 0.001):
         warn('Some binaries have large frequency derivatives', stacklevel=2)

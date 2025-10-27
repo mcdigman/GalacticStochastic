@@ -21,6 +21,8 @@ from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 # TODO still need tests for correct anchoring of reference frequency, phase, and time
 # TODO test amplitude normalization
+# TODO default amp0 etc
+# TODO make manager object
 
 
 def setup_test_helper(m1_solar: float, m2_solar: float, chi1: float = 0.7534821857057837, chi2: float = 0.6215875279643664) -> tuple[BinaryIntrinsicParams, float]:
