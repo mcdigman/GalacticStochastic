@@ -349,8 +349,8 @@ class NoiseModelManager(StateManager):
             msg = 'Could not find group lc in hdf5 file'
             raise TypeError(msg)
 
-        for key in self._lc._fields:
-            assert getattr(self._lc, key) == hf_lc.attrs[key], f'lc attribute {key} does not match saved value'
+        # for key in self._lc._fields:
+        #    assert getattr(self._lc, key) == hf_lc.attrs[key], f'lc attribute {key} does not match saved value'
 
         hf_ic = hf_noise['ic']
         if not isinstance(hf_ic, h5py.Group):

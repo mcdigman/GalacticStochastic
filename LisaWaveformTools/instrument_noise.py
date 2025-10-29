@@ -21,9 +21,9 @@ def instrument_noise1(f: NDArray[np.floating], lc: LISAConstants) -> NDArray[np.
     # To match the LDC power spectra need a factor of 2 here. No idea why... (one sided/two sided?)
     LC: NDArray[np.floating] = 8.0 * 2.0 * f_on_f**2
     # roll-offs
-    roll1 = 4.0e-4 / f
-    roll2 = f / 8.0e-3
-    roll3 = 2.0e-3 / f
+    roll1 = lc.f_roll_acc_f_inv / f
+    roll2 = f / lc.f_roll_acc_f
+    roll3 = lc.f_roll_ps_f_inv / f
     rolla: NDArray[np.floating] = (1.0 + roll1**2) * (1.0 + roll2**4)
     rollw: NDArray[np.floating] = 1.0 + roll3**4
     scale_part: NDArray[np.floating] = LC * 16.0 / 3.0 * np.sin(f_on_f) ** 2 / (2.0 * lc.Larm) ** 2
@@ -41,7 +41,7 @@ def instrument_noise_AET(f: NDArray[np.floating], lc: LISAConstants, tdi_mode: s
     # TODO take nc from object
     nc_aet = 3  # the three TDI channels
     if diagonal_mode == 0:
-        S_inst = np.zeros((f.size, nc_aet))
+        S_inst: NDArray[np.floating] = np.zeros((f.size, nc_aet))
     elif diagonal_mode == 1:
         S_inst = np.zeros((f.size, nc_aet, nc_aet))
     else:
@@ -68,9 +68,9 @@ def instrument_noise_AET(f: NDArray[np.floating], lc: LISAConstants, tdi_mode: s
 
     # roll-offs
     # TODO load the coefficients from lisa_config
-    roll1 = 4.0e-4 / f
-    roll2 = f / 8.0e-3
-    roll3 = 2.0e-3 / f
+    roll1 = lc.f_roll_acc_f_inv / f
+    roll2 = f / lc.f_roll_acc_f
+    roll3 = lc.f_roll_ps_f_inv / f
     rolla: NDArray[np.floating] = (1.0 + roll1**2) * (1.0 + roll2**4)
     rollw: NDArray[np.floating] = 1.0 + roll3**4
 
@@ -168,7 +168,7 @@ def instrument_noise_AET_wdm_loop(
 
     if diagonal_mode == 0:
         assert len(S_inst_long.shape) == 2
-        S_inst_m = np.zeros((wc.Nf, S_inst_long.shape[-1]))
+        S_inst_m: NDArray[np.floating] = np.zeros((wc.Nf, S_inst_long.shape[-1]))
     elif diagonal_mode == 1:
         assert len(S_inst_long.shape) == 3
         assert S_inst_long.shape[1] == S_inst_long.shape[2]

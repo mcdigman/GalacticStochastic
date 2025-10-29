@@ -643,10 +643,10 @@ class BinaryInclusionState(StateManager):
                 f'wavelet constant attribute {key} does not match saved value'
             )
 
-        for key in self._lc._fields:
-            assert getattr(self._lc, key) == hf_include['lc'].attrs[key], (
-                f'lisa constant attribute {key} does not match saved value'
-            )
+        # for key in self._lc._fields:
+        #    assert getattr(self._lc, key) == hf_include['lc'].attrs[key], (
+        #        f'lisa constant attribute {key} does not match saved value'
+        #    )
 
         if self._fit_state.preprocess_mode != 1:
             for key in self._ic._fields:

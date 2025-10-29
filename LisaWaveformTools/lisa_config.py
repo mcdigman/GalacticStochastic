@@ -25,6 +25,9 @@ class LISAConstants(NamedTuple):
     t_rise: float
     rise_mode: int
     noise_curve_mode: int
+    f_roll_acc_f_inv: float
+    f_roll_acc_f: float
+    f_roll_ps_f_inv: float
 
 
 def get_lisa_constants(config: dict[str, Any]) -> LISAConstants:
@@ -108,6 +111,10 @@ def get_lisa_constants(config: dict[str, Any]) -> LISAConstants:
     # Mode to use for instrument noise curve calculation
     noise_curve_mode = int(config_lc.get('noise_curve_mode', 0))
 
+    f_roll_acc_f_inv = float(config_lc.get('f_roll_acc_f_inv', 4.0e-4))
+    f_roll_acc_f = float(config_lc.get('f_roll_acc_f', 8.0e-3))
+    f_roll_ps_f_inv = float(config_lc.get('f_roll_ps_f_inv', 2.0e-3))
+
     return LISAConstants(
         Larm,
         Sps,
@@ -125,4 +132,7 @@ def get_lisa_constants(config: dict[str, Any]) -> LISAConstants:
         t_rise,
         rise_mode,
         noise_curve_mode,
+        f_roll_acc_f_inv,
+        f_roll_acc_f,
+        f_roll_ps_f_inv,
     )
