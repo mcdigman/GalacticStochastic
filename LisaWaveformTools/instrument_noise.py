@@ -38,8 +38,8 @@ def instrument_noise_AET(f: NDArray[np.floating], lc: LISAConstants, tdi_mode: s
     # see arXiv:2005.03610
     # see arXiv:1002.1291
 
-    # TODO take nc from object
-    nc_aet = 3  # the three TDI channels
+    nc_aet: int = 3  # the three TDI channels
+
     if diagonal_mode == 0:
         S_inst: NDArray[np.floating] = np.zeros((f.size, nc_aet))
     elif diagonal_mode == 1:
@@ -59,51 +59,50 @@ def instrument_noise_AET(f: NDArray[np.floating], lc: LISAConstants, tdi_mode: s
         msg = 'Unrecognized option for noise curve mode'
         raise ValueError(msg)
 
-    fonfs = f / lc.fstr
-    cosfonfs = np.cos(fonfs)
+    f_on_f: NDArray[np.floating] = f / lc.fstr
+    cos_f_on_f: NDArray[np.floating] = np.cos(f_on_f)
+    sin_f_on_f: NDArray[np.floating] = np.sin(f_on_f)
+    sin_2f_on_f: NDArray[np.floating] = np.sin(2 * f_on_f)
+    cos_2f_on_f: NDArray[np.floating] = np.cos(2 * f_on_f)
 
-    LC = 64 / (3 * lc.Larm**2)
-    mult_all_diag = LC * fonfs**2 * np.sin(fonfs) ** 2
-    mult_all_offdiag = -LC / 4 * fonfs**2 * np.sin(fonfs) * np.sin(2 * fonfs)
+    LC: float = 64 / (3 * lc.Larm**2)
+    mult_all_diag: NDArray[np.floating] = LC * f_on_f**2 * sin_f_on_f ** 2
+    mult_all_offdiag: NDArray[np.floating] = -LC / 4 * f_on_f**2 * sin_f_on_f * sin_2f_on_f
 
     # roll-offs
-    # TODO load the coefficients from lisa_config
-    roll1 = lc.f_roll_acc_f_inv / f
-    roll2 = f / lc.f_roll_acc_f
-    roll3 = lc.f_roll_ps_f_inv / f
+    roll1: NDArray[np.floating] = lc.f_roll_acc_f_inv / f
+    roll2: NDArray[np.floating] = f / lc.f_roll_acc_f
+    roll3: NDArray[np.floating] = lc.f_roll_ps_f_inv / f
     rolla: NDArray[np.floating] = (1.0 + roll1**2) * (1.0 + roll2**4)
     rollw: NDArray[np.floating] = 1.0 + roll3**4
 
     # common multipliers
-    mult_sa = (2 * lc.Sacc / (2 * np.pi) ** 4) * rolla / f**4
-    mult_sp = lc.Sps * rollw
+    mult_sa: NDArray[np.floating] = (2 * lc.Sacc / float(2 * np.pi) ** 4) * rolla / f**4
+    mult_sp: NDArray[np.floating] = lc.Sps * rollw
 
     # overall component scaling
-    scale_part_AE_diag = mult_all_diag
-    scale_part_xyz_diag = 3 / 2 * mult_all_diag
-    scale_part_xyz_offdiag = 3 / 2 * mult_all_offdiag
-    scale_part_T = mult_all_diag
+    scale_part_AE_diag: NDArray[np.floating] = mult_all_diag
+    scale_part_xyz_diag: NDArray[np.floating] = 3.0 / 2.0 * mult_all_diag
+    scale_part_xyz_offdiag: NDArray[np.floating] = 3.0 / 2.0 * mult_all_offdiag
+    scale_part_T: NDArray[np.floating] = mult_all_diag
 
     # different shapes
-    cos_part_sa_AE = 3 + 2 * cosfonfs + np.cos(2 * fonfs)
-    cos_part_sp_AE = 2 + cosfonfs
-    cos_part_sa_T = 1 - 2 * cosfonfs + cosfonfs**2
-    cos_part_sp_T = 1 - cosfonfs
+    cos_part_sa_AE = 3 + 2 * cos_f_on_f + cos_2f_on_f
+    cos_part_sp_AE = 2 + cos_f_on_f
+    cos_part_sa_T = 1 - 2 * cos_f_on_f + cos_f_on_f**2
+    cos_part_sp_T = 1 - cos_f_on_f
 
-    # TODO derive xyz part
-    # cos_part_sa_xyz_diag = 15 + 5*np.cos(2*fonfs) - 14 * cosfonfs
-    # cos_part_sp_xyz_diag = 10 - 7*cosfonfs
-    cos_part_sa_xyz_diag = 3.0 + np.cos(2 * fonfs)
+    cos_part_sa_xyz_diag = 3.0 + cos_2f_on_f
     cos_part_sp_xyz_diag = 2.0
 
     cos_part_sa_xyz_offdiag = 4.0
     cos_part_sp_xyz_offdiag = 2.0
 
     # combine parts of shapes
-    add_part_AE = mult_sa * cos_part_sa_AE + mult_sp * cos_part_sp_AE
-    add_part_T = mult_sa * cos_part_sa_T + mult_sp * cos_part_sp_T
-    add_part_xyz_diag = mult_sa * cos_part_sa_xyz_diag + mult_sp * cos_part_sp_xyz_diag
-    add_part_xyz_offdiag = mult_sa * cos_part_sa_xyz_offdiag + mult_sp * cos_part_sp_xyz_offdiag
+    add_part_AE: NDArray[np.floating] = mult_sa * cos_part_sa_AE + mult_sp * cos_part_sp_AE
+    add_part_T: NDArray[np.floating] = mult_sa * cos_part_sa_T + mult_sp * cos_part_sp_T
+    add_part_xyz_diag: NDArray[np.floating] = mult_sa * cos_part_sa_xyz_diag + mult_sp * cos_part_sp_xyz_diag
+    add_part_xyz_offdiag: NDArray[np.floating] = mult_sa * cos_part_sa_xyz_offdiag + mult_sp * cos_part_sp_xyz_offdiag
 
     if tdi_mode == 'aet_equal':
         # store result
@@ -149,12 +148,9 @@ def instrument_noise_AET_wdm_loop(
 ) -> NDArray[np.floating]:
     """Help get the the instrument noise in the wdm wavelet basis."""
     # realistically this really only needs run once and is fast enough without jit
-    # TODO check normalization
     # TODO get first and last bins correct
     # nrm: float = float(np.sqrt(12318.0 / wc.Nf)) * float(np.linalg.norm(phif))
-    nrm: float = float(np.sqrt(2 * wc.dt) * np.linalg.norm(phif))
-    print('nrm instrument', nrm)
-    phif = phif / nrm
+
     phif2 = phif**2
 
     half_Nt = wc.Nt // 2
@@ -204,7 +200,9 @@ def instrument_noise_AET_wdm_m(lc: LISAConstants, wc: WDMWaveletConstants, tdi_m
     # TODO why no plus 1?
     ls: NDArray[np.integer] = np.arange(-wc.Nt // 2, wc.Nt // 2)
     fs: NDArray[np.floating] = ls / wc.Tobs
-    phif: NDArray[np.floating] = np.sqrt(wc.dt) * phitilde_vec(2 * np.pi * fs * wc.dt, wc.Nf, wc.nx)
+    phif: NDArray[np.floating] = phitilde_vec(2 * np.pi * fs * wc.dt, wc.Nf, wc.nx)
+    nrm: float = float(np.sqrt(2 * wc.dt)) * float(np.linalg.norm(phif))
+    print('nrm instrument', nrm)
+    phif = phif / nrm
 
-    # TODO check ad hoc normalization factor
     return instrument_noise_AET_wdm_loop(phif, lc, wc, tdi_mode=tdi_mode, diagonal_mode=diagonal_mode)

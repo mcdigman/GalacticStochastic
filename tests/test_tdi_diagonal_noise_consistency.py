@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 @overload
 def tdi_xyz_to_aet_helper(signal_xyz: NDArray[np.floating], axis: int = 0) -> NDArray[np.floating]:  ...
 @overload
-def tdi_xyz_to_aet_helper(signal_xyz: NDArray[np.complexfloating], axis: int = 0) -> NDArray[np.complexfloating]: ...
+def tdi_xyz_to_aet_helper(signal_xyz: NDArray[np.complexfloating], axis: int = 0) -> NDArray[np.complexfloating]: ...  # type: ignore[overload-cannot-match]
 def tdi_xyz_to_aet_helper(signal_xyz: NDArray[np.floating] | NDArray[np.complexfloating], axis: int = 0) -> NDArray[np.floating] | NDArray[np.complexfloating]:
     """Convert equal arm length xyz tdi to aet tdi."""
     assert axis in (0, -1)
@@ -49,7 +49,7 @@ def tdi_xyz_to_aet_helper(signal_xyz: NDArray[np.floating] | NDArray[np.complexf
 @overload
 def tdi_aet_to_xyz_helper(signal_aet: NDArray[np.floating], axis: int = 0) -> NDArray[np.floating]: ...
 @overload
-def tdi_aet_to_xyz_helper(signal_aet: NDArray[np.complexfloating], axis: int = 0) -> NDArray[np.complexfloating]: ...
+def tdi_aet_to_xyz_helper(signal_aet: NDArray[np.complexfloating], axis: int = 0) -> NDArray[np.complexfloating]: ...  # type: ignore[overload-cannot-match]
 def tdi_aet_to_xyz_helper(signal_aet: NDArray[np.floating] | NDArray[np.complexfloating], axis: int = 0) -> NDArray[np.floating] | NDArray[np.complexfloating]:
     """Convert equal arm length aet tdi to xyz tdi."""
     assert axis in (0, -1)
