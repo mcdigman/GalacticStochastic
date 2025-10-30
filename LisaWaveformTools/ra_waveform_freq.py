@@ -60,19 +60,30 @@ def get_tensor_basis(params_extrinsic: ExtrinsicParams) -> TensorBasis:
             Plus polarization tensor basis
         - e_cross: ndarray of shape (3, 3)
             Cross polarization tensor basis
+
+    Raises
+    ------
+    ValueError
+        If the provided costh value is not in the range [-1, 1].
     """
     # Calculate cos and sin of sky position, inclination, polarization
     n_space = 3  # number of spatial dimensions (must be 3)
 
-    costh = params_extrinsic.costh
-    phi = params_extrinsic.phi
-    sinth = np.sqrt(1.0 - costh**2)
-    cosph = np.cos(phi)
-    sinph = np.sin(phi)
+    costh: float = params_extrinsic.costh
+    phi: float = params_extrinsic.phi
 
-    kv = np.zeros(n_space)
-    u = np.zeros(n_space)
-    v = np.zeros(n_space)
+    # avoid sqrt becoming complex
+    if np.abs(costh) > 1.0:
+        msg = 'Invalid value for cos theta: must be in [-1, 1]'
+        raise ValueError(msg)
+
+    sinth: float = float(np.sqrt(1.0 - costh**2))
+    cosph: float = np.cos(phi)
+    sinph: float = np.sin(phi)
+
+    kv: NDArray[np.floating] = np.zeros(n_space)
+    u: NDArray[np.floating] = np.zeros(n_space)
+    v: NDArray[np.floating] = np.zeros(n_space)
 
     kv[0] = -sinth * cosph
     kv[1] = -sinth * sinph
@@ -86,8 +97,8 @@ def get_tensor_basis(params_extrinsic: ExtrinsicParams) -> TensorBasis:
     v[1] = -costh * sinph
     v[2] = sinth
 
-    e_plus = np.zeros((n_space, n_space))
-    e_cross = np.zeros((n_space, n_space))
+    e_plus: NDArray[np.floating] = np.zeros((n_space, n_space))
+    e_cross: NDArray[np.floating] = np.zeros((n_space, n_space))
 
     for i in range(n_space):
         for j in range(n_space):
@@ -97,7 +108,7 @@ def get_tensor_basis(params_extrinsic: ExtrinsicParams) -> TensorBasis:
 
 
 @njit()
-def get_oribtal_phase_constants(lc: LISAConstants, n_sc: int) -> SpacecraftRelativePhases:
+def get_oribtal_phase_constants(lc: LISAConstants, n_spacecraft: int) -> SpacecraftRelativePhases:
     """
     Calculate the initial orbital phase offsets and their sine and cosine values for each spacecraft.
 
@@ -108,28 +119,28 @@ def get_oribtal_phase_constants(lc: LISAConstants, n_sc: int) -> SpacecraftRelat
 
     Parameters
     ----------
-        lc (LISAConstants):
-            An object containing the LISA configuration constants
-        n_sc (int):
-            The number of spacecraft in the constellation.
+    lc: LISAConstants
+        An object containing the LISA configuration constants
+    n_spacecraft: int
+        The number of spacecraft in the constellation.
 
     Returns
     -------
-        SpacecraftRelativePhases:
-            A named tuple containing:
-                - sin_beta: ndarray of shape (n_sc,)
-                    The sine of each spacecraft's initial orbital phase offset times orbital radius and eccentricity.
-                - cos_beta: ndarray of shape (n_sc,)
-                    The cosine of each spacecraft's initial orbital phase offset times orbital rasius and eccentricity.
-                - betas: ndarray of shape (n_sc,)
-                    The initial orbital phase offsets (in radians) for the spacecraft.
+    SpacecraftRelativePhases:
+        A structure containing:
+        - sin_beta: ndarray of shape (n_spacecraft,)
+            The sine of each spacecraft's initial orbital phase offset times orbital radius and eccentricity.
+        - cos_beta: ndarray of shape (n_spacecraft,)
+            The cosine of each spacecraft's initial orbital phase offset times orbital rasius and eccentricity.
+        - betas: ndarray of shape (n_spacecraft,)
+            The initial orbital phase offsets (in radians) for the spacecraft.
     """
     # quantities for computing spacecraft positions
-    betas = np.zeros(n_sc)
-    sin_beta = np.zeros(n_sc)
-    cos_beta = np.zeros(n_sc)
-    for itrc in range(n_sc):
-        betas[itrc] = 2.0 / 3.0 * np.pi * itrc + lc.lambda0
+    betas: NDArray[np.floating] = np.zeros(n_spacecraft)
+    sin_beta: NDArray[np.floating] = np.zeros(n_spacecraft)
+    cos_beta: NDArray[np.floating] = np.zeros(n_spacecraft)
+    for itrc in range(n_spacecraft):
+        betas[itrc] = float(2.0 / 3.0 * np.pi) * itrc + lc.lambda0
         sin_beta[itrc] = (lc.r_orbit * lc.ec) * np.sin(betas[itrc])
         cos_beta[itrc] = (lc.r_orbit * lc.ec) * np.cos(betas[itrc])
     return SpacecraftRelativePhases(sin_beta, cos_beta, betas)
@@ -147,30 +158,34 @@ def get_detector_amplitude_phase_combinations(params_extrinsic: ExtrinsicParams)
 
     Parameters
     ----------
-        params_extrinsic (ExtrinsicParams):
-            Structure containing extrinsic source parameters, including
-            - cosi: cosine of the inclination angle of the binary's orbital plane,
-            - psi: polarization angle of the gravitational-wave signal (in radians).
+    params_extrinsic: ExtrinsicParams
+        Structure containing extrinsic source parameters, including
+        - cosi: cosine of the inclination angle of the binary's orbital plane,
+        - psi: polarization angle of the gravitational-wave signal (in radians).
 
     Returns
     -------
-        DetectorAmplitudePhaseCombinations:
-            Named tuple with the following fields:
-              - A_plus (float): Amplitude coefficient for the plus polarization.
-              - A_cross (float): Amplitude coefficient for the cross polarization.
-              - cos_psi (float): Cosine of twice the polarization angle.
-              - sin_psi (float): Sine of twice the polarization angle.
+    DetectorAmplitudePhaseCombinations:
+        Structure containing the following fiels:
+        - A_plus: float
+            Amplitude coefficient for the plus polarization.
+        - A_cross: float
+            Amplitude coefficient for the cross polarization.
+        - cos_psi: float
+            Cosine of twice the polarization angle.
+        - sin_psi: float
+            Sine of twice the polarization angle.
     """
-    cosi = params_extrinsic.cosi
-    psi = params_extrinsic.psi
+    cosi: float = params_extrinsic.cosi
+    psi: float = params_extrinsic.psi
 
     # polarization angle quantities
-    cos_psi = np.cos(2 * psi)
-    sin_psi = np.sin(2 * psi)
+    cos_psi: float = np.cos(2 * psi)
+    sin_psi: float = np.sin(2 * psi)
 
     # amplitude multipliers
-    A_plus = (1.0 + cosi**2) / 2
-    A_cross = -cosi
+    A_plus: float = (1.0 + cosi**2) / 2
+    A_cross: float = -cosi
 
     return DetectorAmplitudePhaseCombinations(A_plus, A_cross, cos_psi, sin_psi)
 
@@ -186,30 +201,40 @@ def get_aet_combinations(tdi_xyz: TDIComplexAntennaPattern, tdi_aet: TDIComplexA
 
     Parameters
     ----------
-        tdi_xyz (TDIComplexAntennaPattern):
-            Contains the complex antenna pattern responses for the X, Y, and Z Michelson TDI channels.
-        tdi_aet (TDIComplexAntennaPattern):
-            Output structure to be populated in place with the corresponding A, E, and T channel responses.
-
-    Returns
-    -------
-        None: The converted channel responses are written directly into the fields of `tdi_aet`.
+    tdi_xyz: TDIComplexAntennaPattern
+        Contains the complex antenna pattern responses for the X, Y, and Z Michelson TDI channels.
+    tdi_aet: TDIComplexAntennaPattern
+        Output structure to be populated in place with the corresponding A, E, and T channel responses.
     """
-    FpR_aet = tdi_aet.FpR
-    FcR_aet = tdi_aet.FcR
-    FpI_aet = tdi_aet.FpI
-    FcI_aet = tdi_aet.FcI
+    FpR_aet: NDArray[np.floating] = tdi_aet.FpR
+    FcR_aet: NDArray[np.floating] = tdi_aet.FcR
+    FpI_aet: NDArray[np.floating] = tdi_aet.FpI
+    FcI_aet: NDArray[np.floating] = tdi_aet.FcI
 
-    FpR_xyz = tdi_xyz.FpR
-    FcR_xyz = tdi_xyz.FcR
-    FpI_xyz = tdi_xyz.FpI
-    FcI_xyz = tdi_xyz.FcI
+    FpR_xyz: NDArray[np.floating] = tdi_xyz.FpR
+    FcR_xyz: NDArray[np.floating] = tdi_xyz.FcR
+    FpI_xyz: NDArray[np.floating] = tdi_xyz.FpI
+    FcI_xyz: NDArray[np.floating] = tdi_xyz.FcI
+
+    nc_michelson: int = tdi_xyz.FpR.shape[0]
+    assert nc_michelson == 3
+    nc_generate: int = 3
+
+    assert FpR_xyz.shape == (nc_michelson,)
+    assert FcR_xyz.shape == (nc_michelson,)
+    assert FpI_xyz.shape == (nc_michelson,)
+    assert FcI_xyz.shape == (nc_michelson,)
+
+    assert FpR_aet.shape == (nc_generate,)
+    assert FcR_aet.shape == (nc_generate,)
+    assert FpI_aet.shape == (nc_generate,)
+    assert FcI_aet.shape == (nc_generate,)
 
     FpR_aet[0] = (2 * FpR_xyz[0] - FpR_xyz[1] - FpR_xyz[2]) / 3.0
     FcR_aet[0] = (2 * FcR_xyz[0] - FcR_xyz[1] - FcR_xyz[2]) / 3.0
 
-    FpR_aet[1] = (FpR_xyz[2] - FpR_xyz[1]) / np.sqrt(3.0)
-    FcR_aet[1] = (FcR_xyz[2] - FcR_xyz[1]) / np.sqrt(3.0)
+    FpR_aet[1] = (FpR_xyz[2] - FpR_xyz[1]) / float(np.sqrt(3.0))
+    FcR_aet[1] = (FcR_xyz[2] - FcR_xyz[1]) / float(np.sqrt(3.0))
 
     FpR_aet[2] = (FpR_xyz[0] + FpR_xyz[1] + FpR_xyz[2]) / 3.0
     FcR_aet[2] = (FcR_xyz[0] + FcR_xyz[1] + FcR_xyz[2]) / 3.0
@@ -217,8 +242,8 @@ def get_aet_combinations(tdi_xyz: TDIComplexAntennaPattern, tdi_aet: TDIComplexA
     FpI_aet[0] = (2 * FpI_xyz[0] - FpI_xyz[1] - FpI_xyz[2]) / 3.0
     FcI_aet[0] = (2 * FcI_xyz[0] - FcI_xyz[1] - FcI_xyz[2]) / 3.0
 
-    FpI_aet[1] = (FpI_xyz[2] - FpI_xyz[1]) / np.sqrt(3)
-    FcI_aet[1] = (FcI_xyz[2] - FcI_xyz[1]) / np.sqrt(3)
+    FpI_aet[1] = (FpI_xyz[2] - FpI_xyz[1]) / float(np.sqrt(3.0))
+    FcI_aet[1] = (FcI_xyz[2] - FcI_xyz[1]) / float(np.sqrt(3.0))
 
     FpI_aet[2] = (FpI_xyz[0] + FpI_xyz[1] + FpI_xyz[2]) / 3.0
     FcI_aet[2] = (FcI_xyz[0] + FcI_xyz[1] + FcI_xyz[2]) / 3.0
@@ -242,32 +267,42 @@ def get_michelson_combinations(
 
     Parameters
     ----------
-        polarization_response (DetectorPolarizationResponse):
-            Contains the detector tensor projection onto plus and cross polarizations for each arm combination.
-        transfer_function (ComplexTransferFunction):
-            Provides the complex transfer functions for each arm, representing the propagation and time-delay effects.
-        A_psi (DetectorAmplitudePhaseCombinations):
-            Holds the intrinsic_waveform amplitude for each polarization and the polarization angle.
-        tdi_xyz (TDIComplexAntennaPattern):
-            Output object to be filled with the resulting Michelson TDI channel antenna pattern components.
-
-    Returns
-    -------
-        None: The function updates `tdi_xyz` fields in place
+    polarization_response: DetectorPolarizationResponse
+        Contains the detector tensor projection onto plus and cross polarizations for each arm combination.
+    transfer_function: ComplexTransferFunction
+        Provides the complex transfer functions for each arm, representing the propagation and time-delay effects.
+    A_psi: DetectorAmplitudePhaseCombinations
+        Holds the intrinsic_waveform amplitude for each polarization and the polarization angle.
+    tdi_xyz: TDIComplexAntennaPattern
+        Output object to be filled with the resulting Michelson TDI channel antenna pattern components.
     """
-    A_plus = A_psi.A_plus
-    A_cross = A_psi.A_cross
-    cos_psi = A_psi.cos_psi
-    sin_psi = A_psi.sin_psi
+    A_plus: float = A_psi.A_plus
+    A_cross: float = A_psi.A_cross
+    cos_psi: float = A_psi.cos_psi
+    sin_psi: float = A_psi.sin_psi
 
-    nc_michelson = tdi_xyz.FpR.shape[0]
-    TR = transfer_function.TR
-    TI = transfer_function.TI
+    nc_michelson: int = tdi_xyz.FpR.shape[0]
+    TR: NDArray[np.floating] = transfer_function.TR
+    TI: NDArray[np.floating] = transfer_function.TI
 
-    d_plus = polarization_response.d_plus
-    d_cross = polarization_response.d_cross
+    d_plus: NDArray[np.floating] = polarization_response.d_plus
+    d_cross: NDArray[np.floating] = polarization_response.d_cross
 
-    n_arm = d_plus.shape[0]
+    n_arm: int = d_plus.shape[0]
+
+    assert d_plus.shape == (n_arm, n_arm)
+    assert d_cross.shape == (n_arm, n_arm)
+    assert TR.shape == (n_arm, n_arm)
+    assert TI.shape == (n_arm, n_arm)
+    assert len(TR.shape) == 2
+    assert len(tdi_xyz.FpR.shape) == 1
+
+    assert nc_michelson <= n_arm
+    assert tdi_xyz.FpR.shape == (nc_michelson,)
+    assert tdi_xyz.FcR.shape == (nc_michelson,)
+    assert tdi_xyz.FpI.shape == (nc_michelson,)
+    assert tdi_xyz.FcI.shape == (nc_michelson,)
+
     for i in range(nc_michelson):
         tdi_xyz.FpR[i] = (
             -(
@@ -325,30 +360,38 @@ def get_projected_detector_response(
 
     Parameters
     ----------
-        tb (TensorBasis):
-            Contains the wave propagation unit vector and polarization basis tensors.
-        sc_wave_proj (SpacecraftSeparationWaveProjection):
-            Contains the projection (dot products) of the wave vector onto the relevant separation vectors,
-            as computed by `get_separation_wave_projection`.
-        resp (ProjectedDetectorResponse):
-            Output object to be populated with the detector response for each link and polarization. The
-            arrays within `resp` are updated in place.
-
-    Returns
-    -------
-        None: The computed response values are written in place into the provided `resp` object.
+    tb: TensorBasis
+        Contains the wave propagation unit vector and polarization basis tensors.
+    sc_sep: SpacecraftSeparationVectors
+        Contains the projection (dot products) of the wave vector onto the relevant separation vectors,
+        as computed by `get_separation_wave_projection`.
+    polarization_response: DetectorPolarizationResponse
+        Output object to be populated with the detector response for each link and polarization. The
+        arrays within `polarization_response` are updated in place.
     """
-    d_plus = polarization_response.d_plus
-    d_cross = polarization_response.d_cross
+    d_plus: NDArray[np.floating] = polarization_response.d_plus
+    d_cross: NDArray[np.floating] = polarization_response.d_cross
 
-    e_plus = tb.e_plus
-    e_cross = tb.e_cross
+    e_plus: NDArray[np.floating] = tb.e_plus
+    e_cross: NDArray[np.floating] = tb.e_cross
 
-    r12 = sc_sep.r12
-    r13 = sc_sep.r13
-    r23 = sc_sep.r23
+    r12: NDArray[np.floating] = sc_sep.r12
+    r13: NDArray[np.floating] = sc_sep.r13
+    r23: NDArray[np.floating] = sc_sep.r23
 
-    n_space = r12.shape[0]
+    n_space: int = r12.shape[0]
+
+    n_arm = 3
+
+    assert d_plus.shape == (n_arm, n_arm)
+    assert d_cross.shape == (n_arm, n_arm)
+
+    assert e_plus.shape == (n_space, n_space)
+    assert e_cross.shape == (n_space, n_space)
+
+    assert r12.shape == (n_space,)
+    assert r13.shape == (n_space,)
+    assert r23.shape == (n_space,)
 
     d_plus[:] = 0.0
     d_cross[:] = 0.0
@@ -390,33 +433,46 @@ def get_separation_wave_projection(
 
     Parameters
     ----------
-        tb (TensorBasis):
-            Tensor basis structure containing the wave propagation direction vector (`kv`)
-            and polarization tensors.
-        sc_sep (SpacecraftSeparationVectors):
-            Structure holding the three-dimensional separation vectors between spacecraft pairs
-            and between each spacecraft and the guiding center.
-        sc_wave_proj (SpacecraftSeparationWaveProjection):
-            Output structure to be populated in place with the calculated dot products
-            for spacecraft pair separations and guiding center separations.
-
-    Returns
-    -------
-        None: The results are written in place to the arrays in `sc_wave_proj`.
+    tb: TensorBasis
+        Tensor basis structure containing the wave propagation direction vector (`kv`)
+        and polarization tensors.
+    sc_sep: SpacecraftSeparationVectors
+        Structure holding the three-dimensional separation vectors between spacecraft pairs
+        and between each spacecraft and the guiding center.
+    sc_wave_proj: SpacecraftSeparationWaveProjection
+        Output structure to be populated in place with the calculated dot products
+        for spacecraft pair separations and guiding center separations.
     """
-    k_sc_sc_sep = sc_wave_proj.k_sc_sc_sep
-    k_sc_gc_sep = sc_wave_proj.k_sc_gc_sep
+    k_sc_sc_sep: NDArray[np.floating] = sc_wave_proj.k_sc_sc_sep
+    k_sc_gc_sep: NDArray[np.floating] = sc_wave_proj.k_sc_gc_sep
 
-    kv = tb.kv
+    kv: NDArray[np.floating] = tb.kv
 
-    r12 = sc_sep.r12
-    r13 = sc_sep.r13
-    r23 = sc_sep.r23
-    r10 = sc_sep.r10
-    r20 = sc_sep.r20
-    r30 = sc_sep.r30
+    r12: NDArray[np.floating] = sc_sep.r12
+    r13: NDArray[np.floating] = sc_sep.r13
+    r23: NDArray[np.floating] = sc_sep.r23
+    r10: NDArray[np.floating] = sc_sep.r10
+    r20: NDArray[np.floating] = sc_sep.r20
+    r30: NDArray[np.floating] = sc_sep.r30
 
+    # number of spatial dimensions
     n_space = kv.shape[0]
+    # number of spacecraft
+    n_spacecraft = k_sc_gc_sep.shape[0]
+
+    assert n_spacecraft == 3, 'Only implemented for 3 spacecraft'
+
+    assert k_sc_sc_sep.shape == (n_spacecraft, n_spacecraft)
+    assert k_sc_gc_sep.shape == (n_spacecraft,)
+
+    assert kv.shape == (n_space,)
+    assert r12.shape == (n_space,)
+    assert r13.shape == (n_space,)
+    assert r23.shape == (n_space,)
+    assert r10.shape == (n_space,)
+    assert r20.shape == (n_space,)
+    assert r30.shape == (n_space,)
+
     k_sc_sc_sep[:] = 0.0
     k_sc_gc_sep[:] = 0.0
     for k in range(n_space):
@@ -445,32 +501,49 @@ def get_transfer_function(
 
     Parameters
     ----------
-        fr (float): Dimensionless frequency parameter, typically `f / f_star`, where f is the frequency
-            and f_star is the LISA transfer frequency.
-        sc_wave_proj (SpacecraftSeparationWaveProjection): Precomputed inner products
-            of the wave propagation direction with spacecraft separation vectors.
-        transfer_function (ComplexTransferFunction): Object to store the transfer function matrix for each arm pair.
-
-    Returns
-    -------
-        None: The results are written in place to `transfer_function.TR` and `transfer_function.TI`.
+    fr: float
+        Dimensionless frequency, typically `f / f_star`, where f is the frequency
+        and f_star is the LISA transfer frequency.
+    sc_wave_proj: SpacecraftSeparationWaveProjection
+        Precomputed inner products of the wave propagation direction with spacecraft separation vectors.
+    transfer_function: ComplexTransferFunction
+        Object to store the transfer function matrix for each arm pair.
     """
-    k_sc_sc_sep = sc_wave_proj.k_sc_sc_sep
-    k_sc_gc_sep = sc_wave_proj.k_sc_gc_sep
+    k_sc_sc_sep: NDArray[np.floating] = sc_wave_proj.k_sc_sc_sep
+    k_sc_gc_sep: NDArray[np.floating] = sc_wave_proj.k_sc_gc_sep
 
-    TR = transfer_function.TR
-    TI = transfer_function.TI
+    n_spacecraft: int = k_sc_gc_sep.shape[0]
+
+    assert n_spacecraft == 3, 'Only implemented for 3 spacecraft'
+    assert k_sc_sc_sep.shape == (n_spacecraft, n_spacecraft)
+    assert k_sc_gc_sep.shape == (n_spacecraft,)
+
+    TR: NDArray[np.floating] = transfer_function.TR
+    TI: NDArray[np.floating] = transfer_function.TI
     n_arm = TR.shape[0]
+
+    assert n_arm == n_spacecraft, 'Only implemented for 3 spacecraft'
+    assert TR.shape == (n_arm, n_arm)
+    assert TI.shape == (n_arm, n_arm)
+    assert fr > 0.0, 'Frequency must be positive'
+
     for i in range(n_arm - 1):
         for j in range(i + 1, n_arm):
-            q1 = fr * (1.0 - k_sc_sc_sep[i, j])
-            q2 = fr * (1.0 + k_sc_sc_sep[i, j])
-            q3 = -fr * (3.0 + k_sc_sc_sep[i, j] - 2 * k_sc_gc_sep[i])
-            q4 = -fr * (1.0 + k_sc_sc_sep[i, j] - 2 * k_sc_gc_sep[i])  # TODO missing 1/sqrt(3) on k_sc_gc_sep?
-            q5 = -fr * (3.0 - k_sc_sc_sep[i, j] - 2 * k_sc_gc_sep[j])
-            q6 = -fr * (1.0 - k_sc_sc_sep[i, j] - 2 * k_sc_gc_sep[j])  # TODO missing 1/sqrt(3) on k_sc_gc_sep?
-            sincq1 = np.sin(q1) / q1 / 2
-            sincq2 = np.sin(q2) / q2 / 2
+            q1: float = fr * (1.0 - k_sc_sc_sep[i, j])
+            q2: float = fr * (1.0 + k_sc_sc_sep[i, j])
+            q3: float = -fr * (3.0 + k_sc_sc_sep[i, j] - 2 * k_sc_gc_sep[i])
+            q4: float = -fr * (1.0 + k_sc_sc_sep[i, j] - 2 * k_sc_gc_sep[i])  # TODO missing 1/sqrt(3) on k_sc_gc_sep?
+            q5: float = -fr * (3.0 - k_sc_sc_sep[i, j] - 2 * k_sc_gc_sep[j])
+            q6: float = -fr * (1.0 - k_sc_sc_sep[i, j] - 2 * k_sc_gc_sep[j])  # TODO missing 1/sqrt(3) on k_sc_gc_sep?
+            # sinc functions, prevent division by zero
+            if q1 == 0.0:
+                sincq1: float = 0.5
+            else:
+                sincq1 = np.sin(q1) / q1 / 2
+            if q2 == 0.0:
+                sincq2: float = 0.5
+            else:
+                sincq2 = np.sin(q2) / q2 / 2
             # Real part of T from eq B9 in PhysRevD.101.124008
             TR[i, j] = sincq1 * np.cos(q3) + sincq2 * np.cos(q4)  # goes to 1 when f/fstar small
             # imaginary part of T
@@ -502,28 +575,41 @@ def compute_separation_vectors(
 
     Parameters
     ----------
-        _lc (LISAConstants): LISA configuration constants, including arm length.
-        tb (TensorBasis): Contains the gravitational-wave propagation direction vector.
-        sc_pos (SpacecraftScalarPosition): Current positions (x, y, z) of the three spacecraft.
-        sc_sep (SpacecraftSeparationVectors): Object to be populated with the computed separation vectors.
+    lc: LISAConstants
+        LISA configuration constants, including arm length.
+    tb: TensorBasis
+        Contains the gravitational-wave propagation direction vector.
+    sc_pos: SpacecraftScalarPosition
+        Current positions (x, y, z) of the three spacecraft.
+    sc_sep: SpacecraftSeparationVectors
+        Object to be populated with the computed separation vectors.
 
     Returns
     -------
-        float: Projection of the wave propagation vector onto the guiding center
-               in units of arm length over speed of light.
+    float: Projection of the wave propagation vector onto the guiding center
+        in units of arm length over speed of light.
     """
     kv: NDArray[np.floating] = tb.kv
     x: NDArray[np.floating] = sc_pos.x
     y: NDArray[np.floating] = sc_pos.y
     z: NDArray[np.floating] = sc_pos.z
 
-    n_sc: int = x.shape[0]
-    # manually average over n_sc to get coordinates of the guiding center
-    xa: float = (x[0] + x[1] + x[2]) / n_sc
-    ya: float = (y[0] + y[1] + y[2]) / n_sc
-    za: float = (z[0] + z[1] + z[2]) / n_sc
+    n_spacecraft: int = x.shape[0]
+    assert x.shape == (n_spacecraft,)
+    assert y.shape == (n_spacecraft,)
+    assert z.shape == (n_spacecraft,)
 
-    # manual dot product with n_sc
+    assert n_spacecraft == 3, 'Only implemented for 3 spacecraft'
+
+    n_space = 3  # number of spatial dimensions
+    assert kv.shape == (n_space,)
+
+    # manually average over n_spacecraft to get coordinates of the guiding center
+    xa: float = (x[0] + x[1] + x[2]) / n_spacecraft
+    ya: float = (y[0] + y[1] + y[2]) / n_spacecraft
+    za: float = (z[0] + z[1] + z[2]) / n_spacecraft
+
+    # manual dot product with n_spacecraft
     kdotx: float = lc.t_arm * (xa * kv[0] + ya * kv[1] + za * kv[2])
 
     r12 = sc_sep.r12
@@ -532,6 +618,13 @@ def compute_separation_vectors(
     r10 = sc_sep.r10
     r20 = sc_sep.r20
     r30 = sc_sep.r30
+
+    assert r12.shape == (n_space,)
+    assert r13.shape == (n_space,)
+    assert r23.shape == (n_space,)
+    assert r10.shape == (n_space,)
+    assert r20.shape == (n_space,)
+    assert r30.shape == (n_space,)
 
     # Separation vector from spacecraft i to j
     r12[0] = x[1] - x[0]
@@ -575,10 +668,14 @@ def get_sc_scalar_pos(
 
     Parameters
     ----------
-        lc (LISAConstants): LISA system constants and orbital parameters (e.g., mean motion, phase offset, arm length).
-        t (float): Time at which to evaluate the positions.
-        sc_phasing (SpacecraftRelativePhases): Precomputed sine and cosine of relative phase angles for each spacecraft.
-        sc_pos (SpacecraftScalarPosition): Object whose x, y, and z arrays will be populated with spacecraft positions.
+    lc: LISAConstants
+        LISA system constants and orbital parameters (e.g., mean motion, phase offset, arm length).
+    t: float
+        Time at which to evaluate the positions.
+    sc_phasing: SpacecraftRelativePhases
+        Precomputed sine and cosine of relative phase angles for each spacecraft.
+    sc_pos:SpacecraftScalarPosition
+        Object whose x, y, and z arrays will be populated with spacecraft positions.
     """
     sin_beta: NDArray[np.floating] = sc_phasing.sin_beta
     cos_beta: NDArray[np.floating] = sc_phasing.cos_beta
@@ -591,11 +688,19 @@ def get_sc_scalar_pos(
     y: NDArray[np.floating] = sc_pos.y
     z: NDArray[np.floating] = sc_pos.z
 
-    n_sc: int = x.shape[0]
-    for itrc in range(n_sc):
-        x[itrc] = lc.r_orbit * ca + sa * ca * sin_beta[itrc] - (1.0 + sa * sa) * cos_beta[itrc]
+    n_spacecraft: int = x.shape[0]
+
+    assert x.shape == (n_spacecraft,)
+    assert y.shape == (n_spacecraft,)
+    assert z.shape == (n_spacecraft,)
+    assert cos_beta.shape == (n_spacecraft,)
+    assert sin_beta.shape == (n_spacecraft,)
+
+    for itrc in range(n_spacecraft):
+        x[itrc] = (lc.r_orbit * ca
+                   + sa * ca * sin_beta[itrc] - (1.0 + sa * sa) * cos_beta[itrc])
         y[itrc] = lc.r_orbit * sa + sa * ca * cos_beta[itrc] - (1.0 + ca * ca) * sin_beta[itrc]
-        z[itrc] = -np.sqrt(3.0) * (ca * cos_beta[itrc] + sa * sin_beta[itrc])
+        z[itrc] = -float(np.sqrt(3.0)) * (ca * cos_beta[itrc] + sa * sin_beta[itrc])
 
 
 @njit(fastmath=True)
@@ -612,6 +717,16 @@ def rigid_adiabatic_antenna(
     RR = sc_channels.RR
     II = sc_channels.II
 
+    nc_waveform = RR.shape[0]  # number of channels in the output intrinsic_waveform
+
+    n_points = T.shape[0]
+    assert 0 <= nx_lim.nx_min <= nx_lim.nx_max <= n_points
+    assert T.shape == (n_points,)
+    assert F.shape == (n_points,)
+    assert kdotx.shape == (n_points,)
+    assert RR.shape == (nc_waveform, n_points)
+    assert II.shape == (nc_waveform, n_points)
+
     tb: TensorBasis = get_tensor_basis(params_extrinsic)
 
     n_space = 3  # number of spatial dimensions (must be 3)
@@ -620,12 +735,9 @@ def rigid_adiabatic_antenna(
     assert tb.e_plus.shape == (n_space, n_space)
     assert tb.e_cross.shape == (n_space, n_space)
 
-    n_sc = 3  # number of spacecraft (currently must be 3)
+    n_spacecraft = 3  # number of spacecraft (currently must be 3)
 
     n_arm = 3  # number of arms (currently must be 3)
-
-    nc_waveform = RR.shape[0]  # number of channels in the output intrinsic_waveform
-    assert II.shape[0] == nc_waveform
 
     nc_generate = 3  # number of combinations to generate internally (currently must be 3)
     assert nc_generate >= nc_waveform
@@ -633,17 +745,17 @@ def rigid_adiabatic_antenna(
     nc_michelson = 3  # number of michelson combinations (currently must be 3)
     assert nc_michelson >= nc_generate
 
-    polarization_response = DetectorPolarizationResponse(np.zeros((n_arm, n_arm)), np.zeros((n_arm, n_arm)))
+    polarization_response: DetectorPolarizationResponse = DetectorPolarizationResponse(np.zeros((n_arm, n_arm)), np.zeros((n_arm, n_arm)))
 
-    transfer_function = ComplexTransferFunction(np.zeros((n_arm, n_arm)), np.zeros((n_arm, n_arm)))
+    transfer_function: ComplexTransferFunction = ComplexTransferFunction(np.zeros((n_arm, n_arm)), np.zeros((n_arm, n_arm)))
 
-    sc_pos = SpacecraftScalarPosition(np.zeros(n_sc), np.zeros(n_sc), np.zeros(n_sc))
+    sc_pos: SpacecraftScalarPosition = SpacecraftScalarPosition(np.zeros(n_spacecraft), np.zeros(n_spacecraft), np.zeros(n_spacecraft))
 
     # for projecting spacecraft arm vectors into tensor basis
-    sc_wave_proj = SpacecraftSeparationWaveProjection(np.zeros((n_arm, n_arm)), np.zeros(n_arm))
+    sc_wave_proj: SpacecraftSeparationWaveProjection = SpacecraftSeparationWaveProjection(np.zeros((n_arm, n_arm)), np.zeros(n_arm))
 
     # Tuple to hold the XYZ antenna pattern
-    tdi_xyz = TDIComplexAntennaPattern(
+    tdi_xyz: TDIComplexAntennaPattern = TDIComplexAntennaPattern(
         np.zeros(nc_michelson),
         np.zeros(nc_michelson),
         np.zeros(nc_michelson),
@@ -651,14 +763,14 @@ def rigid_adiabatic_antenna(
     )
 
     # Tuple to hold the AET antenna pattern
-    tdi_aet = TDIComplexAntennaPattern(
+    tdi_aet: TDIComplexAntennaPattern = TDIComplexAntennaPattern(
         np.zeros(nc_generate),
         np.zeros(nc_generate),
         np.zeros(nc_generate),
         np.zeros(nc_generate),
     )
 
-    sc_sep = SpacecraftSeparationVectors(
+    sc_sep: SpacecraftSeparationVectors = SpacecraftSeparationVectors(
         np.zeros(n_space),
         np.zeros(n_space),
         np.zeros(n_space),
@@ -667,9 +779,11 @@ def rigid_adiabatic_antenna(
         np.zeros(n_space),
     )
 
-    sc_phasing = get_oribtal_phase_constants(lc, n_sc)
+    sc_phasing: SpacecraftRelativePhases = get_oribtal_phase_constants(lc, n_spacecraft)
 
-    A_psi = get_detector_amplitude_phase_combinations(params_extrinsic)
+    assert lc.fstr > 0.0, 'LISA transfer frequency must be positive'
+
+    A_psi: DetectorAmplitudePhaseCombinations = get_detector_amplitude_phase_combinations(params_extrinsic)
 
     # Main Loop
     for n in prange(nx_lim.nx_min, nx_lim.nx_max):
@@ -684,7 +798,7 @@ def rigid_adiabatic_antenna(
         get_projected_detector_response(tb, sc_sep, polarization_response)
 
         # normalized frequency
-        fr = 1 / (2 * lc.fstr) * F[n]
+        fr: float = 1 / (2 * lc.fstr) * F[n]
 
         get_transfer_function(fr, sc_wave_proj, transfer_function)
 
@@ -701,7 +815,7 @@ def rigid_adiabatic_antenna(
 def get_wavefront_time(
     lc: LISAConstants,
     tb: TensorBasis,
-    ts: NDArray[np.floating],
+    time: NDArray[np.floating],
     sv: SpacecraftOrbits,
     wavefront_time: NDArray[np.floating],
 ) -> None:
@@ -717,29 +831,33 @@ def get_wavefront_time(
 
     Parameters
     ----------
-        _lc (LISAConstants):
-            LISA configuration constants, including arm length and geometry.
-        tb (TensorBasis):
-            The tensor basis structure, containing the propagation direction unit vector (kv).
-        ts (NDArray[np.floating]):
-            Array of reference times at which wavefront times are calculated.
-        sv (SpacecraftOrbits):
-            Spacecraft position data, with positional components (xas, yas, zas).
-        waveform_time (NDArray[np.floating]):
-            Output array to be updated in place with the wavefront (retarded) times. Each value represents
-            the arrival time of the gravitational-wave phase front at a given spacecraft.
-
-    Returns
-    -------
-        None. The function updates `waveform_time` in place.
-
+    lc: LISAConstants
+        LISA configuration constants, including arm length and geometry.
+    tb: TensorBasis
+        The tensor basis structure, containing the propagation direction unit vector (kv).
+    time: NDArray[np.floating]
+        Array of reference times at which wavefront times are calculated.
+    sv: SpacecraftOrbits
+        Spacecraft position data, with positional components (xas, yas, zas).
+    wavefront_time: NDArray[np.floating]
+        Output array to be updated in place with the wavefront times. Each value represents
+        the arrival time of the gravitational-wave phase front at a given spacecraft.
     """
+    n_space: int = 3
+    assert tb.kv.shape == (n_space,)
+    n_points = time.shape[0]
+
+    assert sv.xa.shape == (n_points,)
+    assert sv.ya.shape == (n_points,)
+    assert sv.za.shape == (n_points,)
+    assert wavefront_time.shape == (n_points,)
+
     kdotx: NDArray[np.floating] = lc.t_arm * (sv.xa * tb.kv[0] + sv.ya * tb.kv[1] + sv.za * tb.kv[2])
-    wavefront_time[:] = ts - kdotx
+    wavefront_time[:] = time - kdotx
 
 
 @njit()
-def get_spacecraft_vec(ts: NDArray[np.floating], lc: LISAConstants) -> SpacecraftOrbits:
+def get_spacecraft_vec(time: NDArray[np.floating], lc: LISAConstants) -> SpacecraftOrbits:
     """Compute the time-dependent positions of the three LISA spacecraft and the guiding center.
 
     This function evaluates the heliocentric positions of each spacecraft across the input times.
@@ -750,39 +868,41 @@ def get_spacecraft_vec(ts: NDArray[np.floating], lc: LISAConstants) -> Spacecraf
 
     Parameters
     ----------
-        ts :  NDArray[np.floating]
-            1D array of time values (in seconds) for which to compute the spacecraft positions; shape (n_t,).
-        lc : LISAConstants
-            Structure containing LISA orbit configuration parameters.
+    time:  NDArray[np.floating]
+        1D array of time values (in seconds) for which to compute the spacecraft positions; shape (n_t,).
+    lc: LISAConstants
+        Structure containing LISA orbit configuration parameters.
 
     Returns
     -------
-        SpacecraftOrbits:
-            Named tuple containing arrays for the positions of each spacecraft (xs, ys, zs) and
-            arrays for the guiding center coordinates (xas, yas, zas) at all specified times.
+    SpacecraftOrbits:
+        Structure containing arrays for the positions of each spacecraft (xs, ys, zs) and
+        arrays for the guiding center coordinates (xas, yas, zas) at all specified times.
     """
-    n_sc = 3  # number of spacecraft (currently must be 3)
+    assert len(time.shape) == 1
 
-    xs = np.zeros((n_sc, ts.size))
-    ys = np.zeros((n_sc, ts.size))
-    zs = np.zeros((n_sc, ts.size))
-    alpha = float(2 * np.pi * lc.fm) * ts + float(lc.kappa0)
+    n_spacecraft: int = 3  # number of spacecraft (currently must be 3)
 
-    sa = np.sin(alpha)
-    ca = np.cos(alpha)
+    xs: NDArray[np.floating] = np.zeros((n_spacecraft, time.size))
+    ys: NDArray[np.floating] = np.zeros((n_spacecraft, time.size))
+    zs: NDArray[np.floating] = np.zeros((n_spacecraft, time.size))
+    alpha: NDArray[np.floating] = float(2 * np.pi * lc.fm) * time + float(lc.kappa0)
 
-    for i in range(n_sc):
-        beta = i * 2 / 3 * np.pi + float(lc.lambda0)
-        sb = np.sin(beta)
-        cb = np.cos(beta)
+    sa: NDArray[np.floating] = np.sin(alpha)
+    ca: NDArray[np.floating] = np.cos(alpha)
+
+    for i in range(n_spacecraft):
+        beta: float = i * float(2 / 3 * np.pi) + float(lc.lambda0)
+        sb: float = np.sin(beta)
+        cb: float = np.cos(beta)
         xs[i] = lc.r_orbit * ca + lc.r_orbit * lc.ec * (sa * ca * sb - (1.0 + sa * sa) * cb)
         ys[i] = lc.r_orbit * sa + lc.r_orbit * lc.ec * (sa * ca * cb - (1.0 + ca * ca) * sb)
-        zs[i] = -np.sqrt(3) * lc.r_orbit * lc.ec * (ca * cb + sa * sb)
+        zs[i] = -float(np.sqrt(3.0)) * lc.r_orbit * lc.ec * (ca * cb + sa * sb)
 
     # guiding center
-    xas = (xs[0] + xs[1] + xs[2]) / n_sc
-    yas = (ys[0] + ys[1] + ys[2]) / n_sc
-    zas = (zs[0] + zs[1] + zs[2]) / n_sc
+    xas: NDArray[np.floating] = (xs[0] + xs[1] + xs[2]) / n_spacecraft
+    yas: NDArray[np.floating] = (ys[0] + ys[1] + ys[2]) / n_spacecraft
+    zas: NDArray[np.floating] = (zs[0] + zs[1] + zs[2]) / n_spacecraft
     return SpacecraftOrbits(xs, ys, zs, xas, yas, zas)
 
 
@@ -794,51 +914,84 @@ def phase_wrap_freq(
     kdotx: NDArray[np.floating],
     wrap_thresh: float = np.pi,
 ) -> None:
-    """Wrap the phase perturbations in frequency domain consistently across channels."""
-    tdi_PF = tdi_waveform.PF
-    tdi_TF = tdi_waveform.TF
-    PF = waveform.PF
-    TF = waveform.TF
+    r"""
+    Wrap the phase perturbations in the frequency domain consistently across TDI channels.
 
-    assert tdi_PF.shape == tdi_TF.shape
-    assert PF.shape == TF.shape
+    This routine applies the perturbations from the tdi phases in from the doppler modulation and
+    rotation of the antenna pattern to get the tdi phases. Results are stored in `tdi_waveform.PF`.
+
+    The method takes into account implicit 2*pi phase shifts from the intrinsic waveform, and wraps
+    the phase to the proper multiple of 2*pi as accurately as possible, for more useful plotting and
+    computation of numerical derivatives, such as for fisher matrix calculations. 2*pi errors should not
+    typiccaly affect the likelihood or parameter estimation directly.
+
+    Frequency bins are processed in descending order, because typically the reference
+    phase will be towards the end, and this approach minimizes cumulative wrapping errors.
+
+    Parameters
+    ----------
+    tdi_waveform : StationaryWaveformFreq
+        Frequency-domain TDI waveform object.
+    waveform : StationaryWaveformFreq
+        Source (barycenter) frequency-domain waveform.
+    nf_lim : PixelGenericRange
+        Frequency grid description
+    kdotx : NDArray[np.floating]
+        Doppler time perturbation array used to compute the barycenter
+        Doppler phase term.
+    wrap_thresh : float, optional
+        Threshold (in radians) for deciding when to apply a \(\pm 2\pi\) wrap to a channel's
+        accumulated phase perturbation. Defaults to `np.pi`.
+    """
+    tdi_PF: NDArray[np.floating] = tdi_waveform.PF
+    tdi_TF: NDArray[np.floating] = tdi_waveform.TF
+    PF: NDArray[np.floating] = waveform.PF
+    TF: NDArray[np.floating] = waveform.TF
+
+    nf_points: int = TF.shape[0]
+
+    assert 0 <= nf_lim.nx_min <= nf_lim.nx_max <= nf_points
+
+    assert TF.shape == (nf_points,)
+    assert PF.shape == (nf_points,)
+    assert kdotx.shape == (nf_points,)
+
     assert len(tdi_PF.shape) == 2
-    assert len(PF.shape) == 1
-    assert PF.shape[0] == tdi_PF.shape[-1]
-    assert kdotx.shape[0] == PF.shape[0]
-    assert 0 <= nf_lim.nx_min <= nf_lim.nx_max <= PF.shape[0]
 
-    nc_loc = tdi_PF.shape[0]
+    n_tdi: int = tdi_PF.shape[0]
 
-    Phase_accums = np.zeros(nc_loc)
+    assert tdi_PF.shape == (n_tdi, nf_points)
+    assert tdi_TF.shape == (n_tdi, nf_points)
 
-    js = np.zeros(nc_loc)
+    phase_accums: NDArray[np.floating] = np.zeros(n_tdi)
+
+    js: NDArray[np.floating] = np.zeros(n_tdi)
 
     for n in range(nf_lim.nx_max - 1, nf_lim.nx_min - 1, -1):
         # Barycenter time and frequency
-        t = TF[n]
-        f = n * nf_lim.dx + nf_lim.x_min  # FF[n]
+        t: float = TF[n]
+        f: float = n * nf_lim.dx + nf_lim.x_min  # FF[n]
 
         # the doppler-only phase perturbation (should be already unwrapped)
-        Phase = -2 * np.pi * f * kdotx[n] - PF[n]  # TODO check pi/4
+        phase: float = -2 * np.pi * f * kdotx[n] - PF[n]  # TODO check pi/4
 
-        for itrc in range(nc_loc):
+        for itrc in range(n_tdi):
             # only the phase perturbation from the antenna pattern
-            p = -tdi_PF[itrc, n]
+            p: float = -tdi_PF[itrc, n]
 
             # adjust for the phase perturbation implicit in the time perturbation; more stable than wrapping p directly
             if n == nf_lim.nx_max - 1:
-                Phase_accums[itrc] = -p
+                phase_accums[itrc] = -p
             else:
-                Phase_accums[itrc] -= np.pi * nf_lim.dx * (tdi_TF[itrc, n] - t + tdi_TF[itrc, n + 1] - TF[n + 1])
+                phase_accums[itrc] -= np.pi * nf_lim.dx * (tdi_TF[itrc, n] - t + tdi_TF[itrc, n + 1] - TF[n + 1])
 
             # wrap if the accumulated phase perturbation exceeds the threshold
-            if Phase_accums[itrc] + p + js[itrc] > wrap_thresh:
+            if phase_accums[itrc] + p + js[itrc] > wrap_thresh:
                 js[itrc] -= 2 * np.pi
-            if -p - js[itrc] - Phase_accums[itrc] > wrap_thresh:
+            if -p - js[itrc] - phase_accums[itrc] > wrap_thresh:
                 js[itrc] += 2 * np.pi
 
-            tdi_PF[itrc, n] = tdi_PF[itrc, n] - Phase - js[itrc]
+            tdi_PF[itrc, n] = tdi_PF[itrc, n] - phase - js[itrc]
 
 
 @njit(fastmath=True)
@@ -852,36 +1005,56 @@ def get_freq_tdi_amp_phase(
     er: EdgeRiseModel,
 ) -> None:
     """Get the frequency domain TDI response."""
-    tdi_AF = tdi_waveform.AF
-    tdi_PF = tdi_waveform.PF
-    tdi_TF = tdi_waveform.TF
-    tdi_TFp = tdi_waveform.TFp
+    F = tdi_waveform.F
+    tdi_AF: NDArray[np.floating] = tdi_waveform.AF
+    tdi_PF: NDArray[np.floating] = tdi_waveform.PF
+    tdi_TF: NDArray[np.floating] = tdi_waveform.TF
+    tdi_TFp: NDArray[np.floating] = tdi_waveform.TFp
 
-    TF = waveform.TF
-    TFp = waveform.TFp
+    TF: NDArray[np.floating] = waveform.TF
+    TFp: NDArray[np.floating] = waveform.TFp
+    AF: NDArray[np.floating] = waveform.AF
+
+    nf_points: int = TF.shape[0]
+    assert 0 <= nf_lim.nx_min <= nf_lim.nx_max <= nf_points
+    assert TF.shape == (nf_points,)
+    assert TFp.shape == (nf_points,)
+    assert AF.shape == (nf_points,)
+    assert F.shape == (nf_points,)
+    assert kdotx.shape == (nf_points,)
+
+    assert len(tdi_TF.shape) == 2
+    n_tdi: int = tdi_TF.shape[0]
+    assert tdi_TF.shape == (n_tdi, nf_points)
+    assert tdi_PF.shape == (n_tdi, nf_points)
+    assert tdi_AF.shape == (n_tdi, nf_points)
+    assert tdi_TFp.shape == (n_tdi, nf_points)
+
+    assert nf_lim.dx != 0.0, 'Frequency spacing must be non-zero'
 
     # for the derivative of RR and II absorb 1/(2*nf_lim.dx) into the constant in tdi_TF
     spacecraft_channel_deriv_helper(spacecraft_channels, -1.0 / (2 * nf_lim.dx))
 
-    tdi_waveform_generic = StationaryWaveformGeneric(tdi_waveform.F, tdi_PF, tdi_TF, tdi_TF, tdi_AF)
+    tdi_waveform_generic = StationaryWaveformGeneric(F, tdi_PF, tdi_TF, tdi_TF, tdi_AF)
     # Time based method applies phase perturbation to PF, so set PF to zero here
     waveform_generic = StationaryWaveformGeneric(
-        waveform.F,
+        F,
         np.zeros_like(waveform.PF),
-        waveform.TF,
-        waveform.TFp,
-        waveform.AF,
+        TF,
+        TFp,
+        AF,
     )
 
     amp_phase_loop_helper(
-        waveform.F,
-        waveform.TF,
+        F,
+        TF,
         waveform_generic,
         tdi_waveform_generic,
         spacecraft_channels,
         lc,
         nf_lim,
     )
+
     # sign is flipped relative to time
     tdi_PF[:] = -tdi_PF
 

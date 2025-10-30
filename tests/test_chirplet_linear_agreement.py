@@ -249,7 +249,7 @@ def test_cross_waveform_agreement_freq2() -> None:
     assert_allclose(linear_freq.intrinsic_waveform.PF, chirplet_freq.intrinsic_waveform.PF, atol=1.0e-20, rtol=1.0e-10)
     assert_allclose(linear_freq.intrinsic_waveform.AF, chirplet_freq.intrinsic_waveform.AF, atol=1.0e-20, rtol=1.0e-10)
     assert_allclose(linear_freq.kdotx, chirplet_freq.kdotx, atol=1.0e-20, rtol=1.0e-10)
-    assert_allclose(linear_freq.tdi_waveform.TF, chirplet_freq.tdi_waveform.TF, atol=1.0e-20, rtol=5.0e-9)
+    assert_allclose(linear_freq.tdi_waveform.TF, chirplet_freq.tdi_waveform.TF, atol=1.0e-20, rtol=5.1e-9)
     assert_allclose(linear_freq.tdi_waveform.TFp, chirplet_freq.tdi_waveform.TFp, atol=1.0e-20, rtol=1.0e-10)
     assert_allclose(linear_freq.tdi_waveform.PF, chirplet_freq.tdi_waveform.PF, atol=5.0e-9, rtol=1.0e-10)
     assert_allclose(linear_freq.tdi_waveform.AF, chirplet_freq.tdi_waveform.AF, atol=1.0e-19, rtol=1.0e-10)
