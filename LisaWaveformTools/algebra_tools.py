@@ -25,20 +25,8 @@ def gradient_uniform_inplace(ys: NDArray[np.floating], result: NDArray[np.floati
 
     Notes
     -----
-    - Uses second-order central differences: (y[i+1] - y[i-1])/(2*dx) for interior points
+    - Uses second-order central differences for interior points
     - Uses first-order differences at boundaries:
-      - Forward difference at left edge: (y[1] - y[0])/dx
-      - Backward difference at right edge: (y[n] - y[n-1])/dx
-    - Input array must have at least 2 points along second axis for gradient computation
-    - Function is optimized using Numba's @njit decorator for performance
-    - If compiled with parallel=True, parallel computation is used for the main loop over interior points
-
-    Raises
-    ------
-    AssertionError
-        If result and ys arrays have different shapes
-        If input array has less than 2 points along second axis
-
     """
     assert ys.shape == result.shape, 'Incompatible shape for result'
     assert len(ys.shape) == 2, 'Input ys must be a 2D array'
@@ -98,7 +86,6 @@ def stabilized_gradient_uniform_inplace(
     - y and dydt must be 2D arrays of same shape (nc_channel, n_t)
     - x and dxdt must be 1D arrays of length n_t
     - n_t must be greater than 1 for gradient computation
-
     """
     # input dimension validation
     assert len(y.shape) == 2, 'Input y must be a 2D array'

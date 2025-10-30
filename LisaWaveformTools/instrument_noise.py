@@ -3,7 +3,6 @@
 from warnings import warn
 
 import numpy as np
-from numpy.testing import assert_allclose
 from numpy.typing import NDArray
 from WDMWaveletTransforms.transform_freq_funcs import phitilde_vec
 
@@ -115,7 +114,6 @@ def instrument_noise_AET(f: NDArray[np.floating], lc: LISAConstants, tdi_mode: s
             S_inst[:, 1, 1] = S_inst[:, 0, 0]
             S_inst[:, 2, 2] = np.abs(scale_part_T * add_part_T)
             # off diagonal components are zero for equal arm length
-        assert_allclose(instrument_noise1(f, lc), scale_part_AE_diag * add_part_AE, atol=1.0e-100, rtol=1.0e-14)
     elif tdi_mode == 'xyz_equal':
         if diagonal_mode == 0:
             S_inst[:, 0] = np.abs(scale_part_xyz_diag * add_part_xyz_diag)
