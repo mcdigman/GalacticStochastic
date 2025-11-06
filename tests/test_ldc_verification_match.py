@@ -8,12 +8,14 @@ from typing import TYPE_CHECKING
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy.ndimage
 import tomllib
 import WDMWaveletTransforms.fft_funcs as fft
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_array_less
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.optimize import dual_annealing
-from scipy.signal import resample, welch
+from scipy.signal import butter, csd, filtfilt, hilbert, resample, welch
+from WDMWaveletTransforms.transform_freq_funcs import tukey
 from WDMWaveletTransforms.wavelet_transforms import inverse_wavelet_freq, inverse_wavelet_time, transform_wavelet_freq
 
 from GalacticStochastic.iterative_fit import fetch_or_run_iterative_loop
@@ -27,7 +29,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
-def load_sangria_tdi(verification_only: int = 0) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
+def load_sangria_tdi(verification_only: int = 0, t_min: float = 0., t_max: float = np.inf) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
     """Load sangria tdi from a file."""
     full_galactic_params_filename = 'LDC/LDC2_sangria_training_v2.h5'
     sangria_verification_filename = 'LDC/LDC2_sangria_vgb-tdi_v1_sgsEVXb.h5'
@@ -47,9 +49,9 @@ def load_sangria_tdi(verification_only: int = 0) -> tuple[NDArray[np.floating], 
         assert isinstance(hf_in, h5py.Group)
         hf_x = hf_in['X']
         assert isinstance(hf_x, h5py.Dataset)
-        hf_y = hf_in['X']
+        hf_y = hf_in['Y']
         assert isinstance(hf_y, h5py.Dataset)
-        hf_z = hf_in['X']
+        hf_z = hf_in['Z']
         assert isinstance(hf_z, h5py.Dataset)
         x_tdi = np.asarray(hf_x[:, 1]).flatten()
         y_tdi = np.asarray(hf_y[:, 1]).flatten()
@@ -59,6 +61,12 @@ def load_sangria_tdi(verification_only: int = 0) -> tuple[NDArray[np.floating], 
     else:
         msg = f'Unrecognized load option {verification_only}'
         raise ValueError(msg)
+
+    t_mask = (time_tdi >= t_min) & (time_tdi <= t_max)
+    x_tdi = x_tdi[t_mask]
+    y_tdi = y_tdi[t_mask]
+    z_tdi = z_tdi[t_mask]
+    time_tdi = time_tdi[t_mask]
 
     assert x_tdi.shape == y_tdi.shape
     assert x_tdi.shape == z_tdi.shape
@@ -150,10 +158,12 @@ def match_sangria_curve(toml_filename_in: str, fcsd: NDArray[np.floating], psd_a
 
 
 if __name__ == '__main__':
-    # pytest.cmdline.main(['test_sangria_v1_verification_match.py'])
     # toml_filename_in = 'Galaxies/GalaxyFullLDC/run_old_parameters.toml'
-    toml_filename_in = 'Galaxies/GalaxyFullLDC/run_match_parameters_fit.toml'
-    # toml_filename_in = 'Galaxies/GalaxyVerification2LDC/run_verification_parameters.toml'
+    verification_only = False
+    if verification_only:
+        toml_filename_in = 'Galaxies/GalaxyVerification2LDC/run_verification_parameters.toml'
+    else:
+        toml_filename_in = 'Galaxies/GalaxyFullLDC/run_match_parameters_fit2.toml'
 
     with Path(toml_filename_in).open('rb') as f:
         config_in = tomllib.load(f)
@@ -161,22 +171,9 @@ if __name__ == '__main__':
     wc = get_wavelet_model(config_in)
     lc = get_lisa_constants(config_in)
 
-    with Path(toml_filename_in).open('rb') as f:
-        config_in2 = tomllib.load(f)
+    ts_bg = np.arange(0., wc.Nt * wc.Nf) * wc.dt
 
-    # config_in2['lisa_constants']['Sps'] = 2.25e-22
-    # config_in2['lisa_constants']['Sps'] = 1.25e-22
-    # config_in2['lisa_constants']['Sacc'] = 1.25e-29
-
-    # config_in2['lisa_constants']['Sps'] = 9.0e-24
-    # config_in2['lisa_constants']['Sacc'] = 5.76e-30
-
-    config_in2['lisa_constants']['Sps'] = 9.0e-24
-    config_in2['lisa_constants']['Sacc'] = 1. / 4. * 5.76e-30
-
-    lc2 = get_lisa_constants(config_in2)
-
-    xyz_tdi_time, time_tdi = load_sangria_tdi(verification_only=False)
+    xyz_tdi_time, time_tdi = load_sangria_tdi(verification_only=verification_only, t_max=ts_bg[-1])
     n_samples_in = time_tdi.size
     dt_in = time_tdi[1] - time_tdi[0]
     assert_allclose(np.diff(time_tdi), dt_in, atol=1.e-100, rtol=1.e-14)
@@ -192,24 +189,27 @@ if __name__ == '__main__':
 
     SAET_m = instrument_noise_AET_wdm_m(lc, wc)
     noise_AET_dense_pure = DiagonalStationaryDenseNoiseModel(SAET_m, wc, prune=0, nc_snr=lc.nc_snr)
-    galactic_bg += noise_AET_dense_pure.generate_dense_noise()
-
-    ts_bg = np.arange(0., wc.Nt * wc.Nf) * wc.dt
+    if not verification_only:
+        galactic_bg += noise_AET_dense_pure.generate_dense_noise()
 
     AET_tdi_time_rec_temp = np.zeros((galactic_bg.shape[-1], wc.Nt * wc.Nf))
     for itrc in range(galactic_bg.shape[-1]):
         AET_tdi_time_rec_temp[itrc, :] = inverse_wavelet_time(galactic_bg[:, :, itrc], wc.Nf, wc.Nt)
 
+    assert ts_bg[-1] >= time_tdi[-1]
     nt_full_max = int(np.argmax(ts_bg >= time_tdi[-1])) + 1
     AET_tdi_time_rec = np.zeros((galactic_bg.shape[-1], n_samples_in))
     for itrc in range(galactic_bg.shape[-1]):
-        AET_tdi_time_rec[itrc, :], t_tdi_mbh_alt = resample(AET_tdi_time_rec_temp[itrc, :nt_full_max], num=n_samples_in, t=ts_bg[:nt_full_max])
-        assert_allclose(t_tdi_mbh_alt, time_tdi, atol=1.e-100, rtol=1.e-14)
+        if np.isclose(wc.dt, dt_in, atol=1.e-100, rtol=1.e-14):
+            AET_tdi_time_rec[itrc, :] = AET_tdi_time_rec_temp[itrc, :nt_full_max]
+        else:
+            AET_tdi_time_rec[itrc, :], t_tdi_mbh_alt = resample(AET_tdi_time_rec_temp[itrc, :nt_full_max], num=n_samples_in, t=ts_bg[:nt_full_max])
+            assert_allclose(t_tdi_mbh_alt, time_tdi, atol=1.e-100, rtol=1.e-14)
 
     AET_tdi_freq_rec = np.fft.rfft(AET_tdi_time_rec, axis=-1)
 
     fs = 1.0 / dt_in
-    nperseg = int(np.round(((1. / dt_in) / (1. / wc.dt)) * wc.Nf)) * 2
+    nperseg = int(np.round(((1. / dt_in) / (1. / wc.dt)) * wc.Nf))
     fpsd, psd_aet_rec = welch(AET_tdi_time_rec, fs=fs, nperseg=nperseg, scaling='density', window='tukey', axis=-1)
     fpsd, psd_aet = welch(AET_tdi_time, fs=fs, nperseg=nperseg, scaling='density', window='tukey', axis=-1)
 
@@ -226,7 +226,7 @@ if __name__ == '__main__':
 
     xyz_tdi_time_rec = tdi_aet_to_xyz_helper(AET_tdi_time_rec, axis=0)
 
-    xyz_tdi_time = xyz_tdi_time[:ND]
+    xyz_tdi_time = xyz_tdi_time[:, :ND]
 
     xyz_tdi_freq = fft.rfft(xyz_tdi_time, axis=-1)
     time_tdi = time_tdi[:ND]
@@ -243,35 +243,53 @@ if __name__ == '__main__':
     fcsd, csd_xyz_rec = get_csd_helper(xyz_tdi_time_rec, fs, nperseg, nf_min, nf_max, axis=0)
     fcsd, csd_aet_rec = get_csd_helper(AET_tdi_time_rec, fs, nperseg, nf_min, nf_max, axis=0)
 
-    csd_scale: NDArray[np.floating] = (lc.fstr / fcsd) ** 2
+    _fcsd, xyz_cross_csd = csd(xyz_tdi_time, xyz_tdi_time_rec, fs=fs, nperseg=nperseg, scaling='density', window='tukey', axis=-1)
+    xyz_cross_csd = xyz_cross_csd[:, nf_min:nf_max]
+
+    _fcsd, aet_cross_csd = csd(AET_tdi_time, AET_tdi_time_rec, fs=fs, nperseg=nperseg, scaling='density', window='tukey', axis=-1)
+    aet_cross_csd = aet_cross_csd[:, nf_min:nf_max]
+
+    xyz_cross_cohere = np.zeros(((nf_max - nf_min), lc.nc_snr))
+    aet_cross_cohere = np.zeros(((nf_max - nf_min), lc.nc_snr))
+    for itrc in range(lc.nc_snr):
+        xyz_cross_cohere[:, itrc] = np.abs(xyz_cross_csd[itrc])**2 / (psd_xyz_rec[itrc, nf_min:nf_max] * psd_xyz[itrc, nf_min:nf_max])
+        aet_cross_cohere[:, itrc] = np.abs(aet_cross_csd[itrc])**2 / (psd_aet_rec[itrc, nf_min:nf_max] * psd_aet[itrc, nf_min:nf_max])
 
     re_csd_xyz = np.real(csd_xyz)
-    re_csd_xyz_scale = (csd_scale * re_csd_xyz.T).T
+    im_csd_xyz = np.imag(csd_xyz)
+    angle_csd_xyz = np.angle(csd_xyz)
+    abs_csd_xyz = np.abs(csd_xyz)
 
     re_csd_aet = np.real(csd_aet)
-    re_csd_aet_scale = (csd_scale * re_csd_aet.T).T
+    im_csd_aet = np.imag(csd_aet)
+    angle_csd_aet = np.angle(csd_aet)
+    abs_csd_aet = np.abs(csd_aet)
 
     re_csd_xyz_rec = np.real(csd_xyz_rec)
-    re_csd_xyz_rec_scale = (csd_scale * re_csd_xyz_rec.T).T
+    im_csd_xyz_rec = np.imag(csd_xyz_rec)
+    angle_csd_xyz_rec = np.angle(csd_xyz_rec)
+    abs_csd_xyz_rec = np.abs(csd_xyz_rec)
 
     re_csd_aet_rec = np.real(csd_aet_rec)
-    re_csd_aet_rec_scale = (csd_scale * re_csd_aet_rec.T).T
+    im_csd_aet_rec = np.imag(csd_aet_rec)
+    angle_csd_aet_rec = np.angle(csd_aet_rec)
+    abs_csd_aet_rec = np.abs(csd_aet_rec)
 
-    psd_xyz_expect = instrument_noise_AET(fcsd, lc2, tdi_mode='xyz_equal', diagonal_mode=1)
-    psd_xyz_expect_scale = (csd_scale * psd_xyz_expect.T).T
+    psd_xyz_expect = instrument_noise_AET(fcsd, lc, tdi_mode='xyz_equal', diagonal_mode=1)
 
-    psd_aet_expect = instrument_noise_AET(fcsd, lc2, tdi_mode='aet_equal', diagonal_mode=1)
-    psd_aet_expect_scale = (csd_scale * psd_aet_expect.T).T
+    psd_aet_expect = instrument_noise_AET(fcsd, lc, tdi_mode='aet_equal', diagonal_mode=1)
 
-    lc3 = match_sangria_curve(toml_filename_in, fcsd, psd_aet, psd_xyz, re_csd_xyz, nf_min, nf_max)
+    do_match = False
+    if do_match:
+        lc3 = match_sangria_curve(toml_filename_in, fcsd, psd_aet, psd_xyz, re_csd_xyz, nf_min, nf_max)
+    else:
+        lc3 = lc
 
     psd_aet_expect3 = instrument_noise_AET(fcsd, lc3, tdi_mode='aet_equal', diagonal_mode=1)
     psd_xyz_expect3 = instrument_noise_AET(fcsd, lc3, tdi_mode='xyz_equal', diagonal_mode=1)
 
     plt.loglog(fpsd, psd_aet_rec[0])
     plt.loglog(fpsd, psd_aet[0])
-    # plt.loglog(fpsd, instrument_noise_AET(fpsd, lc)[:,0])
-    # plt.loglog(fpsd, instrument_noise_AET(fpsd, lc2)[:,0])
     plt.loglog(fcsd, psd_aet_expect3[:, 0, 0])
     plt.title('A channel comparison')
     plt.show()
@@ -292,12 +310,12 @@ if __name__ == '__main__':
     plt.title('xyz spectrum')
     plt.show()
 
-    plt.loglog(fcsd, np.abs(re_csd_xyz[:, 0, 1]))
-    plt.loglog(fcsd, np.abs(re_csd_xyz[:, 0, 2]))
-    plt.loglog(fcsd, np.abs(re_csd_xyz[:, 1, 2]))
-    plt.loglog(fcsd, np.abs(re_csd_xyz_rec[:, 0, 1]))
-    plt.loglog(fcsd, np.abs(re_csd_xyz_rec[:, 0, 2]))
-    plt.loglog(fcsd, np.abs(re_csd_xyz_rec[:, 1, 2]))
+    plt.loglog(fcsd, np.abs(abs_csd_xyz[:, 0, 1]))
+    plt.loglog(fcsd, np.abs(abs_csd_xyz[:, 0, 2]))
+    plt.loglog(fcsd, np.abs(abs_csd_xyz[:, 1, 2]))
+    plt.loglog(fcsd, np.abs(abs_csd_xyz_rec[:, 0, 1]))
+    plt.loglog(fcsd, np.abs(abs_csd_xyz_rec[:, 0, 2]))
+    plt.loglog(fcsd, np.abs(abs_csd_xyz_rec[:, 1, 2]))
     plt.loglog(fcsd, np.abs(psd_xyz_expect[:, 0, 1]))
     plt.loglog(fcsd, np.abs(psd_xyz_expect3[:, 0, 1]))
     plt.title('xyz cross spectrum')
@@ -314,18 +332,242 @@ if __name__ == '__main__':
     plt.title('aet cross spectrum')
     plt.show()
 
+    coh_xyz = np.zeros_like(re_csd_aet)
+    coh_aet = np.zeros_like(re_csd_aet)
+    coh_xyz_rec = np.zeros_like(re_csd_aet)
+    coh_aet_rec = np.zeros_like(re_csd_aet)
+    for itr1 in range(lc.nc_snr - 1):
+        for itr2 in range(itr1 + 1, lc.nc_snr):
+            coh_xyz[:, itr1, itr2] = np.abs(csd_xyz[:, itr1, itr2])**2 / (psd_xyz[itr1, nf_min:nf_max] * psd_xyz[itr2, nf_min:nf_max])
+            coh_xyz_rec[:, itr1, itr2] = np.abs(csd_xyz_rec[:, itr1, itr2])**2 / (psd_xyz_rec[itr1, nf_min:nf_max] * psd_xyz_rec[itr2, nf_min:nf_max])
+            coh_aet[:, itr1, itr2] = np.abs(csd_aet[:, itr1, itr2])**2 / (psd_aet[itr1, nf_min:nf_max] * psd_aet[itr2, nf_min:nf_max])
+            coh_aet_rec[:, itr1, itr2] = np.abs(csd_aet_rec[:, itr1, itr2])**2 / (psd_aet_rec[itr1, nf_min:nf_max] * psd_aet_rec[itr2, nf_min:nf_max])
+
+    coh_xyz_min = np.min(np.array([coh_xyz, coh_xyz_rec]), axis=0)
+    coh_aet_min = np.min(np.array([coh_aet, coh_aet_rec]), axis=0)
+    coh_xyz_min_overall = np.min(np.array([coh_xyz_min[:, 0, 1], coh_xyz_min[:, 0, 2], coh_xyz_min[:, 1, 2]]), axis=0)
+    coh_aet_min_overall = np.min(np.array([coh_aet_min[:, 0, 1], coh_aet_min[:, 0, 2], coh_aet_min[:, 1, 2]]), axis=0)
+    coh_xyz_min_mask = 1. * (coh_xyz_min > 0.5)
+    coh_aet_min_mask = 1. * (coh_aet_min > 0.5)
+    nf_min_show = np.argmin(np.abs(0.95 * ifm.bis.params_gb[:, 3].min() - fcsd))
+    nf_max_show = np.argmin(np.abs(1.05 * ifm.bis.params_gb[:, 3].max() - fcsd))
+
+    # test expected doppler modulation of one of the signals
+    idx_f_select = int(np.argmin(np.abs(ifm.bis.params_gb[:, 3] - 0.02146691497723561)))
+    f_select = ifm.bis.params_gb[idx_f_select, 3]
+    cos_select = np.cos(2 * np.pi * f_select * time_tdi)
+    filter_band = (f_select * 0.99, f_select * 1.01)
+    b_band, a_band = butter(4, filter_band, fs=1.0 / dt_in, btype='bandpass', analog=False)
+
+    aet_tdi_time_filter = AET_tdi_time.copy()
+    aet_tdi_time_filter_rec = AET_tdi_time_rec.copy()
+
+    tukey_alpha = 0.05
+    tukey(aet_tdi_time_filter.T, tukey_alpha, aet_tdi_time_filter.shape[-1])
+    tukey(aet_tdi_time_filter_rec.T, tukey_alpha, aet_tdi_time_filter_rec.shape[-1])
+
+    aet_tdi_time_filter = filtfilt(b_band, a_band, aet_tdi_time_filter, axis=-1)
+    aet_tdi_time_filter_rec = filtfilt(b_band, a_band, aet_tdi_time_filter_rec, axis=-1)
+    # multiply by cos of test signal
+    aet_select_proj = aet_tdi_time_filter * cos_select
+    aet_select_proj_rec = aet_tdi_time_filter_rec * cos_select
+# low pass filter multiplied signals
+
+    f_lowpass = 3.e-5
+    b, a = butter(4, f_lowpass, fs=1.0 / dt_in, btype='lowpass', analog=False)
+    aet_select_proj = filtfilt(b, a, aet_select_proj, axis=-1)
+    aet_select_proj_rec = filtfilt(b, a, aet_select_proj_rec, axis=-1)
+
+    aet_select_proj_analytic = hilbert(aet_select_proj, axis=1)
+    aet_select_proj_analytic_rec = hilbert(aet_select_proj_rec, axis=1)
+
+    aet_proj_angle = np.unwrap(np.angle(aet_select_proj_analytic), axis=1)
+    aet_proj_angle_rec = np.unwrap(np.angle(aet_select_proj_analytic_rec), axis=1)
+
+    aet_proj_dangle = aet_proj_angle - aet_proj_angle_rec
+    plt.plot(aet_proj_dangle.T)
+    plt.show()
+    tukey(aet_proj_dangle.T, tukey_alpha, aet_proj_dangle.shape[-1])
+    aet_proj_dangle = filtfilt(b, a, aet_proj_dangle, axis=-1)
+
+# tukey(aet_proj_angle.T, tukey_alpha, aet_proj_angle.shape[-1])
+# tukey(aet_proj_angle_rec.T, tukey_alpha, aet_proj_angle_rec.shape[-1])
+    aet_proj_angle = filtfilt(b, a, aet_proj_angle, axis=-1)
+    aet_proj_angle_rec = filtfilt(b, a, aet_proj_angle_rec, axis=-1)
+
+    aet_proj_mag = np.abs(aet_select_proj_analytic)
+    aet_proj_mag_rec = np.abs(aet_select_proj_analytic_rec)
+# tukey(aet_proj_mag.T, tukey_alpha, aet_proj_mag.shape[-1])
+# tukey(aet_proj_mag_rec.T, tukey_alpha, aet_proj_mag_rec.shape[-1])
+    aet_proj_mag = filtfilt(b, a, aet_proj_mag, axis=-1)
+    aet_proj_mag_rec = filtfilt(b, a, aet_proj_mag_rec, axis=-1)
+
+    _, psd_aet_proj = welch(aet_select_proj, fs=fs, nperseg=nperseg * 8, scaling='density', window='tukey', axis=-1)
+    _, psd_aet_proj_rec = welch(aet_select_proj_rec, fs=fs, nperseg=nperseg * 8, scaling='density', window='tukey', axis=-1)
+
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], coh_xyz[nf_min_show:nf_max_show, 0, 1])
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], coh_xyz[nf_min_show:nf_max_show, 0, 2])
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], coh_xyz[nf_min_show:nf_max_show, 1, 2])
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], coh_xyz_min[nf_min_show:nf_max_show, 0, 1])
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], coh_xyz_min[nf_min_show:nf_max_show, 0, 2])
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], coh_xyz_min[nf_min_show:nf_max_show, 1, 2])
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], coh_xyz_min_overall[nf_min_show:nf_max_show])
+    plt.title('xyz coherence')
+    plt.show()
+
+    plt.semilogx(fcsd, np.unwrap(angle_csd_xyz[:, 0, 1]))
+    plt.semilogx(fcsd, np.unwrap(angle_csd_xyz[:, 0, 2]))
+    plt.semilogx(fcsd, np.unwrap(angle_csd_xyz[:, 1, 2]))
+    plt.semilogx(fcsd, np.unwrap(angle_csd_xyz_rec[:, 0, 1]))
+    plt.semilogx(fcsd, np.unwrap(angle_csd_xyz_rec[:, 0, 2]))
+    plt.semilogx(fcsd, np.unwrap(angle_csd_xyz_rec[:, 1, 2]))
+    plt.title('xyz cross spectrum angle')
+    plt.show()
+
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], xyz_cross_cohere[nf_min_show:nf_max_show])
+    plt.title('xyz cross method coherence')
+    plt.show()
+
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], aet_cross_cohere[nf_min_show:nf_max_show])
+    plt.title('aet cross method coherence')
+    plt.show()
+
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], np.unwrap(angle_csd_xyz[nf_min_show:nf_max_show, 0, 1]) - np.unwrap(angle_csd_xyz_rec[nf_min_show:nf_max_show, 0, 1]))
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], np.unwrap(angle_csd_xyz[nf_min_show:nf_max_show, 0, 2]) - np.unwrap(angle_csd_xyz_rec[nf_min_show:nf_max_show, 0, 2]))
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], np.unwrap(angle_csd_xyz[nf_min_show:nf_max_show, 1, 2]) - np.unwrap(angle_csd_xyz_rec[nf_min_show:nf_max_show, 1, 2]))
+    plt.show()
+
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], (np.unwrap(angle_csd_xyz[nf_min_show:nf_max_show, 0, 1]) - np.unwrap(angle_csd_xyz_rec[nf_min_show:nf_max_show, 0, 1])) * coh_xyz_min_mask[nf_min_show:nf_max_show, 0, 1])
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], (np.unwrap(angle_csd_xyz[nf_min_show:nf_max_show, 0, 2]) - np.unwrap(angle_csd_xyz_rec[nf_min_show:nf_max_show, 0, 2])) * coh_xyz_min_mask[nf_min_show:nf_max_show, 0, 2])
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], (np.unwrap(angle_csd_xyz[nf_min_show:nf_max_show, 1, 2]) - np.unwrap(angle_csd_xyz_rec[nf_min_show:nf_max_show, 1, 2])) * coh_xyz_min_mask[nf_min_show:nf_max_show, 1, 2])
+    plt.show()
+
+    angle_diff_xyz = ((np.unwrap(angle_csd_xyz[nf_min_show:nf_max_show]) - np.unwrap(angle_csd_xyz_rec[nf_min_show:nf_max_show])) % (2 * np.pi) + np.pi) % (2 * np.pi) - np.pi
+    angle_diff_xyz_mask = angle_diff_xyz * coh_xyz_min_mask[nf_min_show:nf_max_show]
+
+    angle_diff_aet = ((np.unwrap(angle_csd_aet[nf_min_show:nf_max_show]) - np.unwrap(angle_csd_aet_rec[nf_min_show:nf_max_show])) % (2 * np.pi) + np.pi) % (2 * np.pi) - np.pi
+    angle_diff_aet_mask = angle_diff_aet * coh_aet_min_mask[nf_min_show:nf_max_show]
+
+    angle_aet_cross = np.unwrap(np.angle(aet_cross_csd[:, nf_min_show:nf_max_show].T))
+    angle_xyz_cross = np.unwrap(np.angle(xyz_cross_csd[:, nf_min_show:nf_max_show].T))
+
+    # there might be some frequency dependent offset but it should be the same in all channels
+    # to test this, use a smooth monotonic mean angle
+    angle_aet_mean = np.maximum.accumulate(scipy.ndimage.gaussian_filter(np.mean(angle_aet_cross[:, :2], axis=1), sigma=2))
+    angle_xyz_mean = np.maximum.accumulate(scipy.ndimage.gaussian_filter(np.mean(angle_xyz_cross, axis=1), sigma=2))
+    dangle_aet_cross = (angle_aet_cross.T - angle_aet_mean).T
+    dangle_xyz_cross = (angle_xyz_cross.T - angle_xyz_mean).T
+
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], angle_diff_xyz[:, 0, 1])
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], angle_diff_xyz[:, 0, 2])
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], angle_diff_xyz[:, 1, 2])
+    plt.title('xyz cross spectrum angle diff')
+    plt.show()
+
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], angle_diff_aet_mask[:, 0, 1])
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], angle_diff_aet_mask[:, 0, 2])
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], angle_diff_aet_mask[:, 1, 2])
+    plt.title('aet cross spectrum angle diff')
+    plt.show()
+
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], dangle_aet_cross)
+    plt.title('aet method delta angle')
+    plt.show()
+
+    plt.semilogx(fcsd[nf_min_show:nf_max_show], dangle_xyz_cross)
+    plt.title('xyz method delta angle')
+    plt.show()
+
     # check xyz psds match each other and expectation
-    assert_allclose(psd_xyz_expect[:, 0, 0], psd_xyz_rec[0, nf_min:nf_max], rtol=1.e-1, atol=2.e-38)
-    assert_allclose(psd_xyz_expect[:, 1, 1], psd_xyz_rec[1, nf_min:nf_max], rtol=1.e-1, atol=2.e-38)
-    assert_allclose(psd_xyz_expect[:, 2, 2], psd_xyz_rec[2, nf_min:nf_max], rtol=1.e-1, atol=2.e-38)
+    if verification_only:
+        # check absolute errors
+        assert_allclose(psd_xyz[:, nf_min:nf_max], psd_xyz_rec[:, nf_min:nf_max], rtol=1.e-14, atol=6.0e-44)
+        assert_allclose(psd_aet[:2, nf_min:nf_max], psd_aet_rec[:2, nf_min:nf_max], rtol=1.e-14, atol=6.5e-44)
+        assert_allclose(psd_aet[2, nf_min:nf_max], psd_aet_rec[2, nf_min:nf_max], rtol=1.e-14, atol=1.5e-50)
 
-    assert_allclose(psd_xyz_expect[:, 0, 0], psd_xyz[0, nf_min:nf_max], rtol=1.e-1, atol=2.e-38)
-    assert_allclose(psd_xyz_expect[:, 1, 1], psd_xyz[1, nf_min:nf_max], rtol=1.e-1, atol=2.e-38)
-    assert_allclose(psd_xyz_expect[:, 2, 2], psd_xyz[2, nf_min:nf_max], rtol=1.e-1, atol=2.e-38)
+        # check relative errors tight for most points
+        assert_array_less(np.sum(~np.isclose(psd_xyz[:, nf_min:nf_max], psd_xyz_rec[:, nf_min:nf_max], rtol=1.e-1, atol=1.e-51)), 25)
+        assert_array_less(np.sum(~np.isclose(psd_aet[:2, nf_min:nf_max], psd_aet_rec[:2, nf_min:nf_max], rtol=1.e-1, atol=1.e-51)), 18)
+        assert_array_less(np.sum(~np.isclose(psd_aet[2, nf_min:nf_max], psd_aet_rec[2, nf_min:nf_max], rtol=1.e-1, atol=1.e-56)), 18)
 
-    assert_allclose(psd_xyz[0, nf_min:nf_max], psd_xyz_rec[0, nf_min:nf_max], rtol=1.e-1, atol=1.e-38)
-    assert_allclose(psd_xyz[1, nf_min:nf_max], psd_xyz_rec[1, nf_min:nf_max], rtol=1.e-1, atol=1.e-38)
-    assert_allclose(psd_xyz[2, nf_min:nf_max], psd_xyz_rec[2, nf_min:nf_max], rtol=1.e-1, atol=1.e-38)
+        # check signal power agreement
+        assert_allclose(np.trapezoid(psd_xyz[:, nf_min:nf_max], fpsd[nf_min:nf_max], axis=-1), np.trapezoid(psd_xyz_rec[:, nf_min:nf_max], fpsd[nf_min:nf_max], axis=-1), atol=1.e-100, rtol=4.e-3)
+        assert_allclose(np.trapezoid(psd_aet[:, nf_min:nf_max], fpsd[nf_min:nf_max], axis=-1), np.trapezoid(psd_aet_rec[:, nf_min:nf_max], fpsd[nf_min:nf_max], axis=-1), atol=1.e-100, rtol=4.e-3)
+
+        # check cross spectrum agreement
+        assert_allclose(re_csd_aet[fcsd > 0.001, 0, 1], re_csd_aet_rec[fcsd > 0.001, 0, 1], rtol=1.e-14, atol=2.e-44)
+        assert_allclose(re_csd_aet[fcsd > 0.001, 0, 2], re_csd_aet_rec[fcsd > 0.001, 0, 2], rtol=1.e-14, atol=3.e-47)
+        assert_allclose(re_csd_aet[fcsd > 0.001, 1, 2], re_csd_aet_rec[fcsd > 0.001, 1, 2], rtol=1.e-14, atol=3.e-47)
+        assert_allclose(re_csd_xyz[fcsd > 0.001, :, :], re_csd_xyz_rec[fcsd > 0.001, :, :], rtol=1.e-14, atol=5.e-44)
+
+        assert_allclose(abs_csd_aet[fcsd > 0.001, 0, 1], abs_csd_aet_rec[fcsd > 0.001, 0, 1], rtol=1.e-14, atol=4.e-44)
+        assert_allclose(abs_csd_aet[fcsd > 0.001, 0, 2], abs_csd_aet_rec[fcsd > 0.001, 0, 2], rtol=1.e-14, atol=4.e-48)
+        assert_allclose(abs_csd_aet[fcsd > 0.001, 1, 2], abs_csd_aet_rec[fcsd > 0.001, 1, 2], rtol=1.e-14, atol=2.e-47)
+        assert_allclose(abs_csd_xyz[fcsd > 0.001, :, :], abs_csd_xyz_rec[fcsd > 0.001, :, :], rtol=1.e-14, atol=4.e-44)
+
+        assert_allclose(im_csd_aet[fcsd > 0.001, 0, 1], im_csd_aet_rec[fcsd > 0.001, 0, 1], rtol=1.e-14, atol=4.e-44)
+        assert_allclose(im_csd_aet[fcsd > 0.001, 0, 2], im_csd_aet_rec[fcsd > 0.001, 0, 2], rtol=1.e-14, atol=4.e-48)
+        assert_allclose(im_csd_aet[fcsd > 0.001, 1, 2], im_csd_aet_rec[fcsd > 0.001, 1, 2], rtol=1.e-14, atol=2.e-47)
+        assert_allclose(im_csd_xyz[fcsd > 0.001, :, :], im_csd_xyz_rec[fcsd > 0.001, :, :], rtol=1.e-14, atol=4.e-44)
+
+        # check coherence agreement
+        assert_array_less(~np.isclose(coh_xyz[nf_min_show:nf_max_show], coh_xyz_rec[nf_min_show:nf_max_show], atol=1.e-1, rtol=1.e-2), 13)
+        assert_array_less(~np.isclose(coh_aet[nf_min_show:nf_max_show, 0, 1], coh_aet_rec[nf_min_show:nf_max_show, 0, 1], atol=1.e-1, rtol=1.e-2), 4)
+        assert_array_less(~np.isclose(coh_aet[nf_min_show:nf_max_show], coh_aet_rec[nf_min_show:nf_max_show], atol=1.e-1, rtol=1.e-2), 51)
+
+        # test channel relative phase angle agreement
+        assert_array_less(np.abs(angle_diff_xyz_mask), 0.09)
+        assert_array_less(np.abs(np.mean(angle_diff_xyz_mask, axis=0)), 2.e-3)
+        assert_array_less(np.abs(np.mean(angle_diff_xyz, axis=0)), 5.e-3)
+
+        assert_array_less(np.abs(angle_diff_aet_mask[:, 0, 1]), 2.e-3)
+        assert_array_less(np.abs(angle_diff_aet_mask), 0.1)
+        assert_array_less(np.abs(np.mean(angle_diff_aet_mask[:, 0, 1], axis=0)), 4.e-6)
+        assert_array_less(np.abs(np.mean(angle_diff_aet[:, 0, 1], axis=0)), 7.e-3)
+
+        # coherence between methods
+        assert_array_less(0.5, xyz_cross_cohere[nf_min_show:nf_max_show])
+        assert_array_less(0.994, np.mean(xyz_cross_cohere[nf_min_show:nf_max_show], axis=0))
+        assert_array_less(0.994, np.mean(aet_cross_cohere[nf_min_show:nf_max_show, :2], axis=0))
+        assert_array_less(0.7, aet_cross_cohere[nf_min_show:nf_max_show, :2])
+        assert_array_less(0.6, aet_cross_cohere[max(nf_max_show // 2, nf_min_show):nf_max_show, 2])
+
+        # angle between methods
+        assert_array_less(np.abs(dangle_xyz_cross), 0.05)
+        assert_array_less(np.abs(np.mean(dangle_xyz_cross, axis=0)), 5.e-4)
+        assert_array_less(np.abs(dangle_aet_cross), 0.24)
+        assert_array_less(np.abs(dangle_aet_cross[:, :2]), 0.05)
+        assert_array_less(np.abs(np.mean(dangle_aet_cross[:, :2], axis=0)), 5.e-4)
+        assert_array_less(np.abs(dangle_aet_cross[dangle_aet_cross.shape[0] // 2:, 2]), 0.09)
+        assert_array_less(np.abs(np.mean(dangle_aet_cross[dangle_aet_cross.shape[0] // 2:, 2])), 5.e-3)
+        # check the absolute angle matches at low frequency
+        assert_array_less(angle_aet_mean[0], 3.e-2)
+        assert_array_less(angle_xyz_mean[0], 3.e-2)
+
+        # check envelope modulation matches for selected source
+        assert_allclose(psd_aet_proj[:2], psd_aet_proj_rec[:2], atol=1.e-10 * np.max(psd_aet_proj[:2]), rtol=4.e-3)
+        assert_allclose(psd_aet_proj[2], psd_aet_proj_rec[2], atol=1.e-10 * np.max(psd_aet_proj[2]), rtol=5.e-3)
+        assert_array_less(np.abs(aet_proj_dangle), 0.6)
+        assert_array_less(np.abs(np.mean(aet_proj_dangle, axis=1)), 1.4e-2)
+        assert_array_less(np.abs(np.mean(aet_proj_angle[:, :] - aet_proj_angle_rec[:, :], axis=1)), 1.1e-2)
+        for itrc in range(lc.nc_snr):
+            assert_array_less(1 - 1.e-4, np.corrcoef(aet_proj_angle[itrc, :], aet_proj_angle_rec[itrc, :])[0, 1])
+            assert_array_less(0.85, np.corrcoef(aet_proj_mag[itrc, :], aet_proj_mag_rec[itrc, :])[0, 1])
+
+        assert_allclose(np.mean(aet_proj_mag, axis=1), np.mean(aet_proj_mag_rec, axis=1), atol=1.e-100, rtol=3.e-3)
+
+    else:
+        assert_allclose(psd_xyz_expect[:, 0, 0], psd_xyz_rec[0, nf_min:nf_max], rtol=1.e-1, atol=2.e-38)
+        assert_allclose(psd_xyz_expect[:, 1, 1], psd_xyz_rec[1, nf_min:nf_max], rtol=1.e-1, atol=2.e-38)
+        assert_allclose(psd_xyz_expect[:, 2, 2], psd_xyz_rec[2, nf_min:nf_max], rtol=1.e-1, atol=2.e-38)
+
+        assert_allclose(psd_xyz_expect[:, 0, 0], psd_xyz[0, nf_min:nf_max], rtol=1.e-1, atol=2.e-38)
+        assert_allclose(psd_xyz_expect[:, 1, 1], psd_xyz[1, nf_min:nf_max], rtol=1.e-1, atol=2.e-38)
+        assert_allclose(psd_xyz_expect[:, 2, 2], psd_xyz[2, nf_min:nf_max], rtol=1.e-1, atol=2.e-38)
+
+        assert_allclose(psd_xyz[0, nf_min:nf_max], psd_xyz_rec[0, nf_min:nf_max], rtol=1.e-1, atol=1.e-38)
+        assert_allclose(psd_xyz[1, nf_min:nf_max], psd_xyz_rec[1, nf_min:nf_max], rtol=1.e-1, atol=1.e-38)
+        assert_allclose(psd_xyz[2, nf_min:nf_max], psd_xyz_rec[2, nf_min:nf_max], rtol=1.e-1, atol=1.e-38)
 
     xyz_powers = np.sum(xyz_tdi_time**2, axis=-1)
     xyz_powers_rec = np.sum(xyz_tdi_time_rec**2, axis=-1)

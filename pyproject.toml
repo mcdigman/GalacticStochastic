@@ -14,8 +14,13 @@ dependencies = [
     "pytest",
     "h5py"
 ]
-requires-python = ">=3.7"
+requires-python = ">=3.12"
+
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["GalacticStochastic*", "LisaWaveformTools*", "WaveletWaveforms*"]

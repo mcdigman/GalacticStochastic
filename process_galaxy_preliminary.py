@@ -13,7 +13,9 @@ from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 if __name__ == '__main__':
     # config_file = 'Galaxies/GalaxyFullLDC/run_old_parameters_format3.toml'
-    config_file = 'Galaxies/GalaxyFullLDC/run_match_parameters_fit.toml'
+    config_file = 'Galaxies/GalaxyFullLDC/run_match_parameters_fit2.toml'
+    # config_file = 'Galaxies/GalaxyFullLDC/run_match_parameters_fit.toml'
+    # config_file = 'Galaxies/GalaxyVerificationLDC/run_verification_parameters.toml'
     # config_file = 'default_parameters.toml'
     config, wc, lc, ic, instrument_random_seed = get_config_objects(config_file)
 

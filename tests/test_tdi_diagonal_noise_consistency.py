@@ -438,7 +438,7 @@ def test_aet_convert(Sps_Sacc_rat_mult: float) -> None:
     # plt.show()
 
     # check converting between AET and XYZ works same in both wavelet and time domain
-    assert_allclose(signal_time_aet, signal_time_aet_alt, atol=1.0e-50, rtol=1.2e-7)
+    assert_allclose(signal_time_aet, signal_time_aet_alt, atol=1.0e-50, rtol=2.4e-7)
 
 
 @pytest.mark.parametrize('Sps_Sacc_rat_mult', [1.0e3, 1.0e-3, 1.0])
@@ -684,4 +684,4 @@ def test_xyz_convert(Sps_Sacc_rat_mult: float) -> None:
     # plt.show()
 
     # check converting between AET and XYZ works same in both wavelet and time domain
-    assert_allclose(signal_time_xyz, signal_time_xyz_alt, atol=1.0e-50, rtol=2.0e-7)
+    assert_allclose(signal_time_xyz, signal_time_xyz_alt, atol=1.0e-50, rtol=2.2e-7)

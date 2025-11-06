@@ -111,6 +111,7 @@ def get_lisa_constants(config: dict[str, Any]) -> LISAConstants:
     # Mode to use for instrument noise curve calculation
     noise_curve_mode = int(config_lc.get('noise_curve_mode', 0))
 
+    # TODO comment these with descriptions
     f_roll_acc_f_inv = float(config_lc.get('f_roll_acc_f_inv', 4.0e-4))
     f_roll_acc_f = float(config_lc.get('f_roll_acc_f', 8.0e-3))
     f_roll_ps_f_inv = float(config_lc.get('f_roll_ps_f_inv', 2.0e-3))
