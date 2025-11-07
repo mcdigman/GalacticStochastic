@@ -26,4 +26,4 @@ where = ["."]
 include = ["GalacticStochastic*", "LisaWaveformTools*", "WaveletWaveforms*"]
 
 [project.scripts]
-run_gb_ = "GalacticStochastic.cli.run_gb_iterative:main"
+run-galactic-stochastic-iterative = "GalacticStochastic.cli.run_iterative_procedure:main"
