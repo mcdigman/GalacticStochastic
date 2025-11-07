@@ -1,0 +1,293 @@
+"""Run or fetch the iterative fit loop for the binaries in the galactic background."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+import numpy as np
+
+from GalacticStochastic import global_file_index as gfi
+from GalacticStochastic.background_decomposition import BGDecomposition
+from GalacticStochastic.config_helper import get_config_objects_from_dict
+from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
+from GalacticStochastic.iterative_fit_manager import IterativeFitManager
+from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
+from GalacticStochastic.noise_manager import NoiseModelManager
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+    from GalacticStochastic.iteration_config import IterationConfig
+    from LisaWaveformTools.lisa_config import LISAConstants
+    from WaveletWaveforms.wdm_config import WDMWaveletConstants
+
+
+def fetch_or_run_iterative_loop(
+    config: dict[str, Any],
+    cyclo_mode: int,
+    *,
+    nt_range_snr: tuple[int, int] = (0, -1),
+    fetch_mode: int = 0,
+    output_mode: int = 1,
+    wc_in: WDMWaveletConstants | None = None,
+    lc_in: LISAConstants | None = None,
+    ic_in: IterationConfig | None = None,
+    instrument_random_seed_in: int | None = None,
+    preprocess_mode: int = 0,
+    params_gb_in: NDArray[np.floating] | None = None,
+    custom_params: int = -1,
+) -> IterativeFitManager:
+    """
+    Run or fetch the iterative fit loop for galactic binary background analysis.
+
+    This function either runs a new iterative fit loop or fetches results from a previously
+    stored file, depending on the specified fetch and preprocess modes. It sets up all
+    necessary configuration objects, background decomposition, noise models, and binary
+    inclusion states, and manages the logic for pre-processing and file I/O.
+
+    Parameters
+    ----------
+    config : dict of str to Any
+        Configuration dictionary containing file paths and fit settings.
+    cyclo_mode : int
+        Cyclostationary mode key for the fit.
+    nt_range_snr : tuple of int
+        Time-frequency pixel range as (min, max) indices. Defaults to (0, -1) for full range.
+    fetch_mode : int
+        Mode for fetching or running the fit:
+        0: run from scratch, stop if preliminary file missing;
+        1: try to fetch, else run, stop if preliminary missing;
+        2: try to fetch, else abort, stop if preliminary missing;
+        3: try to fetch, else run, create preliminary if missing;
+        4: run from scratch, do not check for preliminary file.
+        Default is 0.
+    output_mode : int
+        Output mode for storing results:
+        0: do not store;
+        1: store results unless they are fetched (default).
+        2: store results even they were fetched
+    wc_in : WDMWaveletConstants, optional
+        Optional override for wavelet constants.
+    lc_in : LISAConstants, optional
+        Optional override for LISA instrument constants.
+    ic_in : IterationConfig, optional
+        Optional override for iteration configuration.
+    instrument_random_seed_in : int, optional
+        Optional override for instrument random seed.
+    preprocess_mode : int
+        Preprocessing mode:
+        0: use preliminary file;
+        1: do not use preliminary file;
+        2: other modes (not implemented).
+        Default is 0.
+
+    Returns
+    -------
+    IterativeFitManager
+        The manager object containing the results of the iterative fit.
+
+    Raises
+    ------
+    ValueError
+        If an unrecognized fetch_mode, output_mode, or preprocess_mode is provided.
+    FileNotFoundError
+        If required files or entries are missing and fetch_mode is set to abort.
+    NotImplementedError
+        If an unsupported preprocess_mode is specified.
+    """
+    # input validations
+    assert output_mode in (0, 1, 2), 'Unrecognized option for output mode'
+    assert preprocess_mode in (0, 1, 2), 'Unrecognized option for processing mode'
+    assert fetch_mode in (0, 1, 2, 3, 4), 'Unrecognized option for fetch_mode'
+
+    config, wc, lc, ic, instrument_random_seed = get_config_objects_from_dict(config)
+    if wc_in is not None:
+        wc = wc_in
+
+    if lc_in is not None:
+        lc = lc_in
+
+    if ic_in is not None:
+        ic = ic_in
+
+    if nt_range_snr == (0, -1):
+        nt_min_snr = 0
+        nt_max_snr = wc.Nt
+    else:
+        nt_min_snr = nt_range_snr[0]
+        nt_max_snr = nt_range_snr[1]
+
+    assert 0 <= nt_min_snr < nt_max_snr <= wc.Nt
+
+    if instrument_random_seed_in is not None:
+        instrument_random_seed = instrument_random_seed_in
+
+    # TODO handle storage with custom params
+    if params_gb_in is not None:
+        params_gb = params_gb_in
+        if custom_params == -1:
+            custom_params = 1
+    else:
+        params_gb, _ = gfi.get_full_galactic_params(config)
+
+    del params_gb_in
+
+    nt_lim_snr = PixelGenericRange(nt_min_snr, nt_max_snr, wc.DT, 0.0)
+    nt_lim_waveform = PixelGenericRange(0, wc.Nt, wc.DT, 0.0)
+
+    print(
+        nt_min_snr,
+        nt_max_snr,
+        nt_lim_waveform.nx_min,
+        nt_lim_waveform.nx_max,
+        wc.Nt,
+        wc.Nf,
+        cyclo_mode,
+    )
+
+    if preprocess_mode in (1, 2):
+        assert cyclo_mode == 1, 'Pre-processing is only compatible with cyclo_mode = 1'
+
+    if preprocess_mode in (0, 2):
+        # fetch mode options if we are in a state where the preliminary file is needed
+        # 0: run the loop from scratch, stop if the preliminary file does not exist
+        # 1: try to fetch the final file, else run the loop, stop if the preliminary file does not exist
+        # 2: try to fetch the final file, else abort, stop if the preliminary file does not exist
+        # 3: try to fetch the final file, else run the loop, if the preliminary file does not exist create it
+        # 4: run the loop from scratch, do not use the preliminary file
+        if fetch_mode in (0, 1, 2):
+            fetch_mode_prelim = 2
+        elif fetch_mode == 3:
+            fetch_mode_prelim = 1
+        elif fetch_mode == 4:
+            fetch_mode_prelim = 0
+        else:
+            msg = 'Unrecognized option for fetch_mode'
+            raise ValueError(msg)
+
+        nt_range_prelim = (0, wc.Nt)
+        ifm_prelim = fetch_or_run_iterative_loop(
+            config,
+            cyclo_mode=1,
+            nt_range_snr=nt_range_prelim,
+            fetch_mode=fetch_mode_prelim,
+            preprocess_mode=1,
+            output_mode=output_mode,
+            wc_in=wc_in,
+            lc_in=lc,
+            ic_in=ic_in,
+            instrument_random_seed_in=instrument_random_seed_in,
+            params_gb_in=params_gb,
+            custom_params=custom_params,
+        )
+
+        galactic_below_in = ifm_prelim.noise_manager.bgd.get_galactic_below_low()
+        snrs_tot_in = ifm_prelim.bis.get_final_snrs_tot_upper()
+        galactic_total_in = ifm_prelim.noise_manager.bgd.get_galactic_total()
+        print('INITIAL TOTAL SUM', np.sum(galactic_total_in**2))
+
+        del ifm_prelim
+
+        bgd = BGDecomposition(
+            wc,
+            ic.nc_galaxy,
+            galactic_floor=galactic_below_in.copy(),
+            storage_mode=ic.background_storage_mode,
+        )
+        # set the expected galactic total, for later consistency checks
+        # bgd.set_expected_total(galactic_total_in)
+        del galactic_below_in
+        del galactic_total_in
+    elif preprocess_mode == 1:
+        # fetch mode options if we are in a state where the preliminary file is not needed
+        # (0, 4): run the loop from scratch
+        # (1, 3): try to fetch the final file, if it does not exist run the loop
+        # 2: try to fetch the final file, if it does not exist abort
+
+        bgd = BGDecomposition(
+            wc,
+            ic.nc_galaxy,
+            storage_mode=ic.background_storage_mode,
+        )
+        snrs_tot_in = None
+
+    else:
+        msg = 'Unrecognized option for preprocess_mode'
+        raise NotImplementedError(msg)
+
+    fit_state = IterativeFitState(ic, preprocess_mode=preprocess_mode)
+
+    noise_manager = NoiseModelManager(
+        ic,
+        wc,
+        lc,
+        fit_state,
+        bgd,
+        cyclo_mode,
+        nt_lim_snr,
+        instrument_random_seed=instrument_random_seed,
+    )
+
+    bis = BinaryInclusionState(
+        wc, ic, lc, params_gb, noise_manager, fit_state, nt_lim_waveform, snrs_tot_in=snrs_tot_in
+    )
+
+    del snrs_tot_in
+
+    ifm = IterativeFitManager(ic, fit_state, noise_manager, bis)
+
+    fetched = False
+    if fetch_mode in (1, 2, 3):
+        try:
+            gfi.load_processed_galactic_file(
+                ifm,
+                config,
+                ic,
+                wc,
+                (nt_lim_snr.nx_min, nt_lim_snr.nx_max),
+                cyclo_mode=cyclo_mode,
+                preprocess_mode=preprocess_mode,
+            )
+            ifm.bis.set_select_params(params_gb)
+            fetched = True
+        except FileNotFoundError as e:
+            # loading did not work because either the file does not exist or the key does not exist in the file
+            if fetch_mode == 2:
+                msg = 'File or entry not found: aborting'
+                raise FileNotFoundError(msg) from e
+            print(e)
+            print('Running loop')
+            ifm.do_loop()
+    elif fetch_mode in (0, 4):
+        ifm.do_loop()
+    else:
+        msg = 'Unrecognized option for fetch_mode'
+        raise ValueError(msg)
+
+    if fetched and output_mode != 2:
+        pass
+    elif output_mode in (1, 2):
+        if preprocess_mode == 0:
+            # if pre-processing in mode 2 has happened we will have an inconsistent hash for any re-pre-processed files
+            write_mode = 0
+        else:
+            if preprocess_mode == 1:
+                write_mode = 2
+            else:
+                write_mode = 0
+        gfi.store_processed_gb_file(
+            config,
+            wc,
+            ifm,
+            write_mode=write_mode,
+            preprocess_mode=preprocess_mode,
+            params_gb_in=params_gb,
+        )
+
+    elif output_mode == 0:
+        pass
+    else:
+        msg = 'Unrecognized option for output_mode'
+        raise ValueError(msg)
+    return ifm

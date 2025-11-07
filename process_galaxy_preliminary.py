@@ -1,230 +1,65 @@
-"""Get the waveform for a galaxy of galactic binaries"""
-
-from time import perf_counter
+"""run iterative processing of galactic background"""
 
 
-import numpy as np
-import h5py
-import pandas as pd
+import GalacticStochastic.global_file_index as gfi
+import GalacticStochastic.plot_creation_helpers as pch
+from GalacticStochastic.background_decomposition import BGDecomposition
+from GalacticStochastic.config_helper import get_config_objects
+from GalacticStochastic.inclusion_state_manager import BinaryInclusionState
+from GalacticStochastic.iterative_fit_manager import IterativeFitManager
+from GalacticStochastic.iterative_fit_state_machine import IterativeFitState
+from GalacticStochastic.noise_manager import NoiseModelManager
+from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
-from wavelet_detector_waveforms import BinaryWaveletAmpFreqDT
+if __name__ == '__main__':
+    # config_file = 'Galaxies/GalaxyFullLDC/run_old_parameters_format3.toml'
+    config_file = 'Galaxies/GalaxyFullLDC/run_match_parameters_fit2.toml'
+    # config_file = 'Galaxies/GalaxyFullLDC/run_match_parameters_fit.toml'
+    # config_file = 'Galaxies/GalaxyVerificationLDC/run_verification_parameters.toml'
+    # config_file = 'default_parameters.toml'
+    config, wc, lc, ic, instrument_random_seed = get_config_objects(config_file)
 
-from wdm_const import wdm_const as wc
-from wdm_const import lisa_const as lc
-import global_const as gc
-from instrument_noise import DiagonalStationaryDenseInstrumentNoiseModel, instrument_noise_AET_wdm_m, DiagonalNonstationaryDenseInstrumentNoiseModel
+    galaxy_file = config['files']['galaxy_file']
 
-import global_file_index as gfi
+    cyclo_mode = 1
+    preprocess_mode = 1
+    nt_min = 0
+    nt_max = wc.Nt
+    nt_lim_snr = PixelGenericRange(nt_min, nt_max, wc.DT, 0.)
+    nt_lim_waveform = PixelGenericRange(nt_min, nt_max, wc.DT, 0.)
 
-if __name__=='__main__':
-    galaxy_file = 'galaxy_binaries.hdf5'
-    galaxy_dir = 'Galaxies/Galaxy1/'
+    params_gb, _ = gfi.get_full_galactic_params(config)
 
-    Nf = 2048
-    Nt = 4096
-    dt = 30.0750732421875
+    fit_state = IterativeFitState(ic, preprocess_mode=preprocess_mode)
 
-    #params_gb, n_dgb, n_igb, n_vgb, n_tot = gfi.get_full_galactic_params(galaxy_file, galaxy_dir)
-    dat = pd.read_hdf('Galaxies/LISA_band_FZ_alpha25_Z.hdf')
-    n_dgb = len(dat) 
-    n_igb = 0
-    n_vgb = 0
-    n_tot = n_dgb + n_igb + n_vgb
-    params_gb = gfi.create_dat_in(dat)
-    params0 = params_gb[0].copy()
+    bgd = BGDecomposition(wc, ic.nc_galaxy, storage_mode=ic.background_storage_mode)
 
-    waveT_ini = BinaryWaveletAmpFreqDT(params0.copy(), wc, lc)
-    listT_temp, waveT_temp, NUTs_temp = waveT_ini.get_unsorted_coeffs()
+    noise_manager = NoiseModelManager(ic, wc, lc, fit_state, bgd, cyclo_mode, nt_lim_snr, instrument_random_seed)
 
-    SAET_m = instrument_noise_AET_wdm_m(lc, wc)
-    noise_AET_dense_pure = DiagonalStationaryDenseInstrumentNoiseModel(SAET_m, wc, prune=False)
+    bis = BinaryInclusionState(wc, ic, lc, params_gb, noise_manager, fit_state, nt_lim_waveform)
 
-    noise_realization = noise_AET_dense_pure.generate_dense_noise()
+    ifm = IterativeFitManager(ic, fit_state, noise_manager, bis)
 
-    galactic_bg = np.zeros((wc.Nt*wc.Nf, wc.NC))
-    n_bin_use = n_tot
+    ifm.do_loop()
 
-    n_iterations = 2
-    SAET_tot = np.zeros((n_iterations+1, wc.Nt, wc.Nf, wc.NC))
-    SAET_tot[0] = noise_AET_dense_pure.SAET.copy()
+    do_hf_out = True
+    if do_hf_out:
+        gfi.store_processed_gb_file(
+            config,
+            wc,
+            ifm,
+            params_gb_in=params_gb,
+            write_mode=2,
+            preprocess_mode=preprocess_mode,
+        )
 
-    snr_thresh = 7
-    snr_min = 7
-    snr_autosuppress = 500
-    snrs = np.zeros((n_iterations, n_bin_use, wc.NC))
-    snrs_tot = np.zeros((n_iterations, n_bin_use))
+    del params_gb
 
-    const_suppress = np.zeros(n_bin_use, dtype=np.bool_)
-    var_suppress = np.zeros((n_iterations, n_bin_use), dtype=np.bool_)
+    do_plot_noise_spectrum_ambiguity = False
 
-    galactic_bg_const = np.zeros((wc.Nt*wc.Nf, wc.NC))
+    if do_plot_noise_spectrum_ambiguity:
+        pch.plot_noise_spectrum_ambiguity(ifm)
 
-    ti = perf_counter()
-    for itrn in range(0, n_iterations):
-        galactic_bg = np.zeros((wc.Nt*wc.Nf, wc.NC))
-        noise_AET_dense = DiagonalNonstationaryDenseInstrumentNoiseModel(SAET_tot[itrn], wc, prune=False)
-        t0n = perf_counter()
-
-        for itrb in range(0, n_bin_use):
-            if itrb%10000==0 and itrn==0:
-                tin = perf_counter()
-                print("itrb="+str(itrb)+" at t="+str(tin-t0n)+" s in loop")
-            if not const_suppress[itrb]:
-                waveT_ini.update_params(params_gb[itrb].copy())
-                listT_temp, waveT_temp, NUTs_temp = waveT_ini.get_unsorted_coeffs()
-                snrs[itrn, itrb] = noise_AET_dense.get_sparse_snrs(NUTs_temp, listT_temp, waveT_temp)
-                snrs_tot[itrn, itrb] = np.linalg.norm(snrs[itrn, itrb])
-                if itrn == 0 and snrs_tot[0, itrb]<snr_min:
-                    const_suppress[itrb] = True
-                    for itrc in range(0, wc.NC):
-                        galactic_bg_const[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
-                elif snrs_tot[itrn, itrb]<snr_autosuppress:
-                    for itrc in range(0, wc.NC):
-                        galactic_bg[listT_temp[itrc, :NUTs_temp[itrc]], itrc] += waveT_temp[itrc, :NUTs_temp[itrc]]
-                else:
-                    var_suppress[itrn, itrb] = True
-        t1n = perf_counter()
-        print('made bg '+str(itrn)+' in time '+str(t1n-t0n)+'s')
-
-        galactic_bg_res = galactic_bg+galactic_bg_const
-
-        galactic_bg_full = galactic_bg_res.reshape((wc.Nt, wc.Nf, wc.NC)).copy()#+noise_realization
-
-        signal_full = galactic_bg_full+noise_realization
-
-        SAET_galactic_bg_smoothf_white = np.zeros((wc.Nt, wc.Nf, wc.NC))
-        SAET_galactic_bg_smoothft_white = np.zeros((wc.Nt, wc.Nf, wc.NC))
-        SAET_galactic_bg_smooth = np.zeros((wc.Nt, wc.Nf, wc.NC))
-
-        for itrc in range(0, wc.NC):
-            smooth_lengthf = 8
-            SAET_galactic_bg_white = signal_full[:, :, itrc]**2/SAET_m[:, itrc]
-            for itrf in range(0, wc.Nf):
-                rreach = smooth_lengthf//2-max(itrf-wc.Nf+smooth_lengthf//2+1, 0)
-                lreach = smooth_lengthf//2-max(smooth_lengthf//2-itrf, 0)
-                SAET_galactic_bg_smoothf_white[:, itrf, itrc] = np.mean(SAET_galactic_bg_white[:, itrf-lreach:itrf+rreach+1], axis=1)
-            smooth_lengtht = 84*2
-            for itrt in range(0, wc.Nt):
-                rreach = smooth_lengtht//2-max(itrt-wc.Nt+smooth_lengtht//2+1, 0)
-                lreach = smooth_lengtht//2-max(smooth_lengtht//2-itrt, 0)
-                SAET_galactic_bg_smoothft_white[itrt, :, itrc] = np.mean(SAET_galactic_bg_smoothf_white[itrt-lreach:itrt+rreach+1, :, itrc], axis=0)
-            SAET_galactic_bg_smooth[:, :, itrc] = SAET_galactic_bg_smoothft_white[:, :, itrc]*SAET_m[:, itrc]
-
-        snr_autosuppress = snr_thresh
-        SAET_tot[itrn+1] = SAET_galactic_bg_smooth
-
-    do_hf_write = True
-    if do_hf_write:
-        filename_out = gfi.get_preliminary_filename(galaxy_dir, snr_thresh, Nf, Nt, dt)
-        hf_out = h5py.File(filename_out, 'w')
-        hf_out.create_group('SAET')
-        hf_out['SAET'].create_dataset('galactic_bg_const', data=galactic_bg_const, compression='gzip')
-        hf_out['SAET'].create_dataset('noise_realization', data=noise_realization, compression='gzip')
-        hf_out['SAET'].create_dataset('smooth_lengthf', data=smooth_lengthf)
-        hf_out['SAET'].create_dataset('smooth_lengtht', data=smooth_lengtht)
-        hf_out['SAET'].create_dataset('snr_thresh', data=snr_thresh)
-        hf_out['SAET'].create_dataset('snr_min', data=snr_min)
-        hf_out['SAET'].create_dataset('Nt', data=wc.Nt)
-        hf_out['SAET'].create_dataset('Nf', data=wc.Nf)
-        hf_out['SAET'].create_dataset('dt', data=wc.dt)
-        hf_out['SAET'].create_dataset('n_iterations', data=n_iterations)
-        hf_out['SAET'].create_dataset('n_bin_use', data=n_bin_use)
-        hf_out['SAET'].create_dataset('SAET_m', data=SAET_m)
-        hf_out['SAET'].create_dataset('snrs_tot', data=snrs_tot[0], compression='gzip')
-        hf_out['SAET'].create_dataset('source_gb_file', data=gfi.get_galaxy_filename(galaxy_file, galaxy_dir))
-
-        hf_out.create_group('wc')
-        for key in wc._fields:
-            hf_out['wc'].create_dataset(key, data=getattr(wc, key))
-
-        hf_out.create_group('lc')
-        for key in lc._fields:
-            hf_out['lc'].create_dataset(key, data=getattr(lc, key))
-        #hf_out['SAET'].create_dataset('wc', data=wc)
-        #hf_out['SAET'].create_dataset('lc', data=lc)
-
-        hf_out.close()
-
-
-    plot_noise_spectrum_evolve = True
-    if plot_noise_spectrum_evolve:
-        import matplotlib.pyplot as plt
-
-        plt.loglog(np.arange(0, wc.Nf)*wc.DF, SAET_m[:, 0])
-        plt.loglog(np.arange(0, wc.Nf)*wc.DF, np.mean(SAET_tot[:, :, :, 0], axis=1).T)
-        plt.xlabel('f (Hz)')
-        plt.show()
-
-    plot_bg_smooth = True
-    if plot_bg_smooth:
-        import matplotlib.pyplot as plt
-        res_A = np.sqrt(SAET_tot[-1, :, :, 0]/SAET_m[:, 0])
-        plt.imshow(np.rot90(np.log10(res_A[:, 0:wc.Nf//2])), aspect='auto', extent=[0, wc.Nt*wc.DT/gc.SECSYEAR, 0, wc.Nf//2*wc.DF])
-        plt.xlabel('t (yr)')
-        plt.ylabel('f (Hz)')
-        plt.title(r"log10($S_A$), snr threshold="+str(snr_thresh))
-        plt.show()
-
-        res_E = np.sqrt(SAET_tot[-1, :, :, 1]/SAET_m[:, 1])
-        plt.imshow(np.rot90(np.log10(res_E[:, 0:wc.Nf//2])), aspect='auto', extent=[0, wc.Nt*wc.DT/gc.SECSYEAR, 0, wc.Nf//2*wc.DF])
-        plt.xlabel('t (yr)')
-        plt.ylabel('f (Hz)')
-        plt.title(r"log10($S_E$), snr threshold="+str(snr_thresh))
-        plt.show()
-
-    plot_bg = False
-    if plot_bg:
-        res = galactic_bg_full[:, :, 0]
-        res = res[:, :wc.Nf//2]
-        mask = (res==0.)
-        res[mask] = np.nan
-        import matplotlib.pyplot as plt
-        plt.imshow(np.rot90(res), aspect='auto')
-        plt.show()
-
-    plot_realization_im = False
-    if plot_realization_im:
-        import matplotlib.pyplot as plt
-        mask = (galactic_bg_full==0.)
-        res = np.zeros_like(galactic_bg_full)
-        res[~mask] = np.log10(np.abs(galactic_bg_full[~mask]))
-        plt.imshow(np.rot90(res[:, :, 0][:, 1:200]), aspect='auto')
-        plt.ylabel('frequency')
-        plt.xlabel('time')
-        plt.show()
-
-
-    do_hist_plots = False
-    if do_hist_plots:
-        import matplotlib.pyplot as plt
-        plt.hist(np.log10(params_gb[:, 0]), 100)
-        plt.xlabel('log10(Amplitude)')
-        plt.show()
-
-        plt.hist(np.cos(params_gb[:, 1]), 100)
-        plt.xlabel('cos(EclipticLatitude)')
-        plt.show()
-
-        plt.hist(params_gb[:, 2], 100)
-        plt.xlabel('EclipticLongitude')
-        plt.show()
-
-        plt.hist(np.log10(params_gb[:, 3]), 100)
-        plt.xlabel('log10(Frequency)')
-        plt.show()
-
-        plt.hist(np.log10(np.abs(params_gb[:, 4])), 100)
-        plt.xlabel('log10(abs(FrequencyDerivative))')
-        plt.show()
-
-        plt.hist(np.cos(params_gb[:, 5]), 100)
-        plt.xlabel('cosi')
-        plt.show()
-
-        plt.hist(params_gb[:, 6], 100)
-        plt.xlabel('InitialPhase')
-        plt.show()
-
-        plt.hist(params_gb[:, 7], 100)
-        plt.xlabel('Polarization')
-        plt.show()
+    do_plot_noise_spectrum_evolve = True
+    if do_plot_noise_spectrum_evolve:
+        pch.plot_noise_spectrum_evolve(ifm)

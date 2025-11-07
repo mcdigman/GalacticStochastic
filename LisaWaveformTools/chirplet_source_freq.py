@@ -1,0 +1,31 @@
+"""A source with linearly increasing frequency and constant amplitude."""
+
+from typing import override
+
+from LisaWaveformTools.source_params import ExtrinsicParams
+from LisaWaveformTools.stationary_freq_source import StationarySourceWaveformFreq
+from WaveletWaveforms.chirplet_funcs import (
+    LinearChirpletIntrinsicParams,
+    LinearChirpletParamsManager,
+    chirplet_freq_intrinsic,
+)
+
+
+class LinearChirpletSourceWaveformFreq(StationarySourceWaveformFreq[LinearChirpletIntrinsicParams, ExtrinsicParams]):
+    """Store a chirplet with linearly increasing frequency in the frequency domain."""
+
+    @override
+    def _create_intrinsic_params_manager(
+        self, params_intrinsic: LinearChirpletIntrinsicParams
+    ) -> LinearChirpletParamsManager:
+        return LinearChirpletParamsManager(params_intrinsic)
+
+    @override
+    def _update_intrinsic(self) -> None:
+        """Update the intrinsic_waveform with respect to the intrinsic parameters."""
+        if not isinstance(self.params.intrinsic, LinearChirpletIntrinsicParams):
+            msg = 'Intrinsic parameters must be of type LinearChirpletIntrinsicParams.'
+            raise TypeError(msg)
+
+        chirplet_freq_intrinsic(self._intrinsic_waveform, self.params.intrinsic, self._intrinsic_waveform.F)
+        self._consistent_intrinsic: bool = True
