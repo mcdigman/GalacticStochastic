@@ -418,7 +418,7 @@ def get_S_cyclo(
                 r_mean[:, itrc] = 1.0
             else:
                 mask: NDArray[np.bool_] = Sw_in_mean[:, itrc] > faint_cutoff_thresh * max_val
-                stabilizer: float = t_stabilizer_mult * float(max_val)
+                stabilizer: float = t_stabilizer_mult * float(np.max(S_in_mean[mask, itrc]))
                 Sw_in: NDArray[np.floating] = S_in[:, mask, itrc] / (S_in_mean[mask, itrc] + stabilizer)
                 r_mean[:, itrc] = np.mean(Sw_in, axis=1)
 
