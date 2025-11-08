@@ -1,6 +1,8 @@
 [files]
 # values related to file io
 
+
+galaxy_dir = 'Galaxies/GalaxyFlat/'
 galaxy_file = 'galaxy_binaries.hdf5'
 
 # prefix for final processed filename
@@ -106,14 +108,14 @@ component_list = ['dgb', 'igb', 'vgb']
 # constants related to wavelet transforms
 
 # number of frequency layers in the wavelet transform (should be even)
-Nf = 2048
+Nf = 4096
 
 # number of time layers in wavelet transform (should be even)
-Nt = 4096
+Nt = 3078
 
 # time sampling cadence in seconds (note that the total time covered by the transform will be Nf*Nt*dt)
 # dt is the only quantity in the definition of the wavelet transform that has units
-dt = 30.0750732421875
+dt = 5.0
 
 # over sampling
 mult = 8
@@ -146,10 +148,10 @@ L = 512
 Larm = 2.5e9
 
 # Photon shot noise power
-Sps = 1.48481420973638e-23
+Sps = 2.25e-22
 
 # Acceleration noise power
-Sacc = 1.5982131619908737e-30
+Sacc = 9.0e-30
 
 # Initial azimuthal position of the guiding center
 kappa0 = 0.0
@@ -180,12 +182,3 @@ t0 = 0.0
 
 # Rise time of antenna pattern in frequency domain
 t_rise = 0.0
-
-# the frequency in Hz controlling the 1/f^2 roll off of the denominator of the LISA acceleration noise
-f_roll_acc_f2_inv = 0.0003825153977709533
-
-# the frequency in Hz controlling the f^4 roll off of the denominator or the LISA acceleration noise
-f_roll_acc_f4 = 0.005977512856889381
-
-# the frequency in Hz controlling the 1/f^4 roll off of the denominator or the LISA laser noise
-f_roll_ps_f4_inv = 0.001258828143983798

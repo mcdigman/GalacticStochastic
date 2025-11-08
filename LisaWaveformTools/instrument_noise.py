@@ -20,9 +20,9 @@ def instrument_noise1(f: NDArray[np.floating], lc: LISAConstants) -> NDArray[np.
     # To match the LDC power spectra need a factor of 2 here. No idea why... (one sided/two sided?)
     LC: NDArray[np.floating] = 8.0 * 2.0 * f_on_f**2
     # roll-offs
-    roll1 = lc.f_roll_acc_f_inv / f
-    roll2 = f / lc.f_roll_acc_f
-    roll3 = lc.f_roll_ps_f_inv / f
+    roll1 = lc.f_roll_acc_f2_inv / f
+    roll2 = f / lc.f_roll_acc_f4
+    roll3 = lc.f_roll_ps_f4_inv / f
     rolla: NDArray[np.floating] = (1.0 + roll1**2) * (1.0 + roll2**4)
     rollw: NDArray[np.floating] = 1.0 + roll3**4
     scale_part: NDArray[np.floating] = LC * 16.0 / 3.0 * np.sin(f_on_f) ** 2 / (2.0 * lc.Larm) ** 2
@@ -69,9 +69,9 @@ def instrument_noise_AET(f: NDArray[np.floating], lc: LISAConstants, tdi_mode: s
     mult_all_offdiag: NDArray[np.floating] = -LC / 4 * f_on_f**2 * sin_f_on_f * sin_2f_on_f
 
     # roll-offs
-    roll1: NDArray[np.floating] = lc.f_roll_acc_f_inv / f
-    roll2: NDArray[np.floating] = f / lc.f_roll_acc_f
-    roll3: NDArray[np.floating] = lc.f_roll_ps_f_inv / f
+    roll1: NDArray[np.floating] = lc.f_roll_acc_f2_inv / f
+    roll2: NDArray[np.floating] = f / lc.f_roll_acc_f4
+    roll3: NDArray[np.floating] = lc.f_roll_ps_f4_inv / f
     rolla: NDArray[np.floating] = (1.0 + roll1**2) * (1.0 + roll2**4)
     rollw: NDArray[np.floating] = 1.0 + roll3**4
 

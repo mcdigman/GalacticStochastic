@@ -116,9 +116,9 @@ def match_sangria_curve(toml_filename_in: str, fcsd: NDArray[np.floating], psd_a
     def S_func_temp(tpl: NDArray[np.floating]) -> float:
         config_in3['lisa_constants']['Sps'] = 10**tpl[0]
         config_in3['lisa_constants']['Sacc'] = 10**tpl[1]
-        config_in3['lisa_constants']['f_roll_acc_f_inv'] = tpl[2]
-        config_in3['lisa_constants']['f_roll_acc_f'] = tpl[3]
-        config_in3['lisa_constants']['f_roll_ps_f_inv'] = tpl[4]
+        config_in3['lisa_constants']['f_roll_acc_f2_inv'] = tpl[2]
+        config_in3['lisa_constants']['f_roll_acc_f4'] = tpl[3]
+        config_in3['lisa_constants']['f_roll_ps_f4_inv'] = tpl[4]
         lc3 = get_lisa_constants(config_in3)
         psd_aet_expect3 = instrument_noise_AET(f_log_space, lc3, tdi_mode='aet_equal', diagonal_mode=0)
         psd_xyz_expect3 = instrument_noise_AET(f_log_space_masked, lc3, tdi_mode='xyz_equal', diagonal_mode=1)
@@ -150,9 +150,9 @@ def match_sangria_curve(toml_filename_in: str, fcsd: NDArray[np.floating], psd_a
     print(res_found)
     config_in3['lisa_constants']['Sps'] = 10**res[0]
     config_in3['lisa_constants']['Sacc'] = 10**res[1]
-    config_in3['lisa_constants']['f_roll_acc_f_inv'] = res[2]
-    config_in3['lisa_constants']['f_roll_acc_f'] = res[3]
-    config_in3['lisa_constants']['f_roll_ps_f_inv'] = res[4]
+    config_in3['lisa_constants']['f_roll_acc_f2_inv'] = res[2]
+    config_in3['lisa_constants']['f_roll_acc_f4'] = res[3]
+    config_in3['lisa_constants']['f_roll_ps_f4_inv'] = res[4]
     lc3 = get_lisa_constants(config_in3)
     return lc3
 

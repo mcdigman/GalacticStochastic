@@ -20,7 +20,7 @@ def main() -> None:
     config['files']['galaxy_dir'] = target_directory
 
     cyclo_mode = 1
-    ifm = fetch_or_run_iterative_loop(config, cyclo_mode=cyclo_mode, fetch_mode=3, output_mode=1, preprocess_mode=0)
+    fetch_or_run_iterative_loop(config, cyclo_mode=cyclo_mode, fetch_mode=3, output_mode=1, preprocess_mode=0)
 
 
 if __name__ == '__main__':

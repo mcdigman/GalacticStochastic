@@ -25,7 +25,7 @@ def wavemaket(
     wc: WDMWaveletConstants,
     taylor_table: WaveletTaylorTimeCoeffs,
     *,
-    force_nulls: int = 0,
+    force_nulls: int = 2,
 ) -> None:
     """
     Construct a sparse wavelet-domain representation of a time-domain intrinsic_waveform using interpolation tables.
@@ -84,6 +84,8 @@ def wavemaket(
 
     for itrc in range(nc_waveform):
         mm: int = 0
+        mm_null: int = 0
+        pow_null = 0.
         nf_min: int = 0
         nf_max: int = wc.Nf - 1
         for j in range(nt_lim_waveform.nx_min, nt_lim_waveform.nx_max):
@@ -163,7 +165,7 @@ def wavemaket(
 
                         mm += 1
                         # end loop over frequency layers
-            elif force_nulls == 1:
+            elif force_nulls in (1, 2):
                 # we know what the indices would be for values not precomputed in the table
                 # so force values outside the range of the table to 0 instead of dropping,
                 # in order to get likelihoods right, which is particularly important around total nulls,
@@ -171,6 +173,9 @@ def wavemaket(
                 # note that if this happens only very rarely
                 # we could just actually calculate the non-precomputed coefficient
                 fa = waveform.FT[itrc, j]
+
+                c = waveform.AT[itrc, j] * np.cos(waveform.PT[itrc, j])
+                s = waveform.AT[itrc, j] * np.sin(waveform.PT[itrc, j])
 
                 Nfsam1_loc = int((wc.BW + wc.dfd * wc.Tw * ny) / wc.df_bw)
                 if Nfsam1_loc % 2 == 1:
@@ -184,12 +189,24 @@ def wavemaket(
                 kmax = min(wc.Nf - 1, int(np.floor((fa + half_bandwidth) / wc.DF)))
 
                 for k in range(kmin, kmax + 1):
+                    if mm_null >= wc.n_f_null_extend:
+                        print('Null filling exceeded', itrc, j, k, fa, waveform.FTd[itrc, j])
+                        break
+
+                    if force_nulls == 1:
+                        wavelet_waveform.wave_value[itrc, mm] = 0.0
+                    else:
+                        # option to directly compute the value at the null, should be ok as long as they are rare
+                        y, z = get_taylor_time_pixel_direct(fa, waveform.FTd[itrc, j], k, taylor_table.wavelet_norm, wc)
+                        if (j_ind + k) % 2:
+                            wavelet_waveform.wave_value[itrc, mm] = -(c * z + s * y)
+                        else:
+                            wavelet_waveform.wave_value[itrc, mm] = c * y - s * z
+                        pow_null += wavelet_waveform.wave_value[itrc, mm] ** 2
+
                     wavelet_waveform.pixel_index[itrc, mm] = j_ind * wc.Nf + k
-                    wavelet_waveform.wave_value[itrc, mm] = 0.0
                     mm += 1
-            elif force_nulls == 2:
-                msg1 = 'Direct computation of values outside the table is not implemented yet'
-                raise NotImplementedError(msg1)
+                    mm_null += 1
             elif force_nulls == 0:
                 pass
             else:

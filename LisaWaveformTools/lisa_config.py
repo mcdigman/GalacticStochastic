@@ -25,9 +25,9 @@ class LISAConstants(NamedTuple):
     t_rise: float
     rise_mode: int
     noise_curve_mode: int
-    f_roll_acc_f_inv: float
-    f_roll_acc_f: float
-    f_roll_ps_f_inv: float
+    f_roll_acc_f2_inv: float
+    f_roll_acc_f4: float
+    f_roll_ps_f4_inv: float
 
 
 def get_lisa_constants(config: dict[str, Any]) -> LISAConstants:
@@ -111,10 +111,14 @@ def get_lisa_constants(config: dict[str, Any]) -> LISAConstants:
     # Mode to use for instrument noise curve calculation
     noise_curve_mode = int(config_lc.get('noise_curve_mode', 0))
 
-    # TODO comment these with descriptions
-    f_roll_acc_f_inv = float(config_lc.get('f_roll_acc_f_inv', 4.0e-4))
-    f_roll_acc_f = float(config_lc.get('f_roll_acc_f', 8.0e-3))
-    f_roll_ps_f_inv = float(config_lc.get('f_roll_ps_f_inv', 2.0e-3))
+    # the frequency in Hz controlling the 1/f^2 roll off of the denominator of the LISA acceleration noise
+    f_roll_acc_f2_inv = float(config_lc.get('f_roll_acc_f2_inv', 4.0e-4))
+
+    # the frequency in Hz controlling the f^4 roll off of the denominator or the LISA acceleration noise
+    f_roll_acc_f4 = float(config_lc.get('f_roll_acc_f4', 8.0e-3))
+
+    # the frequency in Hz controlling the 1/f^4 roll off of the denominator or the LISA laser noise
+    f_roll_ps_f4_inv = float(config_lc.get('f_roll_ps_f4_inv', 2.0e-3))
 
     return LISAConstants(
         Larm,
@@ -133,7 +137,7 @@ def get_lisa_constants(config: dict[str, Any]) -> LISAConstants:
         t_rise,
         rise_mode,
         noise_curve_mode,
-        f_roll_acc_f_inv,
-        f_roll_acc_f,
-        f_roll_ps_f_inv,
+        f_roll_acc_f2_inv,
+        f_roll_acc_f4,
+        f_roll_ps_f4_inv,
     )

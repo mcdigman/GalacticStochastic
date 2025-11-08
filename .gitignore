@@ -4,6 +4,8 @@ wavelet/
 pylint_log.txt
 vulture_log.txt
 profiles/
+scratch/
 .idea/
 **/.swp
 *.swp
+GalacticStochastic.egg-info/
