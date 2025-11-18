@@ -167,6 +167,7 @@ def check_fdot_grid_helper(params_gb: NDArray[np.floating], wc: WDMWaveletConsta
     fdot_min_avail: float = wc.dfd * (- wc.Nfd_negative)
     ny_max = np.floor(fdot_max_loc / wc.dfd)
     ny_min = np.floor(fdot_min_loc / wc.dfd)
+
     # range of possible frequency bandwidths
     bw_max = wc.df_bw / 2. * (wc.Nsf + 2 / 3 * np.min([np.abs(ny_max), np.abs(ny_max + 1)], axis=0) * wc.dfdot * wc.Nsf)
     bw_min = wc.df_bw / 2. * (wc.Nsf + 2 / 3 * np.min([np.abs(ny_min), np.abs(ny_min + 1)], axis=0) * wc.dfdot * wc.Nsf)
@@ -176,20 +177,20 @@ def check_fdot_grid_helper(params_gb: NDArray[np.floating], wc: WDMWaveletConsta
     f_max_need = f_max_loc + bw_range
     f_min_need = f_min_loc - bw_range
 
-    print(np.max(bw_max / wc.DF))
-    print(np.max(bw_min / wc.DF))
-    print(np.max(bw_range / wc.DF))
+    # print(np.max(bw_max / wc.DF))
+    # print(np.max(bw_min / wc.DF))
+    # print(np.max(bw_range / wc.DF))
     print('k max', np.max(f_max_need) / wc.DF)
     print('k min', np.min(f_min_need) / wc.DF)
     print('k center max range', np.max(f_max_loc - f_min_loc) / wc.DF)
     print('k center mean range', np.mean(f_max_loc - f_min_loc) / wc.DF)
     print('k median range', np.median(f_max_loc - f_min_loc) / wc.DF)
 
-    print(amp_doppler, np.max(f_start))
-    print(np.max(fdot_range))
-    print(np.min(fdot_range))
-    print(np.sum(fdot_max_loc > fdot_max_avail))
-    print(np.sum(fdot_min_loc < fdot_max_avail))
+    # print(amp_doppler, np.max(f_start))
+    # print(np.max(fdot_range))
+    # print(np.min(fdot_range))
+    # print(np.sum(fdot_max_loc > fdot_max_avail))
+    # print(np.sum(fdot_min_loc < fdot_max_avail))
     print('MAXIMUM FREQUENCY DERIVATIVE', fdot_max_loc.max(), fdot_loc.max(), fdot_min_loc.max(), fdot_max_avail, fdot_max_grid)
     print('MINIMUM FREQUENCY DERIVATIVE', fdot_max_loc.min(), fdot_loc.min(), fdot_min_loc.min(), fdot_min_avail, -fdot_max_grid)
     print('fdotdot range', fdotdot_range_max, fdotdot_range_max * wc.DT, fdotdot_range_max / wc.DF)
@@ -339,7 +340,7 @@ class BinaryInclusionState(StateManager):
             params0_sel = self._params_gb[0]
         params0: SourceParams = unpack_params_gb(params0_sel)
         self._waveform_manager: LinearFrequencyWaveletWaveformTime = LinearFrequencyWaveletWaveformTime(
-            params0, self._wc, self._lc, self._nt_lim_waveform, table_cache_mode='check', table_output_mode='skip', wavelet_mode=3,
+            params0, self._wc, self._lc, self._nt_lim_waveform, table_cache_mode='check', table_output_mode='skip', wavelet_mode=1,
         )
 
         check_fdot_grid_helper(self._params_gb, self._wc, self._lc, self._fmax_binary)

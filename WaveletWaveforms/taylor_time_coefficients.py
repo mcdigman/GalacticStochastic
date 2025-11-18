@@ -304,7 +304,7 @@ def get_taylor_time_pixel_direct(
 
 
 def dfd_grid_spacing_check_helper(wc: WDMWaveletConstants, f_target: float, fd_target: float = 0., k_range: int = 1, atol_mult: float = 1.e-6, rtol_pix: float = 1.e-7, assert_mode: int = 1, dfd_mult: float = 1.0, wavelet_norm: NDArray[np.floating] | None = None) -> float:
-    """Do some checks using the exact formula to deterimine if the dfd grid spacing appears adequate"""
+    """Do some checks using the exact formula to deterimine if the dfd grid spacing appears adequate."""
     if wavelet_norm is None:
         wavelet_norm = get_wavelet_norm(wc)
 
@@ -317,7 +317,7 @@ def dfd_grid_spacing_check_helper(wc: WDMWaveletConstants, f_target: float, fd_t
     k_base = int(np.floor(f_target / wc.DF))
     k_min: int = max(k_base - k_range, 1)
     k_max: int = min(k_base + k_range, wc.Nf - 1)
-    dfd_mult_need: float = 1.
+    dfd_mult_need: float = np.inf
     for k in range(k_min, k_max + 1):
         dfd_loc: float = dfd_mult * wc.dfd
         y_1, z_1 = get_taylor_time_pixel_direct(f_target, fd_target - dfd_loc, k, wavelet_norm, wc)
@@ -330,7 +330,13 @@ def dfd_grid_spacing_check_helper(wc: WDMWaveletConstants, f_target: float, fd_t
 
         zpp: float = (z_1 - 2 * z_2 + z_3) / dfd_loc**2
         z_abs_error: float = float(np.abs(zpp)) * dfd_loc**2 / 2.0
-        dfd_mult_need = min(dfd_mult_need, float(np.sqrt(atol_pix / max(y_abs_error, z_abs_error, atol_pix))))
+
+        error_use: float = max(y_abs_error, z_abs_error)
+        if error_use > 0:
+            dfd_mult_need = min(dfd_mult_need, float(np.sqrt(atol_pix / error_use)))
+        else:
+            dfd_mult_need = min(dfd_mult_need, 1.)
+
         if assert_mode == 1:
             msg = f'The requested grid will not achieve target precision. Try decreasing dfdot by ~{dfd_mult_need}'
             assert_allclose(y_2, y_2 + y_abs_error, atol=atol_pix, rtol=rtol_pix, err_msg=msg)
@@ -339,7 +345,8 @@ def dfd_grid_spacing_check_helper(wc: WDMWaveletConstants, f_target: float, fd_t
 
 
 @njit()
-def get_dtaylor_table_di_di(jj: float, i: float, wavelet_norm: NDArray[np.floating], wc: WDMWaveletConstants) -> tuple[float, float, float, float]:
+def _get_dtaylor_table_di_di(jj: float, i: float, wavelet_norm: NDArray[np.floating], wc: WDMWaveletConstants) -> tuple[float, float, float, float]:
+    """Get derivative of taylor table with respect to indices."""
     fd: float = wc.dfd * (-wc.Nfd_negative + jj)  # set f-dot increments
     Nfsam: int = int((wc.BW + np.abs(fd) * wc.Tw) / wc.df_bw)
     if Nfsam % 2 == 1:
@@ -371,7 +378,7 @@ def get_dtaylor_table_di_di(jj: float, i: float, wavelet_norm: NDArray[np.floati
 
 
 def df_bw_grid_spacing_check_helper(wc: WDMWaveletConstants, f_target: float, fd_target: float = 0., atol_mult: float = 1.e-6, rtol_pix: float = 1.e-7, assert_mode: int = 1, df_bw_mult: float = 1.0, wavelet_norm: NDArray[np.floating] | None = None) -> float:
-    """Do some checks using the exact formula to deterimine if the dfd grid spacing appears adequate"""
+    """Do some checks using the exact formula to deterimine if the df_bw grid spacing appears adequate"""
     if wavelet_norm is None:
         wavelet_norm = get_wavelet_norm(wc)
 
@@ -381,14 +388,22 @@ def df_bw_grid_spacing_check_helper(wc: WDMWaveletConstants, f_target: float, fd
     assert atol_pix > 0.
 
     # check if the df_bw seems small enough for numerical stability
-    y_2, z_2, ypp, zpp = get_dtaylor_table_di_di(fd_target / wc.dfd, f_target / wc.df_bw, wavelet_norm, wc)
+    y_2, z_2, ypp, zpp = _get_dtaylor_table_di_di(fd_target / wc.dfd, f_target / wc.df_bw, wavelet_norm, wc)
 
     # central finite difference first and second derivative of y
     y_abs_error: float = float(np.abs(ypp)) / 2.0 * df_bw_mult ** 2
 
     z_abs_error: float = float(np.abs(zpp)) / 2.0 * df_bw_mult ** 2
-    df_bw_mult_need: float = float(np.sqrt(atol_pix / max(y_abs_error, z_abs_error, atol_pix)))
+
+    error_use = max(y_abs_error, z_abs_error)
+
+    if error_use <= 0.:
+        df_bw_mult_need: float = 1.
+    else:
+        df_bw_mult_need = float(np.sqrt(atol_pix / error_use))
+
     assert df_bw_mult_need > 0.
+
     nsf_mult_need: float = 1. / df_bw_mult_need
     if assert_mode == 1:
         msg = f'The requested grid will not achieve target precision. Try increasing Nsf by ~{nsf_mult_need}'
@@ -427,19 +442,25 @@ def grid_check_helper(wc: WDMWaveletConstants, grid_check_mode: int, target_prec
         raise ValueError(msg)
 
     failed = False
-    if not np.isclose(df_bw_mult_need, 1., atol=1.e-2):
+    if df_bw_mult_need < 0.95:
         failed = True
         assert df_bw_mult_need > 0.
         nsf_mult_need = 1. / df_bw_mult_need
-        warn(f'The requested grid will not achieve target precision. Try increasing Nsf by ~{nsf_mult_need}', stacklevel=2)
-    if not np.isclose(dfd_mult_need, 1., atol=1.e-2):
+        warn(f'The requested grid will not achieve target precision {target_precision}. Try increasing Nsf by ~{nsf_mult_need}', stacklevel=2)
+    elif df_bw_mult_need > 2.:
+        nsf_mult_need = 1. / df_bw_mult_need
+        print(f'Nsf could safely be decreased by a factor of ~{nsf_mult_need}')
+
+    if dfd_mult_need < 0.95:
         failed = True
-        warn(f'The requested grid will not achieve target precision. Try decreasing dfd by ~{dfd_mult_need}', stacklevel=2)
+        warn(f'The requested grid will not achieve target precision {target_precision}. Try decreasing dfd by ~{dfd_mult_need}', stacklevel=2)
+    elif dfd_mult_need > 2.:
+        print(f'dfd could safely be increased by ~{dfd_mult_need}')
 
     if failed and assert_mode == 1:
-        msg = 'Grid will not achieve required precision'
+        msg = f'Taylor time interpolation will not achieve required precision {target_precision}'
         raise ValueError(msg)
-    print('Grid expected to achieve specified precision')
+    print(f'Taylor time interpolation expected to achieve specified precision {target_precision}')
 
 
 def get_taylor_table_time(
@@ -450,7 +471,6 @@ def get_taylor_table_time(
     cache_dir: str = 'coeffs/',
     filename_base: str = 'taylor_time_table_',
     grid_check_mode: int = 1,
-    target_precision: float = 1.e-4,
     assert_mode: int = 1,
 ) -> WaveletTaylorTimeCoeffs:
     """
@@ -573,14 +593,15 @@ def get_taylor_table_time(
         msg = f'Unrecognized option for cache_mode {cache_mode}'
         raise NotImplementedError(msg)
 
-    grid_check_helper(wc, grid_check_mode, target_precision=target_precision, wavelet_norm=wavelet_norm, assert_mode=assert_mode)
+    grid_check_helper(wc, grid_check_mode, target_precision=wc.taylor_time_interpolation_target_precision, wavelet_norm=wavelet_norm, assert_mode=assert_mode)
 
     if not cache_good:
         fd = wc.DF / wc.Tw * wc.dfdot * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)  # set f-dot increments
 
         max_fd = np.max(np.abs(fd))
-        if max_fd > 8 * wc.DF / wc.Tw:
-            msg = 'Requested interpolation grid exceeds valid range of time domain taylor approximation'
+        max_allow = 8 * wc.DF / wc.Tw * (1. + wc.max_freq_tol_time_interpolation)  # small factor to account for numerical inexactness
+        if max_fd > max_allow:
+            msg = f'Requested interpolation grid max {max_fd} exceeds valid range of time domain taylor approximation {max_allow}'
             if assert_mode:
                 raise ValueError(msg)
             warn(msg, stacklevel=2)

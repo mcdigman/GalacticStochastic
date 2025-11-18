@@ -111,7 +111,7 @@ component_list = ['dgb', 'igb', 'vgb']
 Nf = 2048
 
 # number of time layers in wavelet transform (should be even)
-Nt = 4096
+Nt = 6144
 
 # time sampling cadence in seconds (note that the total time covered by the transform will be Nf*Nt*dt)
 # dt is the only quantity in the definition of the wavelet transform that has units
@@ -121,16 +121,16 @@ dt = 30.0750732421875
 mult = 8
 
 # frequency steps in interpolation table
-Nsf = 400
+Nsf = 100
 
 # fractional fdot increment in interpolation table
-dfdot = 0.02
+dfdot = 0.05
 
 # number of fdots in interpolation table
-Nfd = 80
+Nfd = 320
 
 # number of fdot increments which are less than zero in the interpolation table (should be less than Nfd)
-Nfd_negative = 40
+Nfd_negative = 160
 
 # number of timesteps used to compute the interpolation table; must be an integer times mult
 Nst = 800
@@ -140,6 +140,12 @@ nx = 4.0
 
 # reduced filter length; must be a power of 2
 L = 32
+
+# Maximum number of extra values to be imputed for null filling if necessary
+n_f_null_extend = 0
+
+# target precision of interpolation grid for taylor time wavelet computation method
+taylor_time_interpolation_target_precision =  1.0e-3
 
 [lisa_constants]
 # constants related to LISA constellation
