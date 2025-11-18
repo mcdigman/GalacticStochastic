@@ -98,17 +98,17 @@ def match_sangria_curve(toml_filename_in: str, fcsd: NDArray[np.floating], psd_a
     with Path(toml_filename_in).open('rb') as f:
         config_in3 = tomllib.load(f)
 
-    log_f = np.linspace(np.log10(fcsd[0]), np.log10(fcsd[-1] * 0.92), 1000)
+    log_f = np.linspace(np.log10(fcsd[0]), np.log10(fcsd[-1] * 0.88), 1000)
     f_log_space = 10**log_f
-    log_psd_goal_T = InterpolatedUnivariateSpline(np.log10(fcsd), np.log10(psd_aet[2, nf_min:nf_max]), k=3, ext=2)(log_f)
     mask_spect = ((f_log_space < f_mask_low) | (f_log_space > f_mask_high))
     log_f_masked = log_f[mask_spect]
     f_log_space_masked = f_log_space[mask_spect]
     log_psd_goal_A = InterpolatedUnivariateSpline(np.log10(fcsd), np.log10(psd_aet[0, nf_min:nf_max]), k=3, ext=2)(log_f_masked)
     log_psd_goal_E = InterpolatedUnivariateSpline(np.log10(fcsd), np.log10(psd_aet[1, nf_min:nf_max]), k=3, ext=2)(log_f_masked)
-    log_psd_goal_01 = InterpolatedUnivariateSpline(np.log10(fcsd), np.log10(np.abs(re_csd_xyz[:, 0, 1])), k=3, ext=2)(log_f_masked)
-    log_psd_goal_02 = InterpolatedUnivariateSpline(np.log10(fcsd), np.log10(np.abs(re_csd_xyz[:, 0, 2])), k=3, ext=2)(log_f_masked)
-    log_psd_goal_12 = InterpolatedUnivariateSpline(np.log10(fcsd), np.log10(np.abs(re_csd_xyz[:, 1, 2])), k=3, ext=2)(log_f_masked)
+    log_psd_goal_T = InterpolatedUnivariateSpline(np.log10(fcsd), np.log10(psd_aet[2, nf_min:nf_max]), k=3, ext=2)(log_f)
+    psd_goal_01 = InterpolatedUnivariateSpline(np.log10(fcsd), re_csd_xyz[:, 0, 1], k=3, ext=2)(log_f_masked)
+    psd_goal_02 = InterpolatedUnivariateSpline(np.log10(fcsd), re_csd_xyz[:, 0, 2], k=3, ext=2)(log_f_masked)
+    psd_goal_12 = InterpolatedUnivariateSpline(np.log10(fcsd), re_csd_xyz[:, 1, 2], k=3, ext=2)(log_f_masked)
     log_psd_goal_00 = InterpolatedUnivariateSpline(np.log10(fcsd), np.log10(np.abs(psd_xyz[0, nf_min:nf_max])), k=3, ext=2)(log_f_masked)
     log_psd_goal_11 = InterpolatedUnivariateSpline(np.log10(fcsd), np.log10(np.abs(psd_xyz[1, nf_min:nf_max])), k=3, ext=2)(log_f_masked)
     log_psd_goal_22 = InterpolatedUnivariateSpline(np.log10(fcsd), np.log10(np.abs(psd_xyz[2, nf_min:nf_max])), k=3, ext=2)(log_f_masked)
@@ -119,31 +119,35 @@ def match_sangria_curve(toml_filename_in: str, fcsd: NDArray[np.floating], psd_a
         config_in3['lisa_constants']['f_roll_acc_f2_inv'] = tpl[2]
         config_in3['lisa_constants']['f_roll_acc_f4'] = tpl[3]
         config_in3['lisa_constants']['f_roll_ps_f4_inv'] = tpl[4]
+        # config_in3['lisa_constants']['f_roll_acc_f_inv'] = tpl[5]
         lc3 = get_lisa_constants(config_in3)
-        psd_aet_expect3 = instrument_noise_AET(f_log_space, lc3, tdi_mode='aet_equal', diagonal_mode=0)
         psd_xyz_expect3 = instrument_noise_AET(f_log_space_masked, lc3, tdi_mode='xyz_equal', diagonal_mode=1)
-        contrib_T = np.linalg.norm(np.log10(psd_aet_expect3[:, 2]) - log_psd_goal_T)
+        psd_aet_expect3 = instrument_noise_AET(f_log_space_masked, lc3, tdi_mode='aet_equal', diagonal_mode=0)
         contrib_A = np.linalg.norm(np.log10(psd_aet_expect3[mask_spect, 0]) - log_psd_goal_A)
         contrib_E = np.linalg.norm(np.log10(psd_aet_expect3[mask_spect, 1]) - log_psd_goal_E)
-        contrib_01 = np.linalg.norm(np.log10(np.abs(psd_xyz_expect3[:, 0, 1])) - log_psd_goal_01)
-        contrib_02 = np.linalg.norm(np.log10(np.abs(psd_xyz_expect3[:, 0, 2])) - log_psd_goal_02)
-        contrib_12 = np.linalg.norm(np.log10(np.abs(psd_xyz_expect3[:, 1, 2])) - log_psd_goal_12)
+        contrib_T = np.linalg.norm(np.log10(psd_aet_expect3[f_log_space_masked > 1.e-4, 2]) - log_psd_goal_T[f_log_space_masked > 1.e-4])
+        # contrib_T = 0.
+        contrib_01 = np.linalg.norm(np.log10(np.abs(psd_xyz_expect3[:, 0, 1])) - np.log10(np.abs(psd_goal_01)))
+        contrib_02 = np.linalg.norm(np.log10(np.abs(psd_xyz_expect3[:, 0, 2])) - np.log10(np.abs(psd_goal_02)))
+        contrib_12 = np.linalg.norm(np.log10(np.abs(psd_xyz_expect3[:, 1, 2])) - np.log10(np.abs(psd_goal_12)))
         contrib_00 = np.linalg.norm(np.log10(np.abs(psd_xyz_expect3[:, 0, 0])) - log_psd_goal_00)
         contrib_11 = np.linalg.norm(np.log10(np.abs(psd_xyz_expect3[:, 1, 1])) - log_psd_goal_11)
         contrib_22 = np.linalg.norm(np.log10(np.abs(psd_xyz_expect3[:, 2, 2])) - log_psd_goal_22)
-        return np.sqrt(contrib_A**2 + contrib_E**2 + contrib_T**2 + contrib_01**2 + contrib_02**2 + contrib_12**2 + contrib_00**2 + contrib_11**2 + contrib_22**2)
+        return np.sqrt(contrib_00**2 + contrib_11**2 + contrib_22**2 + contrib_01**2 + contrib_02**2 + contrib_12**2 + contrib_A**2 + contrib_E**2 + contrib_T**2)
 
     bounds = np.zeros((5, 2))
-    bounds[0, 0] = np.log10(1.e-3 * 9.0e-24)
-    bounds[0, 1] = np.log10(1.e3 * 9.0e-24)
-    bounds[1, 0] = np.log10(1.e-3 * 5.76e-30)
-    bounds[1, 1] = np.log10(1.e3 * 5.76e-30)
-    bounds[2, 0] = 2.0e-4
-    bounds[2, 1] = 8.0e-4
+    bounds[0, 0] = np.log10(1.e-3 * 2.25e-22)
+    bounds[0, 1] = np.log10(1.e3 * 2.25e-22)
+    bounds[1, 0] = np.log10(1.e-3 * 9.0e-30)
+    bounds[1, 1] = np.log10(1.e3 * 9.0e-30)
+    bounds[2, 0] = 0.0
+    bounds[2, 1] = 1.0e-3
     bounds[3, 0] = 4.0e-3
     bounds[3, 1] = 1.6e-2
     bounds[4, 0] = 1.0e-3
     bounds[4, 1] = 4.0e-3
+    # bounds[5, 0] = 0.0
+    # bounds[5, 1] = 1.0e-3
 
     res_found = dual_annealing(S_func_temp, bounds, maxiter=5000)
     res = res_found['x']
@@ -153,8 +157,97 @@ def match_sangria_curve(toml_filename_in: str, fcsd: NDArray[np.floating], psd_a
     config_in3['lisa_constants']['f_roll_acc_f2_inv'] = res[2]
     config_in3['lisa_constants']['f_roll_acc_f4'] = res[3]
     config_in3['lisa_constants']['f_roll_ps_f4_inv'] = res[4]
+    # config_in3['lisa_constants']['f_roll_acc_f_inv'] = res[5]
     lc3 = get_lisa_constants(config_in3)
+    psd_xyz_expect3 = instrument_noise_AET(f_log_space_masked, lc3, tdi_mode='xyz_equal', diagonal_mode=1)
+    psd_aet_expect3 = instrument_noise_AET(f_log_space_masked, lc3, tdi_mode='aet_equal', diagonal_mode=0)
+    plt.loglog(f_log_space_masked, psd_xyz_expect3[:, 0, 0])
+    plt.loglog(f_log_space_masked, 10**log_psd_goal_00)
+    plt.loglog(f_log_space_masked, np.abs(psd_xyz_expect3[:, 0, 1]))
+    plt.loglog(f_log_space_masked, np.abs(psd_goal_01))
+    plt.loglog(f_log_space_masked, np.abs(psd_xyz_expect3[:, 0, 2]))
+    plt.loglog(f_log_space_masked, np.abs(psd_goal_02))
+    plt.loglog(f_log_space_masked, np.abs(psd_xyz_expect3[:, 1, 2]))
+    plt.loglog(f_log_space_masked, np.abs(psd_goal_12))
+    plt.show()
+    plt.semilogx(f_log_space_masked, psd_xyz_expect3[:, 0, 1] / np.sqrt(psd_xyz_expect3[:, 0, 0] * psd_xyz_expect3[:, 1, 1]))
+    plt.semilogx(f_log_space_masked, psd_goal_01 / np.sqrt(psd_xyz_expect3[:, 0, 0] * psd_xyz_expect3[:, 1, 1]))
+    plt.semilogx(f_log_space_masked, psd_xyz_expect3[:, 0, 2] / np.sqrt(psd_xyz_expect3[:, 0, 0] * psd_xyz_expect3[:, 2, 2]))
+    plt.semilogx(f_log_space_masked, psd_goal_02 / np.sqrt(psd_xyz_expect3[:, 0, 0] * psd_xyz_expect3[:, 2, 2]))
+    plt.semilogx(f_log_space_masked, psd_xyz_expect3[:, 1, 2] / np.sqrt(psd_xyz_expect3[:, 1, 1] * psd_xyz_expect3[:, 2, 2]))
+    plt.semilogx(f_log_space_masked, psd_goal_12 / np.sqrt(psd_xyz_expect3[:, 1, 1] * psd_xyz_expect3[:, 2, 2]))
+    plt.show()
+    plt.loglog(f_log_space_masked, psd_aet_expect3[:, 0])
+    plt.loglog(f_log_space_masked, 10**log_psd_goal_A)
+    plt.loglog(f_log_space_masked, psd_aet_expect3[:, 1])
+    plt.loglog(f_log_space_masked, 10**log_psd_goal_E)
+    plt.loglog(f_log_space_masked, psd_aet_expect3[:, 2])
+    plt.loglog(f_log_space_masked, 10**log_psd_goal_T)
+    plt.show()
     return lc3
+
+
+# def match_sangria_curve(toml_filename_in: str, fcsd: NDArray[np.floating], psd_aet: NDArray[np.floating], psd_xyz: NDArray[np.floating], re_csd_xyz: NDArray[np.floating], nf_min: int, nf_max: int, f_mask_low: float = 1.e-4, f_mask_high: float = 2.4e-2) -> LISAConstants:
+#    with Path(toml_filename_in).open('rb') as f:
+#        config_in3 = tomllib.load(f)
+#
+#    log_f = np.linspace(np.log10(fcsd[0]), np.log10(fcsd[-1] * 0.92), 1000)
+#    f_log_space = 10**log_f
+#    log_psd_goal_T = InterpolatedUnivariateSpline(np.log10(fcsd), np.log10(psd_aet[2, nf_min:nf_max]), k=3, ext=2)(log_f)
+#    mask_spect = ((f_log_space < f_mask_low) | (f_log_space > f_mask_high))
+#    log_f_masked = log_f[mask_spect]
+#    f_log_space_masked = f_log_space[mask_spect]
+#    log_psd_goal_A = InterpolatedUnivariateSpline(np.log10(fcsd), np.log10(psd_aet[0, nf_min:nf_max]), k=3, ext=2)(log_f_masked)
+#    log_psd_goal_E = InterpolatedUnivariateSpline(np.log10(fcsd), np.log10(psd_aet[1, nf_min:nf_max]), k=3, ext=2)(log_f_masked)
+#    log_psd_goal_01 = InterpolatedUnivariateSpline(np.log10(fcsd), np.log10(np.abs(re_csd_xyz[:, 0, 1])), k=3, ext=2)(log_f_masked)
+#    log_psd_goal_02 = InterpolatedUnivariateSpline(np.log10(fcsd), np.log10(np.abs(re_csd_xyz[:, 0, 2])), k=3, ext=2)(log_f_masked)
+#    log_psd_goal_12 = InterpolatedUnivariateSpline(np.log10(fcsd), np.log10(np.abs(re_csd_xyz[:, 1, 2])), k=3, ext=2)(log_f_masked)
+#    log_psd_goal_00 = InterpolatedUnivariateSpline(np.log10(fcsd), np.log10(np.abs(psd_xyz[0, nf_min:nf_max])), k=3, ext=2)(log_f_masked)
+#    log_psd_goal_11 = InterpolatedUnivariateSpline(np.log10(fcsd), np.log10(np.abs(psd_xyz[1, nf_min:nf_max])), k=3, ext=2)(log_f_masked)
+#    log_psd_goal_22 = InterpolatedUnivariateSpline(np.log10(fcsd), np.log10(np.abs(psd_xyz[2, nf_min:nf_max])), k=3, ext=2)(log_f_masked)
+#
+#    def S_func_temp(tpl: NDArray[np.floating]) -> float:
+#        config_in3['lisa_constants']['Sps'] = 10**tpl[0]
+#        config_in3['lisa_constants']['Sacc'] = 10**tpl[1]
+#        config_in3['lisa_constants']['f_roll_acc_f2_inv'] = tpl[2]
+#        config_in3['lisa_constants']['f_roll_acc_f4'] = tpl[3]
+#        config_in3['lisa_constants']['f_roll_ps_f4_inv'] = tpl[4]
+#        lc3 = get_lisa_constants(config_in3)
+#        psd_aet_expect3 = instrument_noise_AET(f_log_space, lc3, tdi_mode='aet_equal', diagonal_mode=0)
+#        psd_xyz_expect3 = instrument_noise_AET(f_log_space_masked, lc3, tdi_mode='xyz_equal', diagonal_mode=1)
+#        contrib_T = np.linalg.norm(np.log10(psd_aet_expect3[:, 2]) - log_psd_goal_T)
+#        contrib_A = np.linalg.norm(np.log10(psd_aet_expect3[mask_spect, 0]) - log_psd_goal_A)
+#        contrib_E = np.linalg.norm(np.log10(psd_aet_expect3[mask_spect, 1]) - log_psd_goal_E)
+#        contrib_01 = np.linalg.norm(np.log10(np.abs(psd_xyz_expect3[:, 0, 1])) - log_psd_goal_01)
+#        contrib_02 = np.linalg.norm(np.log10(np.abs(psd_xyz_expect3[:, 0, 2])) - log_psd_goal_02)
+#        contrib_12 = np.linalg.norm(np.log10(np.abs(psd_xyz_expect3[:, 1, 2])) - log_psd_goal_12)
+#        contrib_00 = np.linalg.norm(np.log10(np.abs(psd_xyz_expect3[:, 0, 0])) - log_psd_goal_00)
+#        contrib_11 = np.linalg.norm(np.log10(np.abs(psd_xyz_expect3[:, 1, 1])) - log_psd_goal_11)
+#        contrib_22 = np.linalg.norm(np.log10(np.abs(psd_xyz_expect3[:, 2, 2])) - log_psd_goal_22)
+#        return np.sqrt(contrib_A**2 + contrib_E**2 + contrib_T**2 + contrib_01**2 + contrib_02**2 + contrib_12**2 + contrib_00**2 + contrib_11**2 + contrib_22**2)
+#
+#    bounds = np.zeros((5, 2))
+#    bounds[0, 0] = np.log10(1.e-3 * 9.0e-24)
+#    bounds[0, 1] = np.log10(1.e3 * 9.0e-24)
+#    bounds[1, 0] = np.log10(1.e-3 * 5.76e-30)
+#    bounds[1, 1] = np.log10(1.e3 * 5.76e-30)
+#    bounds[2, 0] = 2.0e-4
+#    bounds[2, 1] = 8.0e-4
+#    bounds[3, 0] = 4.0e-3
+#    bounds[3, 1] = 1.6e-2
+#    bounds[4, 0] = 1.0e-3
+#    bounds[4, 1] = 4.0e-3
+#
+#    res_found = dual_annealing(S_func_temp, bounds, maxiter=5000)
+#    res = res_found['x']
+#    print(res_found)
+#    config_in3['lisa_constants']['Sps'] = 10**res[0]
+#    config_in3['lisa_constants']['Sacc'] = 10**res[1]
+#    config_in3['lisa_constants']['f_roll_acc_f2_inv'] = res[2]
+#    config_in3['lisa_constants']['f_roll_acc_f4'] = res[3]
+#    config_in3['lisa_constants']['f_roll_ps_f4_inv'] = res[4]
+#    lc3 = get_lisa_constants(config_in3)
+#    return lc3
 
 
 if __name__ == '__main__':
@@ -164,12 +257,19 @@ if __name__ == '__main__':
         toml_filename_in = 'Galaxies/GalaxyVerification2LDC/run_verification_parameters.toml'
     else:
         toml_filename_in = 'Galaxies/GalaxyFullLDC/run_match_parameters_fit2.toml'
+        toml_filename_in2 = 'parameters_5m.toml'
 
     with Path(toml_filename_in).open('rb') as f:
         config_in = tomllib.load(f)
 
+    with Path(toml_filename_in2).open('rb') as f:
+        config_in2 = tomllib.load(f)
+
     wc = get_wavelet_model(config_in)
     lc = get_lisa_constants(config_in)
+
+    wc2 = get_wavelet_model(config_in2)
+    lc2 = get_lisa_constants(config_in2)
 
     ts_bg = np.arange(0., wc.Nt * wc.Nf) * wc.dt
 
@@ -187,7 +287,7 @@ if __name__ == '__main__':
     galactic_bg = ifm.noise_manager.bgd.get_galactic_total(shape_mode=1)
     snrs_got = ifm.bis.get_final_snrs_tot_upper()
 
-    SAET_m = instrument_noise_AET_wdm_m(lc, wc)
+    SAET_m = instrument_noise_AET_wdm_m(lc2, wc)
     noise_AET_dense_pure = DiagonalStationaryDenseNoiseModel(SAET_m, wc, prune=0, nc_snr=lc.nc_snr)
     if not verification_only:
         galactic_bg += noise_AET_dense_pure.generate_dense_noise()
@@ -207,11 +307,24 @@ if __name__ == '__main__':
             assert_allclose(t_tdi_mbh_alt, time_tdi, atol=1.e-100, rtol=1.e-14)
 
     AET_tdi_freq_rec = np.fft.rfft(AET_tdi_time_rec, axis=-1)
+    AET_tdi_freq = np.fft.rfft(AET_tdi_time, axis=-1)
+    AET_tdi_freq_resid = AET_tdi_freq - AET_tdi_freq_rec
+
+    fs_fft = np.arange(0, (wc.Nt * wc.Nf) // 2 + 1) / (wc.dt * wc.Nt * wc.Nf)
+    psd_aet_expect_full = instrument_noise_AET(fs_fft[1:], lc2, tdi_mode='aet_equal', diagonal_mode=1)
+    plt.loglog(fs_fft, np.abs(AET_tdi_freq_rec[1]))
+    plt.loglog(fs_fft, np.abs(AET_tdi_freq[1]))
+    plt.loglog(fs_fft, np.abs(AET_tdi_freq_resid[1]))
+    plt.loglog(fs_fft[1:], np.sqrt(psd_aet_expect_full[:, 1, 1] * wc.Nf * wc.Nf / wc.dt / 2))
+    plt.plot([wc.DF, wc.DF], [0., 1.])
+    plt.plot([1. / wc.Tw, 1. / wc.Tw], [0., 1.])
+    plt.show()
 
     fs = 1.0 / dt_in
     nperseg = int(np.round(((1. / dt_in) / (1. / wc.dt)) * wc.Nf))
     fpsd, psd_aet_rec = welch(AET_tdi_time_rec, fs=fs, nperseg=nperseg, scaling='density', window='tukey', axis=-1)
     fpsd, psd_aet = welch(AET_tdi_time, fs=fs, nperseg=nperseg, scaling='density', window='tukey', axis=-1)
+    fpsd, psd_aet_resid = welch(AET_tdi_time - AET_tdi_time_rec, fs=fs, nperseg=nperseg, scaling='density', window='tukey', axis=-1)
 
     ND = AET_tdi_time_rec.shape[1]
     nt_max = int(ND // wc.Nf)
@@ -233,6 +346,7 @@ if __name__ == '__main__':
 
     fpsd, psd_xyz_rec = welch(xyz_tdi_time_rec, fs=fs, nperseg=nperseg, scaling='density', window='tukey', axis=-1)
     fpsd, psd_xyz = welch(xyz_tdi_time, fs=fs, nperseg=nperseg, scaling='density', window='tukey', axis=-1)
+    fpsd, psd_xyz_resid = welch(xyz_tdi_time - xyz_tdi_time_rec, fs=fs, nperseg=nperseg, scaling='density', window='tukey', axis=-1)
 
     nf_min = max(1, int(np.argmax(fpsd > 4. / wc.DT)), int(np.argmax(fpsd > 4. / wc.Tw)))
     nf_max = fpsd.size - 2
@@ -275,9 +389,11 @@ if __name__ == '__main__':
     angle_csd_aet_rec = np.angle(csd_aet_rec)
     abs_csd_aet_rec = np.abs(csd_aet_rec)
 
-    psd_xyz_expect = instrument_noise_AET(fcsd, lc, tdi_mode='xyz_equal', diagonal_mode=1)
+    psd_xyz_expect = instrument_noise_AET(fpsd, lc, tdi_mode='xyz_equal', diagonal_mode=1)
+    psd_xyz_expect2 = instrument_noise_AET(fpsd, lc2, tdi_mode='xyz_equal', diagonal_mode=1)
 
-    psd_aet_expect = instrument_noise_AET(fcsd, lc, tdi_mode='aet_equal', diagonal_mode=1)
+    psd_aet_expect = instrument_noise_AET(fpsd, lc, tdi_mode='aet_equal', diagonal_mode=1)
+    psd_aet_expect2 = instrument_noise_AET(fpsd, lc2, tdi_mode='aet_equal', diagonal_mode=1)
 
     do_match = False
     if do_match:
@@ -285,28 +401,32 @@ if __name__ == '__main__':
     else:
         lc3 = lc
 
-    psd_aet_expect3 = instrument_noise_AET(fcsd, lc3, tdi_mode='aet_equal', diagonal_mode=1)
-    psd_xyz_expect3 = instrument_noise_AET(fcsd, lc3, tdi_mode='xyz_equal', diagonal_mode=1)
+    psd_aet_expect3 = instrument_noise_AET(fpsd, lc3, tdi_mode='aet_equal', diagonal_mode=1)
+    psd_xyz_expect3 = instrument_noise_AET(fpsd, lc3, tdi_mode='xyz_equal', diagonal_mode=1)
 
     plt.loglog(fpsd, psd_aet_rec[0])
     plt.loglog(fpsd, psd_aet[0])
-    plt.loglog(fcsd, psd_aet_expect3[:, 0, 0])
+    plt.loglog(fpsd, psd_aet_expect[:, 0, 0])
+    plt.loglog(fpsd, psd_aet_expect2[:, 0, 0])
+    plt.loglog(fpsd, psd_aet_resid[0])
     plt.title('A channel comparison')
     plt.show()
 
     # plt.loglog(fpsd, psd_aet_rec[2])
     # plt.loglog(fpsd, instrument_noise_AET(fpsd, lc)[:,2])
-    plt.loglog(fcsd, psd_aet_rec[2, nf_min:nf_max])
-    plt.loglog(fcsd, psd_aet[2, nf_min:nf_max])
-    plt.loglog(fcsd, psd_aet_expect[:, 2, 2])
-    plt.loglog(fcsd, psd_aet_expect3[:, 2, 2])
+    plt.loglog(fpsd, psd_aet_rec[2])
+    plt.loglog(fpsd, psd_aet[2])
+    plt.loglog(fpsd, psd_aet_expect[:, 2, 2])
+    plt.loglog(fpsd, psd_aet_expect2[:, 2, 2])
+    plt.loglog(fpsd, psd_aet_resid[2])
     plt.title('T channel comparison')
     plt.show()
 
-    plt.loglog(fpsd[nf_min:nf_max], psd_xyz[:, nf_min:nf_max].T)
-    plt.loglog(fpsd[nf_min:nf_max], psd_xyz_rec[:, nf_min:nf_max].T)
-    plt.loglog(fpsd[nf_min:nf_max], psd_xyz_expect[:, 0, 0])
-    plt.loglog(fpsd[nf_min:nf_max], psd_xyz_expect3[:, 0, 0])
+    plt.loglog(fpsd, np.mean(psd_xyz, axis=0))
+    plt.loglog(fpsd, np.mean(psd_xyz_rec, axis=0))
+    plt.loglog(fpsd, psd_xyz_expect[:, 0, 0])
+    plt.loglog(fpsd, psd_xyz_expect2[:, 0, 0])
+    plt.loglog(fpsd, np.mean(psd_xyz_resid, axis=0))
     plt.title('xyz spectrum')
     plt.show()
 
@@ -316,8 +436,9 @@ if __name__ == '__main__':
     plt.loglog(fcsd, np.abs(abs_csd_xyz_rec[:, 0, 1]))
     plt.loglog(fcsd, np.abs(abs_csd_xyz_rec[:, 0, 2]))
     plt.loglog(fcsd, np.abs(abs_csd_xyz_rec[:, 1, 2]))
-    plt.loglog(fcsd, np.abs(psd_xyz_expect[:, 0, 1]))
-    plt.loglog(fcsd, np.abs(psd_xyz_expect3[:, 0, 1]))
+    plt.loglog(fpsd, np.abs(psd_xyz_expect[:, 0, 1]))
+    plt.loglog(fpsd, np.abs(psd_xyz_expect3[:, 0, 1]))
+    plt.loglog(fpsd, np.abs(psd_xyz_expect2[:, 0, 1]))
     plt.title('xyz cross spectrum')
     plt.show()
 
@@ -327,10 +448,14 @@ if __name__ == '__main__':
     plt.loglog(fcsd, np.abs(re_csd_aet_rec[:, 0, 1]))
     plt.loglog(fcsd, np.abs(re_csd_aet_rec[:, 0, 2]))
     plt.loglog(fcsd, np.abs(re_csd_aet_rec[:, 1, 2]))
-    plt.loglog(fcsd, np.abs(psd_aet_expect[:, 0, 1]))
-    plt.loglog(fcsd, np.abs(psd_aet_expect3[:, 0, 1]))
+    plt.loglog(fpsd, np.abs(psd_aet_expect[:, 0, 1]))
+    plt.loglog(fpsd, np.abs(psd_aet_expect3[:, 0, 1]))
+    plt.loglog(fpsd, np.abs(psd_aet_expect2[:, 0, 1]))
     plt.title('aet cross spectrum')
     plt.show()
+
+    import sys
+    sys.exit()
 
     coh_xyz = np.zeros_like(re_csd_aet)
     coh_aet = np.zeros_like(re_csd_aet)

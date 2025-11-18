@@ -451,6 +451,7 @@ def get_taylor_table_time(
     filename_base: str = 'taylor_time_table_',
     grid_check_mode: int = 1,
     target_precision: float = 1.e-4,
+    assert_mode: int = 1,
 ) -> WaveletTaylorTimeCoeffs:
     """
     Construct or retrieve the precomputed table of Taylor-expansion coefficients.
@@ -572,7 +573,7 @@ def get_taylor_table_time(
         msg = f'Unrecognized option for cache_mode {cache_mode}'
         raise NotImplementedError(msg)
 
-    grid_check_helper(wc, grid_check_mode, target_precision=target_precision, wavelet_norm=wavelet_norm)
+    grid_check_helper(wc, grid_check_mode, target_precision=target_precision, wavelet_norm=wavelet_norm, assert_mode=assert_mode)
 
     if not cache_good:
         fd = wc.DF / wc.Tw * wc.dfdot * np.arange(-wc.Nfd_negative, wc.Nfd - wc.Nfd_negative)  # set f-dot increments
@@ -580,11 +581,15 @@ def get_taylor_table_time(
         max_fd = np.max(np.abs(fd))
         if max_fd > 8 * wc.DF / wc.Tw:
             msg = 'Requested interpolation grid exceeds valid range of time domain taylor approximation'
-            raise ValueError(msg)
+            if assert_mode:
+                raise ValueError(msg)
+            warn(msg, stacklevel=2)
 
         if not np.any(fd == 0.0):
             msg = 'Requested frequency derivative grid does not contain zero; results may be unexpected'
-            raise ValueError(msg)
+            if assert_mode:
+                raise ValueError(msg)
+            warn(msg, stacklevel=2)
 
         print(
             'DT=%e DF=%.14e DOM/2pi=%.14e fd1=%e fd-1=%e' % (wc.DT, wc.DF, wc.DOM / (2 * np.pi), fd[1], fd[wc.Nfd - 1])

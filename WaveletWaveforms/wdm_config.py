@@ -35,7 +35,7 @@ class WDMWaveletConstants(NamedTuple):
     n_f_null_extend: int
 
 
-def get_wavelet_model(config: dict[str, Any]) -> WDMWaveletConstants:
+def get_wavelet_model(config: dict[str, Any], assert_mode: int = 1) -> WDMWaveletConstants:
     config_wc: dict[str, int | float] = config['wavelet_constants']
     # number of time pixels (should be even)
     Nf = int(config_wc['Nf'])
@@ -121,7 +121,9 @@ def get_wavelet_model(config: dict[str, Any]) -> WDMWaveletConstants:
         raise ValueError(msg)
     if K % L != 0:
         msg = 'K = %d should be an integer multiple of L = %d' % (K, L)
-        raise ValueError(msg)
+        if assert_mode:
+            raise ValueError(msg)
+        warn(msg, stacklevel=2)
 
     # filter duration (time; same units as dt)
     Tw = float(dt * K)
@@ -175,10 +177,14 @@ def get_wavelet_model(config: dict[str, Any]) -> WDMWaveletConstants:
     df_min_time_grid = dfd * (- Nfd_negative)
     if df_max_time_grid > df_max_time:
         msg = f'Maximum frequency of interpolation grid {df_max_time_grid} is larger than limit of reliability {df_max_time}, consider increasing Nt and decreasing Nf'
-        raise ValueError(msg)
+        if assert_mode:
+            raise ValueError(msg)
+        warn(msg, stacklevel=2)
     if df_min_time_grid < -df_max_time:
         msg = f'Minimum frequency of interpolation grid {df_min_time_grid} is smaller than limit of reliability {-df_max_time}, consider increasing Nt and decreasing Nf'
-        raise ValueError(msg)
+        if assert_mode:
+            raise ValueError(msg)
+        warn(msg, stacklevel=2)
 
     return WDMWaveletConstants(
         Nf,

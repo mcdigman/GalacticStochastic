@@ -25,6 +25,7 @@ class LISAConstants(NamedTuple):
     t_rise: float
     rise_mode: int
     noise_curve_mode: int
+    f_roll_acc_f_inv: float
     f_roll_acc_f2_inv: float
     f_roll_acc_f4: float
     f_roll_ps_f4_inv: float
@@ -53,7 +54,7 @@ def get_lisa_constants(config: dict[str, Any]) -> LISAConstants:
     lambda0 = float(config_lc['lambda0'])
 
     # Transfer frequency should be fixed to c/(2*pi*Larm)?
-    fstr = float(config_lc['fstr'])
+    fstr = float(config_lc.get('fstr', gc.CLIGHT / (2 * np.pi * Larm)))
     assert fstr > 0.0
     if not np.isclose(fstr, gc.CLIGHT / (2 * np.pi * Larm), atol=1.0e-10, rtol=1.0e-3):
         warn(
@@ -74,8 +75,8 @@ def get_lisa_constants(config: dict[str, Any]) -> LISAConstants:
     r_orbit = float(r_m / Larm)
 
     # LISA orbital eccentricity; should be fixed to Larm/(2*r_m*np.sqrt(3))
-    ec = float(config_lc['ec'])
     ec_exp = float(Larm / (2 * r_m * np.sqrt(3)))
+    ec = float(config_lc.get('ec', ec_exp))
     if not np.isclose(ec, ec_exp, atol=1.0e-10, rtol=1.0e-3):
         warn(
             'expected ec=Larm/(2*r_m*np.sqrt(3))=%+.6e, got %+.6e' % (Larm / (2 * r_m * np.sqrt(3)), ec),
@@ -114,6 +115,10 @@ def get_lisa_constants(config: dict[str, Any]) -> LISAConstants:
     # the frequency in Hz controlling the 1/f^2 roll off of the denominator of the LISA acceleration noise
     f_roll_acc_f2_inv = float(config_lc.get('f_roll_acc_f2_inv', 4.0e-4))
 
+    # TODO check which of these should default to zero
+    # the frequency in Hz controlling the 1/f^2 roll off of the denominator of the LISA acceleration noise
+    f_roll_acc_f_inv = float(config_lc.get('f_roll_acc_f_inv', 0.))
+
     # the frequency in Hz controlling the f^4 roll off of the denominator or the LISA acceleration noise
     f_roll_acc_f4 = float(config_lc.get('f_roll_acc_f4', 8.0e-3))
 
@@ -137,6 +142,7 @@ def get_lisa_constants(config: dict[str, Any]) -> LISAConstants:
         t_rise,
         rise_mode,
         noise_curve_mode,
+        f_roll_acc_f_inv,
         f_roll_acc_f2_inv,
         f_roll_acc_f4,
         f_roll_ps_f4_inv,

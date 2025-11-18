@@ -1,0 +1,190 @@
+[files]
+# values related to file io
+
+
+galaxy_dir = 'Galaxies/GalaxyFullLDC/'
+galaxy_file = 'galaxy_binaries.hdf5'
+
+# prefix for final processed filename
+processed_prefix = 'processed_iterations'
+preprocessed_prefix = 'preprocessed_background'
+
+[noise_realization]
+
+# signed integer, random seed for the noise realization to set for generating noise realization
+# so we don't have to store the whole array to disk
+# if -1 the noise is seeded at runtime instead
+instrument_noise_realization_seed = 31415926
+
+[iterative_fit_constants]
+
+# periodicities to fit to cyclostationary model; 1/year, 2/year, 3/year, etc
+period_list = [1, 2, 3, 4, 5]
+
+# maximum number of iterations to allow
+max_iterations = 40
+
+# snr minimum cutoff to use in preprocessing step
+# note this is the total snr for the maximum time under consideration
+snr_min_preprocess = 7.0
+
+# snr minimum cutoff to use in a potential second preprocessing step
+# after the first one but still before the main loop (i.e. reprocessing)
+# note this is the total snr for the maximum time under consideration
+# should be >= snr_min_preprocess
+snr_min_reprocess = 7.0
+
+# set the first iteration to permit use of the cyclostationary model
+# it is more stable to use the fully stationary model for a few iterations
+n_cyclo_switch = 2
+
+# minimum iterations before halting the adaptation of the faint background
+n_min_faint_adapt = 5
+
+# if the total number of binaries included in the faint background changes
+# by less than this threshold between iterations, cut off adaptation
+# of the faint background to avoid oscillation
+faint_converge_change_thresh = 3
+
+# for first iteration set the faint snr cutoff to threshold because spectrum is just instrument noise
+snr_low_initial = 7.0
+# for subsequent, choose faint snr cutoff to ensure almost nothing gets decided as constant because of its own power alone
+# using snr_min = snr_low_mult * snr_low_initial
+snr_low_mult = 0.999
+
+# phase in or out frequency smoothing of galactic spectrum over several iterations using
+# smoothing length = smooth_lengthf_fix + fsmooth_settle_mult*exp(-fsmooth_settle_scale*itrn - fsmooth_settle_offset)
+# cut off to smooth_length_fix at iteration # fsmooth_fix_itr
+# smoothing length is in log frequency bins
+
+# final frequency smoothing length
+smooth_lengthf_fix = 0.25
+
+# multiplier on exponential
+fsmooth_settle_mult = 6.0
+
+# characteristic scale in exponential
+fsmooth_settle_scale = 1.0
+
+# offset of exponential
+fsmooth_settle_offset = 0.0
+
+# iteration to cut off exponential part
+fsmooth_fix_itr = 4
+
+# phase in or out upper snr cutoff using
+# snr_cut_bright = snr_high_fix + snr_high_settle_mult*np.exp(-snr_high_settle_scale*itrn - snr_high_settle_offset)
+# cut off to snr_high_fix at iteration # snr_high_fix_itr
+# in zeroth iteration, fix to snr_high_initial instead
+
+# final snr cutoff
+snr_high_fix = 7.0
+
+# multiplier on exponential
+snr_high_settle_mult = 7.0
+
+# characteristic scale in exponential
+snr_high_settle_scale = 0.6666666666666666
+
+# offset of exponential
+snr_high_settle_offset = 2.0
+
+# iteration to cut off exponential part
+snr_high_fix_itr = 4
+
+# minimum binary frequency to allow (Hz)
+fmin_binary = 1.0e-8
+
+# minimum binary frequency to allow (Hz)
+fmax_binary = 1.0e0
+
+# number of channels to evaluate galactic background
+nc_galaxy = 3
+
+component_list = ['dgb', 'igb', 'vgb']
+
+
+[wavelet_constants]
+# constants related to wavelet transforms
+
+# number of frequency layers in the wavelet transform (should be even)
+Nf = 2048
+
+# number of time layers in wavelet transform (should be even)
+Nt = 4096
+
+# time sampling cadence in seconds (note that the total time covered by the transform will be Nf*Nt*dt)
+# dt is the only quantity in the definition of the wavelet transform that has units
+dt = 30.0750732421875
+
+# over sampling
+mult = 8
+
+# frequency steps in interpolation table
+Nsf = 400
+
+# fractional fdot increment in interpolation table
+dfdot = 0.02
+
+# number of fdots in interpolation table
+Nfd = 80
+
+# number of fdot increments which are less than zero in the interpolation table (should be less than Nfd)
+Nfd_negative = 40
+
+# number of timesteps used to compute the interpolation table; must be an integer times mult
+Nst = 800
+
+# filter steepness of wavelet transform
+nx = 4.0
+
+# reduced filter length; must be a power of 2
+L = 32
+
+[lisa_constants]
+# constants related to LISA constellation
+
+# Mean arm length of the LISA detector (meters)
+Larm = 2.5e9
+
+# Photon shot noise power
+Sps = 1.465e-23
+
+# Acceleration noise power
+Sacc = 1.458e-30
+
+# Initial azimuthal position of the guiding center
+kappa0 = 0.0
+
+# Initial orientation of the LISA constellation
+lambda0 = 0.0
+
+# LISA orbital modulation frequency (i.e. 1/orbital period) (Hz)
+fm = 3.168753575e-8
+
+# LISA orbital radius in AU
+r_au = 1.0
+
+# Number of channels to calculate in the intrinsic_waveform
+nc_waveform = 3
+
+# Number of channels to evaluate snr
+nc_snr = 3
+
+# Global offset of observations times
+t0 = 0.0
+
+# Rise time of antenna pattern in frequency domain
+t_rise = 0.0
+
+# the frequency in Hz controlling the 1/f roll off of the denominator of the LISA acceleration noise
+f_roll_acc_f_inv = 0.0
+
+# the frequency in Hz controlling the 1/f^2 roll off of the denominator of the LISA acceleration noise
+f_roll_acc_f2_inv = 4.0e-4
+
+# the frequency in Hz controlling the f^4 roll off of the denominator or the LISA acceleration noise
+f_roll_acc_f4 = 0.00635
+
+# the frequency in Hz controlling the 1/f^4 roll off of the denominator or the LISA laser noise
+f_roll_ps_f4_inv = 0.00125

@@ -72,7 +72,9 @@ def instrument_noise_AET(f: NDArray[np.floating], lc: LISAConstants, tdi_mode: s
     roll1: NDArray[np.floating] = lc.f_roll_acc_f2_inv / f
     roll2: NDArray[np.floating] = f / lc.f_roll_acc_f4
     roll3: NDArray[np.floating] = lc.f_roll_ps_f4_inv / f
-    rolla: NDArray[np.floating] = (1.0 + roll1**2) * (1.0 + roll2**4)
+    roll4: NDArray[np.floating] = lc.f_roll_acc_f_inv / f
+    # TODO check if roll2 is supposed to be squared or have an option not to; see LISA-MSE-TN-0001_v2.0.pdf and Astro2010_RFI2_LISA does not have the squared
+    rolla: NDArray[np.floating] = (1.0 + roll1**2) * (1.0 + roll2**4) * (1.0 + roll4)
     rollw: NDArray[np.floating] = 1.0 + roll3**4
 
     # common multipliers

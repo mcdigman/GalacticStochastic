@@ -143,8 +143,10 @@ def check_fdot_grid_helper(params_gb: NDArray[np.floating], wc: WDMWaveletConsta
     print('Predicted minimum Nfd_negative needed for safety, actual', Nfd_negative_safe, wc.Nfd_negative)
     print('Predicted minimum Nfd needed for safety, actual', Nfd_safe, wc.Nfd)
 
+    f_range_max: float = (2 * np.pi * lc.fm) * amp_doppler_max
     # approximate limit by which fdotdot varies due to doppler shift
     fdotdot_range_max: float = float(8 * np.pi**3 * lc.fm**3) * amp_doppler_max
+    fdotdotdot_range_max: float = float(16 * np.pi**4 * lc.fm**4) * amp_doppler_max
 
     # approximate limit by which fdot varies due to doppler shift
     fdot_range: NDArray[np.floating] = float(4 * np.pi**2 * lc.fm**2) * amp_doppler
@@ -191,6 +193,9 @@ def check_fdot_grid_helper(params_gb: NDArray[np.floating], wc: WDMWaveletConsta
     print('MAXIMUM FREQUENCY DERIVATIVE', fdot_max_loc.max(), fdot_loc.max(), fdot_min_loc.max(), fdot_max_avail, fdot_max_grid)
     print('MINIMUM FREQUENCY DERIVATIVE', fdot_max_loc.min(), fdot_loc.min(), fdot_min_loc.min(), fdot_min_avail, -fdot_max_grid)
     print('fdotdot range', fdotdot_range_max, fdotdot_range_max * wc.DT, fdotdot_range_max / wc.DF)
+    print(fdotdot_range_max * wc.DT**2, fdotdot_range_max * wc.DT**2 / f_range_max, fdotdot_range_max * wc.DT**2 / f_max_binary)
+    print(fdotdotdot_range_max * wc.DT**2)
+    print(fdotdot_range_max * wc.DT**3 / 6, fdotdotdot_range_max * wc.DT**4 / 24)
 
     msg = 'Grid does not cover maximum anticipated source frequency range, may need finer dt'
     assert_array_compare(np.less, f_max_need, wc.DF * (wc.Nf - 1), err_msg=msg)
