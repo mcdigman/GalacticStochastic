@@ -8,7 +8,7 @@ authors = [
 ]
 license = { file = "LICENSE" }
 dependencies = [
-    "numpy",
+    "numpy>2.0.0",
     "scipy",
     "numba",
     "pytest",
@@ -24,3 +24,6 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["GalacticStochastic*", "LisaWaveformTools*", "WaveletWaveforms*"]
+
+[project.scripts]
+run-galactic-stochastic-iterative = "GalacticStochastic.cli.run_iterative_procedure:main"

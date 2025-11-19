@@ -1,6 +1,8 @@
 [files]
 # values related to file io
 
+
+galaxy_dir = 'Galaxies/GalaxyFullLDC/'
 galaxy_file = 'galaxy_binaries.hdf5'
 
 # prefix for final processed filename
@@ -109,7 +111,7 @@ component_list = ['dgb', 'igb', 'vgb']
 Nf = 2048
 
 # number of time layers in wavelet transform (should be even)
-Nt = 4096
+Nt = 6144
 
 # time sampling cadence in seconds (note that the total time covered by the transform will be Nf*Nt*dt)
 # dt is the only quantity in the definition of the wavelet transform that has units
@@ -119,16 +121,16 @@ dt = 30.0750732421875
 mult = 8
 
 # frequency steps in interpolation table
-Nsf = 150
-
-# number of fdots in interpolation table
-Nfd = 80
+Nsf = 100
 
 # fractional fdot increment in interpolation table
-dfdot = 0.1
+dfdot = 0.05
+
+# number of fdots in interpolation table
+Nfd = 320
 
 # number of fdot increments which are less than zero in the interpolation table (should be less than Nfd)
-Nfd_negative = 40
+Nfd_negative = 160
 
 # number of timesteps used to compute the interpolation table; must be an integer times mult
 Nst = 800
@@ -137,7 +139,13 @@ Nst = 800
 nx = 4.0
 
 # reduced filter length; must be a power of 2
-L = 512
+L = 32
+
+# Maximum number of extra values to be imputed for null filling if necessary
+n_f_null_extend = 0
+
+# target precision of interpolation grid for taylor time wavelet computation method
+taylor_time_interpolation_target_precision =  1.0e-3
 
 [lisa_constants]
 # constants related to LISA constellation
@@ -146,22 +154,16 @@ L = 512
 Larm = 2.5e9
 
 # Photon shot noise power
-Sps = 1.48481420973638e-23
+Sps = 1.465e-23
 
 # Acceleration noise power
-Sacc = 1.5982131619908737e-30
+Sacc = 1.458e-30
 
 # Initial azimuthal position of the guiding center
 kappa0 = 0.0
 
 # Initial orientation of the LISA constellation
 lambda0 = 0.0
-
-# Transfer frequency (Hz); should be c/(2*pi*Larm)
-fstr = 0.01908538064
-
-# LISA orbital eccentricity; should be Larm/(2*oribtal radius*np.sqrt(3))
-ec = 0.0048241852175
 
 # LISA orbital modulation frequency (i.e. 1/orbital period) (Hz)
 fm = 3.168753575e-8
@@ -181,11 +183,14 @@ t0 = 0.0
 # Rise time of antenna pattern in frequency domain
 t_rise = 0.0
 
+# the frequency in Hz controlling the 1/f roll off of the denominator of the LISA acceleration noise
+f_roll_acc_f_inv = 0.0
+
 # the frequency in Hz controlling the 1/f^2 roll off of the denominator of the LISA acceleration noise
-f_roll_acc_f2_inv = 0.0003825153977709533
+f_roll_acc_f2_inv = 4.0e-4
 
 # the frequency in Hz controlling the f^4 roll off of the denominator or the LISA acceleration noise
-f_roll_acc_f4 = 0.005977512856889381
+f_roll_acc_f4 = 0.00635
 
 # the frequency in Hz controlling the 1/f^4 roll off of the denominator or the LISA laser noise
-f_roll_ps_f4_inv = 0.001258828143983798
+f_roll_ps_f4_inv = 0.00125

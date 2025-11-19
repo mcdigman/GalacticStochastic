@@ -30,15 +30,37 @@ The behavior of the function is controlled by the `fetch_mode` and `preprocess_m
 as documented in the function's docstring.
 
 To run the full procedure on a specified Galaxy and configuration file with a basic set of default arguments,
-use the script
+first install from the top directory using
 
-python run_iterative_procedure.py,
+`pip install .`
 
-which takes the configuration filename by modifying `config_filename`, and outputs the galaxy to the directory specified
-in the configuration file.
+then the procedure can be run from the command line utility:
+
+run-galactic-stochastic-iterative galaxy_dir config_file
+
+Where galaxy_dir is a directory that contains the galaxy file, and config_file is the filename of a .toml file that contains
+the various configuration parameters.
+
+The names of the input and output hdf5 files can be set in the .toml file. By default, they are
+
+```
+[files]
+# values related to file io
+
+galaxy_file = 'galaxy_binaries.hdf5'
+
+# prefix for final processed filename
+processed_prefix = 'processed_iterations'
+preprocessed_prefix = 'preprocessed_background'
+```
+
+The `preprocessed_prefix` argument is a filename containing the dump of the fit state after the first iteration, and
+`processed_prefix` contains the results of the remaining iterations. The level of detail contained in the output hdf5 files can be controlled
+by arguments provided by the .toml files. Typically in the limit of >~100 million binaries, the preprocessed file will approach ~half the file size
+of the intput galaxy_file, while the final processed files will be smaller, though the exact sizes will depend on the sampling rate and assumed
+length of LISA operations.
+
 I suggest copying and modifying a unique configuration file for each galaxy into the directory
-that the galaxy will be written to, making sure to change galaxy_dir
-in the configuration file to match the output directory. That way, if the configuration file for one galaxy needs to be
-modfied, it will not affect the configuration files for other galaxies.
+that the galaxy will be written to, to ensure the exact run can be replicated in the future.
 
-Care should be taken to change the galaxy directory, or else multiple galaxies may overwrite each other.
+Care should be taken to use differen directories for each galaxy, or else multiple galaxies may overwrite each other.

@@ -9,7 +9,7 @@ from warnings import warn
 import h5py
 import numpy as np
 from numba import njit
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_array_compare
 
 import GalacticStochastic.global_const as gc
 from GalacticStochastic.state_manager import StateManager
@@ -110,6 +110,114 @@ def _snrs_tot_load_helper(
                 snrs_tot_lower[itrn_itr, itrb] = np.linalg.norm(snrs_lower[itrn_itr, itrb])
 
 
+def check_fdot_grid_helper(params_gb: NDArray[np.floating], wc: WDMWaveletConstants, lc: LISAConstants, f_max_binary: float) -> None:
+    """Check that the given interpolation grid is suitable for the specified parameters.
+
+    Parameters
+    ----------
+    params_gb : NDArray[np.floating]
+        Array of shape (n_binaries, N_PAR_GB) containing the parameters of all galactic binaries.
+    wc : WDMWaveletConstants
+        Wavelet constants describing the time-frequency grid.
+    lc : LISAConstants
+        LISA instrument configuration constants.
+    f_max_binary : float
+        The maximum frequency that a binary is permitted to be
+    """
+    # check that the interpolation table will be large enough to handle the frequencies requested
+    fdot_loc: NDArray[np.floating] = params_gb[:, 4]
+    f_start: NDArray[np.floating] = params_gb[:, 3]  # intrinsic frequency at start
+    f_end: NDArray[np.floating] = f_start + wc.Tobs * fdot_loc  # intrinsic frequency at end
+    f_max: NDArray[np.floating] = np.max([f_start, f_end], axis=0)  # maximum intrinsic frequency
+    f_min: NDArray[np.floating] = np.min([f_start, f_end], axis=0)  # minimum intrinsic frequency
+    # approximate maximum fractional amplitude of doppler modulation of frequency due to spacecraft orbits
+    amp_doppler: NDArray[np.floating] = float((2 * np.pi * lc.r_orbit * lc.Larm) / gc.CLIGHT) * f_max
+    amp_doppler_max: float = float((2 * np.pi * lc.r_orbit * lc.Larm) / gc.CLIGHT) * f_max_binary
+    fdot_range_max = float(4 * np.pi**2 * lc.fm**2) * amp_doppler_max
+    fdot_max_safe: float = float(np.max(fdot_loc)) + fdot_range_max
+    fdot_min_safe: float = float(np.min(fdot_loc)) - fdot_range_max
+    Nfd_negative_safe = max(-int(np.floor(fdot_min_safe / wc.dfd)) + 1, 0)
+    Nfd_positive_safe = max(int(np.ceil(fdot_max_safe / wc.dfd)) + 1, 1)
+    Nfd_safe = Nfd_negative_safe + Nfd_positive_safe
+    print('Approx Nfd needed each side: ', np.ceil((fdot_range_max + np.max(np.abs(fdot_loc))) / wc.dfd) + 1., fdot_range_max, fdot_max_safe, fdot_min_safe)
+    print('Predicted minimum Nfd_negative needed for safety, actual', Nfd_negative_safe, wc.Nfd_negative)
+    print('Predicted minimum Nfd needed for safety, actual', Nfd_safe, wc.Nfd)
+
+    f_range_max: float = (2 * np.pi * lc.fm) * amp_doppler_max
+    # approximate limit by which fdotdot varies due to doppler shift
+    fdotdot_range_max: float = float(8 * np.pi**3 * lc.fm**3) * amp_doppler_max
+    fdotdotdot_range_max: float = float(16 * np.pi**4 * lc.fm**4) * amp_doppler_max
+
+    # approximate limit by which fdot varies due to doppler shift
+    fdot_range: NDArray[np.floating] = float(4 * np.pi**2 * lc.fm**2) * amp_doppler
+    # approximate maximum possible fdot due to doppler shifting, ignoring sky location and polarization
+    fdot_max_loc: NDArray[np.floating] = fdot_loc + fdot_range
+    # approximate minimum possible fdot due to doppler shifting, ignoring sky location and polarization
+    fdot_min_loc: NDArray[np.floating] = fdot_loc - fdot_range
+
+    # approximate limit by which f varies due to doppler shift
+    f_range: NDArray[np.floating] = float(2 * np.pi * lc.fm**2) * amp_doppler
+    # approximate maximum possible f due to doppler shifting, ignoring sky location and polarization
+    f_max_loc: NDArray[np.floating] = f_max + f_range
+    # approximate minimum possible f due to doppler shifting, ignoring sky location and polarization
+    f_min_loc: NDArray[np.floating] = f_min - f_range
+
+    fdot_max_grid = 8 * wc.DF / wc.Tw
+    fdot_max_avail: float = wc.dfd * (wc.Nfd - wc.Nfd_negative)
+    fdot_min_avail: float = wc.dfd * (- wc.Nfd_negative)
+    ny_max = np.floor(fdot_max_loc / wc.dfd)
+    ny_min = np.floor(fdot_min_loc / wc.dfd)
+
+    # range of possible frequency bandwidths
+    bw_max = wc.df_bw / 2. * (wc.Nsf + 2 / 3 * np.min([np.abs(ny_max), np.abs(ny_max + 1)], axis=0) * wc.dfdot * wc.Nsf)
+    bw_min = wc.df_bw / 2. * (wc.Nsf + 2 / 3 * np.min([np.abs(ny_min), np.abs(ny_min + 1)], axis=0) * wc.dfdot * wc.Nsf)
+    bw_range = np.max([bw_max, bw_min], axis=0)
+
+    # maximum and minimum frequencies we should ideally support
+    f_max_need = f_max_loc + bw_range
+    f_min_need = f_min_loc - bw_range
+
+    # print(np.max(bw_max / wc.DF))
+    # print(np.max(bw_min / wc.DF))
+    # print(np.max(bw_range / wc.DF))
+    print('k max', np.max(f_max_need) / wc.DF)
+    print('k min', np.min(f_min_need) / wc.DF)
+    print('k center max range', np.max(f_max_loc - f_min_loc) / wc.DF)
+    print('k center mean range', np.mean(f_max_loc - f_min_loc) / wc.DF)
+    print('k median range', np.median(f_max_loc - f_min_loc) / wc.DF)
+
+    # print(amp_doppler, np.max(f_start))
+    # print(np.max(fdot_range))
+    # print(np.min(fdot_range))
+    # print(np.sum(fdot_max_loc > fdot_max_avail))
+    # print(np.sum(fdot_min_loc < fdot_max_avail))
+    print('MAXIMUM FREQUENCY DERIVATIVE', fdot_max_loc.max(), fdot_loc.max(), fdot_min_loc.max(), fdot_max_avail, fdot_max_grid)
+    print('MINIMUM FREQUENCY DERIVATIVE', fdot_max_loc.min(), fdot_loc.min(), fdot_min_loc.min(), fdot_min_avail, -fdot_max_grid)
+    print('fdotdot range', fdotdot_range_max, fdotdot_range_max * wc.DT, fdotdot_range_max / wc.DF)
+    print(fdotdot_range_max * wc.DT**2, fdotdot_range_max * wc.DT**2 / f_range_max, fdotdot_range_max * wc.DT**2 / f_max_binary)
+    print(fdotdotdot_range_max * wc.DT**2)
+    print(fdotdot_range_max * wc.DT**3 / 6, fdotdotdot_range_max * wc.DT**4 / 24)
+
+    msg = 'Grid does not cover maximum anticipated source frequency range, may need finer dt'
+    assert_array_compare(np.less, f_max_need, wc.DF * (wc.Nf - 1), err_msg=msg)
+    msg = 'Grid does not cover minimum anticipated source frequency range, may need larger Nf or longer observation time'
+    assert_array_compare(np.greater, f_min_need, wc.DF, err_msg=msg)
+    msg = 'Interpolation table does not cover all positive frequency derivatives; consider increasing Nfd'
+    assert_array_compare(np.less, fdot_max_loc, fdot_max_avail, err_msg=msg)
+    msg = 'Interpolation table does not cover all negative frequency derivatives: consider increasing Nfd and Nfd_negative'
+    assert_array_compare(np.greater_equal, fdot_min_loc, fdot_min_avail, err_msg=msg)
+
+    msg = 'Grid does not cover all positive frequency derivatives; consider decreasing Nf and increasing Nt'
+    assert_array_compare(np.less, fdot_max_loc, fdot_max_grid, err_msg=msg)
+    msg = 'Grid does not cover all negative frequency derivatives: consider decreasing Nf and increasing Nt'
+    assert_array_compare(np.greater_equal, fdot_min_loc, -fdot_max_grid, err_msg=msg)
+
+    msg = 'Need larger Nfd negative to safely cover range of frequency derivatives'
+    assert_array_compare(np.less_equal, Nfd_negative_safe, wc.Nfd_negative, err_msg=msg)
+    msg = 'Need larger Nfd to safely cover range of frequency derivatives'
+    assert_array_compare(np.less_equal, Nfd_safe, wc.Nfd, err_msg=msg)
+
+
 class BinaryInclusionState(StateManager):
     """Stores the states of binaries under consideration in the galaxy and track their snrs."""
 
@@ -174,6 +282,8 @@ class BinaryInclusionState(StateManager):
         self._fmax_binary: float = min((self._wc.Nf - 1) * self._wc.DF, self._ic.fmax_binary)
 
         assert self._fmin_binary < self._fmax_binary, 'No frequency range in inputs'
+        if self._fmax_binary < self._ic.fmax_binary:
+            print(f'Max frequency limited to {self._fmax_binary} from {self._ic.fmax_binary} by grid')
 
         if snrs_tot_in is not None:
             faints_in = (
@@ -230,8 +340,10 @@ class BinaryInclusionState(StateManager):
             params0_sel = self._params_gb[0]
         params0: SourceParams = unpack_params_gb(params0_sel)
         self._waveform_manager: LinearFrequencyWaveletWaveformTime = LinearFrequencyWaveletWaveformTime(
-            params0, self._wc, self._lc, self._nt_lim_waveform, table_cache_mode='check', table_output_mode='skip'
+            params0, self._wc, self._lc, self._nt_lim_waveform, table_cache_mode='check', table_output_mode='skip', wavelet_mode=1,
         )
+
+        check_fdot_grid_helper(self._params_gb, self._wc, self._lc, self._fmax_binary)
 
         del params0
         del params0_sel

@@ -32,9 +32,12 @@ class WDMWaveletConstants(NamedTuple):
     DOM: float
     insDOM: float
     L: int
+    n_f_null_extend: int
+    taylor_time_interpolation_target_precision: float
+    max_freq_tol_time_interpolation: float
 
 
-def get_wavelet_model(config: dict[str, Any]) -> WDMWaveletConstants:
+def get_wavelet_model(config: dict[str, Any], assert_mode: int = 1) -> WDMWaveletConstants:
     config_wc: dict[str, int | float] = config['wavelet_constants']
     # number of time pixels (should be even)
     Nf = int(config_wc['Nf'])
@@ -93,6 +96,18 @@ def get_wavelet_model(config: dict[str, Any]) -> WDMWaveletConstants:
     assert L > 0, 'L must be a positive power of two'
     assert (L & (L - 1)) == 0, 'L must be a power of two'
 
+    # number of extra time-frequency pixels to allow in the taylor time method to account for nulls
+    # usually not really necessary but should algorithmically guarantee no segfault
+    n_f_null_extend: int = int(config_wc.get('n_f_null_extend', 200))
+    assert n_f_null_extend >= 0
+
+    # target precision of taylor time interpolation table
+    taylor_time_interpolation_target_precision: float = float(config_wc.get('taylor_time_interpolation_target_precision', 1.e-3))
+    assert taylor_time_interpolation_target_precision >= 0.
+
+    # tolerance on maximum frequency allowed by the time interpolation grid
+    max_freq_tol_time_interpolation: float = float(config_wc.get('max_freq_tol_time_interpolation', 1.e-5))
+
     # derived constants
 
     # total number of points
@@ -115,7 +130,9 @@ def get_wavelet_model(config: dict[str, Any]) -> WDMWaveletConstants:
         raise ValueError(msg)
     if K % L != 0:
         msg = 'K = %d should be an integer multiple of L = %d' % (K, L)
-        raise ValueError(msg)
+        if assert_mode:
+            raise ValueError(msg)
+        warn(msg, stacklevel=2)
 
     # filter duration (time; same units as dt)
     Tw = float(dt * K)
@@ -161,6 +178,23 @@ def get_wavelet_model(config: dict[str, Any]) -> WDMWaveletConstants:
     assert_allclose(BW, 3 / (4 * dt * Nf))
     assert_allclose(dfd, dfdot / (4 * dt**2 * mult * Nf**2))
     assert_allclose(Tw, 2 * dt * mult * Nf)
+    assert_allclose(df_bw, 3 / (4 * dt * Nf * Nsf))
+
+    # Check the specifications for the interpolation grid makes sense
+    df_max_time = 8 * DF / Tw  # or 2 / (dt **2 * mult * Nf **2) or 8 * dfd / dfdot or 2 * Nt ** 2 / (Tobs ** 2 * mult)
+    df_max_time_grid = dfd * (Nfd - Nfd_negative)
+    df_min_time_grid = dfd * (- Nfd_negative)
+    # allow a slight excess to account for numerical inexactness
+    if df_max_time_grid > df_max_time * (1. + max_freq_tol_time_interpolation):
+        msg = f'Maximum frequency of interpolation grid {df_max_time_grid} is larger than limit of reliability {df_max_time}, consider increasing Nt and decreasing Nf, or decreasing requested grid size'
+        if assert_mode:
+            raise ValueError(msg)
+        warn(msg, stacklevel=2)
+    if df_min_time_grid < -df_max_time * (1. + max_freq_tol_time_interpolation):
+        msg = f'Minimum frequency of interpolation grid {df_min_time_grid} is smaller than limit of reliability {-df_max_time}, consider increasing Nt and decreasing Nf, or decreasing requested grid size'
+        if assert_mode:
+            raise ValueError(msg)
+        warn(msg, stacklevel=2)
 
     return WDMWaveletConstants(
         Nf,
@@ -187,4 +221,7 @@ def get_wavelet_model(config: dict[str, Any]) -> WDMWaveletConstants:
         DOM,
         insDOM,
         L,
+        n_f_null_extend,
+        taylor_time_interpolation_target_precision,
+        max_freq_tol_time_interpolation,
     )

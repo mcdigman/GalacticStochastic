@@ -48,7 +48,7 @@ class NoiseModelManager(StateManager):
         bgd: BGDecomposition
             Galactic background decomposition object.
         cyclo_mode: int
-            Cyclostationary mode flag. If nonzero, enables cyclostationary noise modeling.
+            Cyclostationary mode flag. If 0, enable cyclostationary mode. If 1, enable stationary mode.
         nt_lim_snr: PixelGenericRange
             Range of time-frequency pixels used for SNR calculations.
         instrument_random_seed: int
@@ -364,17 +364,23 @@ class NoiseModelManager(StateManager):
                 )
 
         # just make new noise models, don't try to load them
-        if not self.cyclo_mode:
+        if self.cyclo_mode == 0:
             period_list = self._ic.period_list
-        else:
+        elif self.cyclo_mode == 1:
             period_list = ()
+        else:
+            msg = f'Unrecognized option for cyclo_mode {self.cyclo_mode}'
+            raise ValueError(msg)
 
         assert self._itrn - 1 >= 0
 
         if self._itrn - 1 < self._ic.n_cyclo_switch:
             filter_periods = False
         else:
-            filter_periods = not self.cyclo_mode
+            if self.cyclo_mode == 0:
+                filter_periods = True
+            else:
+                filter_periods = False
 
         S_upper = self.bgd.get_S_below_high(
             self.S_inst_m,
@@ -384,7 +390,11 @@ class NoiseModelManager(StateManager):
         )
         self.noise_upper = DiagonalNonstationaryDenseNoiseModel(S_upper, self.wc, prune=1, nc_snr=self._lc.nc_snr)
 
-        filter_periods = not self.cyclo_mode
+        if self.cyclo_mode == 0:
+            filter_periods = True
+        else:
+            filter_periods = False
+
         S_lower = self.bgd.get_S_below_low(self.S_inst_m, self._ic.smooth_lengthf_fix, filter_periods, period_list)
         S_lower = np.asarray(np.min([S_lower, self.noise_upper.get_S()], axis=0), dtype=np.float64)
 

@@ -93,8 +93,8 @@ if __name__ == '__main__':
     nt_lim_report = PixelGenericRange(nt_min_report, nt_max_report, wc.DT, 0.)
     nt_range = (nt_min, nt_max)
 
-    ifm_cyclo = fetch_or_run_iterative_loop(config, cyclo_mode=0, nt_range_snr=nt_range, fetch_mode=1)
-    ifm_stat = fetch_or_run_iterative_loop(config, cyclo_mode=1, nt_range_snr=nt_range, fetch_mode=1)
+    ifm_cyclo = fetch_or_run_iterative_loop(config, cyclo_mode=0, nt_range_snr=nt_range, fetch_mode=0)
+    ifm_stat = fetch_or_run_iterative_loop(config, cyclo_mode=1, nt_range_snr=nt_range, fetch_mode=0)
 
     noise_realization = ifm_stat.noise_manager.get_instrument_realization(white_mode=0)
 
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     S_inst_m = instrument_noise_AET_wdm_m(lc, wc)
 
     filter_periods = 1
-    S_cyclo_model, _, _, _, _ = get_S_cyclo(galactic_cyclo, S_inst_m, wc.DT, 0, filter_periods,
+    S_cyclo_model, _r_cyclo_model, _S_cyclo_demod, _amp_cyclo, _angle_cyclo = get_S_cyclo(galactic_cyclo, S_inst_m, wc.DT, 0, filter_periods,
                                             period_list=(1, 2, 3, 4, 5))
 
     fs = np.arange(1, wc.Nf) * wc.DF
