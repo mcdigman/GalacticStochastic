@@ -1,9 +1,9 @@
 [files]
 # values related to file io
 
-galaxy_dir = 'Galaxies/Galaxy1/'
-galaxy_file = 'galaxy_binaries.hdf5'
-cosmic_data = False
+galaxy_dir = '/Users/kbreivik/Code/GitHub/GalacticStochastic/Galaxies/COSMIC_alpha25/'
+galaxy_file = 'LISA_band_FZ_alpha25_Z.hdf'
+cosmic_data = true
 
 # prefix for final processed filename
 processed_prefix = 'processed_iterations'
@@ -101,7 +101,7 @@ fmax_binary = 1.0e0
 # number of channels to evaluate galactic background
 nc_galaxy = 3
 
-component_list = ['dgb', 'igb', 'vgb']
+component_list = ['dgb']
 
 
 [wavelet_constants]
@@ -127,7 +127,7 @@ Nsf = 150
 Nfd = 80
 
 # fractional fdot increment in interpolation table
-dfdot = 0.1
+dfdot = 0.05
 
 # number of fdot increments which are less than zero in the interpolation table (should be less than Nfd)
 Nfd_negative = 40

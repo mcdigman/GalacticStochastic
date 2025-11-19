@@ -2,6 +2,7 @@
 # values related to file io
 
 galaxy_file = 'galaxy_binaries.hdf5'
+cosmic_data = false
 
 # prefix for final processed filename
 processed_prefix = 'processed_iterations'
