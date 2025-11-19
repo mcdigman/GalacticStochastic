@@ -186,12 +186,12 @@ def get_wavelet_model(config: dict[str, Any], assert_mode: int = 1) -> WDMWavele
     df_min_time_grid = dfd * (- Nfd_negative)
     # allow a slight excess to account for numerical inexactness
     if df_max_time_grid > df_max_time * (1. + max_freq_tol_time_interpolation):
-        msg = f'Maximum frequency of interpolation grid {df_max_time_grid} is larger than limit of reliability {df_max_time}, consider increasing Nt and decreasing Nf'
+        msg = f'Maximum frequency of interpolation grid {df_max_time_grid} is larger than limit of reliability {df_max_time}, consider increasing Nt and decreasing Nf, or decreasing requested grid size'
         if assert_mode:
             raise ValueError(msg)
         warn(msg, stacklevel=2)
     if df_min_time_grid < -df_max_time * (1. + max_freq_tol_time_interpolation):
-        msg = f'Minimum frequency of interpolation grid {df_min_time_grid} is smaller than limit of reliability {-df_max_time}, consider increasing Nt and decreasing Nf'
+        msg = f'Minimum frequency of interpolation grid {df_min_time_grid} is smaller than limit of reliability {-df_max_time}, consider increasing Nt and decreasing Nf, or decreasing requested grid size'
         if assert_mode:
             raise ValueError(msg)
         warn(msg, stacklevel=2)
