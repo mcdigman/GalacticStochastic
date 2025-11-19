@@ -190,37 +190,56 @@ def get_full_galactic_params(config: dict[str, Any]) -> tuple[NDArray[np.floatin
     assert isinstance(fmax, float)
     full_galactic_params_filename = get_galaxy_filename(config)
     filename = full_galactic_params_filename
+    #import pdb; pdb.set_trace()
+    config_files: dict[str, str] = config['files']
+    cosmic = bool(config_files.get('cosmic_data', False))
+    assert isinstance(cosmic, bool)
+    if cosmic:
+        if not categories == ['dgb']:
+            msg = 'COSMIC data only supports dgb category'
+            raise ValueError(msg)
+        import pandas as pd
+        from GalacticStochastic.cosmic_data_helpers import create_dat_in
+        with pd.HDFStore(filename, mode="r") as store:
+            galaxy = store["data"]
+            params_gb = create_dat_in(galaxy)
+            ns_got = np.array([params_gb.shape[0]], dtype=np.int64)
+            
+            n_tot = int(ns_got.sum())
+            print('Total', n_tot)
 
-    hf_in = h5py.File(filename, 'r')
 
-    hf_sky = hf_in['sky']
+    else:
+        hf_in = h5py.File(filename, 'r')
 
-    if not isinstance(hf_sky, h5py.Group):
-        msg = 'Unrecognized hdf5 file format'
-        raise TypeError(msg)
+        hf_sky = hf_in['sky']
 
-    ns_got = np.zeros(len(categories), dtype=np.int64)
-    params_got: list[NDArray[np.floating]] = []
-    for itr, label in enumerate(categories):
-        ns_got[itr], params_loc = _source_mask_read_helper(hf_sky, label, fmin, fmax)
-        if label == 'dgb' and np.any(params_loc[:, 4] < 0.0):
-            warn('Some binaries reported as detached have negative frequency derivatives', stacklevel=2)
-        params_got.append(params_loc)
-        print('Component: ', str(label), str(ns_got[itr]))
+        if not isinstance(hf_sky, h5py.Group):
+            msg = 'Unrecognized hdf5 file format'
+            raise TypeError(msg)
 
-    n_tot = int(ns_got.sum())
+        ns_got = np.zeros(len(categories), dtype=np.int64)
+        params_got: list[NDArray[np.floating]] = []
+        for itr, label in enumerate(categories):
+            ns_got[itr], params_loc = _source_mask_read_helper(hf_sky, label, fmin, fmax)
+            if label == 'dgb' and np.any(params_loc[:, 4] < 0.0):
+                warn('Some binaries reported as detached have negative frequency derivatives', stacklevel=2)
+            params_got.append(params_loc)
+            print('Component: ', str(label), str(ns_got[itr]))
 
-    print('Total', n_tot)
+        n_tot = int(ns_got.sum())
 
-    params_gb = np.zeros((n_tot, n_par_gb))
+        print('Total', n_tot)
 
-    n_old = 0
-    for itr in range(len(categories)):
-        n_cur = n_old + int(ns_got[itr])
-        params_gb[n_old:n_cur, :] = params_got[itr]
-        n_old = n_cur
+        params_gb = np.zeros((n_tot, n_par_gb))
 
-    hf_in.close()
+        n_old = 0
+        for itr in range(len(categories)):
+            n_cur = n_old + int(ns_got[itr])
+            params_gb[n_old:n_cur, :] = params_got[itr]
+            n_old = n_cur
+
+        hf_in.close()
     assert np.all(np.isfinite(params_gb)), 'Some binaries have non-finite parameters'
     assert not np.any(np.all(params_gb == 0.0, axis=1)), 'Some binaries have zero for all parameters'
     if np.any(np.all(params_gb == 0.0, axis=0)):
