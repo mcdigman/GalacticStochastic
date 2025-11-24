@@ -175,6 +175,7 @@ class LinearFrequencyWaveletWaveformTime(BinaryWaveletTaylorTime[LinearFrequency
         response_mode: int = 0,
         table_cache_mode: str = 'check',
         table_output_mode: str = 'skip',
+        assert_mode: int = 1,
     ) -> None:
         """Construct a binary wavelet object."""
         # get the intrinsic_waveform
@@ -189,4 +190,5 @@ class LinearFrequencyWaveletWaveformTime(BinaryWaveletTaylorTime[LinearFrequency
             wavelet_mode=wavelet_mode,
             table_cache_mode=table_cache_mode,
             table_output_mode=table_output_mode,
+            assert_mode=assert_mode,
         )

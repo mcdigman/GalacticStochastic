@@ -30,13 +30,13 @@ mult = 8
 Nsf = 150
 
 # number of fdots in interpolation table
-Nfd = 160
+Nfd = 80
 
 # fractional fdot increment in interpolation table
-dfdot = 0.05
+dfdot = 0.1
 
 # number of fdot increments which are less than zero in the interpolation table (should be less than Nfd)
-Nfd_negative = 80
+Nfd_negative = 40
 
 # number of timesteps used to compute the interpolation table; must be an integer times mult
 Nst = 800
@@ -46,6 +46,8 @@ nx = 4.0
 
 # reduced filter length; must be a power of 2
 L = 512
+
+taylor_time_interpolation_target_precision = 1.0e-2
 
 [lisa_constants]
 # constants related to LISA constellation

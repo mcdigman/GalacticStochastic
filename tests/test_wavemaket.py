@@ -24,7 +24,7 @@ from LisaWaveformTools.lisa_config import LISAConstants, get_lisa_constants
 from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
 from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, EdgeRiseModel
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
-from tests.test_time_tdi_ampphase import get_RR_t_mult, get_waveform_helper
+from tests.test_time_tdi_ampphase import get_RR_t_mult, get_waveform_helper_time
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, SparseWaveletWaveform, sparse_addition_helper
 from WaveletWaveforms.taylor_time_coefficients import (
     get_empty_sparse_taylor_time_waveform,
@@ -64,7 +64,7 @@ def get_aet_waveform_helper(
     II_scale_mult = np.array([1.0])
 
     # generate the intrinsic_waveform in the wavelet domain and transform it
-    waveform, AET_waveform, arg_cut = get_waveform_helper(
+    waveform, AET_waveform, arg_cut = get_waveform_helper_time(
         p_input,
         f_input,
         fp_input,

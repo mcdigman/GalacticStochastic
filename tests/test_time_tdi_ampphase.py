@@ -18,7 +18,7 @@ from LisaWaveformTools.algebra_tools import gradient_uniform_inplace
 from LisaWaveformTools.lisa_config import get_lisa_constants
 from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
 from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, EdgeRiseModel
-from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
+from LisaWaveformTools.stationary_source_waveform import StationaryWaveformFreq, StationaryWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, sparse_addition_helper
 from WaveletWaveforms.taylor_time_coefficients import (
     get_empty_sparse_taylor_time_waveform,
@@ -28,16 +28,72 @@ from WaveletWaveforms.taylor_time_wavelet_funcs import wavemaket
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
 # the table takes a while to compute so share it between tests
-toml_filename_in = 'tests/galactic_fit_test_config1.toml'
+toml_filename_in = 'tests/time_tdi_test_config1.toml'
 
 with Path(toml_filename_in).open('rb') as f:
     config_in = tomllib.load(f)
+
 
 wc_in = get_wavelet_model(config_in)
 taylor_time_table = get_taylor_table_time(wc_in, cache_mode='check', output_mode='hf')
 
 
-def get_waveform_helper(
+def get_waveform_helper_freq(
+    phase_time_0: float,
+    f_input: float,
+    fp_input: float,
+    fpp_input: float,
+    amp_input: float,
+    nf_range: PixelGenericRange,
+    nc_waveform: int,
+    max_f: float,
+) -> tuple[StationaryWaveformFreq, StationaryWaveformFreq, int]:
+    """Help get intrinsic_waveform objects."""
+    F = np.arange(nf_range.nx_min, nf_range.nx_max, nf_range.dx) + nf_range.x_min
+    # T = np.arange(nt_loc) * DT
+    phase_freq_0 = -np.pi / 4.0 + phase_time_0
+
+    PF = np.zeros(F.size)
+    TF = np.zeros(F.size)
+    TFp = np.zeros(F.size)
+    if fpp_input == 0.0:
+        TF[:] = (F - f_input) / fp_input
+        TFp[:] = 1. / fp_input
+    else:
+        # enforce TF(f0) = 0.
+        f_mask = f_input > F
+
+        PF[~f_mask] = phase_freq_0 + 2 * np.pi * ((-F[~f_mask] * np.abs(fp_input) + (np.abs(fp_input)**2 + 2 * (F[~f_mask] - f_input) * np.abs(fpp_input))**(3 / 2) / (3 * np.abs(fpp_input))) * np.sign(fp_input) * np.sign(fpp_input)) / np.abs(fpp_input)
+        TF[f_mask] = -np.sign(fp_input) * np.sign(fpp_input) * (-np.abs(fp_input) - np.sqrt(np.abs(fp_input)**2 + 2 * F[f_mask] * (-np.abs(fpp_input)) - 2 * f_input * (-np.abs(fpp_input)))) / (-np.abs(fpp_input))
+        TF[~f_mask] = -np.sign(fp_input) * np.sign(fpp_input) * (-np.abs(fp_input) - np.sqrt(np.abs(fp_input)**2 + 2 * F[~f_mask] * (np.abs(fpp_input)) - 2 * f_input * (np.abs(fpp_input)))) / (np.abs(fpp_input))
+
+        TFp[f_mask] = np.sign(fp_input) * np.sign(fpp_input) / np.sqrt(np.abs(fp_input) ** 2 + 2 * F[f_mask] * (-np.abs(fpp_input)) - 2 * f_input * (-np.abs(fpp_input)))
+        TFp[~f_mask] = np.sign(fp_input) * np.sign(fpp_input) / np.sqrt(np.abs(fp_input) ** 2 + 2 * F[~f_mask] * (np.abs(fpp_input)) - 2 * f_input * (np.abs(fpp_input)))
+
+    AF = np.full(F.size, amp_input) * 1 / np.sqrt(np.abs(TFp))
+
+    if np.any((max_f < F) | (F < 0.0)):
+        arg_cut = int(np.argmax((max_f < F) | (F < 0.0)))
+        PF[arg_cut:] = PF[arg_cut]
+        TFp[arg_cut:] = 0.0
+        AF[arg_cut:] = 0.0
+        if TF[arg_cut] < 0.0:
+            TF[arg_cut:] = 0.0
+        else:
+            TF[arg_cut:] = TF[arg_cut]
+    else:
+        arg_cut = int(F.size)
+
+    AET_PF = np.zeros((nc_waveform, F.size))
+    AET_TF = np.zeros((nc_waveform, F.size))
+    AET_TFp = np.zeros((nc_waveform, F.size))
+    AET_AF = np.zeros((nc_waveform, F.size))
+    waveform = StationaryWaveformFreq(F, PF, TF, TFp, AF)
+    AET_waveform = StationaryWaveformFreq(F, AET_PF, AET_TF, AET_TFp, AET_AF)
+    return waveform, AET_waveform, arg_cut
+
+
+def get_waveform_helper_time(
     p_input: float,
     f_input: float,
     fp_input: float,
@@ -164,7 +220,7 @@ def get_RR_t_mult(
 # @pytest.mark.skip()
 def test_ExtractAmpPhase_inplace_basic(f0_mult: float, rr_model: str, f0p_mult: float) -> None:
     """Test the extraction in some easier cases"""
-    toml_filename = 'tests/galactic_fit_test_config1.toml'
+    toml_filename = 'tests/time_tdi_test_config1.toml'
 
     with Path(toml_filename).open('rb') as f:
         config = tomllib.load(f)
@@ -453,7 +509,7 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult: float, rr_model: str, f0p_mult: 
 # @pytest.mark.skip()
 def test_time_tdi_inplace_nearzero(f0_mult: float, rr_model: str, f0p_mult: float) -> None:
     """Test extraction in cases where the RR or II or both go near zero"""
-    toml_filename = 'tests/galactic_fit_test_config1.toml'
+    toml_filename = 'tests/time_tdi_test_config1.toml'
 
     with Path(toml_filename).open('rb') as f:
         config = tomllib.load(f)
@@ -756,7 +812,7 @@ def test_time_tdi_inplace_transform(f0_mult: float, rr_model: str, f0p_mult: flo
     """Test whether the signal computed in the time domain matches computing
     it in the wavelet domain and transforming to time.
     """
-    toml_filename = 'tests/galactic_fit_test_config1.toml'
+    toml_filename = 'tests/time_tdi_test_config1.toml'
 
     with Path(toml_filename).open('rb') as f:
         config = tomllib.load(f)
@@ -775,7 +831,7 @@ def test_time_tdi_inplace_transform(f0_mult: float, rr_model: str, f0p_mult: flo
     fp_input = f0p_mult * f_input / wc.Tobs
     fpp_input = 0.0
     amp_input = 1.0
-    waveform, AET_waveform, _ = get_waveform_helper(
+    waveform, AET_waveform, _ = get_waveform_helper_time(
         p_input,
         f_input,
         fp_input,
@@ -786,7 +842,7 @@ def test_time_tdi_inplace_transform(f0_mult: float, rr_model: str, f0p_mult: flo
         nc_waveform,
         max_f=1 / (2 * wc.dt) - 1 / wc.Tobs,
     )
-    waveform_fine, AET_waveform_fine, arg_cut_fine = get_waveform_helper(
+    waveform_fine, AET_waveform_fine, arg_cut_fine = get_waveform_helper_time(
         p_input,
         f_input,
         fp_input,
@@ -827,7 +883,7 @@ def test_time_tdi_inplace_transform(f0_mult: float, rr_model: str, f0p_mult: flo
     # get the sparse wavelet intrinsic_waveform
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(lc.nc_waveform, wc)
     nt_lim = PixelGenericRange(0, wc.Nt, wc.DT, lc.t0)
-    wavemaket(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table, force_nulls=False)
+    wavemaket(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table, force_nulls=0)
 
     # get the dense wavelet intrinsic_waveform
     wavelet_dense: NDArray[np.floating] = np.zeros((nt_loc * wc.Nf, nc_waveform))
@@ -865,6 +921,9 @@ def test_time_tdi_inplace_transform(f0_mult: float, rr_model: str, f0p_mult: flo
         signal_time_pred_sin[:, itrc] = filtfilt(b, a, signal_time_pred_sin[:, itrc])
         signal_time_filter[:, itrc] = filtfilt(b, a, signal_time_filter[:, itrc])
 
+    print(AET_waveform.FTd / wc.dfd)
+    print(np.max(np.abs(AET_waveform.FTd)) / wc.dfd, wc.Nfd, wc.Nfd_negative)
+    print(np.linalg.norm(wavelet_dense), np.linalg.norm(signal_time), np.linalg.norm(signal_time_filter), np.linalg.norm(signal_time_pred_cos), np.linalg.norm(signal_time_pred_sin))
     match_cos = np.sum(signal_time_filter * signal_time_pred_cos) / (
         np.linalg.norm(signal_time_filter) * np.linalg.norm(signal_time_pred_cos)
     )

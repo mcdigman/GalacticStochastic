@@ -79,22 +79,28 @@ def white_plot_ax(ax_in: plt.Axes, title: str, data: NDArray[np.floating], exten
 
 if __name__ == '__main__':
     # filename_config = 'default_parameters.toml'
-    filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters_format4.toml'
+    # filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters_format3.toml'
+    # filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters_format4.toml'
+    filename_config = 'parameters_default_12year.toml'
+    target_directory = 'Galaxies/GalaxyFullLDC/'
 
     config, wc, lc, ic, instrument_random_seed = config_helper.get_config_objects(filename_config)
+    config['files']['galaxy_dir'] = target_directory
 
-    nt_incr = int(wc.Nt // 16)
+    nt_incr = int(wc.Nt // 24)
 
     nt_min = nt_incr * 6
     nt_max = nt_min + 4 * nt_incr
+    # nt_min = 0
+    # nt_max = wc.Nt
     nt_lim = PixelGenericRange(nt_min, nt_max, wc.DT, 0.)
     nt_min_report = 0
     nt_max_report = nt_max - nt_min
     nt_lim_report = PixelGenericRange(nt_min_report, nt_max_report, wc.DT, 0.)
-    nt_range = (nt_min, nt_max)
+    nt_range = (int(nt_min), int(nt_max))
 
-    ifm_cyclo = fetch_or_run_iterative_loop(config, cyclo_mode=0, nt_range_snr=nt_range, fetch_mode=0)
-    ifm_stat = fetch_or_run_iterative_loop(config, cyclo_mode=1, nt_range_snr=nt_range, fetch_mode=0)
+    ifm_cyclo = fetch_or_run_iterative_loop(config, cyclo_mode='cyclostationary', nt_range_snr=nt_range, fetch_mode='fetch_or_fail_reprocess_only')
+    ifm_stat = fetch_or_run_iterative_loop(config, cyclo_mode='stationary', nt_range_snr=nt_range, fetch_mode='fetch_or_fail_reprocess_only')
 
     noise_realization = ifm_stat.noise_manager.get_instrument_realization(white_mode=0)
 
@@ -112,6 +118,7 @@ if __name__ == '__main__':
     filter_periods = 1
     S_cyclo_model, _r_cyclo_model, _S_cyclo_demod, _amp_cyclo, _angle_cyclo = get_S_cyclo(galactic_cyclo, S_inst_m, wc.DT, 0, filter_periods,
                                             period_list=(1, 2, 3, 4, 5))
+    S_stat_model, _r_stat_model, _S_stat_demod, _amp_stat, _angle_stat = get_S_cyclo(galactic_stat, S_inst_m, wc.DT, 0, filter_periods=False)
 
     fs = np.arange(1, wc.Nf) * wc.DF
 
@@ -121,7 +128,7 @@ if __name__ == '__main__':
     nf_max = int(np.argmax(fs > f_max))
 
     signal_white_resid_cyclo = result_normality_battery(nf_min, nf_max, signal_full_cyclo, S_cyclo_model)
-    signal_white_resid_stat = result_normality_battery(nf_min, nf_max, signal_full_stat, S_cyclo_model)
+    signal_white_resid_stat = result_normality_battery(nf_min, nf_max, signal_full_stat, S_stat_model)
 
     extent = (nt_min_report * wc.DT / gc.SECSYEAR, nt_lim_report.nx_max * wc.DT / gc.SECSYEAR, nf_min * wc.DF, nf_max * wc.DF)
 

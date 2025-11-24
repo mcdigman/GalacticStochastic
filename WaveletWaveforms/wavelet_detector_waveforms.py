@@ -198,6 +198,7 @@ class BinaryWaveletTaylorTime(
         storage_mode: int = 0,
         table_cache_mode: str = 'check',
         table_output_mode: str = 'skip',
+        assert_mode: int = 0,
     ) -> None:
         """Construct a sparse binary wavelet for a time domain taylor intrinsic_waveform with interpolation."""
         if storage_mode not in (0, 1):
@@ -223,6 +224,7 @@ class BinaryWaveletTaylorTime(
             self._wc,
             cache_mode=self._table_cache_mode,
             output_mode=self._table_output_mode,
+            assert_mode=assert_mode,
         )
 
         self._storage_mode: int = storage_mode

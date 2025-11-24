@@ -30,13 +30,13 @@ mult = 8
 Nsf = 150
 
 # number of fdots in interpolation table
-Nfd = 80
+Nfd = 160
 
 # fractional fdot increment in interpolation table
-dfdot = 0.1
+dfdot = 0.01
 
 # number of fdot increments which are less than zero in the interpolation table (should be less than Nfd)
-Nfd_negative = 40
+Nfd_negative = 80
 
 # number of timesteps used to compute the interpolation table; must be an integer times mult
 Nst = 800

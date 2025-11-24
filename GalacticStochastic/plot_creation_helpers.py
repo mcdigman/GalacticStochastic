@@ -29,7 +29,7 @@ def plot_noise_spectrum_ambiguity(ifm: IterativeFitManager) -> None:
     _ = ax.loglog(fs, S_stat_m[1:, 0], 'k--', zorder=-100)
     ax.tick_params(axis='both', direction='in', which='both', top=True, right=True)
     _ = plt.legend(labels=['upper estimate', 'lower estimate', 'base'])
-    _ = plt.ylim([2.0e-44, 4.0e-43])
+    _ = plt.ylim([2.0e-46, 4.0e-42])
     _ = plt.xlim([3.0e-4, 6.0e-3])
     _ = plt.xlabel('f (Hz)')
     _ = plt.ylabel(r'$\langle S^{AE}_{m} \rangle$')

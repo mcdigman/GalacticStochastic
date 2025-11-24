@@ -27,9 +27,12 @@ if __name__ == '__main__':
     smooth_targ_length = 0.25
     _: Any
     # filename_config = 'default_parameters.toml'
-    filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters_format4.toml'
+    # filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters_format4.toml'
+    filename_config = 'parameters_default_12year.toml'
+    target_directory = 'Galaxies/GalaxyFullLDC/'
 
     config, wc, lc, ic, instrument_random_seed = config_helper.get_config_objects(filename_config)
+    config['files']['galaxy_dir'] = target_directory
 
     fs = np.arange(0, wc.Nf) * wc.DF
 
@@ -61,7 +64,7 @@ if __name__ == '__main__':
     r_tots = np.zeros((nk, wc.Nt, S_inst_m.shape[-1]))
 
     for itrk in range(nk):
-        nt_lim = PixelGenericRange(nt_mins[itrk], nt_maxs[itrk], wc.DT, 0)
+        nt_lim = PixelGenericRange(int(nt_mins[itrk]), int(nt_maxs[itrk]), wc.DT, 0)
         ifm = fetch_or_run_iterative_loop(config, cyclo_mode, nt_range_snr=(nt_lim.nx_min, nt_lim.nx_max), fetch_mode=1)
         galactic_below_high = ifm.noise_manager.bgd.get_galactic_below_high(shape_mode=1)
 

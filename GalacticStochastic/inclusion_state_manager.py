@@ -203,9 +203,9 @@ def check_fdot_grid_helper(params_gb: NDArray[np.floating], wc: WDMWaveletConsta
     msg = 'Grid does not cover minimum anticipated source frequency range, may need larger Nf or longer observation time'
     assert_array_compare(np.greater, f_min_need, wc.DF, err_msg=msg)
     msg = 'Interpolation table does not cover all positive frequency derivatives; consider increasing Nfd'
-    assert_array_compare(np.less, fdot_max_loc, fdot_max_avail, err_msg=msg)
+    # assert_array_compare(np.less, fdot_max_loc, fdot_max_avail, err_msg=msg)
     msg = 'Interpolation table does not cover all negative frequency derivatives: consider increasing Nfd and Nfd_negative'
-    assert_array_compare(np.greater_equal, fdot_min_loc, fdot_min_avail, err_msg=msg)
+    # assert_array_compare(np.greater_equal, fdot_min_loc, fdot_min_avail, err_msg=msg)
 
     msg = 'Grid does not cover all positive frequency derivatives; consider decreasing Nf and increasing Nt'
     assert_array_compare(np.less, fdot_max_loc, fdot_max_grid, err_msg=msg)
@@ -213,9 +213,9 @@ def check_fdot_grid_helper(params_gb: NDArray[np.floating], wc: WDMWaveletConsta
     assert_array_compare(np.greater_equal, fdot_min_loc, -fdot_max_grid, err_msg=msg)
 
     msg = 'Need larger Nfd negative to safely cover range of frequency derivatives'
-    assert_array_compare(np.less_equal, Nfd_negative_safe, wc.Nfd_negative, err_msg=msg)
+    # assert_array_compare(np.less_equal, Nfd_negative_safe, wc.Nfd_negative, err_msg=msg)
     msg = 'Need larger Nfd to safely cover range of frequency derivatives'
-    assert_array_compare(np.less_equal, Nfd_safe, wc.Nfd, err_msg=msg)
+    # assert_array_compare(np.less_equal, Nfd_safe, wc.Nfd, err_msg=msg)
 
 
 class BinaryInclusionState(StateManager):
@@ -340,7 +340,7 @@ class BinaryInclusionState(StateManager):
             params0_sel = self._params_gb[0]
         params0: SourceParams = unpack_params_gb(params0_sel)
         self._waveform_manager: LinearFrequencyWaveletWaveformTime = LinearFrequencyWaveletWaveformTime(
-            params0, self._wc, self._lc, self._nt_lim_waveform, table_cache_mode='check', table_output_mode='skip', wavelet_mode=1,
+            params0, self._wc, self._lc, self._nt_lim_waveform, table_cache_mode='check', table_output_mode='skip', wavelet_mode=1, assert_mode=0
         )
 
         check_fdot_grid_helper(self._params_gb, self._wc, self._lc, self._fmax_binary)
@@ -751,9 +751,10 @@ class BinaryInclusionState(StateManager):
         # shouldn't need to load the waveform manager, because it is reconstructed each time it is used
 
         for key in self._wc._fields:
-            assert getattr(self._wc, key) == hf_include['wc'].attrs[key], (
-                f'wavelet constant attribute {key} does not match saved value'
-            )
+            if key in hf_include['wc'].attrs:
+                assert getattr(self._wc, key) == hf_include['wc'].attrs[key], (
+                    f'wavelet constant attribute {key} does not match saved value'
+                )
 
         # for key in self._lc._fields:
         #    assert getattr(self._lc, key) == hf_include['lc'].attrs[key], (

@@ -22,7 +22,7 @@ instrument_noise_realization_seed = 31415926
 period_list = [1, 2, 3, 4, 5]
 
 # maximum number of iterations to allow
-max_iterations = 40
+max_iterations = 45
 
 # snr minimum cutoff to use in preprocessing step
 # note this is the total snr for the maximum time under consideration
@@ -50,6 +50,7 @@ faint_converge_change_thresh = 3
 snr_low_initial = 7.0
 # for subsequent, choose faint snr cutoff to ensure almost nothing gets decided as constant because of its own power alone
 # using snr_min = snr_low_mult * snr_low_initial
+# higher snr_low_mult should leave less sources undecided
 snr_low_mult = 0.999
 
 # phase in or out frequency smoothing of galactic spectrum over several iterations using

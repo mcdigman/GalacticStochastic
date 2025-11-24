@@ -129,13 +129,18 @@ def get_iteration_config(config: dict[str, Any]) -> IterationConfig:
 
     snr_high_settle_offset = float(config_ic['snr_high_settle_offset'])
 
+    # value of snr to always be considered bright, and bright threshold in first iteration
+    snr_autosuppress: float = float(config_ic.get('snr_autosuppress', 40.))
+
     snr_high_fix_itr = int(config_ic['snr_high_fix_itr'])
     assert snr_high_fix_itr >= 0
     snr_high_fix_itr = min(max_iterations, snr_high_fix_itr)
 
     snr_cut_bright = np.zeros(max_iterations) + snr_high_fix
-    for itrn in range(snr_high_fix_itr):
+    snr_cut_bright[0] = snr_autosuppress
+    for itrn in range(1, snr_high_fix_itr):
         snr_cut_bright[itrn] += snr_high_settle_mult * np.exp(-snr_high_settle_scale * itrn - snr_high_settle_offset)
+        snr_cut_bright[itrn] = min(snr_cut_bright[itrn], snr_autosuppress)
         assert snr_cut_bright[itrn] >= 0.0
 
     # minimum binary frequency to allow

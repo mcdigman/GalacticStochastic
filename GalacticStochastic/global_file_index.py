@@ -300,9 +300,9 @@ def load_processed_galactic_file(
         snr_thresh = ic.snr_thresh
     filename_in = get_processed_galactic_filename(config, wc, preprocess_mode=preprocess_mode)
     if nt_lim_snr == (0, -1):
-        nt_range: tuple[int, int] = (0, wc.Nt)
+        nt_range: tuple[int, int] = ((0), int(wc.Nt))
     else:
-        nt_range = nt_lim_snr
+        nt_range = (int(nt_lim_snr[0]), int(nt_lim_snr[1]))  # recover in case it is given as an int64 or something
 
     cyclo_key = str(cyclo_mode)
 
@@ -317,6 +317,7 @@ def load_processed_galactic_file(
             msg = 'Unrecognized hdf5 file format'
             raise TypeError(msg)
         print(filename_in, preprocess_mode, nt_range, cyclo_key)
+        print(hf_snr.keys())
         hf_nt = hf_snr[str(nt_range)]
         if not isinstance(hf_nt, h5py.Group):
             msg = 'Unrecognized hdf5 file format'
@@ -446,7 +447,7 @@ def store_processed_gb_file(
     hf_snr = hf_itr.require_group(str(snr_thresh))
     del hf_itr
 
-    nt_range: tuple[int, int] = (nt_lim_snr.nx_min, nt_lim_snr.nx_max)
+    nt_range: tuple[int, int] = (int(nt_lim_snr.nx_min), int(nt_lim_snr.nx_max))
 
     hf_nt = hf_snr.require_group(str(nt_range))
     del hf_snr

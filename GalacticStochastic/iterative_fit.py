@@ -236,10 +236,10 @@ def fetch_or_run_iterative_loop(
         nt_range_prelim = (0, wc.Nt)
         ifm_prelim = fetch_or_run_iterative_loop(
             config,
-            cyclo_mode=1,
+            cyclo_mode='stationary',
             nt_range_snr=nt_range_prelim,
             fetch_mode=fetch_mode_prelim,
-            preprocess_mode=1,
+            preprocess_mode='initial',
             output_mode=output_mode_int,
             wc_in=wc_in,
             lc_in=lc,

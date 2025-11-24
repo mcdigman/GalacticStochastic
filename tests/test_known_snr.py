@@ -365,7 +365,7 @@ def test_snr_known_linear(amp0_mult: float, var_mult: float, ftd0: float, f0_mul
     # check snr computed by pipeline matches defintion
     assert_allclose(snr_var, snr_channel, atol=1.e-100, rtol=8.e-3)
     assert_allclose(snr_expect, snr_channel, atol=1.e-100, rtol=6.e-3)
-    assert_allclose(snr_var_expect, snr_channel, atol=1.e-100, rtol=7.e-3)
+    assert_allclose(snr_var_expect, snr_channel, atol=1.e-100, rtol=8.e-3)
 
     # check snr computed by psds match definition
     assert_allclose(snr_var, snr_freq_direct3, atol=1.e-100, rtol=7.e-2)

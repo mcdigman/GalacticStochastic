@@ -342,7 +342,8 @@ class NoiseModelManager(StateManager):
             raise TypeError(msg)
 
         for key in self.wc._fields:
-            assert getattr(self.wc, key) == hf_wc.attrs[key], f'wc attribute {key} does not match saved value'
+            if key in hf_wc.attrs:
+                assert getattr(self.wc, key) == hf_wc.attrs[key], f'wc attribute {key} does not match saved value'
 
         hf_lc = hf_noise['lc']
         if not isinstance(hf_lc, h5py.Group):
