@@ -1,8 +1,8 @@
 [files]
 # values related to file io
 
-galaxy_file = 'galaxy_binaries.hdf5'
-cosmic_data = false
+galaxy_file = 'LISA_band_FZ_alpha25_Z.hdf'
+cosmic_data = true
 
 # prefix for final processed filename
 processed_prefix = 'processed_iterations'
@@ -100,7 +100,7 @@ fmax_binary = 1.0e0
 # number of channels to evaluate galactic background
 nc_galaxy = 3
 
-component_list = ['dgb', 'igb', 'vgb']
+component_list = ['dgb']
 
 
 [wavelet_constants]
@@ -126,7 +126,7 @@ Nsf = 150
 Nfd = 80
 
 # fractional fdot increment in interpolation table
-dfdot = 0.1
+dfdot = 0.05
 
 # number of fdot increments which are less than zero in the interpolation table (should be less than Nfd)
 Nfd_negative = 40
@@ -147,10 +147,10 @@ L = 512
 Larm = 2.5e9
 
 # Photon shot noise power
-Sps = 1.48481420973638e-23
+Sps = 2.25e-22
 
 # Acceleration noise power
-Sacc = 1.5982131619908737e-30
+Sacc = 9.0e-30
 
 # Initial azimuthal position of the guiding center
 kappa0 = 0.0
@@ -181,12 +181,3 @@ t0 = 0.0
 
 # Rise time of antenna pattern in frequency domain
 t_rise = 0.0
-
-# the frequency in Hz controlling the 1/f^2 roll off of the denominator of the LISA acceleration noise
-f_roll_acc_f2_inv = 0.0003825153977709533
-
-# the frequency in Hz controlling the f^4 roll off of the denominator or the LISA acceleration noise
-f_roll_acc_f4 = 0.005977512856889381
-
-# the frequency in Hz controlling the 1/f^4 roll off of the denominator or the LISA laser noise
-f_roll_ps_f4_inv = 0.001258828143983798
