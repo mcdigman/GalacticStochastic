@@ -1,7 +1,6 @@
 [files]
 # values related to file io
 
-galaxy_dir = '/Users/kbreivik/Code/GitHub/GalacticStochastic/Galaxies/COSMIC_alpha25/'
 galaxy_file = 'LISA_band_FZ_alpha25_Z.hdf'
 cosmic_data = true
 

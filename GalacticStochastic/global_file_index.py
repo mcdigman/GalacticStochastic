@@ -15,6 +15,15 @@ from GalacticStochastic.iteration_config import IterationConfig
 from GalacticStochastic.iterative_fit_manager import IterativeFitManager
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
+load_cosmic: Any
+try:
+    # pandas is an optional import
+    from GalacticStochastic.cosmic_data_helpers import load_cosmic
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
+
+
 n_par_gb = 8
 labels_gb = [
     'Amplitude',
@@ -190,24 +199,13 @@ def get_full_galactic_params(config: dict[str, Any]) -> tuple[NDArray[np.floatin
     assert isinstance(fmax, float)
     full_galactic_params_filename = get_galaxy_filename(config)
     filename = full_galactic_params_filename
-    #import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     config_files: dict[str, str] = config['files']
     cosmic = bool(config_files.get('cosmic_data', False))
     assert isinstance(cosmic, bool)
     if cosmic:
-        if not categories == ['dgb']:
-            msg = 'COSMIC data only supports dgb category'
-            raise ValueError(msg)
-        import pandas as pd
-        from GalacticStochastic.cosmic_data_helpers import create_dat_in
-        with pd.HDFStore(filename, mode="r") as store:
-            galaxy = store["data"]
-            params_gb = create_dat_in(galaxy)
-            ns_got = np.array([params_gb.shape[0]], dtype=np.int64)
-            
-            n_tot = int(ns_got.sum())
-            print('Total', n_tot)
-
+        params_gb, ns_got = load_cosmic(filename, categories)
+        n_tot = int(ns_got.sum())
 
     else:
         hf_in = h5py.File(filename, 'r')
@@ -228,9 +226,6 @@ def get_full_galactic_params(config: dict[str, Any]) -> tuple[NDArray[np.floatin
             print('Component: ', str(label), str(ns_got[itr]))
 
         n_tot = int(ns_got.sum())
-
-        print('Total', n_tot)
-
         params_gb = np.zeros((n_tot, n_par_gb))
 
         n_old = 0
@@ -240,6 +235,8 @@ def get_full_galactic_params(config: dict[str, Any]) -> tuple[NDArray[np.floatin
             n_old = n_cur
 
         hf_in.close()
+
+    print('Total', n_tot)
     assert np.all(np.isfinite(params_gb)), 'Some binaries have non-finite parameters'
     assert not np.any(np.all(params_gb == 0.0, axis=1)), 'Some binaries have zero for all parameters'
     if np.any(np.all(params_gb == 0.0, axis=0)):
