@@ -129,6 +129,30 @@ def create_dat_in(dat: DataFrame) -> NDArray[np.floating]:
 
 
 def load_cosmic(filename: str, categories: list[str]) -> tuple[NDArray[np.floating], NDArray[np.integer]]:
+    """Load a COSMIC galaxy from a file.
+
+    Parameters
+    ----------
+    filename: str
+        The filename
+    categories: list[str]
+        The list of categories, currently must be ['dgb']
+
+    Returns
+    -------
+    params_gb : numpy.ndarray
+        Array of shape (N, 8) where N is the number of sources, containing the following columns:
+        [amplitude, ecliptic longitude, ecliptic latitude, f_gw, chirp, inclination, phase, polarization]
+    ns_got: numpy.ndarray
+        Array of integers, currently must be just array([N])
+
+    Raises
+    ------
+    ValueError
+        if the categories are not as required
+    AssertionError
+        if the file format is incorrect
+    """
     if categories != ['dgb']:
         msg = 'COSMIC data only supports dgb category'
         raise ValueError(msg)
