@@ -81,13 +81,15 @@ if __name__ == '__main__':
     # filename_config = 'default_parameters.toml'
     # filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters_format3.toml'
     # filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters_format4.toml'
-    filename_config = 'parameters_default_12year.toml'
-    target_directory = 'Galaxies/GalaxyFullLDC/'
+    # filename_config = 'parameters_default_12year.toml'
+    # target_directory = 'Galaxies/GalaxyFullLDC/'
+    filename_config = 'Galaxies/COSMIC_alpha25/run_default_parameters_cosmic.toml'
+    target_directory = 'Galaxies/COSMIC_alpha25/'
 
     config, wc, lc, ic, instrument_random_seed = config_helper.get_config_objects(filename_config)
     config['files']['galaxy_dir'] = target_directory
 
-    nt_incr = int(wc.Nt // 24)
+    nt_incr = int(wc.Nt // 16)
 
     nt_min = nt_incr * 6
     nt_max = nt_min + 4 * nt_incr
@@ -99,8 +101,8 @@ if __name__ == '__main__':
     nt_lim_report = PixelGenericRange(nt_min_report, nt_max_report, wc.DT, 0.)
     nt_range = (int(nt_min), int(nt_max))
 
-    ifm_cyclo = fetch_or_run_iterative_loop(config, cyclo_mode='cyclostationary', nt_range_snr=nt_range, fetch_mode='fetch_or_fail_reprocess_only')
-    ifm_stat = fetch_or_run_iterative_loop(config, cyclo_mode='stationary', nt_range_snr=nt_range, fetch_mode='fetch_or_fail_reprocess_only')
+    ifm_cyclo = fetch_or_run_iterative_loop(config, cyclo_mode='cyclostationary', nt_range_snr=nt_range, fetch_mode='run_or_fetch_reprocess_only')
+    ifm_stat = fetch_or_run_iterative_loop(config, cyclo_mode='stationary', nt_range_snr=nt_range, fetch_mode='run_or_fetch_reprocess_only')
 
     noise_realization = ifm_stat.noise_manager.get_instrument_realization(white_mode=0)
 

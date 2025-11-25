@@ -28,8 +28,10 @@ if __name__ == '__main__':
     _: Any
     # filename_config = 'default_parameters.toml'
     # filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters_format4.toml'
-    filename_config = 'parameters_default_12year.toml'
-    target_directory = 'Galaxies/GalaxyFullLDC/'
+    # filename_config = 'parameters_default_12year.toml'
+    # target_directory = 'Galaxies/GalaxyFullLDC/'
+    filename_config = 'Galaxies/COSMIC_alpha25/run_default_parameters_cosmic.toml'
+    target_directory = 'Galaxies/COSMIC_alpha25/'
 
     config, wc, lc, ic, instrument_random_seed = config_helper.get_config_objects(filename_config)
     config['files']['galaxy_dir'] = target_directory
@@ -37,10 +39,12 @@ if __name__ == '__main__':
     fs = np.arange(0, wc.Nf) * wc.DF
 
     cyclo_mode = 0
-    idx_use = [0, 1, 3, 7, 11]
-    nt_incr = int(wc.Nt // 24)
-    nt_mins = np.array([nt_incr * 11, nt_incr * 10, nt_incr * 9, nt_incr * 8, nt_incr * 7, nt_incr * 6, nt_incr * 5, nt_incr * 4, nt_incr * 3, nt_incr * 2, nt_incr * 1, nt_incr * 0])[idx_use]
-    nt_maxs = np.array([2 * nt_incr * 1, 2 * nt_incr * 2, 2 * nt_incr * 3, 2 * nt_incr * 4, 2 * nt_incr * 5, 2 * nt_incr * 6, 2 * nt_incr * 7, 2 * nt_incr * 8, 2 * nt_incr * 9, 2 * nt_incr * 10, 2 * nt_incr * 11, 2 * nt_incr * 12])[idx_use] + nt_mins
+    idx_use = [0, 1, 3, 7]
+    nt_incr = int(wc.Nt // 16)
+    nt_mins = np.array([nt_incr * 7, nt_incr * 6, nt_incr * 5, nt_incr * 4, nt_incr * 3, nt_incr * 2, nt_incr * 1, nt_incr * 0])[idx_use]
+    nt_maxs = np.array([2 * nt_incr * 1, 2 * nt_incr * 2, 2 * nt_incr * 3, 2 * nt_incr * 4, 2 * nt_incr * 5, 2 * nt_incr * 6, 2 * nt_incr * 7, 2 * nt_incr * 8])[idx_use] + nt_mins
+    # nt_mins = np.array([nt_incr * 11, nt_incr * 10, nt_incr * 9, nt_incr * 8, nt_incr * 7, nt_incr * 6, nt_incr * 5, nt_incr * 4, nt_incr * 3, nt_incr * 2, nt_incr * 1, nt_incr * 0])[idx_use]
+    # nt_maxs = np.array([2 * nt_incr * 1, 2 * nt_incr * 2, 2 * nt_incr * 3, 2 * nt_incr * 4, 2 * nt_incr * 5, 2 * nt_incr * 6, 2 * nt_incr * 7, 2 * nt_incr * 8, 2 * nt_incr * 9, 2 * nt_incr * 10, 2 * nt_incr * 11, 2 * nt_incr * 12])[idx_use] + nt_mins
 
     nt_ranges = nt_maxs - nt_mins
     nk = nt_maxs.size

@@ -203,9 +203,9 @@ def check_fdot_grid_helper(params_gb: NDArray[np.floating], wc: WDMWaveletConsta
     msg = 'Grid does not cover minimum anticipated source frequency range, may need larger Nf or longer observation time'
     assert_array_compare(np.greater, f_min_need, wc.DF, err_msg=msg)
     msg = 'Interpolation table does not cover all positive frequency derivatives; consider increasing Nfd'
-    # assert_array_compare(np.less, fdot_max_loc, fdot_max_avail, err_msg=msg)
+    assert_array_compare(np.less, fdot_max_loc, fdot_max_avail, err_msg=msg)
     msg = 'Interpolation table does not cover all negative frequency derivatives: consider increasing Nfd and Nfd_negative'
-    # assert_array_compare(np.greater_equal, fdot_min_loc, fdot_min_avail, err_msg=msg)
+    assert_array_compare(np.greater_equal, fdot_min_loc, fdot_min_avail, err_msg=msg)
 
     msg = 'Grid does not cover all positive frequency derivatives; consider decreasing Nf and increasing Nt'
     assert_array_compare(np.less, fdot_max_loc, fdot_max_grid, err_msg=msg)
@@ -213,9 +213,9 @@ def check_fdot_grid_helper(params_gb: NDArray[np.floating], wc: WDMWaveletConsta
     assert_array_compare(np.greater_equal, fdot_min_loc, -fdot_max_grid, err_msg=msg)
 
     msg = 'Need larger Nfd negative to safely cover range of frequency derivatives'
-    # assert_array_compare(np.less_equal, Nfd_negative_safe, wc.Nfd_negative, err_msg=msg)
+    assert_array_compare(np.less_equal, Nfd_negative_safe, wc.Nfd_negative, err_msg=msg)
     msg = 'Need larger Nfd to safely cover range of frequency derivatives'
-    # assert_array_compare(np.less_equal, Nfd_safe, wc.Nfd, err_msg=msg)
+    assert_array_compare(np.less_equal, Nfd_safe, wc.Nfd, err_msg=msg)
 
 
 class BinaryInclusionState(StateManager):
