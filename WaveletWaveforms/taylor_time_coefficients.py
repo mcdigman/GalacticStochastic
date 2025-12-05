@@ -652,7 +652,7 @@ def get_taylor_table_time(
         elif output_mode == 'skip':
             pass
         else:
-            msg = 'unrecognized option for output_mode'
+            msg = f'Unrecognized option for output_mode {output_mode}'
             raise NotImplementedError(msg)
 
     return WaveletTaylorTimeCoeffs(Nfsam, evcs, evss, wavelet_norm)

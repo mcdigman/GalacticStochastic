@@ -35,6 +35,11 @@ class WDMWaveletConstants(NamedTuple):
     n_f_null_extend: int
     taylor_time_interpolation_target_precision: float
     max_freq_tol_time_interpolation: float
+    dtdf: float
+    dtd: float
+    Ntd: int
+    Ntd_negative: int
+    delt: float
 
 
 def get_wavelet_model(config: dict[str, Any], assert_mode: int = 1) -> WDMWaveletConstants:
@@ -59,6 +64,7 @@ def get_wavelet_model(config: dict[str, Any], assert_mode: int = 1) -> WDMWavele
     if mult < 4:
         warn('Mult is unusually small', stacklevel=2)
 
+    # Parameters related to Taylor time interpolation grid
     # number of frequency steps in interpolation table
     Nsf = int(config_wc['Nsf'])
     assert Nsf > 0
@@ -78,7 +84,7 @@ def get_wavelet_model(config: dict[str, Any], assert_mode: int = 1) -> WDMWavele
     if Nfd_negative > Nfd // 2:
         warn('Interpolation table is larger for negative frequencies than positive', stacklevel=2)
 
-    # number of time steps used to compute the interpolation table; must be an integer times mult
+    # number of time steps used to compute the time interpolation table; must be an integer times mult
     Nst = int(config_wc['Nst'])
     assert Nst > 0
 
@@ -86,6 +92,35 @@ def get_wavelet_model(config: dict[str, Any], assert_mode: int = 1) -> WDMWavele
     if dkstep * mult != Nst:
         msg = 'ratio of Nst and mult must be an integer'
         raise ValueError(msg)
+
+    # target precision of taylor time interpolation table
+    taylor_time_interpolation_target_precision: float = float(config_wc.get('taylor_time_interpolation_target_precision', 1.e-3))
+    assert taylor_time_interpolation_target_precision >= 0.
+
+    # tolerance on maximum frequency allowed by the time interpolation grid
+    max_freq_tol_time_interpolation: float = float(config_wc.get('max_freq_tol_time_interpolation', 1.e-5))
+
+    # number of extra time-frequency pixels to allow in the taylor time method to account for nulls
+    # usually not really necessary but should algorithmically guarantee no segfault
+    n_f_null_extend: int = int(config_wc.get('n_f_null_extend', 200))
+    assert n_f_null_extend >= 0
+
+    # Parameters related to Taylor frequency interpolation grid
+
+    # number of time steps used to compute the frequency interpolation table
+    Nsf = int(config_wc.get('Nsf', 80))
+    assert Nsf > 0
+
+    Ntd = int(config_wc.get('Ntd', 50))
+    assert Ntd > 0
+
+    Ntd_negative = int(config_wc.get('Ntd_negative', int(Ntd // 2)))
+    assert Ntd_negative >= 0, 'Number of negative time steps must be non-negative'
+    assert Ntd_negative < Ntd, 'Must be some positive values'
+
+    # Fractional dt/df incremen
+    dtdf = float(config_wc.get('dtdf', 0.0125))
+    assert dtdf > 0.0
 
     # filter steepness of wavelet transform
     nx = float(config_wc['nx'])
@@ -95,18 +130,6 @@ def get_wavelet_model(config: dict[str, Any], assert_mode: int = 1) -> WDMWavele
     L = int(config_wc['L'])
     assert L > 0, 'L must be a positive power of two'
     assert (L & (L - 1)) == 0, 'L must be a power of two'
-
-    # number of extra time-frequency pixels to allow in the taylor time method to account for nulls
-    # usually not really necessary but should algorithmically guarantee no segfault
-    n_f_null_extend: int = int(config_wc.get('n_f_null_extend', 200))
-    assert n_f_null_extend >= 0
-
-    # target precision of taylor time interpolation table
-    taylor_time_interpolation_target_precision: float = float(config_wc.get('taylor_time_interpolation_target_precision', 1.e-3))
-    assert taylor_time_interpolation_target_precision >= 0.
-
-    # tolerance on maximum frequency allowed by the time interpolation grid
-    max_freq_tol_time_interpolation: float = float(config_wc.get('max_freq_tol_time_interpolation', 1.e-5))
 
     # derived constants
 
@@ -167,7 +190,13 @@ def get_wavelet_model(config: dict[str, Any], assert_mode: int = 1) -> WDMWavele
     # step size in FTd
     dfd = DF / Tw * dfdot
 
-    # double check some known relationships between the parameters hold
+    # step size in TFp
+    dtd = dtdf / DF ** 2
+
+    # grid resolution for frequency interpolation grid
+    delt = Tw / (2 * Nst)
+
+    # Verify some known relationships between the parameters hold
     # note that some of these could be allclose, but the tests pass right now
     assert_allclose(DF**2, DF / (2 * DT))
     assert_allclose(B, 2 * A)
@@ -224,4 +253,9 @@ def get_wavelet_model(config: dict[str, Any], assert_mode: int = 1) -> WDMWavele
         n_f_null_extend,
         taylor_time_interpolation_target_precision,
         max_freq_tol_time_interpolation,
+        dtdf,
+        dtd,
+        Ntd,
+        Ntd_negative,
+        delt,
     )
