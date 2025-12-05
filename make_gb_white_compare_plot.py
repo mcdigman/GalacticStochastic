@@ -7,6 +7,7 @@ import numpy as np
 import scipy.ndimage
 import scipy.special
 import scipy.stats
+from numpy.testing import assert_array_equal
 from numpy.typing import NDArray
 
 import GalacticStochastic.global_const as gc
@@ -81,15 +82,20 @@ if __name__ == '__main__':
     # filename_config = 'default_parameters.toml'
     # filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters_format3.toml'
     # filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters_format4.toml'
-    # filename_config = 'parameters_default_12year.toml'
-    # target_directory = 'Galaxies/GalaxyFullLDC/'
-    filename_config = 'Galaxies/COSMIC_alpha25/run_default_parameters_cosmic.toml'
-    target_directory = 'Galaxies/COSMIC_alpha25/'
+    filename_config = 'parameters_default_12year.toml'
+    target_directory = 'Galaxies/GalaxyFullLDC/'
+    # filename_config = 'Galaxies/COSMIC_alpha25/parameters_default_12year.toml'
+    # target_directory = 'Galaxies/COSMIC_alpha25/'
+    # filename_config = 'Galaxies/COSMIC_alpha25/run_default_parameters_cosmic.toml'
+    # target_directory = 'Galaxies/COSMIC_alpha25/'
+    # filename_config = 'Galaxies/FZq3Z/parameters_default_12year.toml'
+    # target_directory = 'Galaxies/FZq3Z/'
 
     config, wc, lc, ic, instrument_random_seed = config_helper.get_config_objects(filename_config)
     config['files']['galaxy_dir'] = target_directory
 
-    nt_incr = int(wc.Nt // 16)
+    nt_incr = int(wc.Nt // 24)
+    assert_array_equal(2 * nt_incr * wc.DT, gc.SECSYEAR)
 
     nt_min = nt_incr * 6
     nt_max = nt_min + 4 * nt_incr

@@ -30,8 +30,14 @@ if __name__ == '__main__':
     # filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters_format4.toml'
     # filename_config = 'parameters_default_12year.toml'
     # target_directory = 'Galaxies/GalaxyFullLDC/'
-    filename_config = 'Galaxies/COSMIC_alpha25/run_default_parameters_cosmic.toml'
+    filename_config = 'Galaxies/COSMIC_alpha25/parameters_default_12year.toml'
     target_directory = 'Galaxies/COSMIC_alpha25/'
+    # filename_config = 'Galaxies/FZq3Z/parameters_default_12year.toml'
+    # target_directory = 'Galaxies/FZq3Z/'
+    # filename_config = 'Galaxies/FZAlpha5/parameters_default_12year.toml'
+    # target_directory = 'Galaxies/FZAlpha5/'
+    # filename_config = 'Galaxies/FZFiducial/parameters_default_12year.toml'
+    # target_directory = 'Galaxies/FZFiducial/'
 
     config, wc, lc, ic, instrument_random_seed = config_helper.get_config_objects(filename_config)
     config['files']['galaxy_dir'] = target_directory
@@ -39,12 +45,12 @@ if __name__ == '__main__':
     fs = np.arange(0, wc.Nf) * wc.DF
 
     cyclo_mode = 0
-    idx_use = [0, 1, 3, 7]
-    nt_incr = int(wc.Nt // 16)
-    nt_mins = np.array([nt_incr * 7, nt_incr * 6, nt_incr * 5, nt_incr * 4, nt_incr * 3, nt_incr * 2, nt_incr * 1, nt_incr * 0])[idx_use]
-    nt_maxs = np.array([2 * nt_incr * 1, 2 * nt_incr * 2, 2 * nt_incr * 3, 2 * nt_incr * 4, 2 * nt_incr * 5, 2 * nt_incr * 6, 2 * nt_incr * 7, 2 * nt_incr * 8])[idx_use] + nt_mins
-    # nt_mins = np.array([nt_incr * 11, nt_incr * 10, nt_incr * 9, nt_incr * 8, nt_incr * 7, nt_incr * 6, nt_incr * 5, nt_incr * 4, nt_incr * 3, nt_incr * 2, nt_incr * 1, nt_incr * 0])[idx_use]
-    # nt_maxs = np.array([2 * nt_incr * 1, 2 * nt_incr * 2, 2 * nt_incr * 3, 2 * nt_incr * 4, 2 * nt_incr * 5, 2 * nt_incr * 6, 2 * nt_incr * 7, 2 * nt_incr * 8, 2 * nt_incr * 9, 2 * nt_incr * 10, 2 * nt_incr * 11, 2 * nt_incr * 12])[idx_use] + nt_mins
+    idx_use = [0, 1, 3, 7, 11]
+    nt_incr = int(wc.Nt // 24)
+    # nt_mins = np.array([nt_incr * 7, nt_incr * 6, nt_incr * 5, nt_incr * 4, nt_incr * 3, nt_incr * 2, nt_incr * 1, nt_incr * 0])[idx_use]
+    # nt_maxs = np.array([2 * nt_incr * 1, 2 * nt_incr * 2, 2 * nt_incr * 3, 2 * nt_incr * 4, 2 * nt_incr * 5, 2 * nt_incr * 6, 2 * nt_incr * 7, 2 * nt_incr * 8])[idx_use] + nt_mins
+    nt_mins = np.array([nt_incr * 11, nt_incr * 10, nt_incr * 9, nt_incr * 8, nt_incr * 7, nt_incr * 6, nt_incr * 5, nt_incr * 4, nt_incr * 3, nt_incr * 2, nt_incr * 1, nt_incr * 0])[idx_use]
+    nt_maxs = np.array([2 * nt_incr * 1, 2 * nt_incr * 2, 2 * nt_incr * 3, 2 * nt_incr * 4, 2 * nt_incr * 5, 2 * nt_incr * 6, 2 * nt_incr * 7, 2 * nt_incr * 8, 2 * nt_incr * 9, 2 * nt_incr * 10, 2 * nt_incr * 11, 2 * nt_incr * 12])[idx_use] + nt_mins
 
     nt_ranges = nt_maxs - nt_mins
     nk = nt_maxs.size
@@ -90,24 +96,50 @@ if __name__ == '__main__':
         S_stat_smooth_m[itrl_fit:, fit_mask, :], fs[fit_mask], fs[1:], nt_ranges[itrl_fit:], S_stat_offset[fit_mask], wc.DT,
     )
 
-    fig = plt.figure(figsize=(5.4, 3.5))
-    ax = fig.subplots(1)
-    fig.subplots_adjust(wspace=0.0, hspace=0.0, left=0.13, top=0.99, right=0.99, bottom=0.12)
-    _ = ax.loglog(
-        fs[1:],
-        wc.dt * (S_stat_smooth_m[:, 1:, :2].mean(axis=2) - S_stat_offset[1:] + S_inst_m[1:, 0]).T,
-        alpha=0.5,
-        label='_nolegend_',
-    )
-    ax.set_prop_cycle(None)
-    _ = ax.loglog(fs[1:], wc.dt * (S_fit_evolve_m[:] + S_inst_m[1:, 0]).T, linewidth=3)
-    ax.set_prop_cycle(None)
-    _ = ax.loglog(fs[1:], wc.dt * (S_inst_m[1:, 0]), 'k--')
-    ax.tick_params(axis='both', direction='in', which='both', top=True, right=True)
-    # _ = plt.ylim([wc.dt * 2.0e-44, wc.dt * 2.0e-43])
-    _ = plt.ylim([1.e-43, 2.0e-39])
-    _ = plt.xlim([3.0e-4, 6.0e-3])
-    _ = plt.xlabel('f [Hz]')
-    _ = plt.ylabel(r'$S^{AE}(f)$ [Hz$^{-1}$]')
-    _ = plt.legend(labels=['1 year', '2 years', '4 years', '8 years'])
-    plt.show()
+fig = plt.figure(figsize=(5.4, 3.5))
+ax = fig.subplots(1)
+fig.subplots_adjust(wspace=0.0, hspace=0.0, left=0.13, top=0.99, right=0.99, bottom=0.12)
+_ = ax.loglog(
+    fs[1:],
+    wc.dt * (S_stat_smooth_m[:, 1:, :2].mean(axis=2) - S_stat_offset[1:] + S_inst_m[1:, 0]).T,
+    alpha=0.5,
+    label='_nolegend_',
+)
+ax.set_prop_cycle(None)
+_ = ax.loglog(fs[1:], wc.dt * (S_fit_evolve_m[:] + S_inst_m[1:, 0]).T, linewidth=3)
+ax.set_prop_cycle(None)
+_ = ax.loglog(fs[1:], wc.dt * (S_inst_m[1:, 0]), 'k--')
+ax.tick_params(axis='both', direction='in', which='both', top=True, right=True)
+# _ = plt.ylim([wc.dt * 2.0e-44, wc.dt * 2.0e-43])
+_ = plt.ylim([1.e-43, 2.0e-39])
+_ = plt.xlim([3.0e-4, 6.0e-3])
+_ = plt.xlabel('f [Hz]')
+_ = plt.ylabel(r'$S^{AE}(f)$ [Hz$^{-1}$]')
+_ = plt.legend(labels=['1 year', '2 years', '4 years', '8 years'])
+plt.show()
+
+# fig = plt.figure(figsize=(5.4, 3.5))
+# ax = fig.subplots(1)
+# fig.subplots_adjust(wspace=0.0, hspace=0.0, left=0.13, top=0.99, right=0.99, bottom=0.12)
+# _ = ax.loglog(
+#    fs[1:],
+#    np.sqrt(wc.dt * (S_stat_smooth_m[:, 1:, :2].mean(axis=2) - S_stat_offset[1:] + S_inst_m[1:, 0]).T),
+#    alpha=0.5,
+#    label='_nolegend_',
+# )
+# ax.set_prop_cycle(None)
+# _ = ax.loglog(fs[1:], np.sqrt(wc.dt * (S_fit_evolve_m[:] + S_inst_m[1:, 0]).T), linewidth=3)
+# ax.set_prop_cycle(None)
+# _ = ax.loglog(fs[1:], np.sqrt(wc.dt * (S_inst_m[1:, 0])), 'k--')
+# ax.set_prop_cycle(None)
+# _ = ax.scatter(ifm.bis.params_gb[ifm.bis.get_bright()[ifm.bis._argbinmap]][:, 3], ifm.bis.params_gb[ifm.bis.get_bright()[ifm.bis._argbinmap]][:, 0])
+# _ = ax.scatter(ifm.bis.params_gb[~ifm.bis.get_bright()[ifm.bis._argbinmap]][:, 3], ifm.bis.params_gb[~ifm.bis.get_bright()[ifm.bis._argbinmap]][:, 0])
+# ax.loglog(fs[1:], np.sqrt(np.mean(np.sum(ifm.noise_manager.bgd.get_galactic_total(shape_mode=1)[:, 1:, 0:2]**2, axis=2), axis=0)))
+# ax.tick_params(axis='both', direction='in', which='both', top=True, right=True)
+# _ = plt.ylim([wc.dt * 2.0e-44, wc.dt * 2.0e-43])
+# _ = plt.ylim([1.e-43, 2.0e-39])
+# _ = plt.xlim([1.0e-4, 6.0e-3])
+# _ = plt.xlabel('f [Hz]')
+# _ = plt.ylabel(r'$S^{AE}(f)$ [Hz$^{-1}$]')
+# _ = plt.legend(labels=['1 year', '2 years', '4 years', '8 years'])
+# plt.show()

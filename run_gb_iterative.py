@@ -7,15 +7,17 @@ from GalacticStochastic.iterative_fit import fetch_or_run_iterative_loop
 if __name__ == '__main__':
     # config_filename = 'default_parameters.toml'
     # config_filename = 'Galaxies/GalaxyNarrow/run_old_parameters4.toml'
-    filename_config = 'parameters_default_12year.toml'
-    target_directory = 'Galaxies/GalaxyFullLDC/'
+    filename_config = 'Galaxies/COSMIC_alpha25/parameters_default_12year.toml'
+    # target_directory = 'Galaxies/GalaxyFullLDC/'
+    target_directory = 'Galaxies/COSMIC_alpha25/'
 
     config, wc, lc, ic, instrument_random_seed = config_helper.get_config_objects(filename_config)
     config['files']['galaxy_dir'] = target_directory
     cyclo_mode = 'stationary'
     # ifm = fetch_or_run_iterative_loop(config, cyclo_mode=cyclo_mode, fetch_mode=2, output_mode=1, preprocess_mode=1)
     # ifm = fetch_or_run_iterative_loop(config, cyclo_mode=cyclo_mode, fetch_mode=0, output_mode=1, preprocess_mode=0)
-    ifm = fetch_or_run_iterative_loop(config, cyclo_mode=cyclo_mode, fetch_mode='run_reprocess_only', output_mode='no_store', preprocess_mode=0)
+    # ifm = fetch_or_run_iterative_loop(config, cyclo_mode=cyclo_mode, fetch_mode='run_reprocess_only', output_mode='no_store', preprocess_mode=0)
+    ifm = fetch_or_run_iterative_loop(config, cyclo_mode=cyclo_mode, fetch_mode='fetch_or_run_all', output_mode='store_if_new', preprocess_mode=0)
     # ifm_alt1 = fetch_or_run_iterative_loop(config, cyclo_mode=cyclo_mode, fetch_mode=1, output_mode=1)
     # ifm_alt2 = fetch_or_run_iterative_loop(config, cyclo_mode=cyclo_mode, fetch_mode=2, output_mode=1)
     # ifm_alt3 = fetch_or_run_iterative_loop(config, cyclo_mode=cyclo_mode, fetch_mode=3, output_mode=1)
