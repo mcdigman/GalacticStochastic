@@ -104,7 +104,7 @@ def get_lisa_constants(config: dict[str, Any]) -> LISAConstants:
     # Rise time for antenna pattern in frequency domain
     t_rise = float(config_lc.get('t_rise', 0.0))
 
-    assert t_rise == 0.0, 'Some methods may not support nonzero t_rise'
+    # assert t_rise == 0.0, 'Some methods may not support nonzero t_rise'
 
     # Mode to use for rise time calculation
     rise_mode = int(config_lc.get('rise_mode', 3))

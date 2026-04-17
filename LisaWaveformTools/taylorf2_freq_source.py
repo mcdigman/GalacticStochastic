@@ -74,7 +74,8 @@ class TaylorF2WaveformFreq(StationarySourceWaveformFreq[BinaryIntrinsicParams, E
 
         # TODO proper selectable waveform model everywhere it is used
 
-        self.TTRef: float = taylorf2_intrinsic_freq(self._intrinsic_waveform, self.params.intrinsic, self.nf_lim, model_select=self.model_select, amplitude_pn_mode=self.amplitude_pn_mode, include_pn_ss3=self.include_pn_ss3, tc_mode=self.tc_mode, t_offset=tc)
+        # need to get absolute limits if bounds could be updated
+        self.TTRef: float = taylorf2_intrinsic_freq(self._intrinsic_waveform, self.params.intrinsic, self.nf_lim_absolute, model_select=self.model_select, amplitude_pn_mode=self.amplitude_pn_mode, include_pn_ss3=self.include_pn_ss3, tc_mode=self.tc_mode, t_offset=tc)
         itrFCut_new = self.itrFCut
         # TODO set itrFCut_new if we need it
 

@@ -61,7 +61,7 @@ def linear_frequency_intrinsic_freq(
             - 2 * np.pi * intrinsic_params.F0 / intrinsic_params.FTd0 * f
             + np.pi / intrinsic_params.FTd0 * f**2
         )
-        AF[n] = intrinsic_params.amp0_t / np.sqrt(intrinsic_params.FTd0)
+        AF[n] = intrinsic_params.amp0_t / np.sqrt(np.abs(intrinsic_params.FTd0))
 
 
 # TODO do consistency checks

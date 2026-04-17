@@ -171,12 +171,15 @@ class StationarySourceWaveformFreq(
         # TODO need to handle bounds edge correctly
         nf_lim_old = self.nf_lim
         itrFCutOld = min(self.itrFCut + nf_lim_old.nx_min, self.NF)
+        print('0', nf_lim_old.nx_min)
 
         nf_low = int(
             np.searchsorted(self.intrinsic_waveform.TF[:itrFCutOld], self._lc.t0 - self._lc.t_rise, side='right')
             - self._n_pad_F
         )
+        print('1', nf_low)
         nf_low = max(0, nf_low)
+        print('2', nf_low)
         # TODO need to recalculate subtraction if Nf old breaks
         # TODO is this the right trap??? Why is the subtraction even needed?
         if self.itrFCut + nf_low < self.NF:
@@ -200,6 +203,7 @@ class StationarySourceWaveformFreq(
         nf_high = min(nf_high, self.NF)
 
         # enforce cleanup of values that will not be reset
+        # do not clean up intrinsic parameters that are used to calculate the cutoff
         if nf_lim_old.nx_max > nf_high:
             # TODO this manipulation of kdotx should only happen if it is a private variable
             self.kdotx[nf_high: nf_lim_old.nx_max] = 0.0

@@ -1,5 +1,4 @@
-"""Unit tests for get_time_tdi_amp_phase.
-There is also some incidental/partial coverage of wavemaket.
+"""Unit tests for wavemaket.
 """
 
 from pathlib import Path
@@ -203,10 +202,10 @@ def get_wavelet_alternative_representation_helper(
     angle_got[itr_high_cut:] = 0.0
 
     # unwrap the fft phases by 2 pi
-    angle_got = np.unwrap(angle_got, axis=0)
+    # angle_got = np.unwrap(angle_got, axis=0)
 
     # standardize the factors of 2 pi to the predicted peak frequency
-    angle_got -= angle_got[arg_peak] - angle_got[arg_peak] % (2 * np.pi)
+    # angle_got -= angle_got[arg_peak] - angle_got[arg_peak] % (2 * np.pi)
 
     return (
         wavelet_dense,

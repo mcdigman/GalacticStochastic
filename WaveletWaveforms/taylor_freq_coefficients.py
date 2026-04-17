@@ -83,6 +83,81 @@ def get_taylor_table_freq_helper(wavelet_norm: NDArray[np.floating], wc: WDMWave
     return evcs, evss
 
 
+def get_taylor_freq_pixel_direct_alt(
+        tf: float, tfp: float, kx: int, wavelet_norm: NDArray[np.floating], wc: WDMWaveletConstants) -> tuple[float, float, float, float]:
+    Np = np.int64(wc.BW * wc.Tobs) + 1
+
+    evc_mid: float = 0.
+    evs_mid: float = 0.
+    evc2_mid: float = 0.
+    evs2_mid: float = 0.
+
+    assert wavelet_norm.size == Np
+
+    # TODO this seems like it should be offset based on ii, not based on kx
+    for k in range(Np):
+        delta_f_loc = (-wc.BW / 2. + k / wc.Tobs)
+        z_prod = (tf - kx * wc.DT) * delta_f_loc
+        z_quads = 1. / 2. * tfp * delta_f_loc**2
+        z_mid = 2 * np.pi * (z_prod + z_quads)
+        evc_mid += np.cos(z_mid) * wavelet_norm[k]
+        evs_mid += np.sin(z_mid) * wavelet_norm[k]
+        evc2_mid += delta_f_loc * np.cos(z_mid) * wavelet_norm[k]
+        evs2_mid += delta_f_loc * np.sin(z_mid) * wavelet_norm[k]
+
+    # evc_mid = np.dot(np.cos(z_mid), wavelet_norm)
+    # evs_mid = np.dot(np.sin(z_mid), wavelet_norm)
+    # for k in range(Np):
+    #    fm = 0.
+    #    #f = wc.delt / wc.Tobs * k - wc.BW/2
+    #    f = (-wc.BW / 2. + 1. / wc.Tobs * k)
+    #    z_mid = 2*np.pi*(f-fm)*tf + np.pi*(f-fm)**2*tfp
+    #    evc_mid += np.cos(z_mid)*wavelet_norm[k]
+    #    evs_mid += np.sin(z_mid)*wavelet_norm[k]
+
+    assert evc_mid != 0.0
+    assert evs_mid != 0.0
+    return evc_mid, evs_mid, evc2_mid, evs2_mid
+
+
+def get_taylor_freq_pixel_direct(
+        tf: float, tfp: float, kx: int, wavelet_norm: NDArray[np.floating], wc: WDMWaveletConstants) -> tuple[float, float]:
+    Np = np.int64(wc.BW * wc.Tobs) + 1
+
+    evc_mid: float = 0.
+    evs_mid: float = 0.
+
+    assert wavelet_norm.size == Np
+    # import matplotlib.pyplot as plt
+    # plt.plot(np.arange(0,Np) / wc.Tobs, wavelet_norm)
+    # plt.show()
+    # import sys
+    # sys.exit()
+
+    # TODO this seems like it should be offset based on ii, not based on kx
+    for k in range(Np):
+        delta_f_loc = (-wc.BW / 2. + k / wc.Tobs)
+        z_prod = (tf - kx * wc.DT) * delta_f_loc
+        z_quads = 1. / 2. * tfp * delta_f_loc**2
+        z_mid = 2 * np.pi * (z_prod + z_quads)
+        evc_mid += np.cos(z_mid) * wavelet_norm[k]
+        evs_mid += np.sin(z_mid) * wavelet_norm[k]
+
+    # evc_mid = np.dot(np.cos(z_mid), wavelet_norm)
+    # evs_mid = np.dot(np.sin(z_mid), wavelet_norm)
+    # for k in range(Np):
+    #    fm = 0.
+    #    #f = wc.delt / wc.Tobs * k - wc.BW/2
+    #    f = (-wc.BW / 2. + 1. / wc.Tobs * k)
+    #    z_mid = 2*np.pi*(f-fm)*tf + np.pi*(f-fm)**2*tfp
+    #    evc_mid += np.cos(z_mid)*wavelet_norm[k]
+    #    evs_mid += np.sin(z_mid)*wavelet_norm[k]
+
+    assert evc_mid != 0.0
+    assert evs_mid != 0.0
+    return evc_mid, evs_mid
+
+
 def get_taylor_table_freq(
     wc: WDMWaveletConstants,
     *,

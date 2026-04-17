@@ -99,6 +99,7 @@ def spacecraft_channel_deriv_helper(spacecraft_channels: AntennaResponseChannels
     gradient_uniform_inplace(spacecraft_channels.II, spacecraft_channels.dII, dx)
 
 
+# TODO move edge rise model parameters to er
 @njit(fastmath=True)
 def edge_rise_multiplier_helper(t: float, er: EdgeRiseModel, lc: LISAConstants) -> float:
     """Apply the edge rise model to the amplitude of a waveform."""
@@ -111,7 +112,11 @@ def edge_rise_multiplier_helper(t: float, er: EdgeRiseModel, lc: LISAConstants) 
             x = 0.5 * (1.0 - np.cos(np.pi * (t - t_start) / t_rise))
         if (t_end - t_rise) < t < t_end:
             x = 0.5 * (1.0 - np.cos(np.pi * (t - t_end) / t_rise))
-    elif lc.rise_mode == 0:
+        if t >= t_end:
+            x = 0.0
+        if t <= t_start:
+            x = 0.0
+    elif lc.rise_mode == 1:
         if t > t_end:
             x = 0.0
         if t < t_start:

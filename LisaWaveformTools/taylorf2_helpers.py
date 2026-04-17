@@ -89,7 +89,144 @@ def TaylorF2_inplace(intrinsic_waveform: StationaryWaveformFreq, params_intrinsi
 
 
 @njit()
-def TaylorF2_eccentric_inplace(intrinsic_waveform: StationaryWaveformFreq, params_intrinsic: BinaryIntrinsicParams, nf_lim: PixelGenericRange, amplitude_pn_mode: int = 0, t_offset: float = 0., tc_mode: int = 0) -> float:
+def TaylorF2_eccentricity_solve(params_intrinsic: BinaryIntrinsicParams, f_i2: float) -> float:
+    """Get an inferred eccentricity at a later frequency based on the taylorf2 eccentricity model."""
+    e01 = params_intrinsic.eccentricity_i
+    Mt = params_intrinsic.mass_total_detector_sec
+    f_i = params_intrinsic.frequency_i_hz
+    eta = params_intrinsic.symmetric_mass_ratio
+    # note that psi_i and psi_ref are slightly different from the no eccentricity case, but it seems to just be a convention that cancels in the results
+    # see cutler 1998 for fisher analytics
+    # see arXiv : 2001.11412 v1.pdf
+    # TODO write tests for self consistency and consistency with other waveform models
+    assert f_i > 0.0
+    assert f_i2 > 0.0
+
+    nu_i1: float = float((np.pi * Mt * f_i)**(1 / 3))
+    nu_i2: float = float((np.pi * Mt * f_i2)**(1 / 3))
+
+    y0 = -(2355 / 1462) * e01**2
+    y01 = (299076223 / 81976608) + (18766963 / 2927736) * eta
+    y02 = -(2819123 / 282600) * np.pi
+    y03 = (16237683263 / 3330429696) \
+            + (24133060753 / 971375328) * eta \
+            + (1562608261 / 69383952) * eta**2
+    y04 = -((2831492681 / 118395270) + (11552066831 / 270617760) * eta) * np.pi
+    y05: float = float(-(43603153867072577087 / 132658535116800000)
+            + (536803271 / 19782000) * GAMMA
+            + (15722503703 / 325555200) * np.pi**2
+            + ((299172861614477 / 689135247360) - (15075413 / 1446912) * np.pi**2) * eta
+            + (3455209264991 / 41019955200) * eta**2
+            + (50612671711 / 878999040) * eta**3
+            + (3843505163 / 59346000) * np.log(2)
+            - (1121397129 / 17584000) * np.log(3))
+    y10 = (2833 / 1008) - (197 / 36) * eta
+    y20 = (377 / 72) * np.pi
+    y30 = -(1193251 / 3048192) - (66317 / 9072) * eta + (18155 / 1296) * eta**2
+    y40 = ((764881 / 90720) - (949457 / 22680) * eta) * np.pi
+    y50: float = float((26531900578691 / 168991764480)
+        - (3317 / 126) * GAMMA
+        + (122833 / 10368) * np.pi**2
+        + ((9155185261 / 548674560) - (3977 / 1152) * np.pi**2) * eta
+        - (5732473 / 1306368) * eta**2
+        - (3090307 / 139968) * eta**3
+        + (87419 / 1890) * np.log(2)
+        - (26001 / 560) * np.log(3))
+    y11 = (847282939759 / 82632420864) \
+            - (718901219 / 368894736) * eta \
+            - (3697091711 / 105398496) * eta**2
+    y12 = (-(7986575459 / 284860800) + (555367231 / 10173600) * eta) * np.pi
+    y21 = ((112751736071 / 5902315776) + (7075145051 / 210796992) * eta) * np.pi
+    y13 = (46001356684079 / 3357073133568) \
+            + (253471410141755 / 5874877983744) * eta \
+            - (1693852244423 / 23313007872) * eta**2 \
+            - (307833827417 / 2497822272) * eta**3
+    y31 = -(356873002170973 / 249880440692736) \
+           - (260399751935005 / 8924301453312) * eta \
+           + (150484695827 / 35413894656) * eta**2 \
+           + (340714213265 / 3794345856) * eta**3
+    y22 = -(1062809371 / 20347200) * np.pi**2
+
+    dy0 = 34 / 15 * y0
+
+    dy10 = y10
+    dy20 = y20
+    dy30 = y30
+    dy40 = y40
+    dy50 = y50
+    dy01 = 28 / 34 * y01
+    dy11 = 28 / 34 * y11
+    dy21 = 28 / 34 * y21
+    dy31 = 28 / 34 * y31
+    dy02 = 25 / 34 * y02
+    dy12 = 25 / 34 * y12
+    dy22 = 25 / 34 * y22
+    dy03 = 22 / 34 * y03
+    dy13 = 22 / 34 * y13
+    dy04 = 19 / 34 * y04
+    dy05 = 16 / 34 * y05
+    ddy0 = 43 / 24 * dy0
+
+    ddy01 = 37 / 43 * dy01
+    ddy02 = 34 / 43 * dy02
+    ddy03 = 31 / 43 * dy03
+    ddy04 = 28 / 43 * dy04
+    ddy05 = 25 / 43 * dy05
+    ddy11 = 37 / 43 * dy11
+    ddy21 = 37 / 43 * dy21
+    ddy31 = 37 / 43 * dy31
+    ddy12 = 34 / 43 * dy12
+    ddy22 = 34 / 43 * dy22
+    ddy13 = 31 / 43 * dy13
+    ddy10 = dy10
+    ddy20 = dy20
+    ddy30 = dy30
+    ddy40 = dy40
+    ddy50 = dy50
+
+    ddy0_derived: float = float(ddy0 * (nu_i1 / nu_i2)**(19 / 3) *
+          (
+            1
+            + ddy10 * nu_i1**2
+            + ddy20 * nu_i1**3
+            + ddy30 * nu_i1**4
+            + ddy40 * nu_i1**5
+            + ddy50 * nu_i1**6
+            - (3317 * nu_i1**6 * np.log(4 * nu_i1)) / 126
+            + ddy01 * nu_i2**2
+            + ddy02 * nu_i2**3
+            + ddy03 * nu_i2**4
+            + ddy04 * nu_i2**5
+            - (30107981 * nu_i2**6) / 13188000 + ddy05 * nu_i2**6 + (734341 * nu_i2**6 * np.log(4 * nu_i2)) / 98910
+            + ddy11 * nu_i1**2 * nu_i2**2
+            + ddy21 * nu_i1**3 * nu_i2**2
+            + ddy31 * nu_i1**4 * nu_i2**2
+            + ddy12 * nu_i1**2 * nu_i2**3
+            + ddy22 * nu_i1**3 * nu_i2**3
+            + ddy13 * nu_i1**2 * nu_i2**4
+          )
+        /
+          (
+            1
+            + ddy01 * nu_i2**2
+            + ddy10 * nu_i2**2
+            + ddy02 * nu_i2**3
+            + ddy20 * nu_i2**3
+            + ddy03 * nu_i2**4
+            + ddy11 * nu_i2**4
+            + ddy30 * nu_i2**4
+            + ddy04 * nu_i2**5
+            + ddy12 * nu_i2**5
+            + ddy21 * nu_i2**5
+            + ddy40 * nu_i2**5
+            - (30107981 * nu_i2**6) / 13188000 + ddy05 * nu_i2**6 + ddy13 * nu_i2**6 + ddy22 * nu_i2**6 + ddy31 * nu_i2**6 + ddy50 * nu_i2**6 - (44512 * nu_i2**6 * np.log(4 * nu_i2)) / 2355
+          ))
+
+    return float(np.sqrt(-24 / 157 * ddy0_derived))
+
+
+@njit()
+def TaylorF2_eccentric_inplace(intrinsic_waveform: StationaryWaveformFreq, params_intrinsic: BinaryIntrinsicParams, nf_lim: PixelGenericRange, amplitude_pn_mode: int = 0, t_offset: float = 0., tc_mode: int = 0, ecc_max: float = 0.3) -> float:
     """Compute TaylorF2 model with eccentricity but no spin.
 
     From DOI: 10.1103/PhysRevD.93.124061
@@ -355,144 +492,15 @@ def TaylorF2_eccentric_inplace(intrinsic_waveform: StationaryWaveformFreq, param
         else:
             AS[n] = a0 * (FS[n]**(-7 / 6) + (9 / 40 * np.pi**(2 / 3)) * (Mt**(2 / 3) * c1) * FS[n]**(-1 / 2) + np.pi / 8 * (Mt * c2) * FS[n]**(-1 / 6))
 
+        # TODO improve trap to try prevent nonsense values at early times where model's eccentricity could be unphysical
+        e0n = TaylorF2_eccentricity_solve(params_intrinsic, FS[n])
+        if e0n >= ecc_max or not np.isfinite(e0n):
+            AS[n] = 0.0
+            TS[n] = -np.inf
+            PSI[n] = -np.inf
+            TPS[n] = np.inf
+
     return float(TTRef)
-
-
-@njit()
-def TaylorF2_eccentricity_solve(params_intrinsic: BinaryIntrinsicParams, f_i2: float) -> float:
-    """Get an inferred eccentricity at a later frequency based on the taylorf2 eccentricity model."""
-    e01 = params_intrinsic.eccentricity_i
-    Mt = params_intrinsic.mass_total_detector_sec
-    f_i = params_intrinsic.frequency_i_hz
-    eta = params_intrinsic.symmetric_mass_ratio
-    # note that psi_i and psi_ref are slightly different from the no eccentricity case, but it seems to just be a convention that cancels in the results
-    # see cutler 1998 for fisher analytics
-    # see arXiv : 2001.11412 v1.pdf
-    # TODO write tests for self consistency and consistency with other waveform models
-    assert f_i > 0.0
-    assert f_i2 > 0.0
-
-    nu_i1: float = float((np.pi * Mt * f_i)**(1 / 3))
-    nu_i2: float = float((np.pi * Mt * f_i2)**(1 / 3))
-
-    y0 = -(2355 / 1462) * e01**2
-    y01 = (299076223 / 81976608) + (18766963 / 2927736) * eta
-    y02 = -(2819123 / 282600) * np.pi
-    y03 = (16237683263 / 3330429696) \
-            + (24133060753 / 971375328) * eta \
-            + (1562608261 / 69383952) * eta**2
-    y04 = -((2831492681 / 118395270) + (11552066831 / 270617760) * eta) * np.pi
-    y05: float = float(-(43603153867072577087 / 132658535116800000)
-            + (536803271 / 19782000) * GAMMA
-            + (15722503703 / 325555200) * np.pi**2
-            + ((299172861614477 / 689135247360) - (15075413 / 1446912) * np.pi**2) * eta
-            + (3455209264991 / 41019955200) * eta**2
-            + (50612671711 / 878999040) * eta**3
-            + (3843505163 / 59346000) * np.log(2)
-            - (1121397129 / 17584000) * np.log(3))
-    y10 = (2833 / 1008) - (197 / 36) * eta
-    y20 = (377 / 72) * np.pi
-    y30 = -(1193251 / 3048192) - (66317 / 9072) * eta + (18155 / 1296) * eta**2
-    y40 = ((764881 / 90720) - (949457 / 22680) * eta) * np.pi
-    y50: float = float((26531900578691 / 168991764480)
-        - (3317 / 126) * GAMMA
-        + (122833 / 10368) * np.pi**2
-        + ((9155185261 / 548674560) - (3977 / 1152) * np.pi**2) * eta
-        - (5732473 / 1306368) * eta**2
-        - (3090307 / 139968) * eta**3
-        + (87419 / 1890) * np.log(2)
-        - (26001 / 560) * np.log(3))
-    y11 = (847282939759 / 82632420864) \
-            - (718901219 / 368894736) * eta \
-            - (3697091711 / 105398496) * eta**2
-    y12 = (-(7986575459 / 284860800) + (555367231 / 10173600) * eta) * np.pi
-    y21 = ((112751736071 / 5902315776) + (7075145051 / 210796992) * eta) * np.pi
-    y13 = (46001356684079 / 3357073133568) \
-            + (253471410141755 / 5874877983744) * eta \
-            - (1693852244423 / 23313007872) * eta**2 \
-            - (307833827417 / 2497822272) * eta**3
-    y31 = -(356873002170973 / 249880440692736) \
-           - (260399751935005 / 8924301453312) * eta \
-           + (150484695827 / 35413894656) * eta**2 \
-           + (340714213265 / 3794345856) * eta**3
-    y22 = -(1062809371 / 20347200) * np.pi**2
-
-    dy0 = 34 / 15 * y0
-
-    dy10 = y10
-    dy20 = y20
-    dy30 = y30
-    dy40 = y40
-    dy50 = y50
-    dy01 = 28 / 34 * y01
-    dy11 = 28 / 34 * y11
-    dy21 = 28 / 34 * y21
-    dy31 = 28 / 34 * y31
-    dy02 = 25 / 34 * y02
-    dy12 = 25 / 34 * y12
-    dy22 = 25 / 34 * y22
-    dy03 = 22 / 34 * y03
-    dy13 = 22 / 34 * y13
-    dy04 = 19 / 34 * y04
-    dy05 = 16 / 34 * y05
-    ddy0 = 43 / 24 * dy0
-
-    ddy01 = 37 / 43 * dy01
-    ddy02 = 34 / 43 * dy02
-    ddy03 = 31 / 43 * dy03
-    ddy04 = 28 / 43 * dy04
-    ddy05 = 25 / 43 * dy05
-    ddy11 = 37 / 43 * dy11
-    ddy21 = 37 / 43 * dy21
-    ddy31 = 37 / 43 * dy31
-    ddy12 = 34 / 43 * dy12
-    ddy22 = 34 / 43 * dy22
-    ddy13 = 31 / 43 * dy13
-    ddy10 = dy10
-    ddy20 = dy20
-    ddy30 = dy30
-    ddy40 = dy40
-    ddy50 = dy50
-
-    ddy0_derived: float = float(ddy0 * (nu_i1 / nu_i2)**(19 / 3) *
-          (
-            1
-            + ddy10 * nu_i1**2
-            + ddy20 * nu_i1**3
-            + ddy30 * nu_i1**4
-            + ddy40 * nu_i1**5
-            + ddy50 * nu_i1**6
-            - (3317 * nu_i1**6 * np.log(4 * nu_i1)) / 126
-            + ddy01 * nu_i2**2
-            + ddy02 * nu_i2**3
-            + ddy03 * nu_i2**4
-            + ddy04 * nu_i2**5
-            - (30107981 * nu_i2**6) / 13188000 + ddy05 * nu_i2**6 + (734341 * nu_i2**6 * np.log(4 * nu_i2)) / 98910
-            + ddy11 * nu_i1**2 * nu_i2**2
-            + ddy21 * nu_i1**3 * nu_i2**2
-            + ddy31 * nu_i1**4 * nu_i2**2
-            + ddy12 * nu_i1**2 * nu_i2**3
-            + ddy22 * nu_i1**3 * nu_i2**3
-            + ddy13 * nu_i1**2 * nu_i2**4
-          )
-        /
-          (
-            1
-            + ddy01 * nu_i2**2
-            + ddy10 * nu_i2**2
-            + ddy02 * nu_i2**3
-            + ddy20 * nu_i2**3
-            + ddy03 * nu_i2**4
-            + ddy11 * nu_i2**4
-            + ddy30 * nu_i2**4
-            + ddy04 * nu_i2**5
-            + ddy12 * nu_i2**5
-            + ddy21 * nu_i2**5
-            + ddy40 * nu_i2**5
-            - (30107981 * nu_i2**6) / 13188000 + ddy05 * nu_i2**6 + ddy13 * nu_i2**6 + ddy22 * nu_i2**6 + ddy31 * nu_i2**6 + ddy50 * nu_i2**6 - (44512 * nu_i2**6 * np.log(4 * nu_i2)) / 2355
-          ))
-
-    return float(np.sqrt(-24 / 157 * ddy0_derived))
 
 
 @njit()

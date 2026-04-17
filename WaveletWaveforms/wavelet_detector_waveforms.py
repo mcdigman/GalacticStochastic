@@ -10,6 +10,7 @@ from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.source_params import ExtrinsicParamsType, IntrinsicParamsType, SourceParams
 from LisaWaveformTools.stationary_source_waveform import (
     StationarySourceWaveform,
+    StationaryWaveformFreq,
     StationaryWaveformTime,
     StationaryWaveformType,
 )
@@ -20,6 +21,12 @@ from WaveletWaveforms.sparse_wavelet_time import (
     get_sparse_table_helper,
     make_sparse_wavelet_time,
 )
+from WaveletWaveforms.taylor_freq_coefficients import (
+    WaveletTaylorFreqCoeffs,
+    get_empty_sparse_taylor_freq_waveform,
+    get_taylor_table_freq,
+)
+from WaveletWaveforms.taylor_freq_wavelet_funcs import wavemakef, wavemakef_direct
 from WaveletWaveforms.taylor_time_coefficients import (
     WaveletTaylorTimeCoeffs,
     get_empty_sparse_taylor_time_waveform,
@@ -179,6 +186,118 @@ class SparseWaveletSourceWaveform(Generic[StationaryWaveformType, IntrinsicParam
 
         """
         return self._consistent and self.consistent_source
+
+
+class BinaryWaveletTaylorFreq(
+    SparseWaveletSourceWaveform[StationaryWaveformFreq, IntrinsicParamsType, ExtrinsicParamsType]
+):
+    """Store a sparse binary wavelet for a frequency domain taylor waveform."""
+
+    def __init__(
+        self,
+        params: SourceParams,
+        wc: WDMWaveletConstants,
+        lc: LISAConstants,
+        nt_lim_waveform: PixelGenericRange,
+        nf_lim_waveform: PixelGenericRange,
+        source_waveform: StationarySourceWaveform[StationaryWaveformFreq, IntrinsicParamsType, ExtrinsicParamsType],
+        *,
+        wavelet_mode: int = 1,
+        storage_mode: int = 0,
+        table_cache_mode: str = 'check',
+        table_output_mode: str = 'skip',
+        assert_mode: int = 0,
+    ) -> None:
+        """Construct a sparse binary wavelet for a frequency domain taylor intrinsic_waveform with interpolation."""
+        if storage_mode not in (0, 1):
+            msg = 'Unrecognized option for storage_mode'
+            raise ValueError(msg)
+
+        self._wc: WDMWaveletConstants = wc
+        self._lc: LISAConstants = lc
+        self._nt_lim_waveform: PixelGenericRange = nt_lim_waveform
+        self._nf_lim_waveform: PixelGenericRange = nf_lim_waveform
+        self._wavelet_mode: int = wavelet_mode
+        self._table_cache_mode: str = table_cache_mode
+        self._table_output_mode: str = table_output_mode
+
+        # get a blank wavelet intrinsic_waveform with the correct size for the sparse taylor frequency method
+        # when consistent is set to True, it will be the correct intrinsic_waveform
+        wavelet_waveform_loc: SparseWaveletWaveform = get_empty_sparse_taylor_freq_waveform(
+            int(self._lc.nc_waveform), wc
+        )
+
+        # interpolation for wavelet taylor expansion
+        # TODO need better way of setting whether cache is checked, whether to output, and whether to store in hdf5
+        self._taylor_freq_table: WaveletTaylorFreqCoeffs = get_taylor_table_freq(
+            self._wc,
+            cache_mode=self._table_cache_mode,
+            output_mode=self._table_output_mode,
+            assert_mode=assert_mode,
+        )
+
+        self._storage_mode: int = storage_mode
+
+        super().__init__(params, wavelet_waveform_loc, source_waveform)
+
+    @override
+    def store_hdf5(self, hf_in: h5py.Group, *, group_name: str = 'wavelet_waveform', group_mode: int = 0) -> h5py.Group:
+        hf_wavelet = super().store_hdf5(hf_in, group_name=group_name, group_mode=group_mode)
+
+        hf_wavelet.attrs['wavelet_mode'] = self._wavelet_mode
+        hf_wavelet.attrs['storage_mode'] = self._storage_mode
+        hf_wavelet.attrs['table_cache_mode'] = self._table_cache_mode
+        hf_wavelet.attrs['table_output_mode'] = self._table_output_mode
+        hf_wavelet.attrs['taylor_freq_table_name'] = self._taylor_freq_table.__class__.__name__
+
+        if self._storage_mode == 0:
+            _ = hf_wavelet.create_dataset('Nfsam', data=self._taylor_freq_table.Nfsam, compression='gzip')
+            _ = hf_wavelet.create_dataset('evc', data=self._taylor_freq_table.evc, compression='gzip')
+            _ = hf_wavelet.create_dataset('evs', data=self._taylor_freq_table.evs, compression='gzip')
+            _ = hf_wavelet.create_dataset('wavelet_norm', data=self._taylor_freq_table.wavelet_norm, compression='gzip')
+
+        hf_wavelet.attrs['nt_lim_name'] = self._nt_lim_waveform.__class__.__name__
+        hf_nt = hf_wavelet.create_group('nt_lim_waveform')
+        for key in self._nt_lim_waveform._fields:
+            hf_nt.attrs[key] = getattr(self._nt_lim_waveform, key)
+
+        hf_wavelet.attrs['wc_name'] = self._wc.__class__.__name__
+        hf_wc = hf_wavelet.create_group('wc')
+        for key in self._wc._fields:
+            hf_wc.attrs[key] = getattr(self._wc, key)
+
+        hf_lc = hf_wavelet.create_group('lc')
+        hf_wavelet.attrs['lc_name'] = self._lc.__class__.__name__
+        for key in self._lc._fields:
+            hf_lc.attrs[key] = getattr(self._lc, key)
+        return hf_wavelet
+
+    @override
+    def _update_wavelet_waveform(self) -> None:
+        """Update the wavelet intrinsic_waveform to match the current parameters."""
+        if self._wavelet_mode == 0:
+            wavemakef_direct(
+                self._wavelet_waveform,
+                self.source_waveform.tdi_waveform,
+                self._nt_lim_waveform,
+                self._nf_lim_waveform,
+                self._wc,
+                self._taylor_freq_table,
+            )
+        elif self._wavelet_mode in (1, 2, 3):
+            # including 3 for future compatibility with computing coefficients for nulls
+            wavemakef(
+                self._wavelet_waveform,
+                self.source_waveform.tdi_waveform,
+                self._nt_lim_waveform,
+                self._nf_lim_waveform,
+                self._wc,
+                self._taylor_freq_table,
+                force_nulls=self._wavelet_mode - 1,
+            )
+        else:
+            msg = 'Unrecognized wavelet mode: {}. Valid modes are 0, 1, 2 or 3.'.format(self._wavelet_mode)
+            raise NotImplementedError(msg)
 
 
 class BinaryWaveletTaylorTime(

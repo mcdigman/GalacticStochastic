@@ -906,27 +906,176 @@ def get_spacecraft_vec(time: NDArray[np.floating], lc: LISAConstants) -> Spacecr
     return SpacecraftOrbits(xs, ys, zs, xas, yas, zas)
 
 
-@njit(fastmath=True)
-def phase_wrap_freq(
+def phase_wrap_helper_implicit_freq(
+    tdi_waveform: StationaryWaveformGeneric,
+    waveform: StationaryWaveformGeneric,
+    nf_lim: PixelGenericRange,
+    wrap_thresh: float = np.pi,
+) -> None:
+    """
+    Wrap the tdi perturbations to the phases by appropriate factors of 2 pi.
+
+    Parameters
+    ----------
+    tdi_waveform: StationaryWaveformGeneric
+        Object containing the TDI intrinsic_waveform, with shape (nc_channel, n_t).
+    waveform: StationaryWaveformGeneric
+        Object containing the intrinsic intrinsic_waveform, with shape (n_t)
+    nf_lim : PixelGenericRange
+        Frequency grid description
+    wrap_thresh: float
+        Threshold above which to consider the phase large enough to wrap by 2 pi.
+
+    Returns
+    -------
+    None
+        Results are stored in place in the PF attribute of tdi_waveform.
+
+    """
+    tdi_PF: NDArray[np.floating] = tdi_waveform.P
+    tdi_TF: NDArray[np.floating] = tdi_waveform.X
+    tdi_TFp: NDArray[np.floating] = tdi_waveform.Xp
+    PF: NDArray[np.floating] = waveform.P
+    TF: NDArray[np.floating] = waveform.X
+    TFp: NDArray[np.floating] = waveform.Xp
+
+    # validate the shapes of the inputs
+    assert len(tdi_PF.shape) == 2
+    assert len(PF.shape) == 1
+    assert PF.shape[0] == tdi_PF.shape[1]
+    assert PF.shape[0] > 0
+
+    # the number of channels we need to handle phases for
+    nc_loc: int = tdi_PF.shape[0]
+
+    for itrc in range(nc_loc):
+        # Re-evaluate to ensure the predictions align with the implicit perturbation from the integrated time
+        # Should be able to detect multiple wrapping
+        p_old: float = (tdi_PF[itrc, nf_lim.nx_max - 1])
+        j: float = 0.0
+        for n in range(nf_lim.nx_max - 1, nf_lim.nx_min - 1, -1):
+            # Isolate just the perturbation to the intrinsic phase
+            p: float = (tdi_PF[itrc, n])
+            delta_implicit = -2 * np.pi * nf_lim.dx * (tdi_TF[itrc, n] - TF[n]) - np.pi * nf_lim.dx**2 * (tdi_TFp[itrc, n] - TFp[n])
+            if n < nf_lim.nx_max - 1:
+                delta_implicit_alt = -np.pi * nf_lim.dx * (tdi_TF[itrc, n] - TF[n] + tdi_TF[itrc, n + 1] - TF[n + 1])
+            else:
+                delta_implicit_alt = 0.0
+
+            # delta = delta_implicit
+            delta = p - p_old
+            assert np.abs(delta) < wrap_thresh
+
+            if itrc == 0:
+                print(0, n, delta, delta_implicit, delta_implicit_alt, delta - delta_implicit, delta - delta_implicit_alt)
+
+            # Detect wrapping by multiple factors of 2 pi using the implicit phase shift predicted by integrating the time
+            if delta - delta_implicit >= 2 * np.pi:
+                if itrc == 0:
+                    print('decr', p, p_old, wrap_thresh)
+                n_2pi_wraps = 1.0 + np.fix((delta - delta_implicit - 2 * np.pi) / (2 * np.pi))
+                j -= 2 * np.pi * n_2pi_wraps
+                delta = delta - 2 * np.pi * n_2pi_wraps
+            elif delta_implicit - delta >= 2 * np.pi:
+                if itrc == 0:
+                    print('incr', p, p_old, wrap_thresh)
+                n_2pi_wraps = 1.0 + np.fix((delta_implicit - delta - 2 * np.pi) / (2 * np.pi))
+                j += 2 * np.pi * n_2pi_wraps
+                delta = delta + 2 * np.pi * n_2pi_wraps
+
+            if itrc == 0:
+                print(1, n, delta, delta_implicit)
+
+            # Add the total amount of previous wrapping we have computed
+            tdi_PF[itrc, n] += j
+
+            if n < nf_lim.nx_min - 1:
+                assert np.abs(tdi_PF[itrc, n] - tdi_PF[itrc, n + 1]) <= wrap_thresh
+
+            # Store the current phase perturbation
+            p_old = p
+
+
+# @njit()
+def phase_wrap_helper_freq(
+    tdi_waveform: StationaryWaveformGeneric,
+    waveform: StationaryWaveformGeneric,
+    nf_lim: PixelGenericRange,
+    wrap_thresh: float = np.pi,
+) -> None:
+    """
+    Wrap the tdi perturbations to the phases by appropriate factors of 2 pi.
+
+    Parameters
+    ----------
+    tdi_waveform: StationaryWaveformGeneric
+        Object containing the TDI intrinsic_waveform, with shape (nc_channel, n_t).
+    waveform: StationaryWaveformGeneric
+        Object containing the intrinsic intrinsic_waveform, with shape (n_t)
+    nf_lim : PixelGenericRange
+        Frequency grid description
+    wrap_thresh: float
+        Threshold above which to consider the phase large enough to wrap by 2 pi.
+
+    Returns
+    -------
+    None
+        Results are stored in place in the PF attribute of tdi_waveform.
+
+    """
+    tdi_PF: NDArray[np.floating] = tdi_waveform.P
+    tdi_TF: NDArray[np.floating] = tdi_waveform.X
+    tdi_TFp: NDArray[np.floating] = tdi_waveform.Xp
+    PF: NDArray[np.floating] = waveform.P
+    TF: NDArray[np.floating] = waveform.X
+    TFp: NDArray[np.floating] = waveform.Xp
+
+    # validate the shapes of the inputs
+    assert len(tdi_PF.shape) == 2
+    assert len(PF.shape) == 1
+    assert PF.shape[0] == tdi_PF.shape[1]
+    assert PF.shape[0] > 0
+
+    # the number of channels we need to handle phases for
+    nc_loc: int = tdi_PF.shape[0]
+
+    for itrc in range(nc_loc):
+        # Get the starting perturbation to the phase
+        p_old: float = (tdi_PF[itrc, nf_lim.nx_max - 1])
+        j: float = 0.0
+        for n in range(nf_lim.nx_max - 1, nf_lim.nx_min - 1, -1):
+            # Isolate just the perturbation to the intrinsic phase
+            p: float = (tdi_PF[itrc, n])
+            delta = p - p_old
+
+            # Detect wrapping by factors of wrap_thresh
+            # If the phase has increased or decreased more than wrap_thresh (<~2 pi)
+            # try absorbing that change into the reported phase permanently,
+            # as it is likely represents wrapping.
+            if delta > wrap_thresh:
+                # Can detect wrapping by multiple factors of 2 pi using the implicit phase shift predicted by integrating the time
+                j -= 2 * np.pi
+            elif - delta > wrap_thresh:
+                j += 2 * np.pi
+
+            # Add the total amount of previous wrapping we have computed
+            tdi_PF[itrc, n] += j
+
+            if n < nf_lim.nx_min - 1:
+                assert np.abs(tdi_PF[itrc, n] - tdi_PF[itrc, n + 1]) <= wrap_thresh
+
+            # Store the current phase perturbation
+            p_old = p
+
+
+# @njit(fastmath=True)
+def apply_doppler_freq(
     tdi_waveform: StationaryWaveformFreq,
     waveform: StationaryWaveformFreq,
     nf_lim: PixelGenericRange,
     kdotx: NDArray[np.floating],
-    wrap_thresh: float = np.pi,
 ) -> None:
     r"""
-    Wrap the phase perturbations in the frequency domain consistently across TDI channels.
-
-    This routine applies the perturbations from the tdi phases in from the doppler modulation and
-    rotation of the antenna pattern to get the tdi phases. Results are stored in `tdi_waveform.PF`.
-
-    The method takes into account implicit 2*pi phase shifts from the intrinsic waveform, and wraps
-    the phase to the proper multiple of 2*pi as accurately as possible, for more useful plotting and
-    computation of numerical derivatives, such as for fisher matrix calculations. 2*pi errors should not
-    typiccaly affect the likelihood or parameter estimation directly.
-
-    Frequency bins are processed in descending order, because typically the reference
-    phase will be towards the end, and this approach minimizes cumulative wrapping errors.
 
     Parameters
     ----------
@@ -939,14 +1088,17 @@ def phase_wrap_freq(
     kdotx : NDArray[np.floating]
         Doppler time perturbation array used to compute the barycenter
         Doppler phase term.
-    wrap_thresh : float, optional
-        Threshold (in radians) for deciding when to apply a \(\pm 2\pi\) wrap to a channel's
-        accumulated phase perturbation. Defaults to `np.pi`.
     """
     tdi_PF: NDArray[np.floating] = tdi_waveform.PF
     tdi_TF: NDArray[np.floating] = tdi_waveform.TF
     PF: NDArray[np.floating] = waveform.PF
     TF: NDArray[np.floating] = waveform.TF
+
+    # import matplotlib.pyplot as plt
+    # plt.plot(np.arange(nf_lim.nx_min, nf_lim.nx_max), tdi_PF[0, nf_lim.nx_min:nf_lim.nx_max])
+    # plt.plot(np.arange(nf_lim.nx_min, nf_lim.nx_max), np.unwrap(tdi_PF[0, nf_lim.nx_min:nf_lim.nx_max][::-1])[::-1])
+    # plt.ylabel('direct P')
+    # plt.show()
 
     nf_points: int = TF.shape[0]
 
@@ -963,9 +1115,9 @@ def phase_wrap_freq(
     assert tdi_PF.shape == (n_tdi, nf_points)
     assert tdi_TF.shape == (n_tdi, nf_points)
 
-    phase_accums: NDArray[np.floating] = np.zeros(n_tdi)
+    # phase_accums: NDArray[np.floating] = np.zeros(n_tdi)
 
-    js: NDArray[np.floating] = np.zeros(n_tdi)
+    # js: NDArray[np.floating] = np.zeros(n_tdi)
 
     for n in range(nf_lim.nx_max - 1, nf_lim.nx_min - 1, -1):
         # Barycenter time and frequency
@@ -977,24 +1129,51 @@ def phase_wrap_freq(
 
         for itrc in range(n_tdi):
             # only the phase perturbation from the antenna pattern
-            p: float = -tdi_PF[itrc, n]
+            # p: float = tdi_PF[itrc, n]
+
+            # if p < 0.0:
+            #    p += 2 * np.pi
 
             # adjust for the phase perturbation implicit in the time perturbation; more stable than wrapping p directly
-            if n == nf_lim.nx_max - 1:
-                phase_accums[itrc] = -p
-            else:
-                phase_accums[itrc] -= np.pi * nf_lim.dx * (tdi_TF[itrc, n] - t + tdi_TF[itrc, n + 1] - TF[n + 1])
+            # if n == nf_lim.nx_max - 1:
+            #    phase_accums[itrc] = -p
+            #    # p_implicit = 0.0
+            #    # p_explicit = 0.0
+            # else:
+            #    # phase_accums[itrc] -= np.pi * nf_lim.dx * (tdi_TF[itrc, n] - t + tdi_TF[itrc, n + 1] - TF[n + 1])
+            #    phase_accums[itrc] -= tdi_PF[itrc, n] - (tdi_PF[itrc, n + 1] + js[itrc])  # np.pi * nf_lim.dx * (tdi_TF[itrc, n] - t + tdi_TF[itrc, n + 1] - TF[n + 1])
+
+                # p_implicit = np.pi * nf_lim.dx * (tdi_TF[itrc, n] - t + tdi_TF[itrc, n + 1] - TF[n + 1])
+                # p_implicit = 2*np.pi * nf_lim.dx * (tdi_TF[itrc, n + 1] - TF[n + 1])
+                # p_explicit = tdi_PF[itrc, n] - (tdi_PF[itrc, n+1]+js[itrc])
+                # phase_accums_alt[itrc] -= p_implicit
 
             # wrap if the accumulated phase perturbation exceeds the threshold
-            if phase_accums[itrc] + p + js[itrc] > wrap_thresh:
-                js[itrc] -= 2 * np.pi
-            if -p - js[itrc] - phase_accums[itrc] > wrap_thresh:
-                js[itrc] += 2 * np.pi
+            # print(p_implicit, p_explicit, phase_accums_alt[itrc])
+#            if phase_accums[itrc] + p + js[itrc] > wrap_thresh:
+#                if itrc ==0:
+#                    print(tdi_PF[itrc,n+1])
+#                    print('decr i', n, itrc, phase_accums[itrc] + p + js[itrc], phase_accums[itrc], p, p_implicit, p_explicit, js[itrc], tdi_PF[itrc,n] - js[itrc])
+#                js[itrc] -= 2 * np.pi
+#                if itrc == 0:
+#                    print('decr f', n, itrc, phase_accums[itrc] + p + js[itrc], phase_accums[itrc], p, p_implicit, p_explicit, js[itrc], tdi_PF[itrc,n] - js[itrc])
+#            if -p - js[itrc] - phase_accums[itrc] > wrap_thresh:
+#                if itrc == 0:
+#                    print(tdi_PF[itrc,n+1])
+#                    print('incr i', n, itrc, phase_accums[itrc] + p + js[itrc], phase_accums[itrc], p, p_implicit, p_explicit, js[itrc], tdi_PF[itrc,n] - js[itrc])
+#                js[itrc] += 2 * np.pi
+#                if itrc == 0:
+#                    print('incr f', n, itrc, phase_accums[itrc] + p + js[itrc], phase_accums[itrc], p, p_implicit, p_explicit, js[itrc], tdi_PF[itrc,n] - js[itrc])
 
-            tdi_PF[itrc, n] = tdi_PF[itrc, n] - phase - js[itrc]
+            tdi_PF[itrc, n] = tdi_PF[itrc, n] - phase  # - js[itrc]
+    # assert False
+#
+#    plt.plot(tdi_TF[0,3500:nf_lim.nx_max]-TF[3500:nf_lim.nx_max])
+#    plt.show()
 
 
-@njit(fastmath=True)
+# TODO make order of arguments consistent with get_time_tdi_amp_phase
+# @njit()
 def get_freq_tdi_amp_phase(
     tdi_waveform: StationaryWaveformFreq,
     waveform: StationaryWaveformFreq,
@@ -1003,6 +1182,7 @@ def get_freq_tdi_amp_phase(
     nf_lim: PixelGenericRange,
     kdotx: NDArray[np.floating],
     er: EdgeRiseModel,
+    wrap_thresh: float = np.pi,
 ) -> None:
     """Get the frequency domain TDI response."""
     F = tdi_waveform.F
@@ -1032,10 +1212,10 @@ def get_freq_tdi_amp_phase(
 
     assert nf_lim.dx != 0.0, 'Frequency spacing must be non-zero'
 
-    # for the derivative of RR and II absorb 1/(2*nf_lim.dx) into the constant in tdi_TF
-    spacecraft_channel_deriv_helper(spacecraft_channels, -1.0 / (2 * nf_lim.dx))
+    # for the derivative of RR and II absorb nf_lim.dx into the constant in tdi_TF
+    spacecraft_channel_deriv_helper(spacecraft_channels, -nf_lim.dx)
 
-    tdi_waveform_generic = StationaryWaveformGeneric(F, tdi_PF, tdi_TF, tdi_TF, tdi_AF)
+    tdi_waveform_generic = StationaryWaveformGeneric(F, tdi_PF, tdi_TF, tdi_TFp, tdi_AF)
     # Time based method applies phase perturbation to PF, so set PF to zero here
     waveform_generic = StationaryWaveformGeneric(
         F,
@@ -1055,16 +1235,18 @@ def get_freq_tdi_amp_phase(
         nf_lim,
     )
 
-    # sign is flipped relative to time
-    tdi_PF[:] = -tdi_PF
-
-    # Wrap the phase perturbations consistently across channels
-    phase_wrap_freq(tdi_waveform, waveform, nf_lim, kdotx)
-    # apply edge rise/fall to tdi_AF and tdi_TF
-    apply_edge_rise_helper(waveform.TF, tdi_AF, er, lc, nf_lim)
-
     # compute tdi_TFp as perturbation on TFps
     # compute the gradient dy/dx using a second order accurate central finite difference
     # assuming constant x grid along second axis,
     # forward/backward first order accurate at boundaries, and apply a TFps base
     stabilized_gradient_uniform_inplace(TF, TFp, tdi_TF, tdi_TFp, nf_lim.dx, nf_lim.nx_min, nf_lim.nx_max)
+
+    # sign is flipped relative to time
+    tdi_PF[:] = -tdi_PF
+
+    # Wrap the phase perturbations consistently across channels
+    phase_wrap_helper_freq(tdi_waveform_generic, waveform_generic, nf_lim, wrap_thresh=wrap_thresh)
+    phase_wrap_helper_implicit_freq(tdi_waveform_generic, waveform_generic, nf_lim, wrap_thresh=wrap_thresh)
+    apply_doppler_freq(tdi_waveform, waveform, nf_lim, kdotx)
+    # apply edge rise/fall to tdi_AF and tdi_TF
+    apply_edge_rise_helper(waveform.TF, tdi_AF, er, lc, nf_lim)
