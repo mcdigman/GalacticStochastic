@@ -6,7 +6,7 @@ from numpy.typing import NDArray
 
 
 @njit()
-def gradient_uniform_inplace(ys: NDArray[np.floating], result: NDArray[np.floating], dx: float) -> None:
+def gradient_uniform_inplace(ys: NDArray[np.floating], result: NDArray[np.floating], dx: float, nx_min: int = 0, nx_max: int = -1) -> None:
     """Compute the numerical gradient of a 2D array using finite differences.
 
     This function computes dy/dx using second-order accurate central finite differences
@@ -31,16 +31,22 @@ def gradient_uniform_inplace(ys: NDArray[np.floating], result: NDArray[np.floati
     assert ys.shape == result.shape, 'Incompatible shape for result'
     assert len(ys.shape) == 2, 'Input ys must be a 2D array'
     nc_loc = ys.shape[0]
-    n_ys = ys.shape[1]
+
+    if nx_max == -1:
+        nx_max = ys.shape[1]
+
+    assert 0 <= nx_min < nx_max <= ys.shape[1], 'Invalid range for x'
+
+    n_ys = nx_max - nx_min
     assert n_ys > 1, 'Insufficient length to compute gradient'
 
     # handle the edge cases to first order
     for itrc in range(nc_loc):
-        result[itrc, 0] = (ys[itrc, 1] - ys[itrc, 0]) / dx
-        result[itrc, n_ys - 1] = (ys[itrc, n_ys - 1] - ys[itrc, n_ys - 2]) / dx
+        result[itrc, nx_min] = (ys[itrc, nx_min + 1] - ys[itrc, nx_min]) / dx
+        result[itrc, nx_max - 1] = (ys[itrc, nx_max - 1] - ys[itrc, nx_max - 2]) / dx
 
     # main loop to handle the rest to second order
-    for i in prange(1, n_ys - 1):
+    for i in prange(nx_min + 1, nx_max - 1):
         for itrc in range(nc_loc):
             result[itrc, i] = (ys[itrc, i + 1] - ys[itrc, i - 1]) / (2 * dx)
 

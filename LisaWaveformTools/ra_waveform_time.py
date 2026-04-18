@@ -35,6 +35,7 @@ def phase_wrap_helper(
         Results are stored in place in the PT attribute of tdi_waveform.
 
     """
+    # TODO only wrap phases over nt_min, nt_max
     AET_PT: NDArray[np.floating] = AET_waveform.PT
     PT: NDArray[np.floating] = waveform.PT
 
@@ -77,7 +78,7 @@ def phase_wrap_helper(
 
 
 @njit()
-def spacecraft_channel_deriv_helper(spacecraft_channels: AntennaResponseChannels, dx: float) -> None:
+def spacecraft_channel_deriv_helper(spacecraft_channels: AntennaResponseChannels, dx: float, nx_min: int = 0, nx_max: int = -1) -> None:
     """Get the derivatives of the RR and II components of the TDI and store them in dRR and dII.
 
     Parameters
@@ -94,9 +95,21 @@ def spacecraft_channel_deriv_helper(spacecraft_channels: AntennaResponseChannels
         Results are stored in place in dRR and dII attributes of sc_channels
 
     """
+    assert spacecraft_channels.RR.shape == spacecraft_channels.II.shape
+    assert spacecraft_channels.dRR.shape == spacecraft_channels.II.shape
+    assert spacecraft_channels.dII.shape == spacecraft_channels.II.shape
+    assert len(spacecraft_channels.II.shape) == 2
+    assert np.isfinite(dx)
+    assert dx != 0.0
+
+    if nx_max == -1:
+        nx_max = spacecraft_channels.II.shape[1]
+
+    assert 0 <= nx_min <= nx_max <= spacecraft_channels.II.shape[1]
+
     # get and store the derivatives
-    gradient_uniform_inplace(spacecraft_channels.RR, spacecraft_channels.dRR, dx)
-    gradient_uniform_inplace(spacecraft_channels.II, spacecraft_channels.dII, dx)
+    gradient_uniform_inplace(spacecraft_channels.RR, spacecraft_channels.dRR, dx, nx_min, nx_max)
+    gradient_uniform_inplace(spacecraft_channels.II, spacecraft_channels.dII, dx, nx_min, nx_max)
 
 
 # TODO move edge rise model parameters to er
@@ -438,7 +451,7 @@ def get_time_tdi_amp_phase(
 
     """
     # get and store dRR and dII in the object
-    spacecraft_channel_deriv_helper(spacecraft_channels, nt_lim.dx)
+    spacecraft_channel_deriv_helper(spacecraft_channels, nt_lim.dx, nt_lim.nx_min, nt_lim.nx_max)
 
     # get the tdi perturbations to the amplitude and phase
     get_time_tdi_amp_phase_helper(spacecraft_channels, AET_waveform, waveform, lc, er, nt_lim)

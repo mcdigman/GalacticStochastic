@@ -16,9 +16,10 @@ from WDMWaveletTransforms.wavelet_transforms import inverse_wavelet_time
 
 from LisaWaveformTools.algebra_tools import gradient_uniform_inplace
 from LisaWaveformTools.lisa_config import get_lisa_constants
-from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase
+from LisaWaveformTools.ra_waveform_time import get_time_tdi_amp_phase, spacecraft_channel_deriv_helper
 from LisaWaveformTools.spacecraft_objects import AntennaResponseChannels, EdgeRiseModel
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformFreq, StationaryWaveformTime
+from tests.test_algebra_tools import get_scaling_test_case_helper
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, sparse_addition_helper
 from WaveletWaveforms.taylor_time_coefficients import (
     get_empty_sparse_taylor_time_waveform,
@@ -183,6 +184,290 @@ def get_RR_t_mult(
         msg = 'unrecognized option for rr_model=' + str(rr_model)
         raise ValueError(msg)
     return RR_t_mult, II_t_mult
+
+
+@pytest.mark.parametrize('rr_model1',
+    [
+        'quad1',
+    ],
+)
+@pytest.mark.parametrize('rr_model2',
+    [
+        'quad1',
+    ],
+)
+@pytest.mark.parametrize('rr_model3',
+    [
+        'quad1',
+    ],
+)
+@pytest.mark.parametrize('ii_model1',
+    [
+        'quad1',
+    ],
+)
+@pytest.mark.parametrize('ii_model2',
+    [
+        'quad1',
+    ],
+)
+@pytest.mark.parametrize('ii_model3',
+    [
+        'quad1',
+    ],
+)
+@pytest.mark.parametrize('nt_loc', [104])
+@pytest.mark.parametrize('nt_max', [-1, 100, 101, 102, 103, 104])
+@pytest.mark.parametrize('nt_min', [0, 1, 2, 3, 4, 5, 6, 98])
+def test_spacecraft_channel_deriv_helper_limit(rr_model1: str, rr_model2: str, rr_model3: str, ii_model1: str, ii_model2: str, ii_model3: str, nt_loc: int, nt_min: int, nt_max: int) -> None:
+    """Test whether the signal computed in the time domain matches computing
+    it in the wavelet domain and transforming to time.
+    """
+    toml_filename = 'tests/time_tdi_test_config1.toml'
+
+    with Path(toml_filename).open('rb') as f:
+        config = tomllib.load(f)
+
+    wc = get_wavelet_model(config)
+    assert wc == wc_in
+    lc = get_lisa_constants(config)
+
+    nc_waveform = lc.nc_waveform
+
+    T = wc.DT * np.arange(0, nt_loc)
+
+    # ensure the RRs and IIs are scaled diferently in different channels
+    RR_scale_mult = np.array([0.3, 0.9, 0.7])
+    II_scale_mult = np.array([0.2, 0.8, 0.75])
+
+    RR = np.zeros((nc_waveform, nt_loc))
+    II = np.zeros((nc_waveform, nt_loc))
+
+    RR[0] = RR_scale_mult[0] * get_scaling_test_case_helper(rr_model1, T, wc.DT)[0]
+    II[0] = II_scale_mult[0] * get_scaling_test_case_helper(ii_model1, T, wc.DT)[0]
+
+    RR[1] = RR_scale_mult[1] * get_scaling_test_case_helper(rr_model2, T, wc.DT)[0]
+    II[1] = II_scale_mult[1] * get_scaling_test_case_helper(ii_model2, T, wc.DT)[0]
+
+    RR[2] = RR_scale_mult[2] * get_scaling_test_case_helper(rr_model3, T, wc.DT)[0]
+    II[2] = II_scale_mult[2] * get_scaling_test_case_helper(ii_model3, T, wc.DT)[0]
+
+    dRR = np.zeros((nc_waveform, nt_loc))
+    dII = np.zeros((nc_waveform, nt_loc))
+
+    dRR_exp = np.zeros((nc_waveform, nt_loc))
+    dII_exp = np.zeros((nc_waveform, nt_loc))
+
+    spacecraft_channels = AntennaResponseChannels(T, RR, II, dRR, dII)
+
+    spacecraft_channel_deriv_helper(spacecraft_channels, wc.DT, nt_min, nt_max)
+
+    if nt_max == -1:
+        nt_max_use = nt_loc
+    else:
+        nt_max_use = nt_max
+
+    for itrc in range(nc_waveform):
+        # check the computed dRR and dII match coarse
+        dRR_exp[itrc, nt_min:nt_max_use] = np.gradient(RR[itrc, nt_min:nt_max_use], T[nt_min:nt_max_use], edge_order=1)
+        dII_exp[itrc, nt_min:nt_max_use] = np.gradient(II[itrc, nt_min:nt_max_use], T[nt_min:nt_max_use], edge_order=1)
+
+        assert_allclose(
+            spacecraft_channels.dRR[itrc],
+            dRR_exp[itrc],
+            atol=1.0e-14,
+            rtol=1.0e-14,
+        )
+        assert_allclose(
+            spacecraft_channels.dII[itrc],
+            dII_exp[itrc],
+            atol=1.0e-14,
+            rtol=1.0e-14,
+        )
+
+
+@pytest.mark.parametrize('rr_model1',
+    [
+        'const1',
+        'lin1',
+        'abs1',
+        'quad1',
+    ],
+)
+@pytest.mark.parametrize('rr_model2',
+    [
+        'const1',
+        'lin1',
+        'abs1',
+        'quad1',
+    ],
+)
+@pytest.mark.parametrize('rr_model3',
+    [
+        'const1',
+        'lin1',
+        'abs1',
+        'quad1',
+    ],
+)
+@pytest.mark.parametrize('ii_model1',
+    [
+        'const1',
+        'lin1',
+        'abs1',
+        'quad1',
+    ],
+)
+@pytest.mark.parametrize('ii_model2',
+    [
+        'const1',
+        'lin1',
+        'abs1',
+        'quad1',
+    ],
+)
+@pytest.mark.parametrize('ii_model3',
+    [
+        'const1',
+        'lin1',
+        'abs1',
+        'quad1',
+    ],
+)
+def test_spacecraft_channel_deriv_helper(rr_model1: str, rr_model2: str, rr_model3: str, ii_model1: str, ii_model2: str, ii_model3: str) -> None:
+    """Test whether the signal computed in the time domain matches computing
+    it in the wavelet domain and transforming to time.
+    """
+    toml_filename = 'tests/time_tdi_test_config1.toml'
+
+    with Path(toml_filename).open('rb') as f:
+        config = tomllib.load(f)
+
+    wc = get_wavelet_model(config)
+    assert wc == wc_in
+    lc = get_lisa_constants(config)
+
+    nt_loc = wc.Nt
+    nc_waveform = lc.nc_waveform
+
+    T = wc.DT * np.arange(0, nt_loc)
+    T_fine = wc.dt * np.arange(0, nt_loc * wc.Nf)
+
+    # ensure the RRs and IIs are scaled diferently in different channels
+    RR_scale_mult = np.array([0.3, 0.9, 0.7])
+    II_scale_mult = np.array([0.2, 0.8, 0.75])
+
+    RR = np.zeros((nc_waveform, nt_loc))
+    II = np.zeros((nc_waveform, nt_loc))
+
+    RR_fine = np.zeros((nc_waveform, nt_loc * wc.Nf))
+    II_fine = np.zeros((nc_waveform, nt_loc * wc.Nf))
+
+    RR[0] = RR_scale_mult[0] * get_scaling_test_case_helper(rr_model1, T, wc.DT)[0]
+    RR_fine[0] = RR_scale_mult[0] * get_scaling_test_case_helper(rr_model1, T_fine, wc.dt)[0]
+    II[0] = II_scale_mult[0] * get_scaling_test_case_helper(ii_model1, T, wc.DT)[0]
+    II_fine[0] = II_scale_mult[0] * get_scaling_test_case_helper(ii_model1, T_fine, wc.dt)[0]
+
+    RR[1] = RR_scale_mult[1] * get_scaling_test_case_helper(rr_model2, T, wc.DT)[0]
+    RR_fine[1] = RR_scale_mult[1] * get_scaling_test_case_helper(rr_model2, T_fine, wc.dt)[0]
+    II[1] = II_scale_mult[1] * get_scaling_test_case_helper(ii_model2, T, wc.DT)[0]
+    II_fine[1] = II_scale_mult[1] * get_scaling_test_case_helper(ii_model2, T_fine, wc.dt)[0]
+
+    RR[2] = RR_scale_mult[2] * get_scaling_test_case_helper(rr_model3, T, wc.DT)[0]
+    RR_fine[2] = RR_scale_mult[2] * get_scaling_test_case_helper(rr_model3, T_fine, wc.dt)[0]
+    II[2] = II_scale_mult[2] * get_scaling_test_case_helper(ii_model3, T, wc.DT)[0]
+    II_fine[2] = II_scale_mult[2] * get_scaling_test_case_helper(ii_model3, T_fine, wc.dt)[0]
+
+    dRR = np.zeros((nc_waveform, nt_loc))
+    dII = np.zeros((nc_waveform, nt_loc))
+    dRR_fine = np.zeros((nc_waveform, nt_loc * wc.Nf))
+    dII_fine = np.zeros((nc_waveform, nt_loc * wc.Nf))
+
+    spacecraft_channels = AntennaResponseChannels(T, RR, II, dRR, dII)
+    spacecraft_channels_fine = AntennaResponseChannels(T_fine, RR_fine, II_fine, dRR_fine, dII_fine)
+
+    spacecraft_channel_deriv_helper(spacecraft_channels, wc.DT)
+    spacecraft_channel_deriv_helper(spacecraft_channels_fine, wc.dt)
+
+    for itrc in range(nc_waveform):
+        # check the computed dRR and dII match coarse
+        assert_allclose(
+            spacecraft_channels.dRR[itrc],
+            np.gradient(RR[itrc], T, edge_order=1),
+            atol=1.0e-14,
+            rtol=1.0e-14,
+        )
+        assert_allclose(
+            spacecraft_channels.dII[itrc],
+            np.gradient(II[itrc], T, edge_order=1),
+            atol=1.0e-14,
+            rtol=1.0e-14,
+        )
+
+    for itrc in range(nc_waveform):
+        # check the computed dRR and dII match fine
+        assert_allclose(
+            spacecraft_channels_fine.dRR[itrc],
+            np.gradient(RR_fine[itrc], T_fine, edge_order=1),
+            atol=1.0e-14,
+            rtol=1.0e-14,
+        )
+        assert_allclose(
+            spacecraft_channels_fine.dII[itrc],
+            np.gradient(II_fine[itrc], T_fine, edge_order=1),
+            atol=1.0e-14,
+            rtol=1.0e-14,
+        )
+
+    # import matplotlib.pyplot as plt
+    # plt.plot(T_fine, spacecraft_channels_fine.dRR[0])
+    # plt.plot(T, spacecraft_channels.dRR[0])
+    # plt.plot(T, spacecraft_channels_fine.dRR[0][::wc.Nf])
+    # plt.plot(T_fine, np.gradient(RR_fine[0], T_fine, edge_order=1))
+    # plt.show()
+
+    for itrc in range(nc_waveform):
+        # check the computed dRR and dII match coarse fine consistent internal
+        print(itrc)
+        assert_allclose(
+            spacecraft_channels.RR[itrc],
+            spacecraft_channels_fine.RR[itrc][::wc.Nf],
+            atol=1.0e-14,
+            rtol=1.0e-14,
+        )
+        assert_allclose(
+            spacecraft_channels.II[itrc],
+            spacecraft_channels_fine.II[itrc][::wc.Nf],
+            atol=1.0e-14,
+            rtol=1.0e-14,
+        )
+        assert_allclose(
+            spacecraft_channels.dRR[itrc][1:nt_loc - 1],
+            spacecraft_channels_fine.dRR[itrc][::wc.Nf][1:nt_loc - 1],
+            atol=1.0e-14,
+            rtol=1.0e-10,
+        )
+        assert_allclose(
+            spacecraft_channels.dII[itrc][1:nt_loc - 1],
+            spacecraft_channels_fine.dII[itrc][::wc.Nf][1:nt_loc - 1],
+            atol=1.0e-14,
+            rtol=1.0e-10,
+        )
+
+    for itrc in range(nc_waveform):
+        # check the computed dRR and dII match coarse fine consistent gradient
+        assert_allclose(
+            spacecraft_channels.dRR[itrc][1:nt_loc - 1],
+            np.gradient(RR_fine[itrc], T_fine, edge_order=1)[::wc.Nf][1:nt_loc - 1],
+            atol=1.0e-14,
+            rtol=1.0e-10,
+        )
+        assert_allclose(
+            spacecraft_channels.dII[itrc][1:nt_loc - 1],
+            np.gradient(II_fine[itrc], T_fine, edge_order=1)[::wc.Nf][1:nt_loc - 1],
+            atol=1.0e-14,
+            rtol=1.0e-10,
+        )
 
 
 @pytest.mark.parametrize(

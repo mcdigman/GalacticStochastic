@@ -401,9 +401,126 @@ def get_scaling_test_case_helper(
     return x, dxdt
 
 
+@pytest.mark.parametrize('DT', [1])
+@pytest.mark.parametrize('t0', [0.0])
+@pytest.mark.parametrize('nt_loc', [104])
+@pytest.mark.parametrize('nt_max', [-1, 100, 101, 102, 103, 104])
+@pytest.mark.parametrize('nt_min', [0, 1, 2, 3, 4, 5, 6, 98])
+@pytest.mark.parametrize(
+    't_scaling',
+    [
+        'const1',
+        'lin1',
+        'abs1',
+        'quad1',
+    ],
+)
+def test_gradient_uniform_inplace_lim(t_scaling: str, DT: float, t0: float, nt_loc: int, nt_min: int, nt_max: int) -> None:
+    """Test the function gradient_homog_2d_implace produces expected results"""
+    nc_waveform = 3
+    T = np.arange(0.0, nt_loc) * DT + t0
+    channel_scale_mult = np.array([0.9, 0.5, 0.3])
+
+    channel_t_scale, _ = get_scaling_test_case_helper(t_scaling, T, DT)
+
+    if channel_t_scale is None:
+        return
+
+    ys = np.outer(channel_scale_mult, channel_t_scale)
+
+    result = np.zeros((nc_waveform, nt_loc))
+
+    # check we get the same results if we iterate over every dimension separately
+    result2 = np.zeros((nc_waveform, nt_loc))
+
+    gradient_uniform_inplace(ys, result, DT, nt_min, nt_max)
+
+    for itrc in range(nc_waveform):
+        gradient_uniform_inplace(ys[itrc: itrc + 1], result2[itrc: itrc + 1], DT, nt_min, nt_max)
+
+    assert_array_equal(result, result2)
+
+    del result2
+
+    # if nt_loc>2:
+    #    gradient_exp = np.gradient(ys, DT, axis=1, edge_order=2)
+    # else:
+    gradient_exp = np.zeros_like(ys)
+    if nt_max == -1:
+        nt_max_use = nt_loc
+    else:
+        nt_max_use = nt_max
+
+    gradient_exp[:, nt_min:nt_max_use] = np.gradient(ys[:, nt_min:nt_max_use], DT, axis=1, edge_order=1)
+
+    assert_allclose(result, gradient_exp, atol=1.0e-14, rtol=1.0e-14)
+    assert_array_equal(result, gradient_exp)
+
+
 @pytest.mark.parametrize('DT', [0.05, 1])
 @pytest.mark.parametrize('t0', [-101.0, -50.0, 0.0, 50.0, 101.0])
-@pytest.mark.parametrize('nt_loc', [2, 3, 4, 100, 101])
+@pytest.mark.parametrize('nt_loc', [2, 3, 4, 5, 6, 100, 101])
+@pytest.mark.parametrize(
+    't_scaling',
+    [
+        'const1',
+        'lin1',
+        'abs1',
+        'quad1',
+    ],
+)
+def test_gradient_uniform_inplace_known(t_scaling: str, DT: float, t0: float, nt_loc: int) -> None:
+    """Test the function gradient_homog_2d_implace produces expected results"""
+    nc_waveform = 3
+    T = np.arange(0.0, nt_loc) * DT + t0
+    channel_scale_mult = np.array([0.9, 0.5, 0.3])
+
+    channel_t_scale, channel_dxdt_scale = get_scaling_test_case_helper(t_scaling, T, DT)
+
+    if channel_t_scale is None:
+        return
+
+    ys = np.outer(channel_scale_mult, channel_t_scale)
+    dydts = np.outer(channel_scale_mult, channel_dxdt_scale)
+
+    result = np.zeros((nc_waveform, nt_loc))
+
+    # check we get the same results if we iterate over every dimension separately
+    result2 = np.zeros((nc_waveform, nt_loc))
+
+    gradient_uniform_inplace(ys, result, DT)
+
+    for itrc in range(nc_waveform):
+        gradient_uniform_inplace(ys[itrc: itrc + 1], result2[itrc: itrc + 1], DT)
+
+    assert_array_equal(result, result2)
+
+    del result2
+
+    # if nt_loc>2:
+    #    gradient_exp = np.gradient(ys, DT, axis=1, edge_order=2)
+    # else:
+    gradient_exp = np.gradient(ys, DT, axis=1, edge_order=1)
+
+    # if not np.allclose(dydts, result, atol=1.0e-14, rtol=1.0e-14):
+    #    import matplotlib.pyplot as plt
+    #    plt.plot(gradient_exp[0]-dydts[0])
+    #    #plt.plot(gradient_exp[0])
+    #    plt.plot(result[0]-dydts[0])
+    #    plt.ylabel(t_scaling)
+    #    plt.show()
+
+    assert_allclose(result, gradient_exp, atol=1.0e-14, rtol=1.0e-14)
+    assert_array_equal(result, gradient_exp)
+
+    assert_allclose(dydts[:, 1:nt_loc - 1], gradient_exp[:, 1:nt_loc - 1], atol=1.0e-12, rtol=1.0e-12)
+
+    assert_allclose(result[:, 1:nt_loc - 1], dydts[:, 1:nt_loc - 1], atol=1.0e-12, rtol=1.0e-12)
+
+
+@pytest.mark.parametrize('DT', [0.05, 1])
+@pytest.mark.parametrize('t0', [-101.0, -50.0, 0.0, 50.0, 101.0])
+@pytest.mark.parametrize('nt_loc', [2, 3, 4, 5, 6, 100, 101])
 @pytest.mark.parametrize(
     't_scaling',
     [
@@ -436,12 +553,13 @@ def test_gradient_uniform_inplace(t_scaling: str, DT: float, t0: float, nt_loc: 
     T = np.arange(0.0, nt_loc) * DT + t0
     channel_scale_mult = np.array([0.9, 0.5, 0.3])
 
-    channel_t_scale, _ = get_scaling_test_case_helper(t_scaling, T, DT)
+    channel_t_scale, channel_dxdt_scale = get_scaling_test_case_helper(t_scaling, T, DT)
 
     if channel_t_scale is None:
         return
 
     ys = np.outer(channel_scale_mult, channel_t_scale)
+    dydts = np.outer(channel_scale_mult, channel_dxdt_scale)
 
     result = np.zeros((nc_waveform, nt_loc))
 
@@ -457,9 +575,25 @@ def test_gradient_uniform_inplace(t_scaling: str, DT: float, t0: float, nt_loc: 
 
     del result2
 
+    # if nt_loc>2:
+    #    gradient_exp = np.gradient(ys, DT, axis=1, edge_order=2)
+    # else:
     gradient_exp = np.gradient(ys, DT, axis=1, edge_order=1)
 
+    # if not np.allclose(dydts, result, atol=1.0e-14, rtol=1.0e-14):
+    #    import matplotlib.pyplot as plt
+    #    plt.plot(gradient_exp[0]-dydts[0])
+    #    #plt.plot(gradient_exp[0])
+    #    plt.plot(result[0]-dydts[0])
+    #    plt.ylabel(t_scaling)
+    #    plt.show()
+
     assert_allclose(result, gradient_exp, atol=1.0e-14, rtol=1.0e-14)
+    assert_array_equal(result, gradient_exp)
+
+    # assert_allclose(dydts[:,1:nt_loc-1], gradient_exp[:,1:nt_loc-1], atol=1.0e-14, rtol=1.0e-14)
+
+    # assert_allclose(result, dydts, atol=1.0e-14, rtol=1.0e-14)
 
 
 @pytest.mark.parametrize('DT', [0.05, 1])

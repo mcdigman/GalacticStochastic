@@ -966,25 +966,25 @@ def phase_wrap_helper_implicit_freq(
             delta = p - p_old
             assert np.abs(delta) < wrap_thresh
 
-            if itrc == 0:
-                print(0, n, delta, delta_implicit, delta_implicit_alt, delta - delta_implicit, delta - delta_implicit_alt)
+            # if itrc == 0:
+            #    print(0, n, delta, delta_implicit, delta_implicit_alt, delta - delta_implicit, delta - delta_implicit_alt)
 
             # Detect wrapping by multiple factors of 2 pi using the implicit phase shift predicted by integrating the time
             if delta - delta_implicit >= 2 * np.pi:
-                if itrc == 0:
-                    print('decr', p, p_old, wrap_thresh)
+                # if itrc == 0:
+                #    print('decr', p, p_old, wrap_thresh)
                 n_2pi_wraps = 1.0 + np.fix((delta - delta_implicit - 2 * np.pi) / (2 * np.pi))
                 j -= 2 * np.pi * n_2pi_wraps
                 delta = delta - 2 * np.pi * n_2pi_wraps
             elif delta_implicit - delta >= 2 * np.pi:
-                if itrc == 0:
-                    print('incr', p, p_old, wrap_thresh)
+                # if itrc == 0:
+                #    print('incr', p, p_old, wrap_thresh)
                 n_2pi_wraps = 1.0 + np.fix((delta_implicit - delta - 2 * np.pi) / (2 * np.pi))
                 j += 2 * np.pi * n_2pi_wraps
                 delta = delta + 2 * np.pi * n_2pi_wraps
 
-            if itrc == 0:
-                print(1, n, delta, delta_implicit)
+            # if itrc == 0:
+            #    print(1, n, delta, delta_implicit)
 
             # Add the total amount of previous wrapping we have computed
             tdi_PF[itrc, n] += j
@@ -1213,7 +1213,7 @@ def get_freq_tdi_amp_phase(
     assert nf_lim.dx != 0.0, 'Frequency spacing must be non-zero'
 
     # for the derivative of RR and II absorb nf_lim.dx into the constant in tdi_TF
-    spacecraft_channel_deriv_helper(spacecraft_channels, -nf_lim.dx)
+    spacecraft_channel_deriv_helper(spacecraft_channels, -nf_lim.dx, nf_lim.nx_min, nf_lim.nx_max)
 
     tdi_waveform_generic = StationaryWaveformGeneric(F, tdi_PF, tdi_TF, tdi_TFp, tdi_AF)
     # Time based method applies phase perturbation to PF, so set PF to zero here
