@@ -28,10 +28,10 @@ if __name__ == '__main__':
     _: Any
     # filename_config = 'default_parameters.toml'
     # filename_config = 'Galaxies/GalaxyFullLDC/run_old_parameters_format4.toml'
-    # filename_config = 'parameters_default_12year.toml'
-    # target_directory = 'Galaxies/GalaxyFullLDC/'
-    filename_config = 'Galaxies/COSMIC_alpha25/parameters_default_12year.toml'
-    target_directory = 'Galaxies/COSMIC_alpha25/'
+    filename_config = 'parameters_default_12year.toml'
+    target_directory = 'Galaxies/GalaxyFullLDC/'
+    # filename_config = 'Galaxies/COSMIC_alpha25/parameters_default_12year.toml'
+    # target_directory = 'Galaxies/COSMIC_alpha25/'
     # filename_config = 'Galaxies/FZq3Z/parameters_default_12year.toml'
     # target_directory = 'Galaxies/FZq3Z/'
     # filename_config = 'Galaxies/FZAlpha5/parameters_default_12year.toml'
@@ -91,8 +91,9 @@ if __name__ == '__main__':
 
     arg_cut = wc.Nf - 1
     fit_mask = (fs > 1.0e-5) & (fs < fs[arg_cut])
+    print('Begin fitting')
 
-    S_fit_evolve_m, _ = fit_gb_spectrum_evolve(
+    S_fit_evolve_m, fit_res = fit_gb_spectrum_evolve(
         S_stat_smooth_m[itrl_fit:, fit_mask, :], fs[fit_mask], fs[1:], nt_ranges[itrl_fit:], S_stat_offset[fit_mask], wc.DT,
     )
 

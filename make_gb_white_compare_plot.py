@@ -99,6 +99,8 @@ if __name__ == '__main__':
 
     nt_min = nt_incr * 6
     nt_max = nt_min + 4 * nt_incr
+    # nt_min = nt_incr * 4
+    # nt_max = nt_min + 8 * nt_incr
     # nt_min = 0
     # nt_max = wc.Nt
     nt_lim = PixelGenericRange(nt_min, nt_max, wc.DT, 0.)

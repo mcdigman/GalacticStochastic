@@ -171,15 +171,15 @@ class StationarySourceWaveformFreq(
         # TODO need to handle bounds edge correctly
         nf_lim_old = self.nf_lim
         itrFCutOld = min(self.itrFCut + nf_lim_old.nx_min, self.NF)
-        print('0', nf_lim_old.nx_min)
+        # print('0', nf_lim_old.nx_min)
 
         nf_low = int(
             np.searchsorted(self.intrinsic_waveform.TF[:itrFCutOld], self._lc.t0 - self._lc.t_rise, side='right')
             - self._n_pad_F
         )
-        print('1', nf_low)
+        # print('1', nf_low)
         nf_low = max(0, nf_low)
-        print('2', nf_low)
+        # print('2', nf_low)
         # TODO need to recalculate subtraction if Nf old breaks
         # TODO is this the right trap??? Why is the subtraction even needed?
         if self.itrFCut + nf_low < self.NF:
@@ -247,15 +247,8 @@ class StationarySourceWaveformFreq(
             self._lc,
         )
 
-        get_freq_tdi_amp_phase(
-            self._tdi_waveform,
-            self.intrinsic_waveform,
-            self._spacecraft_channels,
-            self._lc,
-            self.nf_lim,
-            self.kdotx,
-            self._er,
-        )
+        get_freq_tdi_amp_phase(self._spacecraft_channels, self._tdi_waveform, self.intrinsic_waveform, self._lc,
+                               self._er, self.nf_lim, self.kdotx)
         self._consistent_extrinsic = True
 
     @override

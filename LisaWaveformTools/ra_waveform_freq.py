@@ -1174,16 +1174,9 @@ def apply_doppler_freq(
 
 # TODO make order of arguments consistent with get_time_tdi_amp_phase
 # @njit()
-def get_freq_tdi_amp_phase(
-    tdi_waveform: StationaryWaveformFreq,
-    waveform: StationaryWaveformFreq,
-    spacecraft_channels: AntennaResponseChannels,
-    lc: LISAConstants,
-    nf_lim: PixelGenericRange,
-    kdotx: NDArray[np.floating],
-    er: EdgeRiseModel,
-    wrap_thresh: float = np.pi,
-) -> None:
+def get_freq_tdi_amp_phase(spacecraft_channels: AntennaResponseChannels, tdi_waveform: StationaryWaveformFreq,
+                           waveform: StationaryWaveformFreq, lc: LISAConstants, er: EdgeRiseModel,
+                           nf_lim: PixelGenericRange, kdotx: NDArray[np.floating], wrap_thresh: float = np.pi) -> None:
     """Get the frequency domain TDI response."""
     F = tdi_waveform.F
     tdi_AF: NDArray[np.floating] = tdi_waveform.AF

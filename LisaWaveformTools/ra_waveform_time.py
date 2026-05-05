@@ -15,6 +15,7 @@ from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 def phase_wrap_helper(
     AET_waveform: StationaryWaveformTime,
     waveform: StationaryWaveformTime,
+    nx_lim: PixelGenericRange,
     wrap_thresh: float = 6.0,
 ) -> None:
     """
@@ -26,6 +27,8 @@ def phase_wrap_helper(
         Object containing the TDI intrinsic_waveform, with shape (nc_channel, n_t).
     waveform: StationaryWaveformTime
         Object containing the intrinsic intrinsic_waveform, with shape (n_t)
+    nx_lim: PixelGenericRange
+        Range of indices to wrap the phases over
     wrap_thresh: float
         Threshold above which to consider the phase large enough to wrap by 2 pi.
 
@@ -49,11 +52,13 @@ def phase_wrap_helper(
     nc_loc: int = AET_PT.shape[0]
     n_t: int = AET_PT.shape[1]
 
+    assert 0 <= nx_lim.nx_min <= nx_lim.nx_max <= n_t
+
     for itrc in range(nc_loc):
         # Get the starting perturbation to the phase
         p_old: float = (AET_PT[itrc, 0] - PT[0]) % (2 * np.pi)
         j: float = 0.0
-        for n in range(n_t):
+        for n in range(nx_lim.nx_min, nx_lim.nx_max):
             # Isolate just the perturbation to the intrinsic phase
             p: float = (AET_PT[itrc, n] - PT[n]) % (2 * np.pi)
 
@@ -86,8 +91,8 @@ def spacecraft_channel_deriv_helper(spacecraft_channels: AntennaResponseChannels
     spacecraft_channels: SpacecraftChannels
         Object containing the spacecraft channels with RR, II, dRR, and dII attributes,
         with RR and II already computed.
-    nt_lim: PixelGenericRange
-        Range of time indices to compute the derivatives over and time spacing of uniform samples
+    nx_lim: PixelGenericRange
+        Range of indices to compute the derivatives over and time spacing of uniform samples
 
     Returns
     -------
@@ -386,7 +391,8 @@ def get_time_tdi_amp_phase_helper(
     amp_phase_loop_helper(
         waveform.FT, waveform.T, waveform_generic, AET_waveform_generic, spacecraft_channels, lc, nt_lim
     )
-    apply_edge_rise_helper(waveform.T, AET_waveform.AT, er, lc, nt_lim)
+    # TODO time and frequency domains may need to allow different edge rise models
+    # apply_edge_rise_helper(waveform.T, AET_waveform.AT, er, lc, nt_lim)
 
 
 @njit()
@@ -458,7 +464,7 @@ def get_time_tdi_amp_phase(
 
     if phase_wrap_mode == 1:
         # wrap the phases using phase_wrap_helper
-        phase_wrap_helper(AET_waveform, waveform)
+        phase_wrap_helper(AET_waveform, waveform, nt_lim)
     elif phase_wrap_mode == 0:
         # many applications do not need the phases to be wrapped properly
         pass

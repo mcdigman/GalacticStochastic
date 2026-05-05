@@ -50,14 +50,16 @@ def get_waveform_helper_freq(
     max_f: float,
 ) -> tuple[StationaryWaveformFreq, StationaryWaveformFreq, int]:
     """Help get intrinsic_waveform objects."""
-    F = np.arange(nf_range.nx_min, nf_range.nx_max, nf_range.dx) + nf_range.x_min
+    F = nf_range.dx * np.arange(0, nf_range.nx_max) + nf_range.x_min
     # T = np.arange(nt_loc) * DT
-    phase_freq_0 = -np.pi / 4.0 + phase_time_0
-
+    phase_freq_0 = -np.pi / 4.0 - phase_time_0
+    # phase_freq_0 = phase_time_0
+    # phase_freq_0 = 1.86929 + phase_time_0
     PF = np.zeros(F.size)
     TF = np.zeros(F.size)
     TFp = np.zeros(F.size)
     if fpp_input == 0.0:
+        PF[:] = phase_freq_0 + 2 * np.pi * F * (F / 2 - f_input) / fp_input + 2 * np.pi * f_input**2 / (2 * fp_input)
         TF[:] = (F - f_input) / fp_input
         TFp[:] = 1. / fp_input
     else:
@@ -71,7 +73,7 @@ def get_waveform_helper_freq(
         TFp[f_mask] = np.sign(fp_input) * np.sign(fpp_input) / np.sqrt(np.abs(fp_input) ** 2 + 2 * F[f_mask] * (-np.abs(fpp_input)) - 2 * f_input * (-np.abs(fpp_input)))
         TFp[~f_mask] = np.sign(fp_input) * np.sign(fpp_input) / np.sqrt(np.abs(fp_input) ** 2 + 2 * F[~f_mask] * (np.abs(fpp_input)) - 2 * f_input * (np.abs(fpp_input)))
 
-    AF = np.full(F.size, amp_input) * 1 / np.sqrt(np.abs(TFp))
+    AF = np.full(F.size, amp_input) * np.sqrt(np.abs(TFp))
 
     if np.any((max_f < F) | (F < 0.0)):
         arg_cut = int(np.argmax((max_f < F) | (F < 0.0)))
@@ -84,6 +86,11 @@ def get_waveform_helper_freq(
             TF[arg_cut:] = TF[arg_cut]
     else:
         arg_cut = int(F.size)
+
+    PF[:nf_range.nx_min] = 0.0
+    TF[:nf_range.nx_min] = 0.0
+    TFp[:nf_range.nx_min] = 0.0
+    AF[:nf_range.nx_min] = 0.0
 
     AET_PF = np.zeros((nc_waveform, F.size))
     AET_TF = np.zeros((nc_waveform, F.size))

@@ -215,15 +215,36 @@ def get_wavelet_model(config: dict[str, Any], assert_mode: int = 1) -> WDMWavele
     df_min_time_grid = dfd * (- Nfd_negative)
     # allow a slight excess to account for numerical inexactness
     if df_max_time_grid > df_max_time * (1. + max_freq_tol_time_interpolation):
-        msg = f'Maximum frequency of interpolation grid {df_max_time_grid} is larger than limit of reliability {df_max_time}, consider increasing Nt and decreasing Nf, or decreasing requested grid size'
+        msg = f'Maximum frequency of interpolation grid {df_max_time_grid} is larger than limit of reliability {df_max_time}, consider increasing Nt and decreasing Nf, or decreasing requested dfdot or Nfd'
         if assert_mode:
             raise ValueError(msg)
         warn(msg, stacklevel=2)
     if df_min_time_grid < -df_max_time * (1. + max_freq_tol_time_interpolation):
-        msg = f'Minimum frequency of interpolation grid {df_min_time_grid} is smaller than limit of reliability {-df_max_time}, consider increasing Nt and decreasing Nf, or decreasing requested grid size'
+        msg = f'Minimum frequency of interpolation grid {df_min_time_grid} is smaller than limit of reliability {-df_max_time}, consider increasing Nt and decreasing Nf, or decreasing requested dfdot or Nfd_negative'
         if assert_mode:
             raise ValueError(msg)
         warn(msg, stacklevel=2)
+
+    df_min_freq = DF**2 / 8  # or DF/(16 DT)
+
+    dtd_max_freq_grid = dtd * (Ntd - Ntd_negative)
+    dtd_min_freq_grid = dtd * (- Ntd_negative)
+
+    if dtd_max_freq_grid != 0.0:
+        dfd_upper_freq_grid = 1. / dtd_max_freq_grid
+        if dfd_upper_freq_grid < df_min_freq * (1. - max_freq_tol_time_interpolation):
+            msg = f'Minimum frequency of interpolation grid {dfd_upper_freq_grid} is smaller than limit of reliability {df_min_freq}, consider decreasing Nf and increasing Nt, or decreasing requested dtdf or Ntd'
+            if assert_mode:
+                raise ValueError(msg)
+            warn(msg, stacklevel=2)
+
+    if dtd_min_freq_grid != 0.0:
+        dfd_lower_freq_grid = 1. / dtd_min_freq_grid
+        if dfd_lower_freq_grid > -df_min_freq * (1. - max_freq_tol_time_interpolation):
+            msg = f'Maximum frequency of interpolation grid {dfd_lower_freq_grid} is larger than limit of reliability {-df_min_freq}, consider decreasing Nf and increasing Nt, or decreasing requested dtdf or Ntd_negative'
+            if assert_mode:
+                raise ValueError(msg)
+            warn(msg, stacklevel=2)
 
     return WDMWaveletConstants(
         Nf,
