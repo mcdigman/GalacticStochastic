@@ -302,6 +302,131 @@ def get_taylor_time_pixel_direct(
     assert evs_mid != 0.0
     return evc_mid, evs_mid
 
+@njit()
+def get_taylor_time_pixel_direct_order2(
+    fa: float, fda: float, k_in: int, wavelet_norm: NDArray[np.floating], wc: WDMWaveletConstants
+) -> tuple[float, float, float, float]:
+    """
+    Compute Taylor expansion coefficients for a single time pixel in the wavelet domain.
+
+    This function performs a direct, on-the-fly calculation of the Taylor expansion
+    coefficients required for wavelet-domain interpolation at the given time pixel.
+    The computation is carried out using the wavelet configuration parameters in `_wc`. This pixel-by-pixel
+    approach provides somewhat higher accuracy and can be used for validation,
+    testing, or situations where precomputed tables would be excessively large or slow to compute.
+    Note while more accurate than the table-based method, it is still only the first-order Taylor approximation,
+    so the overall reconstruction accuracy may not improve significantly.
+
+    Parameters
+    ----------
+    fa: float
+        The frequency at which to compute the Taylor expansion coefficients.
+    fda: float
+        The frequency derivative at which to compute the Taylor expansion coefficients.
+    k_in: int
+        The frequency index of the wavelet pixel for which to compute the coefficients.
+    wavelet_norm: NDArray[np.floating]
+        A single precomputed and normalized wavelet for reference.
+    wc : WDMWaveletConstants
+        Wavelet decomposition configuration containing resolution, frequency grid,
+        and windowing information.
+
+    Returns
+    -------
+    evc: float
+        The cosine component of the Taylor expansion coefficient for the given time pixel.
+    evs: float
+        The sine component of the Taylor expansion coefficient for the given time pixel.
+
+    Notes
+    -----
+    This method does not use or require precomputed interpolation tables. It is best suited
+    for use cases demanding somewhat higher precision.
+
+    See Also
+    --------
+    get_taylor_table_time : Compute or retrieve Taylor coefficient tables for a grid of points.
+    wavemaket_direct : Construct sparse wavelet representations using direct coefficient evaluation.
+    """
+    dfa: float = fa - wc.DF * k_in
+    # df_bw technically depends on Nsf, but the dependence cancels immediately
+    xk: float = float(np.abs(dfa)) / wc.df_bw
+    fd_mid: float = fda
+
+    z_add: float = np.pi / 16
+    z_pre: float = 2 * np.pi * wc.df_bw * wc.dt * xk
+    z_quads_mid = np.zeros(wc.K)
+    for k in range(wc.K):
+        z_quads_mid[k] = np.pi * wc.dt**2 * fd_mid * (k - wc.K // 2) ** 2
+
+    z_mult: float = z_add + z_pre
+    evc_mid: float = 0.0
+    evs_mid: float = 0.0
+    devc_mid: float = 0.0
+    devs_mid: float = 0.0
+    #import matplotlib.pyplot as plt
+    #plt.plot(wavelet_norm * np.sin(z_mult*(np.arange(0,wc.K) - wc.K//2)+z_quads_mid))
+    #plt.plot(wavelet_norm * np.cos(z_mult*(np.arange(0,wc.K) - wc.K//2)+z_quads_mid))
+    #plt.xlabel(str(k_in)+" "+str(fa)+" "+str(fda))
+    #plt.show()
+
+    for k in prange(wc.K):
+        z_mid: float = z_mult * (k - wc.K // 2) + z_quads_mid[k]
+        evc_mid += wavelet_norm[k] * np.cos(z_mid)
+        evs_mid += wavelet_norm[k] * np.sin(z_mid)
+        devc_mid -= wc.dt * (k - wc.K // 2) * wavelet_norm[k] * np.sin(z_mid)
+        devs_mid += wc.dt * (k - wc.K // 2) * wavelet_norm[k] * np.cos(z_mid)
+
+    assert evc_mid != 0.0
+    assert evs_mid != 0.0
+    assert devc_mid != 0.0
+    assert devs_mid != 0.0
+    devc_mid = devc_mid
+    devs_mid = devs_mid
+
+    return evc_mid, evs_mid, devc_mid, devs_mid
+
+
+def dfd_grid_spacing_check_helper(wc: WDMWaveletConstants, f_target: float, fd_target: float = 0., k_range: int = 1, atol_mult: float = 1.e-6, rtol_pix: float = 1.e-7, assert_mode: int = 1, dfd_mult: float = 1.0, wavelet_norm: NDArray[np.floating] | None = None) -> float:
+    """Do some checks using the exact formula to deterimine if the dfd grid spacing appears adequate."""
+    if wavelet_norm is None:
+        wavelet_norm = get_wavelet_norm(wc)
+
+    # determine the scale to set
+    abs_scale: float = float(np.sum(np.abs(wavelet_norm)))
+    atol_pix: float = atol_mult * abs_scale
+    assert atol_pix > 0.
+
+    # check if the dfd seems small enough for numerical stability
+    k_base = int(np.floor(f_target / wc.DF))
+    k_min: int = max(k_base - k_range, 1)
+    k_max: int = min(k_base + k_range, wc.Nf - 1)
+    dfd_mult_need: float = np.inf
+    for k in range(k_min, k_max + 1):
+        dfd_loc: float = dfd_mult * wc.dfd
+        y_1, z_1 = get_taylor_time_pixel_direct(f_target, fd_target - dfd_loc, k, wavelet_norm, wc)
+        y_2, z_2 = get_taylor_time_pixel_direct(f_target, fd_target, k, wavelet_norm, wc)
+        y_3, z_3 = get_taylor_time_pixel_direct(f_target, fd_target + dfd_loc, k, wavelet_norm, wc)
+
+        # central finite difference first and second derivative of y
+        ypp: float = (y_1 - 2 * y_2 + y_3) / dfd_loc**2
+        y_abs_error: float = float(np.abs(ypp)) * dfd_loc**2 / 2.0
+
+        zpp: float = (z_1 - 2 * z_2 + z_3) / dfd_loc**2
+        z_abs_error: float = float(np.abs(zpp)) * dfd_loc**2 / 2.0
+
+        error_use: float = max(y_abs_error, z_abs_error)
+        if error_use > 0:
+            dfd_mult_need = min(dfd_mult_need, float(np.sqrt(atol_pix / error_use)))
+        else:
+            dfd_mult_need = min(dfd_mult_need, 1.)
+
+        if assert_mode == 1:
+            msg = f'The requested grid will not achieve target precision. Try decreasing dfdot by ~{dfd_mult_need}'
+            assert_allclose(y_2, y_2 + y_abs_error, atol=atol_pix, rtol=rtol_pix, err_msg=msg)
+            assert_allclose(z_2, z_2 + z_abs_error, atol=atol_pix, rtol=rtol_pix, err_msg=msg)
+    return dfd_mult_need
+
 
 def dfd_grid_spacing_check_helper(wc: WDMWaveletConstants, f_target: float, fd_target: float = 0., k_range: int = 1, atol_mult: float = 1.e-6, rtol_pix: float = 1.e-7, assert_mode: int = 1, dfd_mult: float = 1.0, wavelet_norm: NDArray[np.floating] | None = None) -> float:
     """Do some checks using the exact formula to deterimine if the dfd grid spacing appears adequate."""

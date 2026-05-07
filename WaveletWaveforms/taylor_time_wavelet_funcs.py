@@ -6,11 +6,12 @@ The functions use the WDM wavelet basis.
 from typing import TYPE_CHECKING
 
 import numpy as np
+from numpy.testing import assert_allclose
 from numba import njit
 
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, SparseWaveletWaveform
-from WaveletWaveforms.taylor_time_coefficients import WaveletTaylorTimeCoeffs, get_taylor_time_pixel_direct
+from WaveletWaveforms.taylor_time_coefficients import WaveletTaylorTimeCoeffs, get_taylor_time_pixel_direct, get_taylor_time_pixel_direct_order2
 from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 if TYPE_CHECKING:
@@ -26,6 +27,7 @@ def wavemaket(
     taylor_table: WaveletTaylorTimeCoeffs,
     *,
     force_nulls: int = 2,
+    amplitude_order: int = 0
 ) -> None:
     """
     Construct a sparse wavelet-domain representation of a time-domain intrinsic_waveform using interpolation tables.
@@ -78,6 +80,9 @@ def wavemaket(
     --------
     wavemaket_direct : Direct computation of wavelet coefficients without table lookup.
     """
+    assert amplitude_order in (0, 1), 'Unrecognized amplitude order'
+    assert force_nulls in (0, 1, 2), 'Unrecognized force_nulls option. Valid options are 0, 1, or 2.'
+
     n_set_old = wavelet_waveform.n_set.copy()
 
     nc_waveform = wavelet_waveform.wave_value.shape[0]
@@ -98,8 +103,10 @@ def wavemaket(
 
             assert taylor_table.Nfsam.size == wc.Nfd
             if 0 <= n_ind < wc.Nfd - 1:
-                c: float = waveform.AT[itrc, j] * np.cos(waveform.PT[itrc, j])
-                s: float = waveform.AT[itrc, j] * np.sin(waveform.PT[itrc, j])
+                #c: float = waveform.AT[itrc, j] * np.cos(waveform.PT[itrc, j])
+                #s: float = waveform.AT[itrc, j] * np.sin(waveform.PT[itrc, j])
+                c: float = np.cos(waveform.PT[itrc, j])
+                s: float = np.sin(waveform.PT[itrc, j])
 
                 dy: float = y0 - ny
                 assert 0.0 <= dy <= 1.0
@@ -149,14 +156,57 @@ def wavemaket(
                             n_ind + 1, jj2 + 1
                         ]
 
+
                         z: float = (1.0 - dx) * taylor_table.evs[n_ind, jj1] + dx * taylor_table.evs[n_ind, jj1 + 1]
                         zz: float = (1.0 - dx) * taylor_table.evs[n_ind + 1, jj2] + dx * taylor_table.evs[
                             n_ind + 1, jj2 + 1
                         ]
 
+
+                        #y_alt, z_alt, y2_alt, z2_alt = get_taylor_time_pixel_direct_order2(fa, waveform.FTd[itrc, j], k, taylor_table.wavelet_norm, wc)
+
+
+                        mult1 = waveform.AT[itrc, j]
+                        if amplitude_order == 0:
+                            mult2 = 0.0
+                            z2 = 0.0
+                            y2 = 0.0
+                        else:
+                            if nt_lim_waveform.nx_min < j < nt_lim_waveform.nx_max - 1:
+                                mult2 = (waveform.AT[itrc, j + 1] - waveform.AT[itrc, j - 1]) / (2 * nt_lim_waveform.dx)
+                            elif nt_lim_waveform.nx_min == j < nt_lim_waveform.nx_max - 1:
+                                mult2 = (waveform.AT[itrc, j + 1] - waveform.AT[itrc, j]) / (nt_lim_waveform.dx)
+                            elif nt_lim_waveform.nx_min < j == nt_lim_waveform.nx_max - 1:
+                                mult2 = (waveform.AT[itrc, j] - waveform.AT[itrc, j - 1]) / (nt_lim_waveform.dx)
+                            else:
+                                mult2 = 0.
+
+                            dydx = -1/(2*np.pi)*(1./wc.df_bw)*(taylor_table.evc[n_ind, jj1 + 1] - taylor_table.evc[n_ind, jj1])
+                            dyydx = -1/(2*np.pi)*(1./wc.df_bw)*(taylor_table.evc[n_ind + 1, jj2 + 1] - taylor_table.evc[n_ind + 1, jj2])
+                            dzdx = 1/(2*np.pi)*(1./wc.df_bw)*(taylor_table.evs[n_ind, jj1 + 1] - taylor_table.evs[n_ind, jj1])
+                            dzzdx = 1/(2*np.pi)*(1./wc.df_bw)*(taylor_table.evs[n_ind + 1, jj2 + 1] - taylor_table.evs[n_ind + 1, jj2])
+
+                            #y1, z1, dy1df, dz1df = get_taylor_time_pixel_direct_order2(fa, waveform.FTd[itrc, j], k, taylor_table.wavelet_norm, wc)
+
+                            y2 = (1.0 - dy) * dzdx + dy * dzzdx
+                            z2 = (1.0 - dy) * dydx + dy * dyydx
+                            #print(dz1df, y2, -dy1df, z2)
+                            #assert_allclose(-dy1df, z2, atol=1.e-10, rtol=2.e-1)
+                            #assert_allclose(dz1df, y2, atol=1.e-10, rtol=2.e-1)
+
+                        #print(y2_alt, z2_alt, y_part2, z_part2)
+                        #print(y2_alt/y_part2)
+                        #print(z2_alt/z_part2)
+                        #assert_allclose(y2_alt/y_part2, z2_alt/z_part2, atol=1.e-100, rtol=1.e-1)
+                        #assert_allclose(y2_alt, y_part2, atol=1.e-100, rtol=1.e-1)
+                        #assert_allclose(z2_alt, z_part2, atol=1.e-100, rtol=1.e-1)
+
                         # interpolate over fdot
-                        y = (1.0 - dy) * y + dy * yy
-                        z = (1.0 - dy) * z + dy * zz
+                        y1 = (1.0 - dy) * y + dy * yy
+                        z1 = (1.0 - dy) * z + dy * zz
+
+                        z = z1 * mult1 + z2 * mult2
+                        y = y1 * mult1 + y2 * mult2
 
                         if (j_ind + k) % 2:
                             wavelet_waveform.wave_value[itrc, mm] = -(c * z + s * y)
@@ -174,8 +224,11 @@ def wavemaket(
                 # we could just actually calculate the non-precomputed coefficient
                 fa = waveform.FT[itrc, j]
 
-                c = waveform.AT[itrc, j] * np.cos(waveform.PT[itrc, j])
-                s = waveform.AT[itrc, j] * np.sin(waveform.PT[itrc, j])
+                #c = waveform.AT[itrc, j] * np.cos(waveform.PT[itrc, j])
+                #s = waveform.AT[itrc, j] * np.sin(waveform.PT[itrc, j])
+
+                c = np.cos(waveform.PT[itrc, j])
+                s = np.sin(waveform.PT[itrc, j])
 
                 Nfsam1_loc = int((wc.BW + wc.dfd * wc.Tw * ny) / wc.df_bw)
                 if Nfsam1_loc % 2 == 1:
@@ -197,7 +250,28 @@ def wavemaket(
                         wavelet_waveform.wave_value[itrc, mm] = 0.0
                     else:
                         # option to directly compute the value at the null, should be ok as long as they are rare
-                        y, z = get_taylor_time_pixel_direct(fa, waveform.FTd[itrc, j], k, taylor_table.wavelet_norm, wc)
+
+                        mult1 = waveform.AT[itrc, j]
+                        if amplitude_order == 0:
+                            y1, z1 = get_taylor_time_pixel_direct(fa, waveform.FTd[itrc, j], k, taylor_table.wavelet_norm, wc)
+                            mult2 = 0.0
+                            z2 = 0.0
+                            y2 = 0.0
+                        else:
+                            #y1, z1, y2, z2 = get_taylor_time_pixel_direct_order2(fa, waveform.FTd[itrc, j], k, taylor_table.wavelet_norm, wc)
+                            y1, z1, dy1df, dz1df = get_taylor_time_pixel_direct_order2(fa, waveform.FTd[itrc, j], k, taylor_table.wavelet_norm, wc)
+                            if nt_lim_waveform.nx_min < j < nt_lim_waveform.nx_max - 1:
+                                mult2 = (waveform.AT[itrc, j + 1] - waveform.AT[itrc, j - 1]) / (2 * nt_lim_waveform.dx)
+                            elif nt_lim_waveform.nx_min == j < nt_lim_waveform.nx_max - 1:
+                                mult2 = (waveform.AT[itrc, j + 1] - waveform.AT[itrc, j]) / (nt_lim_waveform.dx)
+                            elif nt_lim_waveform.nx_min < j == nt_lim_waveform.nx_max - 1:
+                                mult2 = (waveform.AT[itrc, j] - waveform.AT[itrc, j - 1]) / (nt_lim_waveform.dx)
+                            else:
+                                mult2 = 0.
+
+                        z = z1 * mult1 - dy1df * mult2
+                        y = y1 * mult1 + dz1df * mult2
+
                         if (j_ind + k) % 2:
                             wavelet_waveform.wave_value[itrc, mm] = -(c * z + s * y)
                         else:
@@ -229,6 +303,7 @@ def wavemaket_direct(
     nt_lim_waveform: PixelGenericRange,
     wc: WDMWaveletConstants,
     taylor_table: WaveletTaylorTimeCoeffs,
+    amplitude_order: int=0,
 ) -> None:
     """
     Construct a sparse wavelet-domain representation of a time-domain intrinsic_waveform without interpolation.
@@ -276,6 +351,8 @@ def wavemaket_direct(
     --------
     wavemaket : Table-based computation of wavelet coefficients using precomputed interpolation.
     """
+    assert amplitude_order in (0, 1), 'Unrecognized amplitude order'
+
     n_set_old: NDArray[np.integer] = wavelet_waveform.n_set.copy()
 
     nc_waveform: int = wavelet_waveform.wave_value.shape[0]
@@ -290,8 +367,10 @@ def wavemaket_direct(
         for j in range(nt_lim_waveform.nx_min, nt_lim_waveform.nx_max):
             j_ind: int = j  # keep j_ind separate in case we want to apply a time offset in the future
 
-            c: float = waveform.AT[itrc, j] * np.cos(waveform.PT[itrc, j])
-            s: float = waveform.AT[itrc, j] * np.sin(waveform.PT[itrc, j])
+            #c: float = waveform.AT[itrc, j] * np.cos(waveform.PT[itrc, j])
+            #s: float = waveform.AT[itrc, j] * np.sin(waveform.PT[itrc, j])
+            c: float = np.cos(waveform.PT[itrc, j])
+            s: float = np.sin(waveform.PT[itrc, j])
 
             fa: float = waveform.FT[itrc, j]
 
@@ -303,12 +382,16 @@ def wavemaket_direct(
             # not sure the - 1 is strictly necessary
             half_bandwidth: float = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df_bw / 2
 
+            knearest = int(np.round(fa / wc.DF))
+            #kbelow = int(np.floor(fa / wc.DF))
+            kmin = knearest
+            #kmax = knearest
             # lowest frequency layer
             kmin: int = int(np.ceil((fa - half_bandwidth) / wc.DF))
             kmin = max(nf_min, kmin)
             kmin = min(nf_max, kmin)
 
-            # highest frequency layer
+            ## highest frequency layer
             kmax: int = min(nf_max, int(np.floor((fa + half_bandwidth) / wc.DF)))
             kmax = max(nf_min, kmax)
             kmax = max(kmin, kmax)
@@ -316,12 +399,50 @@ def wavemaket_direct(
             for k in range(kmin, kmax + 1):
                 wavelet_waveform.pixel_index[itrc, mm] = j_ind * wc.Nf + k
 
-                y, z = get_taylor_time_pixel_direct(fa, waveform.FTd[itrc, j], k, wavelet_norm, wc)
+                mult1 = waveform.AT[itrc, j]
+                if amplitude_order == 0:
+                    y1, z1 = get_taylor_time_pixel_direct(fa, waveform.FTd[itrc, j], k, wavelet_norm, wc)
+                    mult2 = 0.0
+                    y2 = 0.0
+                    z2 = 0.0
+                    dy1df = 0.0
+                    dz1df = 0.0
 
-                if (j_ind + k) % 2:
-                    wavelet_waveform.wave_value[itrc, mm] = -(c * z + s * y)
                 else:
-                    wavelet_waveform.wave_value[itrc, mm] = c * y - s * z
+                    y1, z1, dy1df, dz1df = get_taylor_time_pixel_direct_order2(fa, waveform.FTd[itrc, j], k, wavelet_norm, wc)
+                    mult1 = waveform.AT[itrc, j]
+                    # the value of this correction may be severely limited by the accuracy of the accuracy of the finite difference here
+                    # also there is maybe some aliasing effect with the resolution of wavelet_norm? 
+                    if nt_lim_waveform.nx_min < j < nt_lim_waveform.nx_max - 1:
+                        #mult2 = (waveform.AT[itrc, j + 1]/waveform.FT[itrc, j + 1] - waveform.AT[itrc, j - 1]/waveform.FT[itrc, j - 1]) / (2 * nt_lim_waveform.dx) * waveform.FT[itrc, j] + waveform.AT[itrc, j] * waveform.FTd[itrc, j]/ waveform.FT[itrc, j]
+                        mult2 = (waveform.AT[itrc, j + 1] - waveform.AT[itrc, j - 1]) / (2 * nt_lim_waveform.dx)
+                    elif nt_lim_waveform.nx_min == j < nt_lim_waveform.nx_max - 1:
+                        mult2 = (waveform.AT[itrc, j + 1] - waveform.AT[itrc, j]) / (nt_lim_waveform.dx)
+                    elif nt_lim_waveform.nx_min < j == nt_lim_waveform.nx_max - 1:
+                        mult2 = (waveform.AT[itrc, j] - waveform.AT[itrc, j - 1]) / (nt_lim_waveform.dx)
+                    else:
+                        mult2 = 0.
+
+                #z = z1 * mult1 + z2 * mult2
+                #y = y1 * mult1 + y2 * mult2
+                #if k < knearest:
+                #    z = z1 * mult1 + z2 * mult2
+                #    y = y1 * mult1 + y2 * mult2
+                #elif k >= knearest:
+                #    z = z1 * mult1 + z2 * mult2
+                #    y = y1 * mult1 + y2 * mult2
+                #else:
+                #    z = z1 * mult1 + 0*z2 * mult2
+                #    y = y1 * mult1 + 0*y2 * mult2
+
+                #if (j_ind + k) % 2:
+                #    wavelet_waveform.wave_value[itrc, mm] = -(c * z + s * y)
+                #else:
+                #    wavelet_waveform.wave_value[itrc, mm] = c * y - s * z
+                if (j_ind + k) % 2:
+                    wavelet_waveform.wave_value[itrc, mm] = -(c * (z1 * mult1 + dy1df * mult2) + s * (y1 * mult1 - dz1df * mult2))
+                else:
+                    wavelet_waveform.wave_value[itrc, mm] = c * (y1 * mult1 - dz1df * mult2) - s * (z1 * mult1 + dy1df * mult2)
 
                 mm += 1
                 # end loop over frequency layers

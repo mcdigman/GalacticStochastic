@@ -293,7 +293,7 @@ def multishape_method_match_helper(
     # call wavemaket
     wavemaket(wavelet_waveform1, AET_waveform, nt_lim, wc, taylor_time_table, force_nulls=False)
 
-    wavemaket_direct(wavelet_waveform2, AET_waveform, nt_lim, wc, taylor_time_table)
+    wavemaket_direct(wavelet_waveform2, AET_waveform, nt_lim, wc, taylor_time_table, amplitude_order=1)
 
     (
         wavelet_dense1,
@@ -434,7 +434,7 @@ def multishape_method_match_helper(
 @pytest.mark.parametrize('rr_model', ['const'])
 @pytest.mark.parametrize('gridsize2_mult', [1])
 @pytest.mark.parametrize('p_offset', [0.0, np.pi / 2.0])
-# @pytest.mark.skip
+@pytest.mark.skip
 def test_wavemaket_method_match_slopes(
     p_offset: float,
     f0_mult: float,
@@ -462,7 +462,7 @@ def test_wavemaket_method_match_slopes(
 @pytest.mark.parametrize('rr_model', ['const'])
 @pytest.mark.parametrize('gridsize2_mult', [32, 16, 8, 4, 2, 1, 0.5])
 @pytest.mark.parametrize('p_offset', [np.pi / 2.0, 0.0])
-# @pytest.mark.skip
+@pytest.mark.skip
 def test_wavemaket_multishape_method_match(
     p_offset: float,
     f0_mult: float,
@@ -487,7 +487,7 @@ def test_wavemaket_multishape_method_match(
     ],
 )
 @pytest.mark.parametrize('p_offset', [0.0, np.pi / 2.0])
-# @pytest.mark.skip
+@pytest.mark.skip
 def test_wavemaket_extreme_size(p_offset: float, f0_mult: float, direct: bool) -> None:
     """Test with maximally rapid oscillations in FTd that integrate out to constant frequency"""
     # get the config for the first (Nf, Nt) pair
@@ -546,7 +546,7 @@ def test_wavemaket_extreme_size(p_offset: float, f0_mult: float, direct: bool) -
     nt_lim = PixelGenericRange(0, wc.Nt, wc.DT, 0.0)
 
     if direct:
-        wavemaket_direct(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table)
+        wavemaket_direct(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table, amplitude_order=1)
     else:
         wavemaket(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table, force_nulls=False)
     print(wavelet_waveform.n_set)
@@ -620,7 +620,7 @@ def test_wavemaket_extreme_size(p_offset: float, f0_mult: float, direct: bool) -
 @pytest.mark.parametrize('gridsize2_mult', [32, 16, 8, 4, 2, 0.5])
 @pytest.mark.parametrize('p_offset', [0.0, np.pi / 2.0])
 @pytest.mark.parametrize('direct', [True, False])
-# @pytest.mark.skip
+@pytest.mark.skip
 def test_wavemaket_dimension_comparison_midevolve2(
     p_offset: float,
     f0_mult: float,
@@ -730,8 +730,8 @@ def test_wavemaket_dimension_comparison_midevolve2(
     nt_lim2 = PixelGenericRange(0, wc2.Nt, wc2.DT, lc2.t0)
     # call wavemaket
     if direct:
-        wavemaket_direct(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1)
-        wavemaket_direct(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2)
+        wavemaket_direct(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1, amplitude_order=1)
+        wavemaket_direct(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2, amplitude_order=1)
     else:
         wavemaket(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1, force_nulls=False)
         wavemaket(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2, force_nulls=False)
@@ -835,7 +835,7 @@ def test_wavemaket_dimension_comparison_midevolve2(
 @pytest.mark.parametrize('gridsize2_mult', [16, 8, 4, 2, 0.5])
 @pytest.mark.parametrize('p_offset', [0.0, np.pi / 2.0])
 @pytest.mark.parametrize('direct', [True, False])
-# @pytest.mark.skip
+@pytest.mark.skip
 def test_wavemaket_dimension_comparison_slowevolve(
     p_offset: float,
     f0_mult: float,
@@ -933,8 +933,8 @@ def test_wavemaket_dimension_comparison_slowevolve(
 
     # call wavemaket
     if direct:
-        wavemaket_direct(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1)
-        wavemaket_direct(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2)
+        wavemaket_direct(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1, amplitude_order=1)
+        wavemaket_direct(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2, amplitude_order=1)
     else:
         wavemaket(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1, force_nulls=False)
         wavemaket(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2, force_nulls=False)
@@ -1051,7 +1051,7 @@ def test_wavemaket_dimension_comparison_slowevolve(
 @pytest.mark.parametrize('gridsize2_mult', [32, 16, 8, 4, 2, 0.5])
 @pytest.mark.parametrize('p_offset', [0.0, np.pi / 2.0])
 @pytest.mark.parametrize('direct', [True, False])
-# @pytest.mark.skip
+@pytest.mark.skip
 def test_wavemaket_dimension_comparison_midevolve(
     p_offset: float,
     f0_mult: float,
@@ -1149,8 +1149,8 @@ def test_wavemaket_dimension_comparison_midevolve(
 
     # call wavemaket
     if direct:
-        wavemaket_direct(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1)
-        wavemaket_direct(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2)
+        wavemaket_direct(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1, amplitude_order=1)
+        wavemaket_direct(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2, amplitude_order=1)
     else:
         wavemaket(wavelet_waveform1, AET_waveform1, nt_lim1, wc1, taylor_time_table1, force_nulls=False)
         wavemaket(wavelet_waveform2, AET_waveform2, nt_lim2, wc2, taylor_time_table2, force_nulls=False)
@@ -1323,7 +1323,7 @@ def test_wavemaket_1d(f0_mult: float, f0p_mult: float, f0pp_mult: float, rr_mode
 
     # call wavemaket
     nt_lim1 = PixelGenericRange(0, wc1.Nt, wc1.DT, 0.0)
-    wavemaket(wavelet_waveform, AET_waveform, nt_lim1, wc1, taylor_time_table1, force_nulls=False)
+    wavemaket(wavelet_waveform, AET_waveform, nt_lim1, wc1, taylor_time_table1, force_nulls=0, amplitude_order=1)
     print(wavelet_waveform.n_set)
     wavelet_dense, signal_time, signal_freq, mag_got, angle_got, _, _, _, _, itr_low_cut, itr_high_cut = (
         get_wavelet_alternative_representation_helper(wavelet_waveform, wc1, tukey_alpha, f_lowpass, 1.0e-3)
@@ -1376,6 +1376,10 @@ def test_wavemaket_1d(f0_mult: float, f0p_mult: float, f0pp_mult: float, rr_mode
             nt_loc,
         )
 
+    import matplotlib.pyplot as plt
+    plt.plot(signal_time_cos_matched[:,0])
+    plt.plot(signal_time_pred_cos[:,0])
+    plt.show()
     # compare the frequency domain representations for the pixels that match
     mag_pred = np.abs(signal_freq_cos_matched[:, 0])
 

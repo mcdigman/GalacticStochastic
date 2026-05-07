@@ -140,6 +140,9 @@ nx = 4.0
 # reduced filter length; must be a power of 2
 L = 512
 
+# time table target precision
+taylor_time_interpolation_target_precision = 1.0e-3
+
 [lisa_constants]
 # constants related to LISA constellation
 

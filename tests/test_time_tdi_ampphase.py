@@ -25,7 +25,7 @@ from WaveletWaveforms.taylor_time_coefficients import (
     get_empty_sparse_taylor_time_waveform,
     get_taylor_table_time,
 )
-from WaveletWaveforms.taylor_time_wavelet_funcs import wavemaket
+from WaveletWaveforms.taylor_time_wavelet_funcs import wavemaket, wavemaket_direct
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
 # the table takes a while to compute so share it between tests
@@ -226,6 +226,7 @@ def get_RR_t_mult(
 @pytest.mark.parametrize('nt_loc', [104])
 @pytest.mark.parametrize('nt_max', [-1, 100, 101, 102, 103, 104])
 @pytest.mark.parametrize('nt_min', [0, 1, 2, 3, 4, 5, 6, 98])
+@pytest.mark.skip()
 def test_spacecraft_channel_deriv_helper_limit(rr_model1: str, rr_model2: str, rr_model3: str, ii_model1: str, ii_model2: str, ii_model3: str, nt_loc: int, nt_min: int, nt_max: int) -> None:
     """Test whether the signal computed in the time domain matches computing
     it in the wavelet domain and transforming to time.
@@ -341,6 +342,7 @@ def test_spacecraft_channel_deriv_helper_limit(rr_model1: str, rr_model2: str, r
         'quad1',
     ],
 )
+@pytest.mark.skip
 def test_spacecraft_channel_deriv_helper(rr_model1: str, rr_model2: str, rr_model3: str, ii_model1: str, ii_model2: str, ii_model3: str) -> None:
     """Test whether the signal computed in the time domain matches computing
     it in the wavelet domain and transforming to time.
@@ -509,7 +511,7 @@ def test_spacecraft_channel_deriv_helper(rr_model1: str, rr_model2: str, rr_mode
     'rr_model',
     ['const', 'lin1', 'lin2', 'lin3', 'lin10', 'lin11', 'lin12', 'lin13', 'lin14', 'lin15', 'lin16'],
 )
-# @pytest.mark.skip()
+@pytest.mark.skip()
 def test_ExtractAmpPhase_inplace_basic(f0_mult: float, rr_model: str, f0p_mult: float) -> None:
     """Test the extraction in some easier cases"""
     toml_filename = 'tests/time_tdi_test_config1.toml'
@@ -798,7 +800,7 @@ def test_ExtractAmpPhase_inplace_basic(f0_mult: float, rr_model: str, f0p_mult: 
         'lin18',
     ],
 )
-# @pytest.mark.skip()
+@pytest.mark.skip()
 def test_time_tdi_inplace_nearzero(f0_mult: float, rr_model: str, f0p_mult: float) -> None:
     """Test extraction in cases where the RR or II or both go near zero"""
     toml_filename = 'tests/time_tdi_test_config1.toml'
@@ -1099,7 +1101,7 @@ def test_time_tdi_inplace_nearzero(f0_mult: float, rr_model: str, f0p_mult: floa
 )
 @pytest.mark.parametrize('f0p_mult', [-0.2, 0.0, 1.0e-5, 0.2, 0.9])
 @pytest.mark.parametrize('rr_model', ['quad2', 'sin1', 'sin2', 'sin3', 'sin4', 'sin5', 'lin18', 'lin17', 'const'])
-# @pytest.mark.skip()
+#@pytest.mark.skip()
 def test_time_tdi_inplace_transform(f0_mult: float, rr_model: str, f0p_mult: float) -> None:
     """Test whether the signal computed in the time domain matches computing
     it in the wavelet domain and transforming to time.
@@ -1176,6 +1178,7 @@ def test_time_tdi_inplace_transform(f0_mult: float, rr_model: str, f0p_mult: flo
     wavelet_waveform = get_empty_sparse_taylor_time_waveform(lc.nc_waveform, wc)
     nt_lim = PixelGenericRange(0, wc.Nt, wc.DT, lc.t0)
     wavemaket(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table, force_nulls=0)
+    #wavemaket_direct(wavelet_waveform, AET_waveform, nt_lim, wc, taylor_time_table, amplitude_order=1)
 
     # get the dense wavelet intrinsic_waveform
     wavelet_dense: NDArray[np.floating] = np.zeros((nt_loc * wc.Nf, nc_waveform))

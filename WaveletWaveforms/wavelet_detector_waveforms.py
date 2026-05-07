@@ -392,6 +392,7 @@ class BinaryWaveletTaylorTime(
                 self._nt_lim_waveform,
                 self._wc,
                 self._taylor_time_table,
+                amplitude_order=1
             )
         elif self._wavelet_mode in (1, 2, 3):
             # including 3 for future compatibility with computing coefficients for nulls
