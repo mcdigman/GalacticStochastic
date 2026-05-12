@@ -246,7 +246,7 @@ def wavemakef_direct(
 
                     z = z1 * mult1 + z2 * mult2
                     y = y1 * mult1 + y2 * mult2
-                    #TODO check if signs of mult2 components are always correct
+                    # TODO check if signs of mult2 components are always correct
 
                     if j_ind % 2:
                         if (j_ind + kx) % 2:

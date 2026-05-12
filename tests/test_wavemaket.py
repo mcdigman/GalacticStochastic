@@ -187,7 +187,7 @@ def get_wavelet_alternative_representation_helper(
     mag_got: NDArray[np.floating] = np.abs(signal_freq)
 
     # index of predicted brightest frequency
-    arg_peak = np.argmax(mag_got)
+    # arg_peak = np.argmax(mag_got)
     min_mag = min_mag_mult * np.max(mag_got)
 
     # fft phases
@@ -1377,8 +1377,8 @@ def test_wavemaket_1d(f0_mult: float, f0p_mult: float, f0pp_mult: float, rr_mode
         )
 
     import matplotlib.pyplot as plt
-    plt.plot(signal_time_cos_matched[:,0])
-    plt.plot(signal_time_pred_cos[:,0])
+    plt.plot(signal_time_cos_matched[:, 0])
+    plt.plot(signal_time_pred_cos[:, 0])
     plt.show()
     # compare the frequency domain representations for the pixels that match
     mag_pred = np.abs(signal_freq_cos_matched[:, 0])

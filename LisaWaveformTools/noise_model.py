@@ -13,6 +13,46 @@ from WaveletWaveforms.wdm_config import WDMWaveletConstants
 
 
 @njit()
+def whiten_sparse_wavelet_helper(
+    wavelet_waveform: SparseWaveletWaveform,
+    wc: WDMWaveletConstants,
+    inv_chol_S: NDArray[np.floating],
+    nc_whiten: int,
+    inplace_mode: int,
+) -> SparseWaveletWaveform:
+    """
+    Whiten a sparse wavelet representation.
+    """
+    assert inplace_mode in (0, 1), 'Unrecognized option for inplace_mode'
+    assert len(wavelet_waveform.wave_value.shape) == 2
+    assert len(wavelet_waveform.n_set.shape) == 1
+    assert wavelet_waveform.wave_value.shape == wavelet_waveform.pixel_index.shape
+    assert wavelet_waveform.wave_value.shape[0] == wavelet_waveform.n_set.shape[0]
+    assert nc_whiten <= wavelet_waveform.n_set.shape[0]
+    assert len(inv_chol_S.shape) == 3
+    assert nc_whiten <= inv_chol_S.shape[2]
+    assert inv_chol_S.shape[0] == wc.Nt
+    assert inv_chol_S.shape[1] == wc.Nf
+
+    if inplace_mode == 0:
+        whitened_wavelet_waveform = SparseWaveletWaveform(wavelet_waveform.wave_value.copy(), wavelet_waveform.pixel_index.copy(), wavelet_waveform.n_set.copy(), wavelet_waveform.n_pixel_max)
+    else:
+        whitened_wavelet_waveform = wavelet_waveform
+
+    for itrc in range(nc_whiten):
+        n_pixel_loc: int = int(wavelet_waveform.n_set[itrc])
+        pixel_index_loc: NDArray[np.integer] = wavelet_waveform.pixel_index[itrc, :n_pixel_loc]
+        wave_value_loc: NDArray[np.floating] = wavelet_waveform.wave_value[itrc, :]
+        i_itrs: NDArray[np.integer] = np.mod(pixel_index_loc, wc.Nf)
+        j_itrs: NDArray[np.integer] = (pixel_index_loc - i_itrs) // wc.Nf
+        for mm in range(n_pixel_loc):
+            j_loc: int = int(j_itrs[mm])
+            i_loc: int = int(i_itrs[mm])
+            whitened_wavelet_waveform.wave_value[itrc, mm] = inv_chol_S[j_loc, i_loc, itrc] * wave_value_loc[mm]
+    return whitened_wavelet_waveform
+
+
+@njit()
 def get_sparse_snr_helper(
     wavelet_waveform: SparseWaveletWaveform,
     nt_lim_snr: PixelGenericRange,
@@ -85,6 +125,90 @@ def get_sparse_likelihood_helper_prewhitened(
                 data_part = data_white * signal_white
                 likelihoods[itrc] += signal_part + data_part
     return likelihoods
+
+
+@njit()
+def get_sparse_dense_inner_product_prewhitened(
+    wavelet_waveform: SparseWaveletWaveform,
+    wavelet_data_white: NDArray[np.floating],
+    nt_lim_snr: PixelGenericRange,
+    wc: WDMWaveletConstants,
+    inv_chol_S: NDArray[np.floating],
+    nc_snr: int,
+) -> NDArray[np.floating]:
+    """
+    Calculate the noise weighted inner product for each TDI channel for a given intrinsic_waveform.
+    """
+    res = np.zeros(nc_snr)
+    for itrc in range(nc_snr):
+        n_pixel_loc: int = int(wavelet_waveform.n_set[itrc])
+        pixel_index_loc: NDArray[np.integer] = wavelet_waveform.pixel_index[itrc, :n_pixel_loc]
+        wave_value_loc: NDArray[np.floating] = wavelet_waveform.wave_value[itrc, :]
+        i_itrs: NDArray[np.integer] = np.mod(pixel_index_loc, wc.Nf)
+        j_itrs: NDArray[np.integer] = (pixel_index_loc - i_itrs) // wc.Nf
+        for mm in range(n_pixel_loc):
+            j_loc: int = int(j_itrs[mm])
+            i_loc: int = int(i_itrs[mm])
+            if nt_lim_snr.nx_min <= j_loc < nt_lim_snr.nx_max:
+                signal_white: float = inv_chol_S[j_loc, i_loc, itrc] * wave_value_loc[mm]
+                data_white: float = wavelet_data_white[j_loc, i_loc, itrc]
+                res[itrc] += data_white * signal_white
+    return res
+
+
+@njit()
+def get_sparse_sparse_inner_product_sorted(
+    wavelet_waveform1: SparseWaveletWaveform,
+    wavelet_waveform2: SparseWaveletWaveform,
+    nt_lim_snr: PixelGenericRange,
+    wc: WDMWaveletConstants,
+    inv_chol_S: NDArray[np.floating],
+    nc_snr: int,
+) -> NDArray[np.floating]:
+    """
+    Calculate the noise weighted inner product for each TDI channel for a given intrinsic_waveform.
+
+    Assume both input pixel_index arrays are sorted for now.
+    """
+    res = np.zeros(nc_snr)
+    for itrc in range(nc_snr):
+        n_pixel_loc1: int = int(wavelet_waveform1.n_set[itrc])
+        pixel_index_loc1: NDArray[np.integer] = wavelet_waveform1.pixel_index[itrc, :n_pixel_loc1]
+        wave_value_loc1: NDArray[np.floating] = wavelet_waveform1.wave_value[itrc, :]
+
+        n_pixel_loc2: int = int(wavelet_waveform2.n_set[itrc])
+        pixel_index_loc2: NDArray[np.integer] = wavelet_waveform2.pixel_index[itrc, :n_pixel_loc2]
+        wave_value_loc2: NDArray[np.floating] = wavelet_waveform2.wave_value[itrc, :]
+
+        # we only need 1 copy of these because we only consider values where both points are on
+        i_itrs: NDArray[np.integer] = np.mod(pixel_index_loc1, wc.Nf)
+        j_itrs: NDArray[np.integer] = (pixel_index_loc1 - i_itrs) // wc.Nf
+
+        mm1 = 0
+        mm2 = 0
+        for _mm_combo in range(n_pixel_loc1 + n_pixel_loc2):
+            index1 = pixel_index_loc1[mm1]
+            index2 = pixel_index_loc2[mm2]
+            if index1 == index2:
+                j_loc: int = int(j_itrs[mm1])
+                i_loc: int = int(i_itrs[mm1])
+                if nt_lim_snr.nx_min <= j_loc < nt_lim_snr.nx_max:
+                    signal_white1: float = inv_chol_S[j_loc, i_loc, itrc] * wave_value_loc1[mm1]
+                    signal_white2: float = inv_chol_S[j_loc, i_loc, itrc] * wave_value_loc2[mm2]
+                    res[itrc] += signal_white1 * signal_white2
+                mm1 += 1
+                mm2 += 1
+            elif index1 > index2:
+                mm2 += 1
+            else:
+                mm1 += 1
+            # if either reaches end, break early because no more values matter
+            if mm1 >= wavelet_waveform1.n_set[itrc]:
+                break
+            if mm2 >= wavelet_waveform2.n_set[itrc]:
+                break
+
+    return res
 
 
 class DenseNoiseModel(ABC):
@@ -265,6 +389,25 @@ class DenseNoiseModel(ABC):
     def get_S_stat_m(self) -> NDArray[np.floating]:
         """Get the mean noise covariance matrix as a function of time."""
         return np.mean(self.get_S(), axis=0)
+
+    def whiten_dense(self, waveform_dense: NDArray[np.floating]) -> NDArray[np.floating]:
+        """Whiten an array with an input dense wavelet representation."""
+        assert waveform_dense.shape == (self._wc.Nt, self._wc.Nf, self._nc_noise)
+        return waveform_dense * self.get_inv_chol_S()
+
+    def whiten_sparse(self, wavelet_waveform: SparseWaveletWaveform, inplace_mode: int = 0) -> SparseWaveletWaveform:
+        """Whiten an input sparse wavelet representation."""
+        assert wavelet_waveform.wave_value.shape[0] <= self._nc_noise
+        return whiten_sparse_wavelet_helper(wavelet_waveform, self._wc, self.get_inv_chol_S(), wavelet_waveform.wave_value.shape[0], inplace_mode)
+
+    def get_log_likelihood_sparse(self, wavelet_waveform: SparseWaveletWaveform, wavelet_data_white: NDArray[np.floating], nt_lim: PixelGenericRange) -> np.floating:
+        return np.sum(get_sparse_likelihood_helper_prewhitened(wavelet_waveform, wavelet_data_white, nt_lim, self._wc, self.get_inv_chol_S(), self._nc_snr))
+
+    def get_sparse_dense_inner_product(self, wavelet_waveform: SparseWaveletWaveform, wavelet_data_white: NDArray[np.floating], nt_lim: PixelGenericRange) -> np.floating:
+        return np.sum(get_sparse_dense_inner_product_prewhitened(wavelet_waveform, wavelet_data_white, nt_lim, self._wc, self.get_inv_chol_S(), self._nc_snr))
+
+    def get_sparse_sparse_inner_product(self, wavelet_waveform1: SparseWaveletWaveform, wavelet_waveform2: SparseWaveletWaveform, nt_lim: PixelGenericRange) -> np.floating:
+        return np.sum(get_sparse_sparse_inner_product_sorted(wavelet_waveform1, wavelet_waveform2, nt_lim, self._wc, self.get_inv_chol_S(), self._nc_snr))
 
 
 class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):

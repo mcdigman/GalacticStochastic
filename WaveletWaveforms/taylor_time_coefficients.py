@@ -302,6 +302,7 @@ def get_taylor_time_pixel_direct(
     assert evs_mid != 0.0
     return evc_mid, evs_mid
 
+
 @njit()
 def get_taylor_time_pixel_direct_order2(
     fa: float, fda: float, k_in: int, wavelet_norm: NDArray[np.floating], wc: WDMWaveletConstants
@@ -364,11 +365,11 @@ def get_taylor_time_pixel_direct_order2(
     evs_mid: float = 0.0
     devc_mid: float = 0.0
     devs_mid: float = 0.0
-    #import matplotlib.pyplot as plt
-    #plt.plot(wavelet_norm * np.sin(z_mult*(np.arange(0,wc.K) - wc.K//2)+z_quads_mid))
-    #plt.plot(wavelet_norm * np.cos(z_mult*(np.arange(0,wc.K) - wc.K//2)+z_quads_mid))
-    #plt.xlabel(str(k_in)+" "+str(fa)+" "+str(fda))
-    #plt.show()
+    # import matplotlib.pyplot as plt
+    # plt.plot(wavelet_norm * np.sin(z_mult*(np.arange(0,wc.K) - wc.K//2)+z_quads_mid))
+    # plt.plot(wavelet_norm * np.cos(z_mult*(np.arange(0,wc.K) - wc.K//2)+z_quads_mid))
+    # plt.xlabel(str(k_in)+" "+str(fa)+" "+str(fda))
+    # plt.show()
 
     for k in prange(wc.K):
         z_mid: float = z_mult * (k - wc.K // 2) + z_quads_mid[k]
@@ -381,8 +382,6 @@ def get_taylor_time_pixel_direct_order2(
     assert evs_mid != 0.0
     assert devc_mid != 0.0
     assert devs_mid != 0.0
-    devc_mid = devc_mid
-    devs_mid = devs_mid
 
     return evc_mid, evs_mid, devc_mid, devs_mid
 
@@ -428,45 +427,45 @@ def dfd_grid_spacing_check_helper(wc: WDMWaveletConstants, f_target: float, fd_t
     return dfd_mult_need
 
 
-def dfd_grid_spacing_check_helper(wc: WDMWaveletConstants, f_target: float, fd_target: float = 0., k_range: int = 1, atol_mult: float = 1.e-6, rtol_pix: float = 1.e-7, assert_mode: int = 1, dfd_mult: float = 1.0, wavelet_norm: NDArray[np.floating] | None = None) -> float:
-    """Do some checks using the exact formula to deterimine if the dfd grid spacing appears adequate."""
-    if wavelet_norm is None:
-        wavelet_norm = get_wavelet_norm(wc)
-
-    # determine the scale to set
-    abs_scale: float = float(np.sum(np.abs(wavelet_norm)))
-    atol_pix: float = atol_mult * abs_scale
-    assert atol_pix > 0.
-
-    # check if the dfd seems small enough for numerical stability
-    k_base = int(np.floor(f_target / wc.DF))
-    k_min: int = max(k_base - k_range, 1)
-    k_max: int = min(k_base + k_range, wc.Nf - 1)
-    dfd_mult_need: float = np.inf
-    for k in range(k_min, k_max + 1):
-        dfd_loc: float = dfd_mult * wc.dfd
-        y_1, z_1 = get_taylor_time_pixel_direct(f_target, fd_target - dfd_loc, k, wavelet_norm, wc)
-        y_2, z_2 = get_taylor_time_pixel_direct(f_target, fd_target, k, wavelet_norm, wc)
-        y_3, z_3 = get_taylor_time_pixel_direct(f_target, fd_target + dfd_loc, k, wavelet_norm, wc)
-
-        # central finite difference first and second derivative of y
-        ypp: float = (y_1 - 2 * y_2 + y_3) / dfd_loc**2
-        y_abs_error: float = float(np.abs(ypp)) * dfd_loc**2 / 2.0
-
-        zpp: float = (z_1 - 2 * z_2 + z_3) / dfd_loc**2
-        z_abs_error: float = float(np.abs(zpp)) * dfd_loc**2 / 2.0
-
-        error_use: float = max(y_abs_error, z_abs_error)
-        if error_use > 0:
-            dfd_mult_need = min(dfd_mult_need, float(np.sqrt(atol_pix / error_use)))
-        else:
-            dfd_mult_need = min(dfd_mult_need, 1.)
-
-        if assert_mode == 1:
-            msg = f'The requested grid will not achieve target precision. Try decreasing dfdot by ~{dfd_mult_need}'
-            assert_allclose(y_2, y_2 + y_abs_error, atol=atol_pix, rtol=rtol_pix, err_msg=msg)
-            assert_allclose(z_2, z_2 + z_abs_error, atol=atol_pix, rtol=rtol_pix, err_msg=msg)
-    return dfd_mult_need
+# def dfd_grid_spacing_check_helper(wc: WDMWaveletConstants, f_target: float, fd_target: float = 0., k_range: int = 1, atol_mult: float = 1.e-6, rtol_pix: float = 1.e-7, assert_mode: int = 1, dfd_mult: float = 1.0, wavelet_norm: NDArray[np.floating] | None = None) -> float:
+#    """Do some checks using the exact formula to deterimine if the dfd grid spacing appears adequate."""
+#    if wavelet_norm is None:
+#        wavelet_norm = get_wavelet_norm(wc)
+#
+#    # determine the scale to set
+#    abs_scale: float = float(np.sum(np.abs(wavelet_norm)))
+#    atol_pix: float = atol_mult * abs_scale
+#    assert atol_pix > 0.
+#
+#    # check if the dfd seems small enough for numerical stability
+#    k_base = int(np.floor(f_target / wc.DF))
+#    k_min: int = max(k_base - k_range, 1)
+#    k_max: int = min(k_base + k_range, wc.Nf - 1)
+#    dfd_mult_need: float = np.inf
+#    for k in range(k_min, k_max + 1):
+#        dfd_loc: float = dfd_mult * wc.dfd
+#        y_1, z_1 = get_taylor_time_pixel_direct(f_target, fd_target - dfd_loc, k, wavelet_norm, wc)
+#        y_2, z_2 = get_taylor_time_pixel_direct(f_target, fd_target, k, wavelet_norm, wc)
+#        y_3, z_3 = get_taylor_time_pixel_direct(f_target, fd_target + dfd_loc, k, wavelet_norm, wc)
+#
+#        # central finite difference first and second derivative of y
+#        ypp: float = (y_1 - 2 * y_2 + y_3) / dfd_loc**2
+#        y_abs_error: float = float(np.abs(ypp)) * dfd_loc**2 / 2.0
+#
+#        zpp: float = (z_1 - 2 * z_2 + z_3) / dfd_loc**2
+#        z_abs_error: float = float(np.abs(zpp)) * dfd_loc**2 / 2.0
+#
+#        error_use: float = max(y_abs_error, z_abs_error)
+#        if error_use > 0:
+#            dfd_mult_need = min(dfd_mult_need, float(np.sqrt(atol_pix / error_use)))
+#        else:
+#            dfd_mult_need = min(dfd_mult_need, 1.)
+#
+#        if assert_mode == 1:
+#            msg = f'The requested grid will not achieve target precision. Try decreasing dfdot by ~{dfd_mult_need}'
+#            assert_allclose(y_2, y_2 + y_abs_error, atol=atol_pix, rtol=rtol_pix, err_msg=msg)
+#            assert_allclose(z_2, z_2 + z_abs_error, atol=atol_pix, rtol=rtol_pix, err_msg=msg)
+#    return dfd_mult_need
 
 
 @njit()
@@ -619,6 +618,7 @@ def get_taylor_table_time(
         Specifies caching behavior for the coefficient table:
         - 'skip': Always compute a new table, do not check for a cache.
         - 'check': Attempt to load from a previously computed cached table; if not found, compute a new table.
+        - 'zeros': Do not get a table at all, just return a filler interpolation table of zeros with only wavelet_norm set
 
     output_mode : str, optional
         Specifies behavior for saving the resulting table:
@@ -714,6 +714,13 @@ def get_taylor_table_time(
             print('Cache checked and missed')
     elif cache_mode == 'skip':
         pass
+    elif cache_mode == 'zeros':
+        # A request for a blank filler table
+        cache_good = True
+        if output_mode == 'hf':
+            msg = 'Cannot output to hdf5 file when table is not calculated, hdf5 output will be skipped'
+            warn(msg, stacklevel=2)
+            output_mode = 'skip'
     else:
         msg = f'Unrecognized option for cache_mode {cache_mode}'
         raise NotImplementedError(msg)

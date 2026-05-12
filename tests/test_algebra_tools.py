@@ -553,13 +553,13 @@ def test_gradient_uniform_inplace(t_scaling: str, DT: float, t0: float, nt_loc: 
     T = np.arange(0.0, nt_loc) * DT + t0
     channel_scale_mult = np.array([0.9, 0.5, 0.3])
 
-    channel_t_scale, channel_dxdt_scale = get_scaling_test_case_helper(t_scaling, T, DT)
+    channel_t_scale, _channel_dxdt_scale = get_scaling_test_case_helper(t_scaling, T, DT)
 
     if channel_t_scale is None:
         return
 
     ys = np.outer(channel_scale_mult, channel_t_scale)
-    dydts = np.outer(channel_scale_mult, channel_dxdt_scale)
+    # dydts = np.outer(channel_scale_mult, channel_dxdt_scale)
 
     result = np.zeros((nc_waveform, nt_loc))
 

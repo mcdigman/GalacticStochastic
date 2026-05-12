@@ -132,7 +132,8 @@ def linear_frequency_intrinsic(
         t = t_in[n]
         FT[n] = intrinsic_params.F0 + intrinsic_params.FTd0 * t
         FTd[n] = intrinsic_params.FTd0
-        PT[n] = -intrinsic_params.phi0 + 2 * np.pi * intrinsic_params.F0 * t + np.pi * intrinsic_params.FTd0 * t**2
+        # gravitational wave phase is twice the binary phase
+        PT[n] = -2 * intrinsic_params.phi0 + 2 * np.pi * intrinsic_params.F0 * t + np.pi * intrinsic_params.FTd0 * t**2
         AT[n] = intrinsic_params.amp0_t
 
 
