@@ -275,6 +275,7 @@ class BinaryWaveletTaylorFreq(
     @override
     def _update_wavelet_waveform(self) -> None:
         """Update the wavelet intrinsic_waveform to match the current parameters."""
+        # TODO nf_lim_waveform should update if the intrinsic waveform's does or these functions do not work
         if self._wavelet_mode == 0:
             wavemakef_direct(
                 self._wavelet_waveform,
@@ -283,6 +284,7 @@ class BinaryWaveletTaylorFreq(
                 self._nf_lim_waveform,
                 self._wc,
                 self._taylor_freq_table,
+                amplitude_order=0,
             )
         elif self._wavelet_mode in (1, 2, 3):
             # including 3 for future compatibility with computing coefficients for nulls
@@ -294,6 +296,7 @@ class BinaryWaveletTaylorFreq(
                 self._wc,
                 self._taylor_freq_table,
                 force_nulls=self._wavelet_mode - 1,
+                amplitude_order=0,
             )
         else:
             msg = 'Unrecognized wavelet mode: {}. Valid modes are 0, 1, 2 or 3.'.format(self._wavelet_mode)

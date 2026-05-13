@@ -10,6 +10,7 @@ from GalacticStochastic import config_helper
 from GalacticStochastic.galactic_fit_helpers import fit_gb_spectrum_evolve, get_S_cyclo
 from GalacticStochastic.iterative_fit import fetch_or_run_iterative_loop
 from LisaWaveformTools.instrument_noise import instrument_noise_AET_wdm_m
+from tests.test_tdi_diagonal_noise_consistency import tdi_aet_to_xyz_helper
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange
 
 mpl.rcParams['axes.linewidth'] = 1.2
@@ -68,8 +69,12 @@ if __name__ == '__main__':
     S_stat_m = np.zeros((nk, wc.Nf, 3))
     S_stat_smooth_m = np.zeros((nk, wc.Nf, 3))
 
-    S_inst_m = instrument_noise_AET_wdm_m(lc, wc)
+    # S_inst_m = instrument_noise_AET_wdm_m(lc, wc, tdi_mode='aet_equal')
+    S_inst_m = instrument_noise_AET_wdm_m(lc, wc, tdi_mode='xyz_equal')
+    # S_inst_aet = instrument_noise_AET(np.arange(0, wc.Nf)*wc.DF, lc, tdi_mode='aet_equal')
+    # S_inst_xyz = instrument_noise_AET(np.arange(0, wc.Nf)*wc.DF, lc, tdi_mode='xyz_equal')
     S_stat_offset = 1.0 * S_inst_m[:, 0]
+    nc_use = 3
 
     r_tots = np.zeros((nk, wc.Nt, S_inst_m.shape[-1]))
 
@@ -77,6 +82,7 @@ if __name__ == '__main__':
         nt_lim = PixelGenericRange(int(nt_mins[itrk]), int(nt_maxs[itrk]), wc.DT, 0)
         ifm = fetch_or_run_iterative_loop(config, cyclo_mode, nt_range_snr=(nt_lim.nx_min, nt_lim.nx_max), fetch_mode=1)
         galactic_below_high = ifm.noise_manager.bgd.get_galactic_below_high(shape_mode=1)
+        galactic_below_high = tdi_aet_to_xyz_helper(galactic_below_high, axis=-1)
 
         S_stat_m[itrk] = np.mean(galactic_below_high, axis=0)
 
@@ -86,7 +92,7 @@ if __name__ == '__main__':
                                                                      smooth_targ_length, filter_periods,
                                                                      period_list=period_list)
 
-        for itrc in range(2):
+        for itrc in range(nc_use):
             S_stat_smooth_m[itrk, :, itrc] += S_stat_offset
 
     arg_cut = wc.Nf - 1
@@ -102,7 +108,7 @@ ax = fig.subplots(1)
 fig.subplots_adjust(wspace=0.0, hspace=0.0, left=0.13, top=0.99, right=0.99, bottom=0.12)
 _ = ax.loglog(
     fs[1:],
-    wc.dt * (S_stat_smooth_m[:, 1:, :2].mean(axis=2) - S_stat_offset[1:] + S_inst_m[1:, 0]).T,
+    wc.dt * (S_stat_smooth_m[:, 1:, :nc_use].mean(axis=2) - S_stat_offset[1:] + S_inst_m[1:, 0]).T,
     alpha=0.5,
     label='_nolegend_',
 )
@@ -113,11 +119,12 @@ _ = ax.loglog(fs[1:], wc.dt * (S_inst_m[1:, 0]), 'k--')
 ax.tick_params(axis='both', direction='in', which='both', top=True, right=True)
 # _ = plt.ylim([wc.dt * 2.0e-44, wc.dt * 2.0e-43])
 _ = plt.ylim([1.e-43, 2.0e-39])
-_ = plt.xlim([3.0e-4, 6.0e-3])
+_ = plt.xlim([1.0e-5, 6.0e-3])
 _ = plt.xlabel('f [Hz]')
 _ = plt.ylabel(r'$S^{AE}(f)$ [Hz$^{-1}$]')
 _ = plt.legend(labels=['1 year', '2 years', '4 years', '8 years'])
 plt.show()
+
 
 # fig = plt.figure(figsize=(5.4, 3.5))
 # ax = fig.subplots(1)

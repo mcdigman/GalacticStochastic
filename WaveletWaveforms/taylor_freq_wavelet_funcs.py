@@ -180,11 +180,9 @@ def wavemakef_direct(
         wc: WDMWaveletConstants,
         taylor_table: WaveletTaylorFreqCoeffs,
         *,
-        force_nulls: int = 2,
         amplitude_order=1,
 ) -> None:
     """Calculate expansion using taylor frequency method choosing only selected F indices"""
-    del force_nulls
     # TODO handle t0 or remove it
     # TODO add input validation
     assert amplitude_order in (0, 1)
