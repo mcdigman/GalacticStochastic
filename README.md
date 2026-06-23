@@ -46,11 +46,15 @@ pip install .
 Optional extras:
 
 ```bash
-pip install ".[dev]"        # pytest + type stubs for the test/type-check suite
-pip install ".[plots]"      # matplotlib, for the make_gb_*_compare_plot.py scripts
-pip install ".[cosmic]"     # pandas + astropy, for loading COSMIC population catalogs
-pip install ".[imrphenomd]" # PyIMRPhenomD (not on PyPI; install from source first)
+pip install ".[dev]"     # pytest + type stubs for the test/type-check suite
+pip install ".[plots]"   # matplotlib, for the make_gb_*_compare_plot.py scripts
+pip install ".[cosmic]"  # pandas + astropy, for loading COSMIC population catalogs
 ```
+
+There is also an `imrphenomd` extra for the `PyIMRPhenomD` waveform model, but it is **not
+installable as-is**: `PyIMRPhenomD` is not published on PyPI, so `pip install ".[imrphenomd]"`
+will fail to resolve it. Install `PyIMRPhenomD` from its own source first; the extra only
+becomes usable once `PyIMRPhenomD` is available to pip.
 
 ---
 
@@ -193,6 +197,7 @@ pip install ".[dev]"
 pytest                 # run the test suite
 ```
 
-Continuous integration runs build, lint (ruff/pylint), type-checking, and docstring
-(pydoclint) checks; see `.github/workflows/`. Pre-commit hooks are configured in
+Continuous integration runs four workflows (see `.github/workflows/`): a build/packaging
+check, the pre-commit lint hooks (ruff, ssort, pyupgrade, pyrefly, and others), type-checking
+with mypy, and docstring/signature checks with pydoclint. The lint hooks are configured in
 `.pre-commit-config.yaml`.
