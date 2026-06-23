@@ -8,17 +8,17 @@ authors = [
 ]
 license = { file = "LICENSE" }
 dependencies = [
-    "numpy>2.0.0",
-    "scipy",
+    "numpy>=2.2",
+    "scipy>=1.16",
     "numba",
-    "h5py",
+    "h5py>=3.14",
     "WDMWaveletTransforms",
 ]
 requires-python = ">=3.12"
 
 [project.optional-dependencies]
-# Development / test tooling.
-dev = ["pytest"]
+# Development / test tooling (pytest plus type stubs for the typed checks).
+dev = ["pytest>=9.0", "h5py-stubs", "scipy-stubs"]
 # COSMIC compatibility mode: loading/processing COSMIC population HDF5 catalogs
 # (see GalacticStochastic/cosmic_data_helpers.py, imported behind an optional guard).
 cosmic = ["pandas", "astropy"]
