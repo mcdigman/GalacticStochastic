@@ -79,9 +79,9 @@ def get_sparse_snr_helper(
     Returns
     -------
     snr : numpy.ndarray
-        an array of shape (nc_noise) which is the S/N for each TDI channel represented.
+        an array of shape (nc_snr) which is the S/N for each TDI channel represented.
 
-    """
+"""
     snr2s = np.zeros(nc_snr)
     for itrc in range(nc_snr):
         n_pixel_loc: int = int(wavelet_waveform.n_set[itrc])
@@ -379,7 +379,7 @@ class DenseNoiseModel(ABC):
         ValueError
             If white_mode is not 0 or 1, or seed_override is less than -2.
 
-"""
+        """
         if white_mode not in (0, 1):
             msg = 'Unrecognized option for white_mode'
             raise ValueError(msg)

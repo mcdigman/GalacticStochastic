@@ -53,7 +53,7 @@ def get_iteration_config(config: dict[str, Any]) -> IterationConfig:
         Immutable named tuple containing all parameters and derived arrays for
         the iterative fitting process.
 
-"""
+    """
     config_ic: dict[str, int | float | str] = config['iterative_fit_constants']
     # maximum number of iterations to allow
     max_iterations = int(config_ic['max_iterations'])

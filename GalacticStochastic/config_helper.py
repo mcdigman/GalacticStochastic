@@ -38,7 +38,7 @@ def get_config_objects_from_dict(
     instrument_random_seed : int
         Random seed for instrument noise realization.
 
-"""
+    """
     wc = get_wavelet_model(config)
 
     lc = get_lisa_constants(config)
