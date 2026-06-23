@@ -150,8 +150,6 @@ def load_cosmic(filename: str, categories: list[str]) -> tuple[NDArray[np.floati
     ------
     ValueError
         if the categories are not as required
-    AssertionError
-        if the file format is incorrect
     """
     if categories != ['dgb']:
         msg = 'COSMIC data only supports dgb category'

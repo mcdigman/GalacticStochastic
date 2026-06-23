@@ -113,8 +113,10 @@ def linear_frequency_intrinsic(
         The intrinsic_waveform object to be updated in place with the time domain intrinsic_waveform.
     intrinsic_params : LinearFrequencyIntrinsicParams
         Dictionary or namespace containing intrinsic parameters of the source.
-    t_in : np.ndarray
+    t_in : NDArray[np.float64]
         Array of arrival times (or evaluation times) for the signal.
+    t_phase_ref : np.float64
+        Reference time subtracted from t_in before computing the phase (default 0.0).
 
     Returns
     -------

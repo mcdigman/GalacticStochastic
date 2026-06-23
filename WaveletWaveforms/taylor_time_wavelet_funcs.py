@@ -68,12 +68,18 @@ def wavemaket(
         However, for likelihood calculations, force_nulls=1 appropriately penalizes data that has power in nulls.
         force_nulls=2 is reserved for calculating wavelet coefficients outside the precomputed table directly,
         but currently returns a NotImplementedError
-
+    amplitude_order : int
+        Order of amplitude correction to apply: 0 for none, 1 for first-order (default 0).
 
     Returns
     -------
     None
         This function modifies `wavelet_waveform` in place and does not return a value.
+
+    Raises
+    ------
+    NotImplementedError
+        If force_nulls=2 is requested (not yet implemented).
 
     See Also
     --------
@@ -330,6 +336,8 @@ def wavemaket_direct(
         - `df_bw`: Spacing of frequency layers (bandwidth) in frequency direction.
     taylor_table : WaveletTaylorTimeCoeffs
         Taylor expansion coefficients and normalization factors required for direct evaluation.
+    amplitude_order : int
+        Order of amplitude correction to apply: 0 for none, 1 for first-order (default 0).
 
     Returns
     -------

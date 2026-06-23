@@ -85,6 +85,12 @@ class StationarySourceWaveform(Generic[StationaryWaveformType, IntrinsicParamsTy
         ----------
         params : SourceParams
             Model-specific parameters (intrinsic and extrinsic) for the source.
+        intrinsic_waveform : StationaryWaveformType
+            Object for storing the intrinsic waveform.
+        tdi_waveform : StationaryWaveformType
+            Object for storing the TDI response waveform.
+        response_mode : int
+            Response mode for the waveform (default 0).
         """
         self._consistent: bool = False
         self._consistent_intrinsic: bool = False
@@ -249,6 +255,11 @@ class StationarySourceWaveform(Generic[StationaryWaveformType, IntrinsicParamsTy
         -------
         tdi_waveform: StationaryWaveformType
             The TDI intrinsic_waveform channels computed from the source parameters.
+
+        Raises
+        ------
+        ValueError
+            If the source parameters have not been updated yet.
         """
         if not self.consistent_extrinsic:
             msg = 'Source parameters have not been updated yet.'
@@ -264,6 +275,11 @@ class StationarySourceWaveform(Generic[StationaryWaveformType, IntrinsicParamsTy
         -------
         intrinsic_waveform: StationaryWaveformType
             The intrinsic intrinsic_waveform computed for the source parameters.
+
+        Raises
+        ------
+        ValueError
+            If the source parameters have not been updated yet.
         """
         if not self.consistent_instrinsic:
             msg = 'Source parameters have not been updated yet.'

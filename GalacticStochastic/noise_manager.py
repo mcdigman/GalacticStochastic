@@ -256,6 +256,8 @@ class NoiseModelManager(StateManager):
             If the method is not implemented in a subclass.
         TypeError
             If the format is not as expected.
+        ValueError
+            If an unrecognized cyclo_mode is encountered.
         """
         if group_mode == 0:
             hf_noise = hf_in['noise_model']

@@ -88,11 +88,15 @@ def spacecraft_channel_deriv_helper(spacecraft_channels: AntennaResponseChannels
 
     Parameters
     ----------
-    spacecraft_channels: SpacecraftChannels
+    spacecraft_channels: AntennaResponseChannels
         Object containing the spacecraft channels with RR, II, dRR, and dII attributes,
         with RR and II already computed.
-    nx_lim: PixelGenericRange
-        Range of indices to compute the derivatives over and time spacing of uniform samples
+    dx : float
+        Uniform time spacing between samples.
+    nx_min : int
+        Start index along the time axis (inclusive, default 0).
+    nx_max : int
+        End index along the time axis (exclusive, default -1 means full array).
 
     Returns
     -------
@@ -188,20 +192,22 @@ def amp_phase_loop_helper(
 
     Parameters
     ----------
-    F: NDArray[float]
+    F : NDArray[np.floating]
         Array of frequencies corresponding to the waveform samples
-    T: NDArray[float]
+    T : NDArray[np.floating]
         Array of times corresponding to the waveform samples
-    spacecraft_channels : SpacecraftChannels
-        Object containing the real (RR) and imaginary (II) components of the spacecraft
-        response, along with their derivatives (dRR, dII)
+    waveform : StationaryWaveformGeneric
+        Input intrinsic_waveform object containing the original phase (PT) and amplitude (AT) data
     AET_waveform : StationaryWaveformGeneric
         Target intrinsic_waveform object where the modified TDI amplitude and phase will be stored.
         Modified in-place with computed values
-    waveform : StationaryWaveformGeneric
-        Input intrinsic_waveform object containing the original phase (PT) and amplitude (AT) data
+    spacecraft_channels : AntennaResponseChannels
+        Object containing the real (RR) and imaginary (II) components of the spacecraft
+        response, along with their derivatives (dRR, dII)
     lc : LISAConstants
         LISA constellation constants containing the strain frequency (fstr)
+    nx_lim : PixelGenericRange
+        Range of time-sample indices to process.
 
     Notes
     -----
@@ -326,7 +332,7 @@ def get_time_tdi_amp_phase_helper(
 
     Parameters
     ----------
-    spacecraft_channels : SpacecraftChannels
+    spacecraft_channels : AntennaResponseChannels
         Object containing the real (RR) and imaginary (II) components of the spacecraft
         response, along with their derivatives (dRR, dII)
     AET_waveform : StationaryWaveformTime
@@ -416,7 +422,7 @@ def get_time_tdi_amp_phase(
 
     Parameters
     ----------
-    spacecraft_channels : SpacecraftChannels
+    spacecraft_channels : AntennaResponseChannels
         Object containing the real (RR) and imaginary (II) components of the spacecraft
         response, along with their derivatives (dRR, dII)
     AET_waveform : StationaryWaveformTime
@@ -454,6 +460,11 @@ def get_time_tdi_amp_phase(
     -------
     None
         Results are stored in-place in tdi_waveform
+
+    Raises
+    ------
+    NotImplementedError
+        If phase_wrap_mode is not 0 or 1.
 
     """
     # get and store dRR and dII in the object

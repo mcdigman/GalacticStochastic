@@ -31,12 +31,12 @@ def linear_frequency_intrinsic_freq(
 
     Parameters
     ----------
-    waveform : StationaryWaveformTime
-        The intrinsic_waveform object to be updated in place with the time domain intrinsic_waveform.
+    waveform : StationaryWaveformFreq
+        The intrinsic_waveform object to be updated in place with the frequency domain intrinsic_waveform.
     intrinsic_params : LinearFrequencyIntrinsicParams
         Dictionary or namespace containing intrinsic parameters of the source.
-    t_in : np.ndarray
-        Array of arrival times (or evaluation times) for the signal.
+    f_in : NDArray[np.floating]
+        Array of frequencies (Hz) at which to evaluate the signal.
 
     Returns
     -------

@@ -190,6 +190,10 @@ def instrument_noise_AET_wdm_m(lc: LISAConstants, wc: WDMWaveletConstants, tdi_m
         constants for LISA constellation specified in lisa_config.py
     wc : WDMWaveletConstants
         constants for WDM wavelet basis also from wdm_config.py
+    tdi_mode : str
+        TDI channel combination to use (default 'aet_equal').
+    diagonal_mode : int
+        If 0, return the full noise curve (default 0).
 
     Returns
     -------
@@ -197,7 +201,7 @@ def instrument_noise_AET_wdm_m(lc: LISAConstants, wc: WDMWaveletConstants, tdi_m
         array of the instrument noise curve for each TDI channel
         array shape is (freq. layers x number of TDI channels)
 
-    """
+"""
     # TODO why no plus 1?
     ls: NDArray[np.integer] = np.arange(-wc.Nt // 2, wc.Nt // 2)
     fs: NDArray[np.floating] = ls / wc.Tobs

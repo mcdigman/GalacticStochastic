@@ -93,9 +93,10 @@ def wavelet(wc: WDMWaveletConstants, m: int | float, nrm: float, *, n_in: int = 
     m : int | float
         The index of the frequency bin around which to center the wavelet.
         Although it has units of an index, it is actually a frequency and so need not necessarily be an integer
-
     nrm : float
         Normalization factor to scale the resulting wavelet.
+    n_in : int
+        Number of time samples to use; if -1 (default), uses wc.K.
     Returns
     -------
     wave : np.ndarray
@@ -153,7 +154,7 @@ def get_taylor_table_time_helper(
 
     Parameters
     ----------
-    wavelet_norm : np.ndarray
+    wavelet_norm : NDArray[np.floating]
         The normalized reference wavelet sampled on the relevant time grid.
     wc : WDMWaveletConstants
         Wavelet decomposition configuration, specifying time step,
@@ -632,6 +633,10 @@ def get_taylor_table_time(
     filename_base : str, optional
         Base file name for the cache file (before appending grid parameters).
         (default is 'taylor_time_table_')
+    grid_check_mode : int
+        Controls the grid precision check: 0 skips it, 1 runs it (default 1).
+    assert_mode : int
+        If 1, raise ValueError when grid precision check fails; otherwise warn (default 1).
 
     Returns
     -------
@@ -644,6 +649,8 @@ def get_taylor_table_time(
     ValueError
         If the requested interpolation grid parameters exceed the valid range
         for the Taylor approximation, or if grid settings are inconsistent.
+    NotImplementedError
+        If cache_mode or output_mode is not a recognized option.
 
     Notes
     -----
