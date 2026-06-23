@@ -2,7 +2,7 @@
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v3.2.0
+  rev: v6.0.0
   hooks:
   - id: trailing-whitespace
   - id: end-of-file-fixer
@@ -24,20 +24,29 @@ repos:
   - id: pretty-format-json
     args: [--autofix]
   - id: requirements-txt-fixer
+  # Additional regression guards (verified to pass on the current tree)
+  - id: check-merge-conflict
+  - id: check-builtin-literals
+  - id: check-illegal-windows-names
+  - id: check-shebang-scripts-are-executable
+  - id: destroyed-symlinks
+  - id: forbid-submodules
+  - id: fix-byte-order-marker
+  - id: double-quote-string-fixer
 
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.19.1
+  rev: v3.21.2
   hooks:
   - id: pyupgrade
     args: [--keep-percent-format]
 
 - repo: https://github.com/bwhmather/ssort
-  rev: 0.14.0
+  rev: 0.16.0
   hooks:
   - id: ssort
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.11.8
+  rev: v0.15.18
   hooks:
   - id: ruff
     args: [--preview, --fix]
@@ -49,3 +58,8 @@ repos:
     # Behavior (e.g. ignore-missing-imports for uninstalled deps) is configured
     # under [tool.pyrefly] in pyproject.toml. The dedicated type-check CI
     # (.github/workflows/typecheck.yml) still runs mypy.
+
+- repo: https://github.com/rhysd/actionlint
+  rev: v1.7.12
+  hooks:
+  - id: actionlint
