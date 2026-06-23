@@ -33,9 +33,6 @@ iteration is by far the most expensive**. The code therefore treats it specially
   re-run many times with different fitting parameters or time windows, reusing the saved
   preliminary background each time.
 
-A high-level diagram of the control flow is in
-[`docs/fetch_or_run_iterative_loop_workflow.svg`](docs/fetch_or_run_iterative_loop_workflow.svg).
-
 ---
 
 ## Installation
@@ -169,7 +166,6 @@ mission length).
 | `WaveletWaveforms/` | WDM wavelet-transform tooling (sparse wavelet waveforms, Taylor coefficients). |
 | `Galaxies/` | Example galaxy catalogs and their per-galaxy `.toml` configs. |
 | `tests/` | Pytest suite and accompanying test configs. |
-| `docs/` | Workflow diagrams and supporting documentation. |
 
 ### Architecture
 
