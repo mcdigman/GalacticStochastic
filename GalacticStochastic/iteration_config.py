@@ -43,7 +43,7 @@ def get_iteration_config(config: dict[str, Any]) -> IterationConfig:
 
     Parameters
     ----------
-    config : dict of str to Any
+    config : dict[str, Any]
         Configuration dictionary containing the 'iterative_fit_constants' section
         with all required keys and values for the iterative fit.
 
@@ -53,10 +53,6 @@ def get_iteration_config(config: dict[str, Any]) -> IterationConfig:
         Immutable named tuple containing all parameters and derived arrays for
         the iterative fitting process.
 
-    Raises
-    ------
-    AssertionError
-        If any required parameter is missing or has an invalid value.
     """
     config_ic: dict[str, int | float | str] = config['iterative_fit_constants']
     # maximum number of iterations to allow

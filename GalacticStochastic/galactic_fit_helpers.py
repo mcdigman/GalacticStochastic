@@ -39,22 +39,22 @@ def S_gal_model_5param(
 
     Parameters
     ----------
-    f : float or NDArray[np.floating]
+    f : NDArray[np.floating] | float
         Frequency (Hz) at which to evaluate the model.
-    log10_a : float or NDArray[np.floating]
+    log10_a : NDArray[np.floating] | float
         Base-10 logarithm of the amplitude normalization.
-    log10_f2 : float or NDArray[np.floating]
+    log10_f2 : NDArray[np.floating] | float
         Base-10 logarithm of the frequency scale in Hz for the tanh transition.
-    log10_f1 : float or NDArray[np.floating]
+    log10_f1 : NDArray[np.floating] | float
         Base-10 logarithm of the exponential cutoff frequency in Hz
-    log10_fknee : float or NDArray[np.floating]
+    log10_fknee : NDArray[np.floating] | float
         Base-10 logarithm of the knee frequency in Hz for the tanh transition.
-    alpha : float or NDArray[np.floating]
+    alpha : NDArray[np.floating] | float
         Exponent controlling the sharpness of the exponential cutoff.
 
     Returns
     -------
-    S_gal : float or NDArray[np.floating]
+    S_gal : NDArray[np.floating] | float
         The modeled galactic binary confusion noise amplitude at the specified frequency.
     """
     return (
@@ -83,26 +83,26 @@ def S_gal_model_7param(
 
     Parameters
     ----------
-    f : float or NDArray[np.floating]
+    f : NDArray[np.floating] | float
         Frequency (Hz) at which to evaluate the model.
-    log10_a : float or NDArray[np.floating]
+    log10_a : NDArray[np.floating] | float
         Base-10 logarithm of the amplitude normalization.
-    log10_f2 : float or NDArray[np.floating]
+    log10_f2 : NDArray[np.floating] | float
         Base-10 logarithm of the frequency scale in Hz for the tanh transition.
-    log10_f1 : float | NDArray[np.floating]
+    log10_f1 : NDArray[np.floating] | float
         Base-10 logarithm of the exponential cutoff frequency in Hz, set to 0. in the referenced paper
-    log10_fknee : float or NDArray[np.floating]
+    log10_fknee : NDArray[np.floating] | float
         Base-10 logarithm of the knee frequency in Hz for the tanh transition.
-    alpha : float or NDArray[np.floating]
+    alpha : NDArray[np.floating] | float
         Exponent controlling the sharpness of the exponential cutoff.
-    beta : float or NDArray[np.floating]
+    beta : NDArray[np.floating] | float
         Scale parameter for the oscillatory part of the exponent, in Hz^-1
-    kappa : float or NDArray[np.floating]
+    kappa : NDArray[np.floating] | float
         1/f, argument for the oscillatory part of the exponent, in Hz^-1.
 
     Returns
     -------
-    S_gal : float or NDArray[np.floating]
+    S_gal : NDArray[np.floating] | float
         The modeled galactic binary confusion noise amplitude at the specified frequency.
 
     Note
@@ -136,7 +136,7 @@ def filter_periods_fft(
     ----------
     r_mean : NDArray[np.floating]
         Input time series to be filtered. Array of shape (Nt, n_channels), where Nt is the number of time samples.
-    period_list : tuple of int or float
+    period_list : tuple[int, ...] | tuple[float, ...] | tuple[np.floating, ...]
         Periods (in multiples of `t_obs/gc.SECSYEAR`) to retain in the filtered signal.
     nt_lim : PixelGenericRange
         Time range object defining the time sampling and limits of the input time series.
@@ -347,7 +347,7 @@ def get_S_cyclo(
         Smoothing length (standard deviation) in log-frequency space.
     filter_periods : int
         If nonzero, apply FFT-based filtering to restrict to specific periods.
-    period_list : tuple of int or float
+    period_list : tuple[int, ...] | tuple[np.floating, ...] | None
         Periods (in multiples of observation time in years) to retain in the filtered signal.
         If None and filtering is enabled, all possible periods are used.
     faint_cutoff_thresh : float

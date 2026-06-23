@@ -66,14 +66,20 @@ def wavemaket(
         amplitude is zero or very small, and thus dropping them is acceptable for some applications.
         For snr calculations, plotting, or computing coadded galactic backgrounds, force_nulls=1 has little benefit.
         However, for likelihood calculations, force_nulls=1 appropriately penalizes data that has power in nulls.
-        force_nulls=2 is reserved for calculating wavelet coefficients outside the precomputed table directly,
-        but currently returns a NotImplementedError
-
+        force_nulls=2 computes wavelet coefficients outside the precomputed table directly
+        rather than approximating them as zero; acceptable when such pixels are rare.
+    amplitude_order : int
+        Order of amplitude correction to apply: 0 for none, 1 for first-order (default 0).
 
     Returns
     -------
     None
         This function modifies `wavelet_waveform` in place and does not return a value.
+
+    Raises
+    ------
+    NotImplementedError
+        If force_nulls is not 0, 1, or 2.
 
     See Also
     --------
@@ -330,6 +336,8 @@ def wavemaket_direct(
         - `df_bw`: Spacing of frequency layers (bandwidth) in frequency direction.
     taylor_table : WaveletTaylorTimeCoeffs
         Taylor expansion coefficients and normalization factors required for direct evaluation.
+    amplitude_order : int
+        Order of amplitude correction to apply: 0 for none, 1 for first-order (default 0).
 
     Returns
     -------

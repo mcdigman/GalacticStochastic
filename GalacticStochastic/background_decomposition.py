@@ -54,8 +54,6 @@ def _check_correct_component_shape(
 
     Raises
     ------
-    AssertionError
-        If the input array does not have the expected size or an allowed shape.
     ValueError
         If an invalid `shape_mode` is provided.
     """
@@ -103,16 +101,16 @@ class BGDecomposition:
             Wavelet constants describing the time-frequency grid.
         nc_galaxy : int
             Number of tdi channels in the galactic background.
-        galactic_floor : ndarray of float, optional
+        galactic_floor : NDArray[np.floating] | None, optional
             Array containing the faintest (floor) component of the galactic background.
             If None, initialized to zeros.
-        galactic_below : ndarray of float, optional
+        galactic_below : NDArray[np.floating] | None, optional
             Array containing the faint component of the galactic background.
             If None, initialized to zeros.
-        galactic_undecided : ndarray of float, optional
+        galactic_undecided : NDArray[np.floating] | None, optional
             Array containing the undecided component of the galactic background.
             If None, initialized to zeros.
-        galactic_above : ndarray of float, optional
+        galactic_above : NDArray[np.floating] | None, optional
             Array containing the bright (above threshold) component of the galactic background.
             If None, initialized to zeros.
         track_mode : int
@@ -127,8 +125,6 @@ class BGDecomposition:
         ------
         ValueError
             If an unrecognized storage mode is provided.
-        AssertionError
-            If provided arrays do not match the expected shapes.
         """
         if storage_mode not in (0, 1):
             msg = 'Unrecognized option for storage mode'
@@ -761,7 +757,7 @@ class BGDecomposition:
             Smoothing length in the frequency domain.
         filter_periods : int
             Number of periods to use for filtering.
-        period_list : tuple of int or float
+        period_list : tuple[int, ...] | tuple[np.floating, ...]
             List of periods to consider in the cyclostationary analysis.
 
         Returns
@@ -802,7 +798,7 @@ class BGDecomposition:
             Smoothing length in the frequency domain.
         filter_periods : int
             Number of periods to use for filtering.
-        period_list : tuple of int or float
+        period_list : tuple[int, ...] | tuple[np.floating, ...]
             List of periods to consider in the cyclostationary analysis.
 
         Returns

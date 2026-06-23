@@ -71,13 +71,15 @@ def get_sparse_snr_helper(
         the range of time pixels to allow
     wc : WDMWaveletConstants
         constants for WDM wavelet basis also from wdm_config.py
-    inv_chol_S :
-
+    inv_chol_S : NDArray[np.floating]
+        inverse square root of the noise covariance, shape (Nt, Nf, nc_noise)
+    nc_snr : int
+        number of TDI channels to calculate S/N for
 
     Returns
     -------
     snr : numpy.ndarray
-        an array of shape (nc_noise) which is the S/N for each TDI channel represented.
+        an array of shape (nc_snr) which is the S/N for each TDI channel represented.
 
     """
     snr2s = np.zeros(nc_snr)
@@ -372,6 +374,11 @@ class DenseNoiseModel(ABC):
             Freq pixels, Number of TDI channels.
             Pixel dimensions specified by wdm_config.py
 
+        Raises
+        ------
+        ValueError
+            If white_mode is not 0 or 1, or seed_override is less than -2.
+
         """
         if white_mode not in (0, 1):
             msg = 'Unrecognized option for white_mode'
@@ -446,7 +453,7 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
 
         Parameters
         ----------
-        S : numpy.ndarray
+        S : NDArray[np.floating]
             array of dense noise curves for each TDI channel
             shape: (Nt x Nf x nc_noise)=(freq layers x number of TDI channels)
         wc : WDMWaveletConstants
@@ -454,17 +461,15 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
         prune : int
             if prune=1, cut the 1st and last values,
             which may not be calculated correctly
+        nc_snr : int
+            number of TDI channels to calculate S/N for
+            (should be less than or equal to the number of TDI channels in S)
         seed : int
             non-negative integer random seed for the noise generator;
             if set, generate_dense_noise will always produce the same result
             if -1, generate_dense_noise will get a new seed every time
-        nc_snr : int
-            number of TDI channels to calculate S/N for
-            (should be less than or equal to the number of TDI channels in S)
-
-        Returns
-        -------
-        DiagonalNonstationaryDenseNoiseModel : class
+        storage_mode : int
+            Storage mode for the noise model (default 0).
 
         """
         assert len(S.shape) == 3
@@ -515,7 +520,7 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
 
         Parameters
         ----------
-        S_stat_m : numpy.ndarray
+        S_stat_m : NDArray[np.floating]
             array of stationary noise curves for each TDI channel,
             such as instrument noise output from instrument_noise_AET_wdm_m
             shape: (Nf x nc_noise) freq layers x number of TDI channels
@@ -533,10 +538,8 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
             non-negative integer random seed for the noise generator;
             if set, generate_dense_noise will always produce the same result
             if -1, generate_dense_noise will get a new seed every time
-
-        Returns
-        -------
-        DiagonalStationaryDenseNoiseModel : class
+        storage_mode : int
+            Storage mode for the noise model (default 0).
 
         """
         assert len(S_stat_m.shape) == 2

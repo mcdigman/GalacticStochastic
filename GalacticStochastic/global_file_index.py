@@ -42,7 +42,7 @@ def get_galaxy_filename(config: dict[str, Any]) -> str:
 
     Parameters
     ----------
-    config : dict of str to Any
+    config : dict[str, Any]
         Configuration dictionary containing file paths.
 
     Returns
@@ -61,7 +61,7 @@ def get_processed_galactic_filename(
 
     Parameters
     ----------
-    config : dict of str to Any
+    config : dict[str, Any]
         Configuration dictionary containing file paths.
     wc : WDMWaveletConstants
         Wavelet constants describing the time-frequency grid.
@@ -165,7 +165,7 @@ def get_full_galactic_params(config: dict[str, Any]) -> tuple[NDArray[np.floatin
 
     Parameters
     ----------
-    config : dict of str to Any
+    config : dict[str, Any]
         Configuration dictionary containing file paths, frequency limits, and component list.
 
     Returns
@@ -177,12 +177,8 @@ def get_full_galactic_params(config: dict[str, Any]) -> tuple[NDArray[np.floatin
 
     Raises
     ------
-    AssertionError
-        If parameter values are out of expected bounds or contain non-finite values.
     TypeError
         If the HDF5 file structure does not match the expected format.
-    UserWarning
-        If some parameters are always zero or have suspicious values (issued as warnings).
 
     Notes
     -----
@@ -283,13 +279,13 @@ def load_processed_galactic_file(
     ----------
     ifm : IterativeFitManager
         The manager object into which the loaded results will be stored.
-    config : dict of str to Any
+    config : dict[str, Any]
         Configuration dictionary containing file paths and iterative fit settings.
     ic : IterationConfig
         Configuration object specifying the parameters for the iterative fit.
     wc : WDMWaveletConstants
         Wavelet constants describing the time-frequency grid.
-    nt_lim_snr : tuple of int
+    nt_lim_snr : tuple[int, int]
         Tuple specifying the time-frequency pixel range to use. Defaults to (0, -1), which uses the full range.
     cyclo_mode : int
         Cyclostationary mode key used to select the correct HDF5 group (default is 1).
@@ -374,12 +370,15 @@ def store_processed_gb_file(
 
     Parameters
     ----------
-    config : dict of str to Any
+    config : dict[str, Any]
         Configuration dictionary containing file paths and iterative fit settings.
     wc : WDMWaveletConstants
         Wavelet constants describing the time-frequency grid.
     ifm : IterativeFitManager
         Manager object containing the results of the iterative fit to be stored.
+    params_gb_in : NDArray[np.floating]
+        Array of shape (n_binaries, n_par_gb) containing the galactic binary parameters;
+        used to compute a SHA256 checksum for provenance tracking.
     write_mode : int
         File writing mode:
         - 0: Overwrite existing group if present (default).
@@ -398,8 +397,6 @@ def store_processed_gb_file(
         If an unrecognized write_mode is provided.
     ValueError
         If an unexpected state is encountered when writing the HDF5 file.
-    AssertionError
-        If file integrity checks fail (e.g., mismatched SHA256 checksums).
     TypeError
         If the HDF5 file structure does not match the expected format.
     """

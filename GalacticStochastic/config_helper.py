@@ -38,10 +38,6 @@ def get_config_objects_from_dict(
     instrument_random_seed : int
         Random seed for instrument noise realization.
 
-    Raises
-    ------
-    AssertionError
-        If the number of galaxy channels exceeds the number of waveform or SNR channels.
     """
     wc = get_wavelet_model(config)
 
@@ -77,10 +73,6 @@ def get_config_dict_from_file(toml_filename: str) -> dict[str, Any]:
     config : dict[str, Any]
         Dictionary containing configuration parameters loaded from the TOML file.
 
-    Raises
-    ------
-    AssertionError
-        If the toml filename exists in the dict but is different than expected
     """
     with Path(toml_filename).open('rb') as f:
         config: dict[str, Any] = tomllib.load(f)

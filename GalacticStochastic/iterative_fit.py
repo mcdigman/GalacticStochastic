@@ -48,11 +48,11 @@ def fetch_or_run_iterative_loop(
 
     Parameters
     ----------
-    config : dict of str to Any
+    config : dict[str, Any]
         Configuration dictionary containing file paths and fit settings.
     cyclo_mode : int | str
         Cyclostationary mode key for the fit.
-    nt_range_snr : tuple of int
+    nt_range_snr : tuple[int, int]
         Time-frequency pixel range as (min, max) indices. Defaults to (0, -1) for full range.
     fetch_mode : int | str
         Mode for fetching or running the fit:
@@ -67,13 +67,13 @@ def fetch_or_run_iterative_loop(
         0 or 'no_store': do not store;
         1 or 'store_if_new': store results unless they are fetched (default).
         2 or 'store_always': store results even they were fetched
-    wc_in : WDMWaveletConstants, optional
+    wc_in : WDMWaveletConstants | None, optional
         Optional override for wavelet constants.
-    lc_in : LISAConstants, optional
+    lc_in : LISAConstants | None, optional
         Optional override for LISA instrument constants.
-    ic_in : IterationConfig, optional
+    ic_in : IterationConfig | None, optional
         Optional override for iteration configuration.
-    instrument_random_seed_in : int, optional
+    instrument_random_seed_in : int | None, optional
         Optional override for instrument random seed.
     preprocess_mode : int | str
         Preprocessing mode:
@@ -81,6 +81,10 @@ def fetch_or_run_iterative_loop(
         1 or 'initial': do first step of pre-processing
         2 or 'repeat_initial': re-process an existing pre-processing result
         Default is 0.
+    params_gb_in : NDArray[np.floating] | None, optional
+        Optional override for the galactic binary parameter array. If None, loaded from file.
+    custom_params : int
+        If -1, set automatically based on whether params_gb_in is provided (default -1).
 
     Returns
     -------
@@ -95,6 +99,8 @@ def fetch_or_run_iterative_loop(
         If required files or entries are missing and fetch_mode is set to abort.
     NotImplementedError
         If an unsupported preprocess_mode is specified.
+    TypeError
+        If fetch_mode, output_mode, cyclo_mode, or preprocess_mode is not int or str.
     """
     # input validations
     assert output_mode in (0, 1, 2, 'no_store', 'store_if_new', 'store_always'), 'Unrecognized option for output mode'

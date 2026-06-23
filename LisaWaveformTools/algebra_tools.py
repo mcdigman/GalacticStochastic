@@ -15,13 +15,17 @@ def gradient_uniform_inplace(ys: NDArray[np.floating], result: NDArray[np.floati
 
     Parameters
     ----------
-    ys : numpy.ndarray
+    ys : NDArray[np.floating]
         Input 2D array of shape (nc_loc, n_ys) containing y-values to differentiate.
         Array is assumed to be on a uniform grid along the second axis
-    result : numpy.ndarray
+    result : NDArray[np.floating]
         Output array of same shape as ys where gradient values will be stored
     dx : float
         Step size between x-values (uniform grid spacing)
+    nx_min : int
+        Start index along second axis (inclusive, default 0).
+    nx_max : int
+        End index along second axis (exclusive, default -1 means n_ys).
 
     Notes
     -----
@@ -71,13 +75,13 @@ def stabilized_gradient_uniform_inplace(
 
     Parameters
     ----------
-    x : numpy.ndarray
+    x : NDArray[np.floating]
         1D array of reference values of length n_t
-    dxdt : numpy.ndarray
+    dxdt : NDArray[np.floating]
         1D array containing the known derivative of x, must be same shape as x
-    y : numpy.ndarray
+    y : NDArray[np.floating]
         2D array of shape (nc_channel, n_t) containing the perturbed curves
-    dydt : numpy.ndarray
+    dydt : NDArray[np.floating]
         2D array of same shape as y where the computed gradients will be stored
     dt : float
         Time step size for gradient calculation

@@ -252,13 +252,8 @@ class BinaryInclusionState(StateManager):
             Object tracking the current state of the iterative fit.
         nt_lim_waveform : PixelGenericRange
             Range of time-frequency pixels for waveform generation.
-        snrs_tot_in : NDArray[np.floating], optional
+        snrs_tot_in : NDArray[np.floating] | None, optional
             Array of precomputed total SNRs for each binary. If provided, used to filter faint binaries.
-
-        Raises
-        ------
-        AssertionError
-            If input arrays have inconsistent shapes or required conditions are not met.
         """
         self._wc: WDMWaveletConstants = wc
         self._ic: IterationConfig = ic
