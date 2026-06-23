@@ -29,7 +29,7 @@ class StationarySourceWaveformTime(
     """Store a binary with linearly increasing frequency and constant amplitude in the time domain."""
 
     def __init__(
-        self, params: SourceParams, nt_lim_waveform: PixelGenericRange, lc: LISAConstants, *, response_mode: int = 0
+            self, params: SourceParams, nt_lim_waveform: PixelGenericRange, lc: LISAConstants, *, response_mode: int = 0, t_phase_ref: np.float64 = np.float64(0.0)
     ) -> None:
         """Initialize the object."""
         self._nt_lim_waveform: PixelGenericRange = nt_lim_waveform
@@ -38,6 +38,7 @@ class StationarySourceWaveformTime(
         self._nc_waveform: int = self._lc.nc_waveform
         self._consistent_extrinsic: bool = False
         self._consistent_intrinsic: bool = False
+        self._t_phase_ref: np.float64 = t_phase_ref
 
         self._TTs: NDArray[np.float64] = np.float64(self._nt_lim_waveform.dx) * np.arange(
             self._nt_lim_waveform.nx_min, self._nt_lim_waveform.nx_max
@@ -103,6 +104,7 @@ class StationarySourceWaveformTime(
         hf_source.attrs['channels_name'] = self._spacecraft_channels.__class__.__name__
         hf_source.attrs['response_mode'] = self.response_mode
         hf_source.attrs['nc_waveform'] = self._nc_waveform
+        hf_source.attrs['t_phase_ref'] = self._t_phase_ref
 
         hf_source.attrs['spacecraft_orbits_name'] = self._spacecraft_orbits.__class__.__name__
         _ = hf_source.create_dataset('spacecraft_x', data=self._spacecraft_orbits.x, compression='gzip')
@@ -191,6 +193,11 @@ class StationarySourceWaveformTime(
     def nc_waveform(self) -> int:
         """Return the number of channels in the waveform."""
         return self._nc_waveform
+
+    @property
+    def t_phase_ref(self) -> np.float64:
+        """Return the time at which the phase and frequency are defined."""
+        return self._t_phase_ref
 
     @property
     def wavefront_time(self) -> NDArray[np.float64]:

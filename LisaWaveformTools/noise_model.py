@@ -135,10 +135,14 @@ def get_sparse_dense_inner_product_prewhitened(
     wc: WDMWaveletConstants,
     inv_chol_S: NDArray[np.floating],
     nc_snr: int,
+    whitened1: int = 0,
+    whitened2: int = 1,
 ) -> NDArray[np.floating]:
     """
     Calculate the noise weighted inner product for each TDI channel for a given intrinsic_waveform.
     """
+    assert whitened1 in (0, 1)
+    assert whitened2 in (0, 1)
     res = np.zeros(nc_snr)
     for itrc in range(nc_snr):
         n_pixel_loc: int = int(wavelet_waveform.n_set[itrc])
@@ -150,8 +154,14 @@ def get_sparse_dense_inner_product_prewhitened(
             j_loc: int = int(j_itrs[mm])
             i_loc: int = int(i_itrs[mm])
             if nt_lim_snr.nx_min <= j_loc < nt_lim_snr.nx_max:
-                signal_white: float = inv_chol_S[j_loc, i_loc, itrc] * wave_value_loc[mm]
-                data_white: float = wavelet_data_white[j_loc, i_loc, itrc]
+                if whitened1:
+                    signal_white: float = wave_value_loc[mm]
+                else:
+                    signal_white = inv_chol_S[j_loc, i_loc, itrc] * wave_value_loc[mm]
+                if whitened2:
+                    data_white: float = wavelet_data_white[j_loc, i_loc, itrc]
+                else:
+                    data_white = inv_chol_S[j_loc, i_loc, itrc] * wavelet_data_white[j_loc, i_loc, itrc]
                 res[itrc] += data_white * signal_white
     return res
 
@@ -164,12 +174,16 @@ def get_sparse_sparse_inner_product_sorted(
     wc: WDMWaveletConstants,
     inv_chol_S: NDArray[np.floating],
     nc_snr: int,
+    whitened1: int = 0,
+    whitened2: int = 0,
 ) -> NDArray[np.floating]:
     """
     Calculate the noise weighted inner product for each TDI channel for a given intrinsic_waveform.
 
     Assume both input pixel_index arrays are sorted for now.
     """
+    assert whitened1 in (0, 1)
+    assert whitened2 in (0, 1)
     res = np.zeros(nc_snr)
     for itrc in range(nc_snr):
         n_pixel_loc1: int = int(wavelet_waveform1.n_set[itrc])
@@ -193,8 +207,14 @@ def get_sparse_sparse_inner_product_sorted(
                 j_loc: int = int(j_itrs[mm1])
                 i_loc: int = int(i_itrs[mm1])
                 if nt_lim_snr.nx_min <= j_loc < nt_lim_snr.nx_max:
-                    signal_white1: float = inv_chol_S[j_loc, i_loc, itrc] * wave_value_loc1[mm1]
-                    signal_white2: float = inv_chol_S[j_loc, i_loc, itrc] * wave_value_loc2[mm2]
+                    if whitened1:
+                        signal_white1: float = wave_value_loc1[mm1]
+                    else:
+                        signal_white1 = inv_chol_S[j_loc, i_loc, itrc] * wave_value_loc1[mm1]
+                    if whitened2:
+                        signal_white2: float = wave_value_loc2[mm2]
+                    else:
+                        signal_white2 = inv_chol_S[j_loc, i_loc, itrc] * wave_value_loc2[mm2]
                     res[itrc] += signal_white1 * signal_white2
                 mm1 += 1
                 mm2 += 1
@@ -361,7 +381,7 @@ class DenseNoiseModel(ABC):
             msg = 'Seed override specification must be -2, -1, or a non-negative integer'
             raise ValueError(msg)
 
-        noise_res = np.zeros((self._wc.Nt, self._wc.Nf, self._nc_noise))
+        noise_res = np.zeros((self._wc.Nt, self._wc.Nf, self._nc_noise), order='F')
 
         # TODO add option to generate new realizations from old seed deterministically
 
@@ -403,11 +423,11 @@ class DenseNoiseModel(ABC):
     def get_log_likelihood_sparse(self, wavelet_waveform: SparseWaveletWaveform, wavelet_data_white: NDArray[np.floating], nt_lim: PixelGenericRange) -> np.floating:
         return np.sum(get_sparse_likelihood_helper_prewhitened(wavelet_waveform, wavelet_data_white, nt_lim, self._wc, self.get_inv_chol_S(), self._nc_snr))
 
-    def get_sparse_dense_inner_product(self, wavelet_waveform: SparseWaveletWaveform, wavelet_data_white: NDArray[np.floating], nt_lim: PixelGenericRange) -> np.floating:
-        return np.sum(get_sparse_dense_inner_product_prewhitened(wavelet_waveform, wavelet_data_white, nt_lim, self._wc, self.get_inv_chol_S(), self._nc_snr))
+    def get_sparse_dense_inner_product(self, wavelet_waveform: SparseWaveletWaveform, wavelet_data_white: NDArray[np.floating], nt_lim: PixelGenericRange, whitened1: int = 0, whitened2: int = 1) -> np.floating:
+        return np.sum(get_sparse_dense_inner_product_prewhitened(wavelet_waveform, wavelet_data_white, nt_lim, self._wc, self.get_inv_chol_S(), self._nc_snr, whitened1, whitened2))
 
-    def get_sparse_sparse_inner_product(self, wavelet_waveform1: SparseWaveletWaveform, wavelet_waveform2: SparseWaveletWaveform, nt_lim: PixelGenericRange) -> np.floating:
-        return np.sum(get_sparse_sparse_inner_product_sorted(wavelet_waveform1, wavelet_waveform2, nt_lim, self._wc, self.get_inv_chol_S(), self._nc_snr))
+    def get_sparse_sparse_inner_product(self, wavelet_waveform1: SparseWaveletWaveform, wavelet_waveform2: SparseWaveletWaveform, nt_lim: PixelGenericRange, whitened1: int = 0, whitened2: int = 0) -> np.floating:
+        return np.sum(get_sparse_sparse_inner_product_sorted(wavelet_waveform1, wavelet_waveform2, nt_lim, self._wc, self.get_inv_chol_S(), self._nc_snr, whitened1, whitened2))
 
 
 class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
@@ -454,8 +474,8 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
             wc, prune=prune, nc_snr=nc_snr, nc_noise=int(S.shape[-1]), seed=seed, storage_mode=storage_mode
         )
 
-        self._S: NDArray[np.floating] = S.copy()
-        self._inv_chol_S: NDArray[np.floating] = np.zeros((self._wc.Nt, self._wc.Nf, self._nc_noise))
+        self._S: NDArray[np.floating] = S.copy(order='F')
+        self._inv_chol_S: NDArray[np.floating] = np.zeros((self._wc.Nt, self._wc.Nf, self._nc_noise), order='F')
         for j in range(self._wc.Nt):
             for itrc in range(self._nc_noise):
                 chol_S_loc = np.sqrt(self._S[j, self.prune:, itrc])
@@ -537,8 +557,8 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
                 chol_S_stat_m_loc = float(np.sqrt(self._S_stat_m_in[m, itrc]))
                 self._inv_chol_S_stat_m[m, itrc] = 1.0 / chol_S_stat_m_loc
 
-        self._S: NDArray[np.floating] = np.zeros((self._wc.Nt, self._wc.Nf, self._nc_noise))
-        self._inv_chol_S: NDArray[np.floating] = np.zeros((self._wc.Nt, self._wc.Nf, self._nc_noise))
+        self._S: NDArray[np.floating] = np.zeros((self._wc.Nt, self._wc.Nf, self._nc_noise), order='F')
+        self._inv_chol_S: NDArray[np.floating] = np.zeros((self._wc.Nt, self._wc.Nf, self._nc_noise), order='F')
 
         # in the current representation, the even m=0 and odd m=0 slots represent
         # the highest and lowest frequency modes respectively

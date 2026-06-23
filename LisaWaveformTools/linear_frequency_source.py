@@ -96,7 +96,7 @@ class LinearFrequencyParamsManager(AbstractIntrinsicParamsManager[LinearFrequenc
 # TODO check factor of 2pi
 @njit()
 def linear_frequency_intrinsic(
-    waveform: StationaryWaveformTime, intrinsic_params: LinearFrequencyIntrinsicParams, t_in: NDArray[np.float64]
+        waveform: StationaryWaveformTime, intrinsic_params: LinearFrequencyIntrinsicParams, t_in: NDArray[np.float64], t_phase_ref: np.float64 = np.float64(0.0),
 ) -> None:
     """
     Get time domain intrinsic_waveform for a linearly increasing frequency source with constant amplitude.
@@ -129,7 +129,7 @@ def linear_frequency_intrinsic(
     nt_loc = t_in.size
     #  compute the intrinsic frequency, phase and amplitude
     for n in range(nt_loc):
-        t = t_in[n]
+        t = t_in[n] - t_phase_ref
         FT[n] = intrinsic_params.F0 + intrinsic_params.FTd0 * t
         FTd[n] = intrinsic_params.FTd0
         # gravitational wave phase is twice the binary phase
@@ -149,7 +149,7 @@ class LinearFrequencySourceWaveformTime(StationarySourceWaveformTime[LinearFrequ
             msg = 'Intrinsic parameters must be of type LinearFrequencyIntrinsicParams.'
             raise TypeError(msg)
 
-        linear_frequency_intrinsic(self._intrinsic_waveform, self.params.intrinsic, self.wavefront_time)
+        linear_frequency_intrinsic(self._intrinsic_waveform, self.params.intrinsic, self.wavefront_time, self.t_phase_ref)
         self._consistent_intrinsic = True
 
     @override
@@ -177,10 +177,11 @@ class LinearFrequencyWaveletWaveformTime(BinaryWaveletTaylorTime[LinearFrequency
         table_cache_mode: str = 'check',
         table_output_mode: str = 'skip',
         assert_mode: int = 1,
+        t_phase_ref: np.float64 = np.float64(0.0),
     ) -> None:
         """Construct a binary wavelet object."""
         # get the intrinsic_waveform
-        source_waveform = LinearFrequencySourceWaveformTime(params, nt_lim_waveform, lc, response_mode=response_mode)
+        source_waveform = LinearFrequencySourceWaveformTime(params, nt_lim_waveform, lc, response_mode=response_mode, t_phase_ref=t_phase_ref)
 
         super().__init__(
             params,

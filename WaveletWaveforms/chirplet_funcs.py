@@ -89,6 +89,7 @@ def chirplet_time_intrinsic(
     intrinsic_params: LinearChirpletIntrinsicParams,
     t_in: NDArray[np.floating],
     nt_lim: PixelGenericRange,
+    t_phase_ref: np.float64 = np.float64(0.),
 ) -> None:
     """Get amplitude, phase, frequency, and frequency derivative for the waveform.
     Uses a separate t_in array, which may be different from the time array in the waveform object.
@@ -111,7 +112,7 @@ def chirplet_time_intrinsic(
 
     #  compute the intrinsic frequency, phase and amplitude
     for n in range(nt_lim.nx_min, nt_lim.nx_max):
-        t = t_in[n]
+        t = t_in[n] - t_phase_ref
         delta_t = t - intrinsic_params.t_center
         x = delta_t / intrinsic_params.tau
 

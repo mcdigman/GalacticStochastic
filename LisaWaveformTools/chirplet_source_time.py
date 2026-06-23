@@ -2,6 +2,8 @@
 
 from typing import override
 
+import numpy as np
+
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.source_params import ExtrinsicParams, SourceParams
 from LisaWaveformTools.stationary_time_source import StationarySourceWaveformTime
@@ -34,7 +36,7 @@ class LinearChirpletSourceWaveformTime(StationarySourceWaveformTime[LinearChirpl
             raise TypeError(msg)
 
         chirplet_time_intrinsic(
-            self._intrinsic_waveform, self.params.intrinsic, self.wavefront_time, self._nt_lim_waveform
+            self._intrinsic_waveform, self.params.intrinsic, self.wavefront_time, self._nt_lim_waveform, self.t_phase_ref
         )
         self._consistent_intrinsic = True
 
@@ -53,6 +55,7 @@ class LinearChirpletWaveletTaylorTime(BinaryWaveletTaylorTime[LinearChirpletIntr
         response_mode: int = 0,
         table_cache_mode: str = 'check',
         table_output_mode: str = 'skip',
+        t_phase_ref: np.float64 = np.float64(0.0),
     ) -> None:
         """Construct a binary wavelet object."""
         # get the intrinsic_waveform
@@ -61,6 +64,7 @@ class LinearChirpletWaveletTaylorTime(BinaryWaveletTaylorTime[LinearChirpletIntr
             nt_lim_waveform,
             lc,
             response_mode=response_mode,
+            t_phase_ref=t_phase_ref,
         )
 
         super().__init__(
@@ -86,6 +90,7 @@ class LinearChirpletWaveletSparseTime(BinaryWaveletSparseTime[LinearChirpletIntr
         nt_lim_waveform: PixelGenericRange,
         *,
         response_mode: int = 0,
+        t_phase_ref: np.float64 = np.float64(0.0),
     ) -> None:
         """Construct a binary wavelet object."""
         self._nt_lim_grid: PixelGenericRange = get_sparse_source_t_grid(wc, lc.t0)
@@ -94,6 +99,7 @@ class LinearChirpletWaveletSparseTime(BinaryWaveletSparseTime[LinearChirpletIntr
             self._nt_lim_grid,
             lc,
             response_mode=response_mode,
+            t_phase_ref=t_phase_ref,
         )
 
         super().__init__(params, wc, lc, nt_lim_waveform, source_waveform)
