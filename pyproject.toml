@@ -39,3 +39,22 @@ include = ["GalacticStochastic*", "LisaWaveformTools*", "WaveletWaveforms*"]
 
 [project.scripts]
 run-galactic-stochastic-iterative = "GalacticStochastic.cli.run_iterative_procedure:main"
+
+[tool.pyrefly]
+# Used by the pyrefly-check pre-commit hook. The hook environment does not
+# install the project's runtime deps, so treat them as Any when unresolved --
+# this preserves the behavior of the old mypy hook's --ignore-missing-imports.
+# (The standalone type-check CI still runs mypy.)
+python-version = "3.12"
+ignore-missing-imports = [
+    "numpy", "numpy.*",
+    "scipy", "scipy.*",
+    "numba", "numba.*",
+    "h5py", "h5py.*",
+    "astropy", "astropy.*",
+    "pandas", "pandas.*",
+    "matplotlib", "matplotlib.*",
+    "pytest", "pytest.*",
+    "PyIMRPhenomD", "PyIMRPhenomD.*",
+    "WDMWaveletTransforms", "WDMWaveletTransforms.*",
+]
