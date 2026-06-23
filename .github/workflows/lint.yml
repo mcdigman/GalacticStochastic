@@ -16,10 +16,8 @@ env:
 jobs:
   pre-commit:
     runs-on: ubuntu-latest
-    # mypy has its own dedicated type-check workflow, so it is skipped here to
-    # avoid running it twice. Drop this `SKIP` to run every hook in this job.
-    env:
-      SKIP: mypy
+    # Runs every pre-commit hook, including pyrefly type checking. mypy is not a
+    # pre-commit hook anymore; it runs in the dedicated typecheck.yml workflow.
     steps:
       - uses: actions/checkout@v4
 
