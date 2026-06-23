@@ -11,10 +11,22 @@ dependencies = [
     "numpy>2.0.0",
     "scipy",
     "numba",
-    "pytest",
-    "h5py"
+    "h5py",
+    "WDMWaveletTransforms",
 ]
 requires-python = ">=3.12"
+
+[project.optional-dependencies]
+# Development / test tooling.
+dev = ["pytest"]
+# COSMIC compatibility mode: loading/processing COSMIC population HDF5 catalogs
+# (see GalacticStochastic/cosmic_data_helpers.py, imported behind an optional guard).
+cosmic = ["pandas", "astropy"]
+# Plotting / figure-generation scripts (make_gb_*_compare_plot.py, plot_creation_helpers.py).
+plots = ["matplotlib"]
+# PyIMRPhenomD is not yet published on PyPI, so it is kept optional for now.
+# Install it from its own source, or via: pip install ".[imrphenomd]" once available.
+imrphenomd = ["PyIMRPhenomD"]
 
 
 [build-system]
