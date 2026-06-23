@@ -10,7 +10,8 @@ license = { file = "LICENSE" }
 dependencies = [
     "numpy>=2.2",
     "scipy>=1.16",
-    "numba",
+    # numba 0.61.2 is the first release that supports numpy 2.2 (0.61.0 caps at <2.2)
+    "numba>=0.61.2",
     "h5py>=3.14",
     "WDMWaveletTransforms",
 ]
@@ -21,9 +22,10 @@ requires-python = ">=3.12"
 dev = ["pytest>=9.0", "h5py-stubs", "scipy-stubs"]
 # COSMIC compatibility mode: loading/processing COSMIC population HDF5 catalogs
 # (see GalacticStochastic/cosmic_data_helpers.py, imported behind an optional guard).
-cosmic = ["pandas", "astropy"]
+# astropy >=7.2 per the note in cosmic_data_helpers.py; both support Python 3.12.
+cosmic = ["pandas>=2.1", "astropy>=7.2"]
 # Plotting / figure-generation scripts (make_gb_*_compare_plot.py, plot_creation_helpers.py).
-plots = ["matplotlib"]
+plots = ["matplotlib>=3.8"]
 # PyIMRPhenomD is not yet published on PyPI, so it is kept optional for now.
 # Install it from its own source, or via: pip install ".[imrphenomd]" once available.
 imrphenomd = ["PyIMRPhenomD"]
@@ -45,16 +47,15 @@ run-galactic-stochastic-iterative = "GalacticStochastic.cli.run_iterative_proced
 # install the project's runtime deps, so treat them as Any when unresolved --
 # this preserves the behavior of the old mypy hook's --ignore-missing-imports.
 # (The standalone type-check CI still runs mypy.)
+#
+# Only packages that ship no type information are listed here. Packages that
+# ship py.typed (numpy, matplotlib, pytest, PyIMRPhenomD) or that we provide
+# stubs for (scipy -> scipy-stubs, h5py -> h5py-stubs) are intentionally
+# omitted so their real types are used instead of being silenced as Any.
 python-version = "3.12"
 ignore-missing-imports = [
-    "numpy", "numpy.*",
-    "scipy", "scipy.*",
     "numba", "numba.*",
-    "h5py", "h5py.*",
     "astropy", "astropy.*",
     "pandas", "pandas.*",
-    "matplotlib", "matplotlib.*",
-    "pytest", "pytest.*",
-    "PyIMRPhenomD", "PyIMRPhenomD.*",
     "WDMWaveletTransforms", "WDMWaveletTransforms.*",
 ]
