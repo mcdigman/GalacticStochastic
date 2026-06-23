@@ -8,22 +8,24 @@ authors = [
 ]
 license = { file = "LICENSE" }
 dependencies = [
-    "numpy>2.0.0",
-    "scipy",
-    "numba",
-    "h5py",
+    "numpy>=2.2",
+    "scipy>=1.16",
+    # numba 0.61.2 is the first release that supports numpy 2.2 (0.61.0 caps at <2.2)
+    "numba>=0.61.2",
+    "h5py>=3.14",
     "WDMWaveletTransforms",
 ]
 requires-python = ">=3.12"
 
 [project.optional-dependencies]
-# Development / test tooling.
-dev = ["pytest"]
+# Development / test tooling (pytest plus type stubs for the typed checks).
+dev = ["pytest>=9.0", "h5py-stubs", "scipy-stubs"]
 # COSMIC compatibility mode: loading/processing COSMIC population HDF5 catalogs
 # (see GalacticStochastic/cosmic_data_helpers.py, imported behind an optional guard).
-cosmic = ["pandas", "astropy"]
+# astropy >=7.2 per the note in cosmic_data_helpers.py; both support Python 3.12.
+cosmic = ["pandas>=2.1", "astropy>=7.2"]
 # Plotting / figure-generation scripts (make_gb_*_compare_plot.py, plot_creation_helpers.py).
-plots = ["matplotlib"]
+plots = ["matplotlib>=3.8"]
 # PyIMRPhenomD is not yet published on PyPI, so it is kept optional for now.
 # Install it from its own source, or via: pip install ".[imrphenomd]" once available.
 imrphenomd = ["PyIMRPhenomD"]
@@ -39,3 +41,24 @@ include = ["GalacticStochastic*", "LisaWaveformTools*", "WaveletWaveforms*"]
 
 [project.scripts]
 run-galactic-stochastic-iterative = "GalacticStochastic.cli.run_iterative_procedure:main"
+
+[tool.pyrefly]
+# Used by the pyrefly-check pre-commit hook. The hook environment does not
+# install the project's runtime deps, so treat them as Any when unresolved --
+# this preserves the behavior of the old mypy hook's --ignore-missing-imports.
+# (The standalone type-check CI still runs mypy.)
+#
+# Packages with usable type info are omitted so their real types are checked:
+# numpy/matplotlib/pytest ship py.typed and scipy/h5py have stub packages, all
+# installed for the hook via additional_dependencies in .pre-commit-config.yaml.
+# The packages below stay ignored because no type info is installable in the
+# isolated hook environment: numba/astropy/pandas ship no py.typed, and
+# PyIMRPhenomD (which does ship py.typed) is not published on PyPI.
+python-version = "3.12"
+ignore-missing-imports = [
+    "numba", "numba.*",
+    "astropy", "astropy.*",
+    "pandas", "pandas.*",
+    "PyIMRPhenomD", "PyIMRPhenomD.*",
+    "WDMWaveletTransforms", "WDMWaveletTransforms.*",
+]
