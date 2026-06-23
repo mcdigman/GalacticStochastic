@@ -48,14 +48,17 @@ run-galactic-stochastic-iterative = "GalacticStochastic.cli.run_iterative_proced
 # this preserves the behavior of the old mypy hook's --ignore-missing-imports.
 # (The standalone type-check CI still runs mypy.)
 #
-# Only packages that ship no type information are listed here. Packages that
-# ship py.typed (numpy, matplotlib, pytest, PyIMRPhenomD) or that we provide
-# stubs for (scipy -> scipy-stubs, h5py -> h5py-stubs) are intentionally
-# omitted so their real types are used instead of being silenced as Any.
+# Packages with usable type info are omitted so their real types are checked:
+# numpy/matplotlib/pytest ship py.typed and scipy/h5py have stub packages, all
+# installed for the hook via additional_dependencies in .pre-commit-config.yaml.
+# The packages below stay ignored because no type info is installable in the
+# isolated hook environment: numba/astropy/pandas ship no py.typed, and
+# PyIMRPhenomD (which does ship py.typed) is not published on PyPI.
 python-version = "3.12"
 ignore-missing-imports = [
     "numba", "numba.*",
     "astropy", "astropy.*",
     "pandas", "pandas.*",
+    "PyIMRPhenomD", "PyIMRPhenomD.*",
     "WDMWaveletTransforms", "WDMWaveletTransforms.*",
 ]

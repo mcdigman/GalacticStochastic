@@ -55,9 +55,18 @@ repos:
   rev: 1.1.1
   hooks:
   - id: pyrefly-check
-    # Behavior (e.g. ignore-missing-imports for uninstalled deps) is configured
-    # under [tool.pyrefly] in pyproject.toml. The dedicated type-check CI
-    # (.github/workflows/typecheck.yml) still runs mypy.
+    # pyrefly runs in an isolated environment, so the typed packages it must
+    # resolve (those no longer in [tool.pyrefly].ignore-missing-imports) are
+    # installed here: numpy/matplotlib/pytest ship py.typed, and scipy/h5py
+    # types come from their stub packages. numba/astropy/pandas/PyIMRPhenomD
+    # stay ignored in pyproject.toml (no installable type info). The dedicated
+    # type-check CI (.github/workflows/typecheck.yml) still runs mypy.
+    additional_dependencies:
+      - numpy>=2.2
+      - matplotlib>=3.8
+      - pytest>=9.0
+      - scipy-stubs
+      - h5py-stubs
 
 - repo: https://github.com/rhysd/actionlint
   rev: v1.7.12
