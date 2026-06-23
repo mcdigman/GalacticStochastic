@@ -62,3 +62,19 @@ ignore-missing-imports = [
     "PyIMRPhenomD", "PyIMRPhenomD.*",
     "WDMWaveletTransforms", "WDMWaveletTransforms.*",
 ]
+
+[tool.pydoclint]
+# Docstring-signature linting (the maintained successor to the now-archived
+# darglint). These options scope pydoclint to roughly the same rules darglint
+# enforced -- argument, return-presence, and raises consistency for numpy-style
+# docstrings -- by disabling the checks darglint does not perform:
+#   check-return-types  -> off : darglint does not check return types (DOC203)
+#   check-class-attributes -> off : darglint does not check class attrs (DOC60x)
+#   allow-init-docstring -> on : darglint documents __init__ args in __init__,
+#                                not the class docstring (DOC301)
+# The stricter-than-darglint DOC105 (arg type-hint matching) and DOC503 (raises
+# vs. `assert`) findings are intentionally left enabled.
+style = "numpy"
+check-return-types = false
+check-class-attributes = false
+allow-init-docstring = true

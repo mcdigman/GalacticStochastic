@@ -1,0 +1,36 @@
+name: Docstrings
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: docstrings-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  # Keep in sync with the pydoclint version used locally.
+  PYDOCLINT_VERSION: "0.8.7"
+
+jobs:
+  pydoclint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache-dependency-glob: "**/pyproject.toml"
+
+      # numpy-style docstring/signature linting. Options come from
+      # [tool.pydoclint] in pyproject.toml (scoped to roughly the darglint rules).
+      - name: Run pydoclint
+        run: >
+          uvx "pydoclint@${{ env.PYDOCLINT_VERSION }}"
+          GalacticStochastic LisaWaveformTools WaveletWaveforms
