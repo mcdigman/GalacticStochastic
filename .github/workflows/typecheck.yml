@@ -1,0 +1,36 @@
+name: Type Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: typecheck-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  # Keep in sync with the mypy rev in .pre-commit-config.yaml
+  MYPY_VERSION: "1.18.2"
+
+jobs:
+  mypy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Run mypy
+        run: >
+          uvx --from "mypy==${{ env.MYPY_VERSION }}" mypy
+          --ignore-missing-imports
+          --explicit-package-bases
+          .
