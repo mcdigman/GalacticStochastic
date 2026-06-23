@@ -1,0 +1,194 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-labelledby="title desc">
+  <title id="title">fetch_or_run_iterative_loop workflow</title>
+  <desc id="desc">Compact workflow diagram for the GalacticStochastic fetch_or_run_iterative_loop function.</desc>
+  <defs>
+    <linearGradient id="topBand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#12343b"/>
+      <stop offset="56%" stop-color="#1d5c63"/>
+      <stop offset="100%" stop-color="#2f4858"/>
+    </linearGradient>
+    <linearGradient id="runBand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff7e6"/>
+      <stop offset="100%" stop-color="#f5fbff"/>
+    </linearGradient>
+    <marker id="arrowDark" markerWidth="16" markerHeight="12" refX="13" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L14,6 L0,12 Z" fill="#25424a"/>
+    </marker>
+    <marker id="arrowLight" markerWidth="16" markerHeight="12" refX="13" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L14,6 L0,12 Z" fill="#ffffff"/>
+    </marker>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#17333a" flood-opacity="0.16"/>
+    </filter>
+    <style>
+      .bg { fill: #f7faf8; }
+      .title { font-family: Inter, Aptos, Segoe UI, Arial, sans-serif; font-size: 52px; font-weight: 760; fill: #ffffff; letter-spacing: 0; }
+      .subtitle { font-family: Inter, Aptos, Segoe UI, Arial, sans-serif; font-size: 24px; fill: #d7f2ee; letter-spacing: 0; }
+      .section-label { font-family: Inter, Aptos, Segoe UI, Arial, sans-serif; font-size: 20px; font-weight: 760; fill: #1c3035; letter-spacing: 0; }
+      .card-title { font-family: Inter, Aptos, Segoe UI, Arial, sans-serif; font-size: 27px; font-weight: 760; fill: #17333a; letter-spacing: 0; }
+      .card-title-light { font-family: Inter, Aptos, Segoe UI, Arial, sans-serif; font-size: 27px; font-weight: 760; fill: #ffffff; letter-spacing: 0; }
+      .body { font-family: Inter, Aptos, Segoe UI, Arial, sans-serif; font-size: 19px; fill: #334a50; letter-spacing: 0; }
+      .body-light { font-family: Inter, Aptos, Segoe UI, Arial, sans-serif; font-size: 19px; fill: #eefaf8; letter-spacing: 0; }
+      .small { font-family: Inter, Aptos, Segoe UI, Arial, sans-serif; font-size: 16px; fill: #49626a; letter-spacing: 0; }
+      .small-light { font-family: Inter, Aptos, Segoe UI, Arial, sans-serif; font-size: 16px; fill: #d8f0ed; letter-spacing: 0; }
+      .mono { font-family: "SF Mono", Consolas, Menlo, monospace; font-size: 17px; fill: #29464d; letter-spacing: 0; }
+      .mono-light { font-family: "SF Mono", Consolas, Menlo, monospace; font-size: 17px; fill: #e8fffb; letter-spacing: 0; }
+      .chip { fill: #e9f3f2; stroke: #bfd4d1; stroke-width: 2; }
+      .card { fill: #ffffff; stroke: #d7e2df; stroke-width: 2; rx: 8; filter: url(#softShadow); }
+      .accent-card { fill: #fef7e9; stroke: #efc46c; stroke-width: 2; rx: 8; filter: url(#softShadow); }
+      .cache-card { fill: #edf6ff; stroke: #9bbfe6; stroke-width: 2; rx: 8; filter: url(#softShadow); }
+      .result-card { fill: #183a40; stroke: #78b7ad; stroke-width: 2; rx: 8; filter: url(#softShadow); }
+      .iteration-card { fill: url(#runBand); stroke: #b9d4d0; stroke-width: 2; rx: 8; filter: url(#softShadow); }
+      .arrow { fill: none; stroke: #25424a; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrowDark); }
+      .arrow-thin { fill: none; stroke: #42727a; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrowDark); }
+      .arrow-light { fill: none; stroke: #ffffff; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrowLight); }
+      .dash { stroke-dasharray: 9 9; }
+      .node-number { font-family: Inter, Aptos, Segoe UI, Arial, sans-serif; font-size: 17px; font-weight: 800; fill: #ffffff; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1920" height="1080"/>
+  <rect x="0" y="0" width="1920" height="174" fill="url(#topBand)"/>
+  <path d="M80 124 C250 70 335 142 492 95 S770 72 927 126 S1220 129 1413 81 S1690 97 1840 122" fill="none" stroke="#9cdad3" stroke-width="3" opacity="0.45"/>
+  <path d="M82 137 C235 96 325 157 488 118 S783 94 944 143 S1248 151 1392 107 S1688 118 1836 141" fill="none" stroke="#f2c35b" stroke-width="2.5" opacity="0.58"/>
+  <text class="title" x="82" y="78">fetch_or_run_iterative_loop()</text>
+  <text class="subtitle" x="84" y="121">Run, fetch, preprocess, cache, and return one IterativeFitManager for the galactic background fit</text>
+
+  <g transform="translate(1475 38)">
+    <rect x="0" y="0" width="340" height="86" rx="8" fill="#0d252a" opacity="0.58"/>
+    <text class="small-light" x="22" y="31">Main call in run_gb_iterative.py</text>
+    <text class="mono-light" x="22" y="59">fetch_mode='fetch_or_run_all'</text>
+  </g>
+
+  <text class="section-label" x="80" y="224">Wrapper path</text>
+  <line x1="80" y1="238" x2="1840" y2="238" stroke="#d8e4e1" stroke-width="2"/>
+
+  <g id="card-input" transform="translate(80 278)">
+    <rect class="card" x="0" y="0" width="300" height="170"/>
+    <circle cx="34" cy="35" r="19" fill="#2f7f7b"/>
+    <text class="node-number" x="29" y="41">1</text>
+    <text class="card-title" x="66" y="41">Normalize inputs</text>
+    <text class="body" x="28" y="78">Validate and map string/int</text>
+    <text class="body" x="28" y="104">modes for fetch, output,</text>
+    <text class="body" x="28" y="130">cyclostationary, preprocess.</text>
+    <rect class="chip" x="28" y="144" width="112" height="30" rx="8"/>
+    <text class="small" x="42" y="165">mode gates</text>
+  </g>
+
+  <path class="arrow" d="M391 363 H470"/>
+
+  <g id="card-context" transform="translate(490 278)">
+    <rect class="card" x="0" y="0" width="300" height="170"/>
+    <circle cx="34" cy="35" r="19" fill="#2f7f7b"/>
+    <text class="node-number" x="29" y="41">2</text>
+    <text class="card-title" x="66" y="41">Build context</text>
+    <text class="body" x="28" y="78">Resolve wc, lc, ic, seed,</text>
+    <text class="body" x="28" y="104">load galactic binaries,</text>
+    <text class="body" x="28" y="130">and set SNR pixel range.</text>
+    <text class="mono" x="28" y="158">get_config_objects...</text>
+  </g>
+
+  <path class="arrow" d="M801 363 H880"/>
+
+  <g id="card-preprocess" transform="translate(900 278)">
+    <rect class="accent-card" x="0" y="0" width="340" height="170"/>
+    <circle cx="34" cy="35" r="19" fill="#d07c32"/>
+    <text class="node-number" x="29" y="41">3</text>
+    <text class="card-title" x="66" y="41">Preprocess gate</text>
+    <text class="body" x="28" y="78">Final or repeat mode needs</text>
+    <text class="body" x="28" y="104">a stationary initial pass.</text>
+    <text class="body" x="28" y="130">Initial mode starts directly.</text>
+    <text class="small" x="28" y="158">May recurse once into this function.</text>
+  </g>
+
+  <path class="arrow" d="M1251 363 H1330"/>
+
+  <g id="card-assemble" transform="translate(1350 278)">
+    <rect class="card" x="0" y="0" width="490" height="170"/>
+    <circle cx="34" cy="35" r="19" fill="#2f7f7b"/>
+    <text class="node-number" x="29" y="41">4</text>
+    <text class="card-title" x="66" y="41">Assemble managers</text>
+    <text class="body" x="28" y="78">Create BGDecomposition, IterativeFitState,</text>
+    <text class="body" x="28" y="104">NoiseModelManager, BinaryInclusionState,</text>
+    <text class="body" x="28" y="130">then wrap them in IterativeFitManager.</text>
+    <text class="mono" x="28" y="158">ifm = IterativeFitManager(...)</text>
+  </g>
+
+  <g id="preprocess-callout" transform="translate(960 484)">
+    <path class="arrow-thin dash" d="M110 0 C95 42 72 57 32 78"/>
+    <rect class="accent-card" x="-24" y="76" width="430" height="126"/>
+    <text class="card-title" x="8" y="112">Preliminary stationary pass</text>
+    <text class="body" x="8" y="146">Runs full Nt with preprocess='initial'</text>
+    <text class="body" x="8" y="172">Returns galactic floor and SNR seeds</text>
+    <path class="arrow-thin dash" d="M407 139 C538 126 584 38 664 -12"/>
+  </g>
+
+  <text class="section-label" x="80" y="556">Fetch/run decision</text>
+  <line x1="80" y1="570" x2="1840" y2="570" stroke="#d8e4e1" stroke-width="2"/>
+
+  <g id="cache" transform="translate(80 626)">
+    <rect class="cache-card" x="0" y="0" width="405" height="184"/>
+    <circle cx="34" cy="35" r="19" fill="#3b78b7"/>
+    <text class="node-number" x="29" y="41">5</text>
+    <text class="card-title" x="66" y="41">Try cache if allowed</text>
+    <text class="body" x="28" y="78">fetch modes 1, 2, 3 attempt HDF5 load.</text>
+    <text class="body" x="28" y="107">Groups are keyed by SNR threshold,</text>
+    <text class="body" x="28" y="136">time range, and cyclo mode.</text>
+    <text class="small" x="28" y="165">Mode 2 aborts when the entry is missing.</text>
+  </g>
+
+  <path class="arrow" d="M496 718 H585"/>
+
+  <g id="run-loop" transform="translate(610 604)">
+    <rect class="iteration-card" x="0" y="0" width="725" height="290"/>
+    <circle cx="36" cy="38" r="20" fill="#b6553d"/>
+    <text class="node-number" x="31" y="44">6</text>
+    <text class="card-title" x="70" y="45">If cache miss or forced run: do_loop()</text>
+    <g transform="translate(40 82)">
+      <rect x="0" y="0" width="190" height="138" rx="8" fill="#ffffff" stroke="#e1d6bd" stroke-width="2"/>
+      <text class="card-title" x="22" y="34">Binaries</text>
+      <text class="body" x="22" y="68">Coadd waveforms</text>
+      <text class="body" x="22" y="96">Compute upper/lower</text>
+      <text class="body" x="22" y="124">SNRs and classes</text>
+    </g>
+    <path class="arrow-thin" d="M243 151 H315"/>
+    <g transform="translate(330 82)">
+      <rect x="0" y="0" width="185" height="138" rx="8" fill="#ffffff" stroke="#c9d9d7" stroke-width="2"/>
+      <text class="card-title" x="22" y="34">State</text>
+      <text class="body" x="22" y="68">Bright/faint</text>
+      <text class="body" x="22" y="96">convergence</text>
+      <text class="body" x="22" y="124">decisions</text>
+    </g>
+    <path class="arrow-thin" d="M530 151 H602"/>
+    <g transform="translate(616 82)">
+      <rect x="0" y="0" width="72" height="138" rx="8" fill="#fff4ef" stroke="#e1b5a6" stroke-width="2"/>
+      <text class="body" x="20" y="55">Noise</text>
+      <text class="body" x="20" y="83">BG</text>
+      <text class="body" x="20" y="111">update</text>
+    </g>
+    <path class="arrow-thin" d="M650 233 C504 270 199 270 91 232"/>
+    <text class="small" x="216" y="259">Repeat until bright and faint converge, or max_iterations is reached.</text>
+  </g>
+
+  <path class="arrow" d="M1347 718 H1430"/>
+
+  <g id="store-return" transform="translate(1450 626)">
+    <rect class="result-card" x="0" y="0" width="390" height="184"/>
+    <circle cx="34" cy="35" r="19" fill="#f2c35b"/>
+    <text class="node-number" x="29" y="41">7</text>
+    <text class="card-title-light" x="66" y="41">Store and return</text>
+    <text class="body-light" x="28" y="78">If new or store_always, write</text>
+    <text class="body-light" x="28" y="107">processed or preprocessed HDF5.</text>
+    <text class="body-light" x="28" y="136">Return the populated manager.</text>
+    <text class="mono-light" x="28" y="165">return IterativeFitManager</text>
+  </g>
+
+  <path class="arrow-light" d="M232 626 C316 548 1420 545 1534 626"/>
+  <text class="small" x="786" y="531">Cache hit skips computation and proceeds to return/storage rules.</text>
+
+  <g transform="translate(80 914)">
+    <rect x="0" y="0" width="1760" height="88" rx="8" fill="#e8f1ef" stroke="#c7d9d5" stroke-width="2"/>
+    <text class="card-title" x="28" y="36">Result object</text>
+    <text class="body" x="28" y="67">The returned IterativeFitManager carries the final binary inclusion state, fit state history, noise models/background decomposition, and enough HDF5 provenance to be reused by later fetch calls.</text>
+  </g>
+</svg>
