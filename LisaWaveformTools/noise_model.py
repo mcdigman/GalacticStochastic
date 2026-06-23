@@ -81,7 +81,7 @@ def get_sparse_snr_helper(
     snr : numpy.ndarray
         an array of shape (nc_snr) which is the S/N for each TDI channel represented.
 
-"""
+    """
     snr2s = np.zeros(nc_snr)
     for itrc in range(nc_snr):
         n_pixel_loc: int = int(wavelet_waveform.n_set[itrc])
@@ -471,7 +471,7 @@ class DiagonalNonstationaryDenseNoiseModel(DenseNoiseModel):
         storage_mode : int
             Storage mode for the noise model (default 0).
 
-"""
+        """
         assert len(S.shape) == 3
         assert S.shape[0] == wc.Nt
         assert S.shape[1] == wc.Nf
@@ -541,7 +541,7 @@ class DiagonalStationaryDenseNoiseModel(DenseNoiseModel):
         storage_mode : int
             Storage mode for the noise model (default 0).
 
-"""
+        """
         assert len(S_stat_m.shape) == 2
         assert S_stat_m.shape[0] == wc.Nf
         super().__init__(

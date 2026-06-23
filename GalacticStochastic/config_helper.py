@@ -73,7 +73,7 @@ def get_config_dict_from_file(toml_filename: str) -> dict[str, Any]:
     config : dict[str, Any]
         Dictionary containing configuration parameters loaded from the TOML file.
 
-"""
+    """
     with Path(toml_filename).open('rb') as f:
         config: dict[str, Any] = tomllib.load(f)
 

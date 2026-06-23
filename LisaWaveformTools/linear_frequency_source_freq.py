@@ -25,6 +25,9 @@ def linear_frequency_intrinsic_freq(
 
     pt = params[6] + 2.0 * np.pi * (params[8] - ts) * fs + np.pi * params[7] * params[0] * xs**2 + np.pi / 4.
     pf = params[6] + 2.0 * np.pi * params[8] * fs + np.pi * params[0] * params[7] * xs**2
+    Note that t_in is not the same as the time coordinate in the input intrinsic_waveform object;
+    it may be a different time coordinate, due to the need to convert from the solar system barycenter
+    frame to the constellation guiding center frame (or the frames of the individual spacecraft).
 
     Parameters
     ----------
