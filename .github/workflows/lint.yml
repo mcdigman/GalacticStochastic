@@ -1,0 +1,42 @@
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    # mypy has its own dedicated type-check workflow, so it is skipped here to
+    # avoid running it twice. Drop this `SKIP` to run every hook in this job.
+    env:
+      SKIP: mypy
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Cache pre-commit hook environments
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: |
+            pre-commit-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
+
+      - name: Run pre-commit hooks
+        run: uvx pre-commit run --all-files --show-diff-on-failure --color=always
