@@ -705,7 +705,7 @@ def TaylorF2_aligned_inplace(intrinsic_waveform: StationaryWaveformFreq, params_
     """
     Compute the TaylorF2 model to 3.5PN order.
 
-    DOI: 10.1103/PhysRevD.80.084043, matching IMRPhenom phenomenological coefficents, see
+    DOI: 10.1103/PhysRevD.80.084043, matching IMRPhenom phenomenological coefficients, see
     for reference AmpInsAnsatz and TaylorF2AlignedPhasing from IMRPhenomD_internals.c
     if include_phenom_amp, include the 3 phenomenological coefficients in the amplitude beyond 3.5PN.
     if include_pn_ss3 is true include the 3PN spin-spin term, which was not known when the phenomonelogical amplitude coefficients set by phenom_amp were fit so may not be compatible

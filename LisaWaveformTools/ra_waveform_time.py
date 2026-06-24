@@ -367,6 +367,7 @@ def get_time_tdi_amp_phase_helper(
         Results are stored in-place in tdi_waveform
 
     """
+    del er
     # Note that if RR and II are both very near zero, there can be a step function
     # in the phase that would correspond to a dirac delta function in the frequency,
     # that currently is not represented in the frequency or derivative at all,

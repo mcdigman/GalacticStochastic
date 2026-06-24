@@ -29,7 +29,7 @@ class StationarySourceWaveformTime(
     """Store a binary with linearly increasing frequency and constant amplitude in the time domain."""
 
     def __init__(
-            self, params: SourceParams, nt_lim_waveform: PixelGenericRange, lc: LISAConstants, *, response_mode: int = 0, t_phase_ref: np.float64 = np.float64(0.0)
+            self, params: SourceParams, nt_lim_waveform: PixelGenericRange, lc: LISAConstants, *, response_mode: int = 0, t_phase_ref: np.float64 = 0.0
     ) -> None:
         """Initialize the object."""
         self._nt_lim_waveform: PixelGenericRange = nt_lim_waveform

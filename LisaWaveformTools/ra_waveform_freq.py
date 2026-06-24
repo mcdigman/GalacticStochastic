@@ -151,7 +151,7 @@ def get_detector_amplitude_phase_combinations(params_extrinsic: ExtrinsicParams)
     """
     Compute the amplitude and phase factors required for the detector's response to a gravitational-wave signal.
 
-    This function uses the the binary inclination and polarization angles
+    This function uses the binary inclination and polarization angles
     to calculate the coefficients that scale the plus and cross polarizations as seen by the detector.
     It also computes the cosine and sine of twice the polarization angle, as needed for projecting the signal onto
     the detector's antenna response.
@@ -957,10 +957,10 @@ def phase_wrap_helper_implicit_freq(
             # Isolate just the perturbation to the intrinsic phase
             p: float = (tdi_PF[itrc, n])
             delta_implicit = -2 * np.pi * nf_lim.dx * (tdi_TF[itrc, n] - TF[n]) - np.pi * nf_lim.dx**2 * (tdi_TFp[itrc, n] - TFp[n])
-            if n < nf_lim.nx_max - 1:
-                delta_implicit_alt = -np.pi * nf_lim.dx * (tdi_TF[itrc, n] - TF[n] + tdi_TF[itrc, n + 1] - TF[n + 1])
-            else:
-                delta_implicit_alt = 0.0
+            #if n < nf_lim.nx_max - 1:
+            #    delta_implicit_alt = -np.pi * nf_lim.dx * (tdi_TF[itrc, n] - TF[n] + tdi_TF[itrc, n + 1] - TF[n + 1])
+            #else:
+            #    delta_implicit_alt = 0.0
 
             # delta = delta_implicit
             delta = p - p_old
@@ -1024,11 +1024,7 @@ def phase_wrap_helper_freq(
 
     """
     tdi_PF: NDArray[np.floating] = tdi_waveform.P
-    tdi_TF: NDArray[np.floating] = tdi_waveform.X
-    tdi_TFp: NDArray[np.floating] = tdi_waveform.Xp
     PF: NDArray[np.floating] = waveform.P
-    TF: NDArray[np.floating] = waveform.X
-    TFp: NDArray[np.floating] = waveform.Xp
 
     # validate the shapes of the inputs
     assert len(tdi_PF.shape) == 2
@@ -1121,7 +1117,6 @@ def apply_doppler_freq(
 
     for n in range(nf_lim.nx_max - 1, nf_lim.nx_min - 1, -1):
         # Barycenter time and frequency
-        t: float = TF[n]
         f: float = n * nf_lim.dx + nf_lim.x_min  # FF[n]
 
         # the doppler-only phase perturbation (should be already unwrapped)

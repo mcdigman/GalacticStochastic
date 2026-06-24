@@ -96,7 +96,7 @@ class LinearFrequencyParamsManager(AbstractIntrinsicParamsManager[LinearFrequenc
 # TODO check factor of 2pi
 @njit()
 def linear_frequency_intrinsic(
-        waveform: StationaryWaveformTime, intrinsic_params: LinearFrequencyIntrinsicParams, t_in: NDArray[np.float64], t_phase_ref: np.float64 = np.float64(0.0),
+        waveform: StationaryWaveformTime, intrinsic_params: LinearFrequencyIntrinsicParams, t_in: NDArray[np.float64], t_phase_ref: np.float64 = 0.0,
 ) -> None:
     """
     Get time domain intrinsic_waveform for a linearly increasing frequency source with constant amplitude.
@@ -179,7 +179,7 @@ class LinearFrequencyWaveletWaveformTime(BinaryWaveletTaylorTime[LinearFrequency
         table_cache_mode: str = 'check',
         table_output_mode: str = 'skip',
         assert_mode: int = 1,
-        t_phase_ref: np.float64 = np.float64(0.0),
+        t_phase_ref: np.float64 = 0.0,
     ) -> None:
         """Construct a binary wavelet object."""
         # get the intrinsic_waveform
