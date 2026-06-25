@@ -1,25 +1,31 @@
-# Implementation Contract: Dense-Stripe Wavelet Coaddition Alternative To `wavemaket`
+# Implementation Contract v2: Dense-Stripe Taylor-Time Wavelet Coaddition
 
-## Intended Capability
+## Status And Scope
 
-Add a new numba-compiled alternative to `wavemaket` that coadds one waveform directly into a dense wavelet-domain stripe array in place.
+This is a revised implementation contract for adding numba-compiled dense-stripe alternatives to `wavemaket`.
 
-The implementation only needs to support:
+This contract is not an implementation approval. It resolves the review findings in `adversarial_review_taylor_time_wavelet_optimized.md` using:
+
+- The original contract in `implementation_contract_taylor_time_wavelet_optimized.md`.
+- Existing repository behavior of `wavemaket`, `wavelet_sparse_to_dense`, `SparseWaveletWaveform`, `PixelGenericRange`, `StationaryWaveformTime`, `WaveletTaylorTimeCoeffs`, and `WDMWaveletConstants`.
+- The human decisions supplied for this revision.
+
+The implementation must add direct dense-stripe coaddition for one waveform over a narrow frequency stripe. It only needs to support:
 
 - `force_nulls=0` equivalent behavior.
 - `amplitude_order=0`.
-- Dense stripe accumulation.
-- Linearly evolving intrinsic source frequency over the supported range.
+- Dense stripe accumulation into an existing output array.
+- Linearly evolving intrinsic source frequency over the supported test domain.
 
-It does not need full `wavemaket` feature parity.
+The implementation does not need full `wavemaket` feature parity.
 
 ## Motivation
 
-The current `wavemaket` path uses a sparse-format wavelet-domain representation. Future higher-level parallel coaddition will operate on independent dense frequency stripes and later sum those coadded stripe results into a final wavelet-domain result.
+The current `wavemaket` path produces a sparse-format wavelet-domain representation over the full wavelet band. Future higher-level parallel coaddition will operate on independent dense frequency stripes and later sum those stripe results into a final wavelet-domain result.
 
-The full wavelet transform matrix is too large to store many complete instances simultaneously, so each worker must operate on a narrow frequency range rather than the full frequency grid.
+The full wavelet transform matrix is too large to store many complete instances simultaneously, so each worker must operate on a narrow frequency range rather than materializing full-band intermediate results.
 
-## Files And Public API
+## Required Files
 
 Required new implementation file:
 
@@ -33,65 +39,115 @@ Required speed benchmark/demo:
 
 - `speed_tests/taylor_time_wavelet_optimized_speed_demo.py`
 
-Required functions:
+Optional strictly additive import/export edits are allowed only in existing `__init__.py` files if required for imports. No other existing tracked Python, configuration, coefficient, test, workflow, or documentation file may be modified by this implementation contract.
+
+## Public API
+
+The implementation must provide these three supported functions:
 
 ```python
 wavemaket_stripe_sparse(
-    wavelet_stripe: NDArray[np.floating],
+    wavelet_stripe: NDArray[np.float64],
     waveform: StationaryWaveformTime,
-    nf_min: int,
+    nf_start: int,
     stripe_height: int,
     nt_lim_waveform: PixelGenericRange,
     wc: WDMWaveletConstants,
     taylor_table: WaveletTaylorTimeCoeffs,
-)
+) -> None
 ```
 
 ```python
 wavemaket_stripe_dense(
-    wavelet_stripe: NDArray[np.floating],
+    wavelet_stripe: NDArray[np.float64],
     waveform: StationaryWaveformTime,
-    nf_min: int,
+    nf_start: int,
     stripe_height: int,
     nt_lim_waveform: PixelGenericRange,
     wc: WDMWaveletConstants,
     taylor_table: WaveletTaylorTimeCoeffs,
-)
+) -> None
 ```
 
-If the fixed-`k` implementation requires a distorted or realigned interpolation-table representation, `taylor_table` may use a new table type for that implementation. Any such table is also treated as a compile-time constant.
+```python
+wavemaket_stripe_dense_aligned(
+    wavelet_stripe: NDArray[np.float64],
+    waveform: StationaryWaveformTime,
+    nf_start: int,
+    stripe_height: int,
+    nt_lim_waveform: PixelGenericRange,
+    wc: WDMWaveletConstants,
+    taylor_table_aligned: WaveletTaylorTimeCoeffsAligned,
+) -> None
+```
 
-Both core required functions are equally supported APIs. Neither is merely an internal benchmark variant.
+All three functions are supported APIs, not throwaway benchmark-only variants. The name `nf_start` replaces the original contract's `nf_min` parameter to avoid collision with `wavemaket`'s local full-band lower-edge variable.
 
-## Dense Stripe Shape
+The implementation must define `WaveletTaylorTimeCoeffsAligned` as a numba-compatible table type. It may be a NamedTuple, dataclass-like numba-compatible object, or other numba-compatible representation, but it must be a lossless alteration of `WaveletTaylorTimeCoeffs` as defined in "Aligned Table Requirements." The implementation may add a helper to construct this table from `WaveletTaylorTimeCoeffs`; if the helper is public, it must have narrow annotations and a NumPy-style docstring.
+
+## Dense Stripe Shape And Indexing
 
 `wavelet_stripe` has shape:
 
 ```text
-(Nt, Nf, Nc)
+(Nt, stripe_height, Nc)
 ```
 
 where:
 
-- `Nt` is the number of time pixels.
-- `Nf` is the number of frequency pixels in the stripe.
-- `Nc` is the number of TDI channels.
+- `Nt == wc.Nt`.
+- `stripe_height == wavelet_stripe.shape[1]`.
+- `stripe_height` is in `{2, 3, 4, 5}`.
+- `Nc == wavelet_stripe.shape[2] == waveform.AT.shape[0]`.
+- `wavelet_stripe.dtype == np.float64`.
+- `wavelet_stripe` is contiguous, either C-contiguous or Fortran-contiguous.
 
-Shape and layout constraints:
+`wc.Nf` is the full number of wavelet frequency layers, for example 256 in existing test configurations. It is distinct from `stripe_height`. The stripe is a contiguous global frequency-layer window:
 
-- `Nt` is always even.
-- Typical `Nt` is 2048.
-- `Nf` is between 2 and 5 inclusive.
-- `Nc` is nearly always 3.
-- The stripe is a contiguous copy.
-- Either C-contiguous or Fortran-contiguous layout may be used, guided by benchmark results.
-- Shape may be treated as a compile-time constant, including recompilation for different shapes.
+```text
+[nf_start, nf_start + stripe_height)
+```
 
-`nf_min` identifies the first frequency pixel represented by the stripe.
+inside the full band:
 
-`stripe_height` is the number of frequency pixels in the stripe and must correspond to `wavelet_stripe.shape[1]`.
+```text
+0 <= nf_start
+nf_start + stripe_height <= wc.Nf
+```
 
-`nt_lim_waveform` gives the relevant time-pixel range for the waveform.
+The time axis uses absolute `wavemaket` time-pixel coordinates. A contribution for full-band time pixel `j` and global frequency layer `k` maps to:
+
+```text
+wavelet_stripe[j, k - nf_start, c]
+```
+
+No function may write outside columns `[0, stripe_height)`. Contributions to global frequency layers outside `[nf_start, nf_start + stripe_height)` are dropped, not wrapped, clamped, or accumulated into edge columns.
+
+The implementation must use `wc.Nf`, not `stripe_height`, wherever full-band wavelet math requires the full frequency-layer count, including pixel-index encoding, layer center calculations, and oracle parity expressions that depend on `j + k`.
+
+Shape may be treated as a compile-time constant, including numba recompilation for different shapes and layouts.
+
+## Runtime Validation
+
+Runtime input validation must use assertions only. With assertions disabled, invalid-input behavior is undefined and is not required to branch defensively.
+
+Each public function must assert at least:
+
+- `wavelet_stripe.ndim == 3`.
+- `wavelet_stripe.shape[0] == wc.Nt`.
+- `wavelet_stripe.shape[1] == stripe_height`.
+- `wavelet_stripe.shape[2] == waveform.AT.shape[0]`.
+- `wavelet_stripe.dtype == np.float64`.
+- `stripe_height in (2, 3, 4, 5)`.
+- `wc.Nt % 2 == 0`.
+- `0 <= nf_start`.
+- `nf_start + stripe_height <= wc.Nf`.
+- `wavelet_stripe` is C-contiguous or F-contiguous.
+- `nt_lim_waveform.nx_min >= 0`.
+- `nt_lim_waveform.nx_max <= wc.Nt`.
+- `nt_lim_waveform.nx_min <= nt_lim_waveform.nx_max`.
+
+Assertions may include messages, but message wording is not part of the contract.
 
 ## Scientific And Mathematical Basis
 
@@ -100,32 +156,63 @@ The numerical oracle is the existing `wavemaket` function called with:
 - `force_nulls=0`
 - `amplitude_order=0`
 
-The new dense-stripe functions must match this oracle for the supported restricted domain.
+The oracle must be run with the same `waveform`, `nt_lim_waveform`, `wc`, and original `WaveletTaylorTimeCoeffs` table. The oracle is converted from sparse to dense by:
 
-Supported waveform domain:
+1. Running `wavemaket` into a `SparseWaveletWaveform`.
+2. Calling `wavelet_sparse_to_dense(oracle_sparse, wc)`, producing shape `(wc.Nt, wc.Nf, Nc)`.
+3. Taking `oracle_dense[:, nf_start:nf_start + stripe_height, :]`.
+
+All correctness comparisons must cover the entire stripe slice, including cells expected to be exactly zero. Comparisons restricted to `oracle != 0` or any other nonzero mask are prohibited.
+
+All three new functions must reproduce the oracle's `force_nulls=0`, `amplitude_order=0` drop behavior in the stripe. For each time pixel `j`, global frequency layer `k`, and channel `c`, the stripe cell may receive a nonzero contribution only when `wavemaket` would write `(j, k, c)` under all of these conditions:
+
+- The frequency-derivative table index condition holds: `0 <= ny + wc.Nfd_negative < wc.Nfd - 1`, where `ny = floor(waveform.FTd[c, j] / wc.dfd)`.
+- `k` is inside the oracle bandwidth interval for that time sample and channel: `ceil((fa - half_bandwidth) / wc.DF) <= k <= floor((fa + half_bandwidth) / wc.DF)`, where `fa = waveform.FT[c, j]` and `half_bandwidth` is computed from the two adjacent `taylor_table.Nfsam` values exactly as in `wavemaket`.
+- `k` is inside the stripe window `[nf_start, nf_start + stripe_height)`.
+- The interpolation-table overflow guard holds: `0 <= jj1 < Nfsam1_loc - 1` and `0 <= jj2 < Nfsam2_loc - 1`, using the same `jj1` and `jj2` definitions as `wavemaket`.
+
+Where any of these conditions fail, the new functions must contribute `0.0` to the stripe cell.
+
+The required functions must compute `wavelet_stripe[...] += contribution`; they must not overwrite existing contents. Pre-existing values in `wavelet_stripe` must be preserved additively.
+
+## Supported Waveform Domain
+
+Supported waveform inputs are selected so that:
 
 - Intrinsic source frequency evolves linearly over time.
-- Total intrinsic frequency drift is no more than two frequency pixels over the observation period.
-- Slope may be positive, negative, zero, or nearly zero.
-- Initial source frequency is within `+/- 0.5` frequency pixel of the stripe center.
+- Total intrinsic frequency drift is no more than two full-band frequency pixels over the observation period.
+- Slope may be positive, negative, zero, nearly zero, or very nearly zero.
+- Initial source frequency is within `+/- 0.5` full-band frequency pixel of the stripe center.
 - Doppler shifting, polarization rotation, and amplitude modulation come from existing TDI functions.
 
 TDI functions must not be modified and are not part of the performance benchmark.
 
+Unsupported behavior:
+
+- Non-ignored null handling other than `force_nulls=0` equivalence.
+- Higher-order amplitude handling.
+- Arbitrary nonlinear intrinsic frequency evolution.
+- Performance guarantees outside the restricted linear-frequency domain.
+- Any changes to existing TDI routines.
+
 ## Numerical Tolerances
 
-For implementations that do not distort the interpolation table:
+All three required functions must match the oracle stripe slice with:
 
-- `atol = 1e-10 * amplitude_source`
-- `rtol = 1e-9`
+```text
+atol = 1e-10 * amplitude_source
+rtol = 1e-9
+```
 
-`amplitude_source` is the maximum value of the amplitude.
+where:
 
-For benchmark-only experimental implementations that distort or realign the interpolation table:
+```python
+amplitude_source = float(np.max(np.abs(waveform.AT[:, nt_lim_waveform.nx_min:nt_lim_waveform.nx_max])))
+```
 
-- Looser behavior may be considered.
-- Proposed threshold: approximately `rtol = 1e-4`.
-- The benchmark and tests must clearly identify that this is a distorted-table experimental path, not the primary faithful tolerance regime unless explicitly accepted later.
+If the selected time range is empty, tests must not use that case for numerical correctness acceptance.
+
+The previous v1 allowance for a distorted or realigned table with looser tolerance is removed. No required or optional path in this contract may use a looser tolerance for correctness acceptance.
 
 ## Implementation Variants
 
@@ -133,196 +220,293 @@ For benchmark-only experimental implementations that distort or realign the inte
 
 This function must:
 
-- Preserve the current variable-`k` inner-loop structure as closely as practical.
-- Write into `wavelet_stripe` in place.
-- Produce dense stripe output rather than sparse-format output.
-- Match the existing `wavemaket(force_nulls=0, amplitude_order=0)` oracle within the faithful numerical tolerance.
+- Preserve the current variable-`k` inner-loop structure as closely as practical while writing directly to `wavelet_stripe`.
+- Use the full-band `wc.Nf` for full-band wavelet calculations.
+- Restrict writes to global layers in `[nf_start, nf_start + stripe_height)`.
+- Accumulate into `wavelet_stripe` in place.
+- Match the oracle stripe slice within the faithful numerical tolerance.
 
 ### `wavemaket_stripe_dense`
 
 This function must:
 
-- Use a fixed-`k` inner loop.
-- Add zero for `k` values that would otherwise be outside the valid variable range.
-- Prioritize minimizing conditional branches in the hot loop.
-- Include a literal zero-conditional hot-loop implementation if achievable.
-- Write into `wavelet_stripe` in place.
-- Match the existing `wavemaket(force_nulls=0, amplitude_order=0)` oracle within the faithful numerical tolerance unless an explicitly benchmark-only distorted-table variant is being evaluated separately.
+- Use a fixed-`k` inner loop over the stripe window.
+- Add zero for `k` values that would fail any oracle drop guard.
+- Use the original `WaveletTaylorTimeCoeffs` representation.
+- Prioritize minimizing conditional branches in the hot loop without changing observable behavior.
+- Accumulate into `wavelet_stripe` in place.
+- Match the oracle stripe slice within the faithful numerical tolerance.
 
-If a branch-containing fixed-`k` version benchmarks faster than a literal zero-branch version, benchmark experiments may include both.
+### `wavemaket_stripe_dense_aligned`
 
-Additional benchmark-only variants are allowed if clearly named and isolated from the two required supported APIs.
+This function must:
 
-## Distorted-Table Experiments
+- Use a fixed-`k` inner loop over the stripe window.
+- Use a losslessly altered aligned table representation.
+- Add zero for `k` values that would fail any oracle drop guard.
+- Prioritize minimizing conditional branches in the hot loop without changing observable behavior.
+- Accumulate into `wavelet_stripe` in place.
+- Match the oracle stripe slice within the faithful numerical tolerance.
 
-Distorted or realigned interpolation-table experiments are optional, not required.
+This third function is required by human decision. It is not an experimental lower-accuracy distorted-table path.
 
-They are not required if the implementation provides a fixed-`k` dense variant that:
+## Aligned Table Requirements
 
-- Meets the faithful numerical tolerance against `wavemaket(force_nulls=0, amplitude_order=0)`.
-- Achieves comparable or superior speed in the benchmark.
-- Has zero branching conditionals in the targeted hot inner loop.
+The aligned table representation used by `wavemaket_stripe_dense_aligned` must be lossless relative to the original `WaveletTaylorTimeCoeffs` for all coefficient values that `wavemaket(force_nulls=0, amplitude_order=0)` may legally read.
 
-If those conditions are not met, distorted-table experiments may be included as benchmark-only alternatives. Any distorted-table variant must be clearly separated from the two required supported APIs unless later promoted by explicit review decision.
+The aligned table may:
 
-## Data And Shape Expectations
+- Make ragged per-`n_ind` coefficient rows rectangular.
+- Add zero padding outside the original valid coefficient ranges.
+- Reindex rows or columns by an integer slide so that fixed-`k` access can use a simpler address calculation.
+- Store additional integer offset metadata required to map back to original `jj1` and `jj2` positions.
 
-The stripe frequency-pixel range must be represented by a `PixelGenericRange`.
+The aligned table must not:
 
-Input sources are selected so their initial frequency is within `+/- 0.5` frequency pixel of the stripe center.
+- Resample, interpolate, distort, round, compress, smooth, or otherwise numerically alter original coefficient values.
+- Change `Nfsam`, `Nfd`, `Nfd_negative`, `dfd`, `df_bw`, `DF`, or other scientific constants.
+- Treat padding as valid coefficient data where the oracle would have dropped the cell.
+- Use any relaxed correctness tolerance.
 
-Required frequency-position coverage:
+Required verification for the aligned table:
 
-- Waveforms beginning in odd-index frequency pixels.
-- Waveforms beginning in even-index frequency pixels.
+- A table-integrity test must verify that every original valid coefficient used by oracle lookup is retrievable from the aligned representation with bitwise equality or exact `==` equality for float64 stored values.
+- A padding test must verify that padded entries cannot create nonzero contributions in cells where the original oracle table-overflow guard would drop the cell.
+- A differential correctness test must compare `wavemaket_stripe_dense_aligned` against the oracle over the full stripe slice for the same cases required of the other two functions.
+
+## Forbidden Shortcuts And Memory Constraints
+
+None of the required functions may:
+
+- Call `wavemaket`.
+- Call `wavemaket_direct`.
+- Allocate or materialize a full dense `(wc.Nt, wc.Nf, Nc)` array.
+- Allocate or materialize a full-band `SparseWaveletWaveform`.
+- Allocate any per-call intermediate whose frequency extent is `O(wc.Nf)`.
+- Use a wrapper over the sparse oracle as the implementation strategy.
+- Hide full-band materialization behind helper functions, aliases, closures, dynamically imported functions, generated-code labels, or equivalent indirection.
+
+Per-call scratch storage in the frequency dimension is limited to `O(stripe_height)`.
+
+Tests and benchmark code may construct the full-band oracle for verification and timing comparison. This exception applies only outside the three required implementation functions and their private helpers.
+
+## Required Coverage Cases
+
+Correctness tests must compare each of the three required functions against the full-stripe oracle for:
+
+- `stripe_height` values `2`, `3`, `4`, and `5`.
+- At least one even `nf_start`.
+- At least one odd `nf_start`.
+- At least one stripe whose top edge is near, but not beyond, `wc.Nf`.
+- Even `wc.Nt`, including a representative `wc.Nt == 2048` case in either correctness tests or benchmark/demo setup.
+- `Nc == 3`.
+- Initial-frequency offsets from the stripe center, in full-band frequency-pixel units: `-0.5`, `-0.3`, `-0.25`, `0.0`, `0.25`, `0.3`, and `0.5`.
+- Linear slopes in full-band frequency pixels per observation period: `-2.0`, `-1.99`, `-1.0`, `-1e-3`, `-1e-10`, `0.0`, `1e-10`, `1e-3`, `1.0`, `1.99`, and `2.0`.
 - Frequencies exactly on pixel boundaries.
 - Frequencies exactly halfway between pixel boundaries.
-- Frequencies at arbitrary positions on either side of halfway between pixel boundaries.
+- Frequencies at arbitrary positions on each side of halfway, represented by offsets `-0.3`, `-0.25`, `0.25`, and `0.3`.
 
-## Boundary Cases
+The required tests may use parametrization rather than the full Cartesian product if the selected cases still exercise each listed requirement for each function and each `stripe_height`. At least one test must exercise each oracle drop guard: derivative-index drop, bandwidth drop, and table-overflow drop.
 
-Required supported cases:
-
-- `Nf` values from 2 through 5 inclusive.
-- Even `Nt`, including representative `Nt = 2048` in benchmark or test coverage.
-- Linear frequency slopes in `[-2, +2]` frequency pixels over the observation.
-- Initial frequencies on boundaries.
-- Initial frequencies halfway between boundaries.
-- Initial frequencies below halfway.
-- Initial frequencies above halfway.
-- Initial frequencies in odd and even frequency-pixel index regions.
-
-Unsupported behavior:
-
-- Non-ignored null handling.
-- Higher-order amplitude handling.
-- Arbitrary nonlinear intrinsic frequency evolution.
-- Performance guarantees outside the restricted linear-frequency domain.
-- Any changes to existing TDI routines.
-
-Validation behavior:
-
-- Runtime input validation must use assertions only.
-- Assertions may check shape, contiguity, supported stripe width, even time length, dtype, and range consistency.
-- Production behavior with assertions disabled is not required to branch defensively for invalid inputs.
-
-## Compatibility Constraints
-
-No existing tracked Python, configuration, or coefficient files may be modified except strict additive edits to existing `__init__.py` files if required for imports.
-
-No existing `wavemaket` behavior may change.
-
-A reviewer must be able to verify that diffs are limited to:
-
-- `WaveletWaveforms/taylor_time_wavelet_optimized.py`
-- `tests/test_taylor_time_wavelet_optimized.py`
-- `speed_tests/taylor_time_wavelet_optimized_speed_demo.py`
-- Optional strictly additive `__init__.py` export edits.
-
-## QA Constraints
-
-Code must:
-
-- Use numba `njit`.
-- Include specific type annotations for all inputs required by repository style.
-- Include concise NumPy-style docstrings.
-- Prioritize correctness and precise input/output semantics over long explanations.
-- Use assertions only for runtime validation.
-- Avoid production defensive branches for invalid inputs in hot paths.
+## Test Requirements
 
 Tests must:
 
-- Compare both required functions against existing `wavemaket(force_nulls=0, amplitude_order=0)`.
-- Compare `wavemaket_stripe_sparse` and `wavemaket_stripe_dense` against each other.
-- Verify in-place mutation of the input dense stripe.
-- Verify the required slope, parity, boundary, half-pixel, arbitrary-position, and stripe-width cases.
-- Avoid shape-only or placeholder-friendly assertions.
-- Clearly distinguish the faithful tolerance regime from any optional distorted-table benchmark experiment.
+- Compare all three required functions against the oracle stripe slice over the entire stripe.
+- Compare `wavemaket_stripe_sparse`, `wavemaket_stripe_dense`, and `wavemaket_stripe_dense_aligned` against each other after independent calls.
+- Verify in-place mutation by checking that the same array object and data pointer are retained.
+- Verify additive coaddition by pre-filling `wavelet_stripe` with known nonzero values `B`, calling each function, and asserting the result equals `B + oracle_slice`.
+- Verify that an overwrite implementation would fail the pre-filled-stripe test.
+- Verify that cells dropped by the oracle remain unchanged except for the pre-existing `B` value in additive tests.
+- Verify required assertions for invalid shape, invalid `stripe_height`, invalid `nf_start`, mismatched `Nc`, non-float64 dtype, and invalid time range.
+- Avoid shape-only, nonzero-only, smoke-only, or placeholder-friendly assertions.
+- Use an independent oracle construction based on existing `wavemaket` plus `wavelet_sparse_to_dense`, not on the new implementation's helper logic.
+- Keep all new tests active. No `@pytest.mark.skip` or `xfail` may be added to the new test file unless specifically authorized outside this contract.
 
-Existing test files do not need to be modified.
+Because repository-wide tests are known to include slow or currently failing cases, this contract does not require the implementation agent to run the full test suite or add CI execution. The enforceable repository-scope QA requirement for this implementation is the allowed-diff/file-scope restriction plus unskipped targeted tests in the new test file.
 
-Existing test files do not need to be run for this contract.
+## Benchmark/Demo Requirements
 
-## Performance Requirements
-
-Add:
+The speed benchmark/demo is required and must be committed at:
 
 - `speed_tests/taylor_time_wavelet_optimized_speed_demo.py`
 
-The speed demo must compare:
+It must:
 
-- Existing `wavemaket`.
-- `wavemaket_stripe_sparse`.
-- `wavemaket_stripe_dense`.
-- Any optional benchmark-only variants.
+- Benchmark `wavemaket`, `wavemaket_stripe_sparse`, `wavemaket_stripe_dense`, and `wavemaket_stripe_dense_aligned`.
+- Exclude TDI waveform construction and other source-generation work from timed sections.
+- Warm up numba compilation before recording timings.
+- Report at least median per-call wall time.
+- Include `wc.Nt == 2048`, `stripe_height` values `2`, `3`, `4`, and `5`, and `Nc == 3`.
+- Include both C-contiguous and F-contiguous stripe layouts, or explicitly report that one layout is unsupported because of a measured correctness or compilation failure.
+- Verify within the benchmark script that benchmarked stripe outputs match the oracle tolerance before reporting speed.
 
-The benchmark must:
+The benchmark has no required speed threshold in this contract. It is a required evidence-producing artifact, not an acceptance gate for performance. This preserves the original motivation while avoiding an invented performance target.
 
-- Exclude TDI computation from timed sections.
-- Include representative `(Nt, Nf, Nc)` shapes.
-- Include `Nt = 2048`, `Nf = 2..5`, and `Nc = 3`.
-- Compare C-contiguous and Fortran-contiguous layouts if both are plausible implementation paths.
-- Document empirical results clearly enough to justify implementation choices.
+## QA And Repository Policy
 
-No explicit parallelism should be used inside these functions. Higher-level parallel coaddition is future work.
+Implementation code must:
 
-## Known Risks
+- Use numba `njit` for the three required functions.
+- Stay in nopython-compatible code for the required functions.
+- Include specific type annotations for public function inputs and return `-> None`.
+- Include concise NumPy-style docstrings for public functions and public helpers.
+- Use assertions only for runtime validation.
+- Avoid production defensive branches for invalid inputs in hot paths.
+- Preserve existing `wavemaket` behavior.
 
-- Matching sparse `wavemaket` behavior against a dense stripe may be sensitive to indexing conventions.
-- Frequency-pixel boundary and half-pixel cases are likely to expose off-by-one or rounding differences.
-- Odd and even frequency-pixel starting indices may interact with wavelet coefficient parity assumptions.
-- Fixed-`k` zero-contribution behavior could accidentally differ from variable valid-range behavior near stripe boundaries.
-- Reworking interpolation-table layout could create numerically subtle differences.
-- C-contiguous versus Fortran-contiguous layout may materially affect numba compilation and vectorization.
-- Adding only new files may make normal package import/export inconvenient unless strict additive `__init__.py` edits are used.
+Unless separately approved, the implementation may not introduce or modify:
 
-## Explicitly Out Of Scope
+- Inline linter suppressions such as `# noqa`.
+- Type-checker suppressions such as `# type: ignore`, `# pyright: ignore`, or casts that hide broad types.
+- Checker configuration.
+- File exclusions.
+- Test skips or expected failures.
+- Warning filters.
+- Coverage exclusions such as `# pragma: no cover`.
+- CI, pre-commit, ruff, pyrefly, mypy, pytest, or coverage configuration.
+- Broad `Any`-typed public interfaces, broad protocols, dynamic attribute access, wrapper aliases, or generated-code designations that obscure the contract.
 
-- Full `wavemaket` compatibility.
-- Null handling modes other than ignored/nulls disabled.
-- Higher-order amplitude interpolation.
-- TDI modification or optimization.
-- Internal parallelism.
-- General sparse-format replacement.
-- Broad waveform models beyond the specified linear-frequency case.
-- Existing coefficient file modifications.
-- Existing test-file modifications.
-- Required distorted-table experiments when the faithful zero-branch dense implementation satisfies accuracy and speed requirements.
+If a future approval permits one of these changes, the implementation must disclose it explicitly and explain why the contract could not be met without it.
 
-## Decisions Already Made
+The required `speed_tests` file may inherit existing repository per-file lint policy for `speed_tests/*`, but this does not relax the public API annotations in the implementation file.
 
-- New implementation path: `WaveletWaveforms/taylor_time_wavelet_optimized.py`
-- New test path: `tests/test_taylor_time_wavelet_optimized.py`
-- New benchmark path: `speed_tests/taylor_time_wavelet_optimized_speed_demo.py`
-- Required function names:
-  - `wavemaket_stripe_sparse`
-  - `wavemaket_stripe_dense`
-- Dense stripe shape: `(Nt, Nf, Nc)`
-- `Nt` is even.
-- Typical `Nt` is 2048.
-- `Nf` is between 2 and 5.
-- `Nc` is nearly always 3.
-- C or Fortran contiguity may be selected empirically.
-- Faithful interpolation tolerance: `atol = 1e-10 * amplitude_source`, `rtol = 1e-9`.
-- `amplitude_source` is the maximum value of the amplitude.
-- Distorted-table variants may be considered around `rtol = 1e-4`.
-- Distorted-table experiments are optional and benchmark-only unless explicitly promoted later.
-- Existing `__init__.py` files may receive strict additive export edits if necessary.
-- Existing `wavemaket` with `force_nulls=0` and `amplitude_order=0` is the oracle.
-- Both core required functions are equally supported APIs.
+## Verification Methods
 
-## Reviewer Acceptance Checklist
+The implementation must be reviewable by:
 
-An implementation satisfies this contract only if a reviewer can verify that:
+- `git diff --name-only`, confirming diffs are limited to the required new files and optional strictly additive `__init__.py` edits.
+- Source inspection, confirming the required functions do not call `wavemaket`, call `wavemaket_direct`, or allocate full-band intermediates.
+- Test inspection, confirming the target tests are active, full-stripe, oracle-based, and include the required coverage cases.
+- Benchmark inspection or execution, confirming it includes all required variants and validates correctness before timing.
 
-- The required implementation, test, and speed-demo files exist at the specified paths.
-- The required function names and signatures are present.
-- Both required functions mutate the provided dense stripe in place.
-- Both required functions are numba `njit` compiled.
-- Tests compare against existing `wavemaket(force_nulls=0, amplitude_order=0)`.
-- Tests cover the required frequency-slope, parity, boundary, half-pixel, arbitrary-position, and stripe-width cases.
-- The faithful implementations meet `atol = 1e-10 * amplitude_source` and `rtol = 1e-9`.
-- Any distorted-table variant is clearly benchmark-only unless separately approved.
-- The speed demo excludes TDI computation from timed sections.
-- The speed demo includes representative `Nt = 2048`, `Nf = 2..5`, and `Nc = 3` cases.
-- Git diffs are limited to the allowed new files and optional strict additive `__init__.py` edits.
+Running the full repository test suite is explicitly outside the required acceptance procedure for this contract revision.
+
+## Finding Disposition Ledger
+
+| Finding | Disposition | Contract section affected | Exact revision made | Reasoning or authority | Remaining uncertainty |
+|---|---|---|---|---|---|
+| B1 | Accepted and resolved | Dense Stripe Shape And Indexing | Replaced `(Nt, Nf, Nc)` with `(Nt, stripe_height, Nc)` and separated `stripe_height` from full-band `wc.Nf`; required `Nt == wc.Nt`. | Human decision 2 and codebase fact that `wc.Nf` is full band. | None for naming and shape. |
+| B2 | Accepted and resolved | Public API; Dense Stripe Shape And Indexing; Runtime Validation | Renamed `nf_min` to `nf_start`; specified `k -> k - nf_start`; required dropping outside stripe and assertions for bounds. | Human decision 2; review A2. | None. |
+| B3 | Accepted and resolved | Scientific And Mathematical Basis; Test Requirements | Enumerated derivative-index, bandwidth, stripe-window, and table-overflow guards; required full-stripe oracle comparison. | Human decision 3 agreeing with A3 and A6. | Exact test data that reaches each guard is implementation responsibility. |
+| B4 | Accepted and resolved | Forbidden Shortcuts And Memory Constraints | Forbid calls to `wavemaket`/`wavemaket_direct` and full-band dense/sparse intermediates inside required functions. | Human decision 3 agreeing with A4; original memory motivation. | Source inspection required. |
+| R1 | Accepted and resolved | Public API; QA And Repository Policy | Added `-> None`; made all three APIs explicit. | Repository annotation policy and human decision for third version. | Exact aligned table internal layout may vary. |
+| R2 | Accepted and resolved | Numerical Tolerances; Scientific And Mathematical Basis | Defined oracle construction, full-stripe comparison, and `amplitude_source`. | Review matrix and A6. | None. |
+| R3 | Accepted and resolved | Test Requirements | Required pairwise comparison among all three variants after independent calls. | Original QA requirement extended to third function by human decision. | Pairwise comparison remains secondary to oracle. |
+| R4 | Accepted and resolved | Test Requirements | Required object and data-pointer in-place verification. | Original in-place requirement. | None. |
+| R5 / MC3 | Accepted and resolved | Scientific And Mathematical Basis; Test Requirements | Defined coadd as `+=`; required pre-filled-stripe test. | Review A5; original "coadds" intent. | None. |
+| R6 / MC6 | Accepted and resolved | Required Coverage Cases; Test Requirements | Converted vague arbitrary positions to concrete offsets and required oracle assertion for listed cases. | Human decision agreeing with A9. | Parametrization may select a reduced non-Cartesian matrix. |
+| R7 | Accepted and resolved | Required Coverage Cases | Enumerated slopes including endpoints, near endpoints, small slopes, zero, and `+/-1e-10`. | Human decision adding smaller nonzero slope. | Scientific validity outside oracle remains out of scope. |
+| R8 | Accepted and resolved | Dense Stripe Shape And Indexing; Required Coverage Cases | Replaced stripe `Nf` wording with `stripe_height`; retained 2 through 5 as stripe heights. | Human decision 2. | None. |
+| R9 / Type gaps 3-4, 9 | Accepted and resolved | Runtime Validation | Changed optional assertions to required assertions; stated undefined behavior under stripped assertions. | Review type/interface gaps. | No defensive behavior under `-O`. |
+| R10 / MC7 / A7 | Accepted and partially resolved | Implementation Variants; Benchmark/Demo Requirements | Kept branch-minimization as implementation guidance, prohibited adding conditionals that change behavior, and required benchmark evidence. Did not add objective speed threshold. | Human decision: for A7 none of the proposed labels/comments/threshold criteria may be added. | Performance acceptance remains a human review matter after benchmark evidence. |
+| R11 | Accepted and partially resolved | Benchmark/Demo Requirements | Required committed benchmark/demo and correctness validation before timing, but no pass/fail speed threshold. | Human decision 1 requires benchmark test; human decision rejects A7-style acceptance labels. | Actual speed target unresolved by authority. |
+| R12 | Accepted and resolved | Required Files; QA And Repository Policy; Verification Methods | Reaffirmed allowed-diff restriction and no config edits. | Original compatibility constraint and user CI decision. | None. |
+| Type gap 1 | Accepted and resolved | Dense Stripe Shape And Indexing; Runtime Validation | Required `np.float64`. | Oracle dense dtype and tolerance feasibility. | None. |
+| Type gap 2 | Accepted and resolved | Dense Stripe Shape And Indexing | Required absolute time axis and `shape[0] == wc.Nt`. | Existing sparse decode uses `j = pixel_index // wc.Nf`. | None. |
+| Type gap 5 | Accepted and resolved | Dense Stripe Shape And Indexing; Runtime Validation | Required `Nc == waveform.AT.shape[0]`. | Prevents silent channel truncation. | None. |
+| Type gap 6 | Accepted and resolved | Numerical Tolerances | Defined `amplitude_source` as max absolute waveform amplitude over all channels and selected time samples. | Review A6. | Empty ranges excluded from numerical tests. |
+| Type gap 7 | Accepted and resolved | Public API | Added return annotation `-> None`. | Repository annotation policy. | None. |
+| Type gap 8 | Accepted and resolved | Public API; Aligned Table Requirements | Defined semantic requirements for aligned table and required integrity tests. | Human decision 1. | Exact storage layout remains implementation freedom. |
+| QA risk 1 | Accepted and partially resolved | Test Requirements; Verification Methods | Stated full suite/CI execution is out of required acceptance; required allowed-diff review and active targeted tests. | Human decision that CI test running is later and existing tests fail/are slow. | Durable CI coverage remains unresolved. |
+| QA risk 2 / MC5 | Accepted and resolved | Test Requirements; QA And Repository Policy | Prohibited skip/xfail in new tests unless separately authorized. | Review A8, adjusted for human CI decision. | None. |
+| QA risk 3 | Accepted and resolved | QA And Repository Policy | Clarified speed-test per-file policy does not relax implementation API annotations. | Existing ruff policy. | Speed demo annotations remain governed by existing repo config. |
+| QA risk 4 | Accepted and resolved | QA And Repository Policy | Prohibited suppressions unless separately approved. | Review A8, strengthened per user decision A7 no inline comments for those additions because they may not be added at all. | None. |
+| QA risk 5 | Accepted and resolved | Required Files; QA And Repository Policy | Prohibited QA config edits, exclusions, warning filters, and `conftest.py`-style collection changes. | Original allowed-diff policy and review A8. | None. |
+| QA risk 6 | Deferred as explicitly out of scope | QA And Repository Policy | Did not require a `fastmath` setting; correctness tolerance is observable requirement. | Review marked as minor and not correctness risk. | Reproducibility across numba versions remains residual. |
+| QA risk 7 | Accepted and resolved | Numerical Tolerances; Aligned Table Requirements | Removed looser distorted-table tolerance and banned relaxed tolerance. | Human decision 1. | None. |
+| MC1 | Accepted and resolved | Forbidden Shortcuts And Memory Constraints | Explicitly forbids wrapper over `wavemaket` and full-band materialization. | Original memory motivation; B4. | Source inspection required. |
+| MC2 | Accepted and resolved | Dense Stripe Shape And Indexing; Required Coverage Cases | Requires realistic full-band `wc.Nf` distinct from stripe height and odd/even stripe heights as window widths. | B1 and human decision 2. | Exact fixture values left to implementation. |
+| MC4 | Accepted and resolved | Scientific And Mathematical Basis; Test Requirements | Banned nonzero-mask oracle comparisons. | B3 and A6. | None. |
+| A1 | Accepted and resolved | Dense Stripe Shape And Indexing | Incorporated with revised `stripe_height` terminology. | Human decision 2. | None. |
+| A2 | Accepted and resolved | Dense Stripe Shape And Indexing; Runtime Validation | Incorporated with `nf_start` terminology. | Human decision 2. | None. |
+| A3 | Accepted and resolved | Scientific And Mathematical Basis | Incorporated. | Human decision 3. | None. |
+| A4 | Accepted and resolved | Forbidden Shortcuts And Memory Constraints | Incorporated. | Human decision 3. | None. |
+| A5 | Accepted and resolved | Scientific And Mathematical Basis; Test Requirements | Incorporated. | Human decision 3. | None. |
+| A6 | Accepted and resolved | Scientific And Mathematical Basis; Numerical Tolerances; Test Requirements | Incorporated. | Human decision 3. | None. |
+| A7 | Rejected with evidence | Benchmark/Demo Requirements | Did not add dense-experimental labeling, inline comments, or objective performance threshold; instead required benchmark evidence only. | Human decision: for A7 none of those may be added at all. | Performance threshold requires future human decision if desired. |
+| A8 | Accepted and partially resolved | QA And Repository Policy; Test Requirements | Incorporated no skips, no suppressions, no config drift. Did not require captured pytest output or CI run. | Human decision says CI test running will be added later and existing tests fail/are slow. | CI execution remains unresolved. |
+| A9 | Accepted and resolved | Required Coverage Cases | Incorporated offsets and slopes, adding `+/-1e-10`. | Human decision. | None. |
+| Residual risk 1 | Requires human or repository-owner resolution | Unresolved Blockers | Listed as unresolved CI decision. | Human decision defers CI. | Needs future CI policy. |
+| Residual risk 2 | Accepted and partially resolved | Required Coverage Cases; Unresolved Blockers | Required at least one case for each drop guard; did not define exact scientific source parameters. | Oracle is authoritative; exact parameter construction is implementation work. | Reviewer must confirm tests truly hit guard boundaries. |
+| Residual risk 3 | Deferred as explicitly out of scope | Runtime Validation; Unresolved Blockers | Stated stripped-assert invalid behavior is undefined; did not require bounds-checked numba run. | Original validation policy uses assertions only. | Debug bounds-check policy unresolved. |
+| Residual risk 4 | Deferred as explicitly out of scope | Benchmark/Demo Requirements; Unresolved Blockers | Required layout reporting; did not require cross-machine reproducibility. | Benchmark environment policy not supplied. | Needs future human judgment. |
+| Residual risk 5 | Deferred as explicitly out of scope | Numerical Tolerances; Unresolved Blockers | Retained faithful tolerance from original contract. | Original numerical tolerance authority. | Empirical adequacy depends on implementation. |
+
+## Requirement Traceability Table
+
+| Requirement | Source of authority | Contract section | Verification method | Dependencies or unresolved questions |
+|---|---|---|---|---|
+| TR1: Add new dense-stripe alternative to `wavemaket`. | Original intended capability. | Status And Scope; Public API | Import required functions. | None. |
+| TR2: Support only `force_nulls=0` and `amplitude_order=0`. | Original scope. | Status And Scope; Scientific And Mathematical Basis | Oracle tests call `wavemaket` with those options. | None. |
+| TR3: Provide three supported functions including aligned-table version. | Original two APIs plus human decision 1. | Public API; Implementation Variants | Signature inspection and tests import each function. | Exact aligned table storage layout is implementation freedom. |
+| TR4: Use `(Nt, stripe_height, Nc)` and `nf_start`. | Human decision 2. | Public API; Dense Stripe Shape And Indexing | Signature and shape assertion tests. | None. |
+| TR5: Treat `stripe_height` as window into full `wc.Nf`. | Original motivation; B1 accepted. | Dense Stripe Shape And Indexing | Tests use `wc.Nf > stripe_height` and odd/even stripe heights. | None. |
+| TR6: Map global `k` to stripe column `k - nf_start` and drop outside stripe. | B2 accepted; necessary consequence of dense stripe window. | Dense Stripe Shape And Indexing | Boundary tests near stripe lower/top edge. | None. |
+| TR7: Use oracle construction through `wavemaket` and `wavelet_sparse_to_dense`. | Original oracle requirement; B3 accepted. | Scientific And Mathematical Basis | Test source inspection and oracle-based assertions. | None. |
+| TR8: Reproduce all oracle drop guards. | Existing `wavemaket` behavior; B3 accepted. | Scientific And Mathematical Basis | Tests hitting derivative, bandwidth, and table-overflow drops. | Exact fixture construction is implementation work. |
+| TR9: Compare over entire stripe including zero cells. | B3/A6 accepted. | Scientific And Mathematical Basis; Test Requirements | Tests must use full-array `assert_allclose`. | None. |
+| TR10: Match faithful tolerance only. | Original tolerance and human decision 1. | Numerical Tolerances | Full-stripe oracle comparisons. | Empirical adequacy remains implementation-dependent. |
+| TR11: Define `amplitude_source` as max abs amplitude over selected channels/time. | A6 accepted. | Numerical Tolerances | Test helper/source inspection. | Empty time ranges excluded. |
+| TR12: Accumulate with `+=`, not overwrite. | Original "coadd" intent; A5 accepted. | Scientific And Mathematical Basis; Test Requirements | Pre-filled-stripe test. | None. |
+| TR13: Forbid `wavemaket` wrapper and full-band intermediates in required functions. | Original memory motivation; B4 accepted. | Forbidden Shortcuts And Memory Constraints | Source inspection and possible monkeypatch/adversarial tests. | Source inspection required for helper indirection. |
+| TR14: Require aligned table to be rectangular, zero-padded, integer-slide-aligned, and lossless. | Human decision 1. | Aligned Table Requirements | Table-integrity, padding, and oracle differential tests. | Exact table type not fixed. |
+| TR15: Require concrete slope and frequency-offset coverage including `+/-1e-10`. | Original boundary coverage; human decision A9. | Required Coverage Cases | Parametrized tests. | Reduced matrix allowed if each requirement covered. |
+| TR16: Require `stripe_height` 2 through 5, odd/even `nf_start`, `Nc == 3`, representative `wc.Nt == 2048`. | Original boundary cases; B1 fix. | Required Coverage Cases; Benchmark/Demo Requirements | Tests or benchmark/demo setup. | None. |
+| TR17: Runtime validation by required assertions only. | Original validation policy; type gaps accepted. | Runtime Validation | Invalid-input assertion tests. | Invalid behavior under stripped assertions undefined. |
+| TR18: Use numba `njit` and nopython-compatible required functions. | Original QA constraints. | QA And Repository Policy | Source inspection and numba compilation. | Exact `fastmath` setting not specified. |
+| TR19: Do not modify existing behavior or files outside allowed set. | Original compatibility policy; human CI decision. | Required Files; Verification Methods | `git diff --name-only`. | None. |
+| TR20: No new suppressions, config exclusions, skips, warning filters, or broad dynamic public interfaces without separate approval. | Standing QA requirement from prompt; review A8. | QA And Repository Policy | Source/config/test diff review. | Future approvals must be explicit. |
+| TR21: Required benchmark/demo with correctness validation before timing and all four variants. | Original benchmark requirement plus human decision 1. | Benchmark/Demo Requirements | Inspect or run benchmark script. | No speed threshold authorized. |
+| TR22: Full repository test suite and CI changes are not required by this contract. | Human decision. | Test Requirements; Verification Methods | Confirm no CI/config diffs required. | Future CI policy unresolved. |
+
+## Unresolved Blockers
+
+- CI execution for the new tests is unresolved. Human decision says CI test running will be added later, so this v2 does not require CI or full-suite execution.
+- No objective performance threshold is authorized. The benchmark/demo must provide evidence, but acceptance of speed results requires future human review.
+- Exact aligned table storage type and constructor name are not fixed. The contract defines observable losslessness and padding behavior, leaving storage layout to implementation.
+- Exact waveform fixture parameters that hit derivative-index, bandwidth, and table-overflow drop guards are not specified. The implementation must provide tests demonstrating those guards are exercised.
+- Numba bounds-check or debug-build policy for catching out-of-bounds writes is unresolved and outside this contract.
+- Cross-machine benchmark reproducibility policy is unresolved.
+
+## Change Summary
+
+### Clarifications That Preserve Intent
+
+- Replaced ambiguous stripe shape `(Nt, Nf, Nc)` with `(Nt, stripe_height, Nc)`.
+- Replaced `nf_min` with `nf_start`.
+- Defined the stripe as a window into full-band `wc.Nf`.
+- Specified global-to-stripe index mapping.
+- Defined full oracle construction and full-stripe comparison.
+- Enumerated the oracle drop guards that must be reproduced as zeros.
+- Defined `amplitude_source`.
+- Required additive coaddition semantics and a pre-filled-stripe test.
+- Required concrete coverage for frequency offsets, slopes, stripe heights, parity, and edge windows.
+
+### Newly Authorized Requirements
+
+- Added `wavemaket_stripe_dense_aligned` as a third supported function version.
+- Required an aligned table representation that is rectangular, zero-padded, integer-slide-aligned, and lossless relative to original `WaveletTaylorTimeCoeffs`.
+- Required aligned-table integrity and padding tests.
+- Required the benchmark/demo to include the aligned-table function and to verify correctness before timing.
+
+### Removed Or Narrowed Requirements
+
+- Removed the v1 looser tolerance allowance for distorted or realigned interpolation-table experiments.
+- Removed any benchmark-only distorted-table acceptance path.
+- Did not add A7's proposed performance threshold or experimental labeling requirement because the supplied human decision rejected those additions.
+- Did not require full repository test-suite execution or CI changes.
+
+### QA-Enforcement Changes
+
+- Required assertions for key input constraints rather than merely allowing them.
+- Prohibited new skips, xfails, warning filters, coverage exclusions, linter/type suppressions, and checker configuration changes unless separately approved.
+- Reaffirmed allowed diffs as the repository-scope enforcement mechanism for this contract.
+- Required tests to be active and oracle-based over the full stripe.
+
+### Out-Of-Scope Recommendations
+
+- Add a future CI job for `tests/test_taylor_time_wavelet_optimized.py`.
+- Define a repository-owner-approved performance threshold after benchmark data exists.
+- Add a bounds-checked numba debug run for this module if maintainers want stronger out-of-bounds detection.
+- Pin a benchmark environment if cross-machine performance comparisons become approval-critical.
