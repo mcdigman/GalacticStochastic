@@ -1,16 +1,10 @@
-# Implementation Contract v5: Dense-Stripe Taylor-Time Wavelet Coaddition
+# Implementation Contract Final: Dense-Stripe Taylor-Time Wavelet Coaddition
 
 ## Status And Scope
 
 This is a revised implementation contract for adding numba-compiled dense-stripe alternatives to `wavemaket`.
 
-This contract is not an implementation approval. It resolves the review findings in `adversarial_review_taylor_time_wavelet_optimized.md`, `adversarial_review_taylor_time_wavelet_optimized_v2.md`, and `adversarial_review_taylor_time_wavelet_optimized_v3.md` using:
-
-- The original contract in `implementation_contract_taylor_time_wavelet_optimized.md`.
-- Existing repository behavior of `wavemaket`, `wavelet_sparse_to_dense`, `SparseWaveletWaveform`, `PixelGenericRange`, `StationaryWaveformTime`, `WaveletTaylorTimeCoeffs`, and `WDMWaveletConstants`.
-- The adversarial re-review in `adversarial_review_taylor_time_wavelet_optimized_v2.md`.
-- The adversarial re-review in `adversarial_review_taylor_time_wavelet_optimized_v3.md`.
-- The human decisions supplied for v2, v3, and v4.
+This is the final approved contract.
 
 The implementation must add direct dense-stripe coaddition for one waveform over a narrow frequency stripe. It only needs to support:
 
@@ -540,56 +534,3 @@ Running the full repository test suite is explicitly outside the required accept
 - Whether the aligned layout is measurably faster than `wavemaket_stripe_dense` is unresolved because no performance threshold or branch metric is authorized.
 - Numba bounds-check or debug-build policy for catching out-of-bounds writes is unresolved and outside this contract.
 - Cross-machine benchmark reproducibility policy is unresolved.
-
-## Change Summary
-
-### Clarifications That Preserve Intent
-
-- Replaced ambiguous stripe shape `(Nt, Nf, Nc)` with `(Nt, stripe_height, Nc)`.
-- Replaced `nf_min` with `nf_start`.
-- Defined the stripe as a window into full-band `wc.Nf`.
-- Specified global-to-stripe index mapping.
-- Defined full oracle construction and full-stripe comparison.
-- Enumerated the oracle drop guards that must be reproduced as zeros.
-- Defined `amplitude_source`.
-- Required numerical-correctness tests to use `amplitude_source > 0`.
-- Required additive coaddition semantics and a pre-filled-stripe test.
-- Reworded the pre-filled-stripe test as the observable assertion `result == B + oracle_slice`.
-- Required concrete coverage for frequency offsets, slopes, stripe heights, parity, and edge windows.
-- Clarified that derivative-index drop coverage may be out-of-domain or source-inspected.
-- Clarified that tolerance comparisons belong in tests and benchmark/demo checks, not inside required numba functions.
-- Clarified that the aligned path is supported only for integer-aligned input configurations satisfying `2 * wc.Nsf % 3 == 0` and `wc.DF / wc.df_bw == 2 * wc.Nsf // 3` within the stated tolerance.
-- Clarified that zero padding is not a substitute for exact oracle bandwidth or table-overflow drops at valid-range edges.
-
-### Newly Authorized Requirements
-
-- Added `wavemaket_stripe_dense_aligned` as a third supported function version.
-- Required an aligned table representation with two-sided zero padding for readable row regions.
-- Required aligned-path input assertions, constant-stride metadata/support, structural tests, padding tests, drop-behavior tests, and identity-wrapper rejection.
-- Required the benchmark/demo to include the aligned-table function and to verify correctness before timing.
-
-### Removed Or Narrowed Requirements
-
-- Removed the v1 looser tolerance allowance for distorted or realigned interpolation-table experiments.
-- Removed any benchmark-only distorted-table acceptance path.
-- Removed the v2 requirement that `wavelet_stripe` be float64 or that the numba function body assert float64 dtype.
-- Removed the v2 requirement that tests verify failure for non-float64 dtype.
-- Removed the v2 requirement that aligned-table coefficient values be lossless or bitwise equal to original table entries, then removed v3's alternate-grid authorization in v4; v4 requires original-grid coefficient reuse for supported aligned inputs.
-- Removed the v3 alternate-grid requirement; v4 reuses the original coefficient grid and asserts the aligned-input precondition instead.
-- Removed the v3 requirement that table-overflow drops be obtained from padding alone.
-- Did not add A7's proposed performance threshold or experimental labeling requirement because the supplied human decision rejected those additions.
-- Did not require full repository test-suite execution or CI changes.
-
-### QA-Enforcement Changes
-
-- Required assertions for key shape, range, channel, and time constraints rather than merely allowing them.
-- Prohibited new skips, xfails, warning filters, coverage exclusions, linter/type suppressions, and checker configuration changes unless separately approved.
-- Reaffirmed allowed diffs as the repository-scope enforcement mechanism for this contract.
-- Required tests to be active and oracle-based over the full stripe.
-
-### Out-Of-Scope Recommendations
-
-- Add a future CI job for `tests/test_taylor_time_wavelet_optimized.py`.
-- Define a repository-owner-approved performance threshold after benchmark data exists.
-- Add a bounds-checked numba debug run for this module if maintainers want stronger out-of-bounds detection.
-- Pin a benchmark environment if cross-machine performance comparisons become approval-critical.
