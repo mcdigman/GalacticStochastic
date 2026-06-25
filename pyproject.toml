@@ -19,7 +19,7 @@ requires-python = ">=3.12"
 
 [project.optional-dependencies]
 # Development / test tooling (pytest plus type stubs for the typed checks).
-dev = ["pytest>=9.0", "h5py-stubs", "scipy-stubs"]
+dev = ["pytest>=9.0", "h5py-stubs", "scipy-stubs", "pandas-stubs"]
 # COSMIC compatibility mode: loading/processing COSMIC population HDF5 catalogs
 # (see GalacticStochastic/cosmic_data_helpers.py, imported behind an optional guard).
 # astropy >=7.2 per the note in cosmic_data_helpers.py; both support Python 3.12.
@@ -49,19 +49,33 @@ run-galactic-stochastic-iterative = "GalacticStochastic.cli.run_iterative_proced
 # (The standalone type-check CI still runs mypy.)
 #
 # Packages with usable type info are omitted so their real types are checked:
-# numpy/matplotlib/pytest ship py.typed and scipy/h5py have stub packages, all
-# installed for the hook via additional_dependencies in .pre-commit-config.yaml.
+# numpy/matplotlib/pytest ship py.typed and scipy/h5py/pandas have stub packages,
+# all installed for the hook via additional_dependencies in .pre-commit-config.yaml.
 # The packages below stay ignored because no type info is installable in the
-# isolated hook environment: numba/astropy/pandas ship no py.typed, and
+# isolated hook environment: numba/astropy ship no py.typed, and
 # PyIMRPhenomD (which does ship py.typed) is not published on PyPI.
 python-version = "3.12"
 ignore-missing-imports = [
     "numba", "numba.*",
     "astropy", "astropy.*",
-    "pandas", "pandas.*",
     "PyIMRPhenomD", "PyIMRPhenomD.*",
     "WDMWaveletTransforms", "WDMWaveletTransforms.*",
 ]
+
+[tool.pyright]
+# Settings for the pyright job in .github/workflows/typecheck.yml. Unlike the
+# mypy job (which uses --ignore-missing-imports), pyright resolves types from an
+# installed environment, so the CI job installs the project's typed extras
+# (.[dev,plots,cosmic]) and numpy/scipy/matplotlib/astropy/pandas are checked for
+# real. PyIMRPhenomD is not published on PyPI (installed from source only), so
+# missing-import reporting is disabled here -- mirroring the --ignore-missing-imports
+# posture of mypy and [tool.pyrefly]. The few astropy (untyped) and numpy stub
+# friction points are handled by inline `# pyright: ignore[...]` comments.
+pythonVersion = "3.12"
+reportMissingImports = "none"
+# Exclude dot-directories (e.g. the CI job's .venv) from analysis; otherwise
+# pyright would try to type-check the installed dependencies' source.
+exclude = ["**/node_modules", "**/__pycache__", "**/.*"]
 
 [tool.pydoclint]
 # Docstring-signature linting (the maintained successor to the now-archived

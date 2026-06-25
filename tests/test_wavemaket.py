@@ -1376,7 +1376,7 @@ def test_wavemaket_1d(f0_mult: float, f0p_mult: float, f0pp_mult: float, rr_mode
             nt_loc,
         )
 
-    import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt  # noqa: PLC0415
     plt.plot(signal_time_cos_matched[:, 0])
     plt.plot(signal_time_pred_cos[:, 0])
     plt.show()

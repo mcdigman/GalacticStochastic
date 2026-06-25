@@ -14,6 +14,7 @@ env:
   PYTHON_VERSION: "3.12"
   # Keep in sync with the mypy rev in .pre-commit-config.yaml
   MYPY_VERSION: "1.18.2"
+  PYRIGHT_VERSION: "1.1.410"
 
 jobs:
   mypy:
@@ -34,3 +35,31 @@ jobs:
           --ignore-missing-imports
           --explicit-package-bases
           .
+
+  pyright:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache-dependency-glob: "**/pyproject.toml"
+
+      # Unlike the mypy job (which uses --ignore-missing-imports), pyright
+      # resolves types from the installed environment, so install the project
+      # with its typed extras into a venv (the runner's system Python is
+      # externally managed, so --system installs are rejected). PyIMRPhenomD is
+      # not on PyPI and is handled via reportMissingImports = "none" in
+      # [tool.pyright] (see pyproject.toml).
+      - name: Install project with typed extras
+        run: |
+          uv venv
+          uv pip install ".[dev,plots,cosmic]"
+
+      - name: Run pyright
+        run: >
+          uvx pyright@${{ env.PYRIGHT_VERSION }}
+          --pythonpath .venv/bin/python

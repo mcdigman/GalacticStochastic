@@ -69,7 +69,7 @@ def test_noise_normalization_flat(noise_curve_mode: int, distort_mult: int) -> N
         noise_realization_freq[:, itrc] = inverse_wavelet_freq(noise_wave[:, :, itrc], Nf, Nt) / nrm
         # NOTE have to cut off Nt because at very low frequencies
         # we are not currently estimating the spectrum correctly in the wavelet domain
-        # also dont't hit the frequencies with big dips
+        # also don't hit the frequencies with big dips
         arglim_min: int = int(max(Nt, int(np.int64(np.pi * max(2 * wc.Tobs / wc.Tw, 2 * wc.Tobs / wc.DT)))))
         arglim: int = int(np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs))
         # import matplotlib.pyplot as plt
@@ -133,7 +133,7 @@ def test_noise_normalization_flat(noise_curve_mode: int, distort_mult: int) -> N
         noise_realization_freq_var[:, itrc] = inverse_wavelet_freq(noise_wave_var[:, :, itrc], Nf, Nt)
         # NOTE have to cut off Nt because at very low frequencies
         # we are not currently estimating the spectrum correctly in the wavelet domain
-        # also dont't hit the frequencies with big dips
+        # also don't hit the frequencies with big dips
         nrm = float(np.sqrt(ND // 2) / np.sqrt(2 * wc.dt))
         arglim = int(np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs))
         _ = unit_normal_battery(
@@ -295,7 +295,7 @@ def test_noise_normalization_match() -> None:
         noise_realization_freq[:, itrc] = inverse_wavelet_freq(noise_wave[:, :, itrc], Nf, Nt)
         # NOTE have to cut off Nt because at very low frequencies
         # we are not currently estimating the spectrum correctly in the wavelet domain
-        # also dont't hit the frequencies with big dips
+        # also don't hit the frequencies with big dips
         arglim = np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs)
         # import matplotlib.pyplot as plt
         # plt.loglog(np.abs(noise_realization_freq[Nt // 2:arglim, itrc]))
@@ -320,7 +320,7 @@ def test_noise_normalization_match() -> None:
         noise_realization_freq_var[:, itrc] = inverse_wavelet_freq(noise_wave_var[:, :, itrc], Nf, Nt)
         # NOTE have to cut off Nt because at very low frequencies
         # we are not currently estimating the spectrum correctly in the wavelet domain
-        # also dont't hit the frequencies with big dips
+        # also don't hit the frequencies with big dips
         arglim = np.int64(np.int64(np.pi) * lc.fstr * wc.Tobs)
         _ = unit_normal_battery(
             np.real(noise_realization_freq_var[Nt // 2: arglim, itrc] / spectra_need[Nt // 2: arglim, itrc]),

@@ -259,6 +259,8 @@ def wavemaket(
                             mult2 = 0.0
                             z2 = 0.0
                             y2 = 0.0
+                            dy1df = 0.0
+                            dz1df = 0.0
                         else:
                             # y1, z1, y2, z2 = get_taylor_time_pixel_direct_order2(fa, waveform.FTd[itrc, j], k, taylor_table.wavelet_norm, wc)
                             y1, z1, dy1df, dz1df = get_taylor_time_pixel_direct_order2(fa, waveform.FTd[itrc, j], k, taylor_table.wavelet_norm, wc)
@@ -386,12 +388,12 @@ def wavemaket_direct(
             # not sure the - 1 is strictly necessary
             half_bandwidth: float = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df_bw / 2
 
-            knearest = int(np.round(fa / wc.DF))
+            #knearest = int(np.round(fa / wc.DF))
             # kbelow = int(np.floor(fa / wc.DF))
-            kmin = knearest
+            #kmin = knearest
             # kmax = knearest
             # lowest frequency layer
-            kmin: int = int(np.ceil((fa - half_bandwidth) / wc.DF))
+            kmin = int(np.ceil((fa - half_bandwidth) / wc.DF))
             kmin = max(nf_min, kmin)
             kmin = min(nf_max, kmin)
 
@@ -407,8 +409,8 @@ def wavemaket_direct(
                 if amplitude_order == 0:
                     y1, z1 = get_taylor_time_pixel_direct(fa, waveform.FTd[itrc, j], k, wavelet_norm, wc)
                     mult2 = 0.0
-                    y2 = 0.0
-                    z2 = 0.0
+                    # y2 = 0.0
+                    # z2 = 0.0
                     dy1df = 0.0
                     dz1df = 0.0
 

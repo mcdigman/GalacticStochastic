@@ -26,6 +26,7 @@ def wavemakef(
     """Calculate expansion using taylor frequency method choosing only selected F indices"""
     # TODO handle t0 or remove it
     # TODO add input validation
+    del force_nulls
     assert amplitude_order in (0, 1)
 
     t0 = nt_lim_waveform.x_min
@@ -180,7 +181,7 @@ def wavemakef_direct(
         wc: WDMWaveletConstants,
         taylor_table: WaveletTaylorFreqCoeffs,
         *,
-        amplitude_order=1,
+        amplitude_order: int = 1,
 ) -> None:
     """Calculate expansion using taylor frequency method choosing only selected F indices"""
     # TODO handle t0 or remove it

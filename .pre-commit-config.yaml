@@ -50,7 +50,7 @@ repos:
   rev: v0.15.18
   hooks:
   - id: ruff
-    args: [--preview, --fix]
+    args: [--fix]
 
 - repo: https://github.com/facebook/pyrefly-pre-commit
   rev: 1.1.1
@@ -58,8 +58,8 @@ repos:
   - id: pyrefly-check
     # pyrefly runs in an isolated environment, so the typed packages it must
     # resolve (those no longer in [tool.pyrefly].ignore-missing-imports) are
-    # installed here: numpy/matplotlib/pytest ship py.typed, and scipy/h5py
-    # types come from their stub packages. numba/astropy/pandas/PyIMRPhenomD
+    # installed here: numpy/matplotlib/pytest ship py.typed, and scipy/h5py/pandas
+    # types come from their stub packages. numba/astropy/PyIMRPhenomD
     # stay ignored in pyproject.toml (no installable type info). The dedicated
     # type-check CI (.github/workflows/typecheck.yml) still runs mypy.
     additional_dependencies:
@@ -68,6 +68,7 @@ repos:
       - pytest>=9.0
       - scipy-stubs
       - h5py-stubs
+      - pandas-stubs
 
 - repo: https://github.com/rhysd/actionlint
   rev: v1.7.12

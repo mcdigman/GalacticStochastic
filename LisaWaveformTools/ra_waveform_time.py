@@ -268,7 +268,7 @@ def amp_phase_loop_helper(
     assert AET_P.shape[-1] == F.shape[0]
     assert 0 <= nx_lim.nx_min <= nx_lim.nx_max <= F.shape[0]
 
-    for n in prange(nx_lim.nx_min, nx_lim.nx_max):
+    for n in prange(nx_lim.nx_min, nx_lim.nx_max):  # type: ignore[not-iterable]
         f_on_f: float = F[n] / lc.fstr
 
         # including TDI + fractional frequency modifiers
@@ -367,6 +367,7 @@ def get_time_tdi_amp_phase_helper(
         Results are stored in-place in tdi_waveform
 
     """
+    del er
     # Note that if RR and II are both very near zero, there can be a step function
     # in the phase that would correspond to a dirac delta function in the frequency,
     # that currently is not represented in the frequency or derivative at all,

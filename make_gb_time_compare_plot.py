@@ -103,27 +103,27 @@ if __name__ == '__main__':
         S_stat_smooth_m[itrl_fit:, fit_mask, :], fs[fit_mask], fs[1:], nt_ranges[itrl_fit:], S_stat_offset[fit_mask], wc.DT,
     )
 
-fig = plt.figure(figsize=(5.4, 3.5))
-ax = fig.subplots(1)
-fig.subplots_adjust(wspace=0.0, hspace=0.0, left=0.13, top=0.99, right=0.99, bottom=0.12)
-_ = ax.loglog(
-    fs[1:],
-    wc.dt * (S_stat_smooth_m[:, 1:, :nc_use].mean(axis=2) - S_stat_offset[1:] + S_inst_m[1:, 0]).T,
-    alpha=0.5,
-    label='_nolegend_',
-)
-ax.set_prop_cycle(None)
-_ = ax.loglog(fs[1:], wc.dt * (S_fit_evolve_m[:] + S_inst_m[1:, 0]).T, linewidth=3)
-ax.set_prop_cycle(None)
-_ = ax.loglog(fs[1:], wc.dt * (S_inst_m[1:, 0]), 'k--')
-ax.tick_params(axis='both', direction='in', which='both', top=True, right=True)
+    fig = plt.figure(figsize=(5.4, 3.5))
+    ax = fig.subplots(1)
+    fig.subplots_adjust(wspace=0.0, hspace=0.0, left=0.13, top=0.99, right=0.99, bottom=0.12)
+    _ = ax.loglog(
+        fs[1:],
+        wc.dt * (S_stat_smooth_m[:, 1:, :nc_use].mean(axis=2) - S_stat_offset[1:] + S_inst_m[1:, 0]).T,
+        alpha=0.5,
+        label='_nolegend_',
+    )
+    ax.set_prop_cycle(None)
+    _ = ax.loglog(fs[1:], wc.dt * (S_fit_evolve_m[:] + S_inst_m[1:, 0]).T, linewidth=3)
+    ax.set_prop_cycle(None)
+    _ = ax.loglog(fs[1:], wc.dt * (S_inst_m[1:, 0]), 'k--')
+    ax.tick_params(axis='both', direction='in', which='both', top=True, right=True)
 # _ = plt.ylim([wc.dt * 2.0e-44, wc.dt * 2.0e-43])
-_ = plt.ylim([1.e-43, 2.0e-39])
-_ = plt.xlim([1.0e-5, 6.0e-3])
-_ = plt.xlabel('f [Hz]')
-_ = plt.ylabel(r'$S^{AE}(f)$ [Hz$^{-1}$]')
-_ = plt.legend(labels=['1 year', '2 years', '4 years', '8 years'])
-plt.show()
+    _ = plt.ylim((1.e-43, 2.0e-39))
+    _ = plt.xlim((1.0e-5, 6.0e-3))
+    _ = plt.xlabel('f [Hz]')
+    _ = plt.ylabel(r'$S^{AE}(f)$ [Hz$^{-1}$]')
+    _ = plt.legend(labels=['1 year', '2 years', '4 years', '8 years'])
+    plt.show()
 
 
 # fig = plt.figure(figsize=(5.4, 3.5))

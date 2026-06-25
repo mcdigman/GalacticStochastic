@@ -78,8 +78,7 @@ def get_config_dict_from_file(toml_filename: str) -> dict[str, Any]:
         config: dict[str, Any] = tomllib.load(f)
 
     # archive the entire raw text of the configuration file for output purposes
-    with Path(toml_filename).open('rb') as f:
-        file_content = f.read()
+    file_content = Path(toml_filename).read_bytes()
 
     config['_raw_file_content'] = file_content
 

@@ -146,7 +146,7 @@ def instrument_noise_AET_wdm_loop(
     tdi_mode: str = 'aet_equal',
     diagonal_mode: int = 0,
 ) -> NDArray[np.floating]:
-    """Help get the the instrument noise in the wdm wavelet basis."""
+    """Help get the instrument noise in the wdm wavelet basis."""
     # realistically this really only needs run once and is fast enough without jit
     # TODO get first and last bins correct
     # nrm: float = float(np.sqrt(12318.0 / wc.Nf)) * float(np.linalg.norm(phif))

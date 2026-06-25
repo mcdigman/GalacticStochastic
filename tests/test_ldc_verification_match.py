@@ -255,6 +255,7 @@ if __name__ == '__main__':
     verification_only = False
     if verification_only:
         toml_filename_in = 'Galaxies/GalaxyVerification2LDC/run_verification_parameters.toml'
+        toml_filename_in2 = toml_filename_in
     else:
         toml_filename_in = 'Galaxies/GalaxyFullLDC/run_match_parameters_fit2.toml'
         toml_filename_in2 = 'parameters_5m.toml'
@@ -733,7 +734,7 @@ if __name__ == '__main__':
 
     plt.loglog(fs_fft[1:], 2 * dt_in * np.abs(AET_tdi_freq[0, 1:]))
     plt.loglog(fs_fft2[1:], 2 * wc.dt * np.abs(AET_tdi_freq_rec[0, 1:]))
-    plt.xlim([3.e-4, 1.e-2])
+    plt.xlim((3.e-4, 1.e-2))
     plt.show()
 
     fpsd1, psd1 = welch(AET_tdi_time[0], fs=fs, nperseg=2 * Nf, scaling='density', window='tukey')
