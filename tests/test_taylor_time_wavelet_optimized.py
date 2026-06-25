@@ -28,7 +28,6 @@ integer-stride reference (boundary cells).
 
 import ast
 import inspect
-import textwrap
 from pathlib import Path
 from typing import NamedTuple
 
@@ -40,6 +39,7 @@ from numpy.testing import assert_allclose
 from numpy.typing import NDArray
 
 from LisaWaveformTools.stationary_source_waveform import StationaryWaveformTime
+from WaveletWaveforms import taylor_time_wavelet_optimized
 from WaveletWaveforms.sparse_waveform_functions import PixelGenericRange, wavelet_sparse_to_dense
 from WaveletWaveforms.taylor_time_coefficients import (
     WaveletTaylorTimeCoeffs,
@@ -603,14 +603,17 @@ def test_aligned_precondition_holds(setup1: _Setup) -> None:
 
 
 def _aligned_function_ast() -> ast.FunctionDef:
-    """Parse ``wavemaket_stripe_dense_aligned`` to its FunctionDef (comments dropped)."""
-    # the numba dispatcher keeps the original Python function under .py_func
-    func = wavemaket_stripe_dense_aligned.py_func
-    source = textwrap.dedent(inspect.getsource(func))
-    module = ast.parse(source)
-    func_def = module.body[0]
-    assert isinstance(func_def, ast.FunctionDef)
-    return func_def
+    """Parse ``wavemaket_stripe_dense_aligned`` to its FunctionDef (comments dropped).
+
+    The source is taken from the module object (not the numba dispatcher) so the
+    parse is independent of how the ``@njit`` decorator is typed.
+    """
+    module = ast.parse(inspect.getsource(taylor_time_wavelet_optimized))
+    for node in module.body:
+        if isinstance(node, ast.FunctionDef) and node.name == 'wavemaket_stripe_dense_aligned':
+            return node
+    msg = 'wavemaket_stripe_dense_aligned not found in module source'
+    raise AssertionError(msg)
 
 
 def _per_k_loops(func_def: ast.FunctionDef) -> list[ast.For]:
