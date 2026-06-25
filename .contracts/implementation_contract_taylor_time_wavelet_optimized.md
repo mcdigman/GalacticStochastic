@@ -1,4 +1,4 @@
-# Implementation Contract v4: Dense-Stripe Taylor-Time Wavelet Coaddition
+# Implementation Contract v5: Dense-Stripe Taylor-Time Wavelet Coaddition
 
 ## Status And Scope
 
@@ -151,7 +151,7 @@ Each public function must assert at least:
 `wavemaket_stripe_dense_aligned` must additionally assert:
 
 - `2 * wc.Nsf % 3 == 0`.
-- With `R = 2 * wc.Nsf // 3`, `abs((wc.DF / wc.df_bw) - R) <= 1e-12 * max(1.0, abs(R))`.
+- With `R = 2 * wc.Nsf // 3`, `abs((wc.DF / wc.df_bw) - R) <= 1e-15 * max(1.0, abs(R))`.
 - The aligned table's stored `R`, valid-region metadata, row count, and channel-independent coefficient-array dimensions are consistent with `wc`, `taylor_table_aligned`, and the supported stripe-height domain.
 
 Assertions may include messages, but message wording is not part of the contract.
@@ -273,10 +273,12 @@ The required input precondition is:
 ```text
 2 * wc.Nsf % 3 == 0
 R = 2 * wc.Nsf // 3
-abs((wc.DF / wc.df_bw) - R) <= 1e-12 * max(1.0, abs(R))
+abs((wc.DF / wc.df_bw) - R) <= 1e-15 * max(1.0, abs(R))
 ```
 
 When this precondition holds, the original `df_bw` grid is already aligned with full-band frequency-layer spacing. The useful aligned-path property is not a new coefficient grid; it is that the fixed-`k` loop can use integer stride `R` and compute the interpolation floor and `dx` values at a per-time-pixel or per-regime boundary instead of recomputing those quantities independently for every `k`.
+
+The ratio tolerance is deliberately ULP-scale (`1e-15`, not `1e-12`): the integer-stride lift-out replaces the oracle's `(wc.DF / wc.df_bw) * k` with `R * k`, so its deviation from the oracle scales as `abs((wc.DF / wc.df_bw) - R) * k * (local coefficient slope)` and must stay within the faithful float64 tolerance for `k` up to `wc.Nf`. A looser ratio bound would admit configurations whose aligned output exceeds `atol = 1e-10 * amplitude_source` while still passing the precondition assertion. The repository `Nsf = 150` configuration satisfies the bound exactly (`wc.DF / wc.df_bw == 100.0`).
 
 The aligned table representation used by `wavemaket_stripe_dense_aligned` must differ structurally from a plain identity wrapper around `WaveletTaylorTimeCoeffs`. The structural difference is layout and metadata, not coefficient values.
 
@@ -304,7 +306,7 @@ Zero padding may be relied on to keep aligned-table reads in bounds and to retur
 
 Required verification for the aligned table:
 
-- A structural test must verify the aligned-path precondition: `2 * wc.Nsf % 3 == 0`, `R == 2 * wc.Nsf // 3`, and `abs((wc.DF / wc.df_bw) - R) <= 1e-12 * max(1.0, abs(R))`.
+- A structural test must verify the aligned-path precondition: `2 * wc.Nsf % 3 == 0`, `R == 2 * wc.Nsf // 3`, and `abs((wc.DF / wc.df_bw) - R) <= 1e-15 * max(1.0, abs(R))`.
 - A structural test must verify that aligned tests and benchmarks use a configuration satisfying the precondition; the repository `Nsf = 150` configuration qualifies with `R = 100`.
 - A structural test must verify that the aligned representation exposes two-sided padding and valid-region metadata or an equivalent observable convention.
 - A structural test must verify that an identity wrapper around `WaveletTaylorTimeCoeffs` without aligned metadata and two-sided padding fails the aligned-table structural tests.
@@ -480,7 +482,7 @@ Running the full repository test suite is explicitly outside the required accept
 | V2-A3 | Accepted and resolved | Required Coverage Cases | Added out-of-domain guard test option or source-inspection option for derivative-index drop. | Review V2-3. | See V2-3. |
 | V2-A4 | Accepted and resolved | Runtime Validation | Added no tolerance/closeness assertions inside required numba functions. | Review V2-4. | None. |
 | V2-A5 | Accepted and resolved | Numerical Tolerances; Test Requirements | Added `amplitude_source > 0` and reworded pre-filled test around observable `B + oracle_slice`. | Review V2-5 and V2-6. | None. |
-| V3-1 | Accepted and resolved | Runtime Validation; Aligned Table Requirements; Requirement Traceability Table | Removed the v3 alternate-grid requirement; required aligned input assertions `2 * wc.Nsf % 3 == 0` and `abs((wc.DF / wc.df_bw) - R) <= 1e-12 * max(1.0, abs(R))`; aligned table reuses original `wc.df_bw` grid coefficient values. | Adversarial review v3 showed the alternate-grid approach is unnecessary when alignment holds and oracle-breaking when it does not; user instructed that it be replaced with assertions about inputs. | Aligned path is unsupported for non-integer-aligned configurations until a future authority defines behavior. |
+| V3-1 | Accepted and resolved | Runtime Validation; Aligned Table Requirements; Requirement Traceability Table | Removed the v3 alternate-grid requirement; required aligned input assertions `2 * wc.Nsf % 3 == 0` and `abs((wc.DF / wc.df_bw) - R) <= 1e-15 * max(1.0, abs(R))`; aligned table reuses original `wc.df_bw` grid coefficient values. | Adversarial review v3 showed the alternate-grid approach is unnecessary when alignment holds and oracle-breaking when it does not; user instructed that it be replaced with assertions about inputs. | Aligned path is unsupported for non-integer-aligned configurations until a future authority defines behavior. |
 | V3-2 | Accepted and resolved | Implementation Variants; Aligned Table Requirements; Test Requirements | Removed requirement that padding alone reproduce table-overflow drops. Required exact drop reproduction through loop bounds, per-regime bounds, branchless validity factor, or equivalent mechanism; padding is only for bounded reads or already-excluded/proven-negligible contributions. | Adversarial review v3 showed edge coefficients are non-negligible and padding-only drops cannot meet tolerance. | Exact mechanism remains implementation freedom subject to full-stripe oracle tests. |
 | V3-A1 | Accepted and resolved with user modification | Runtime Validation; Aligned Table Requirements | Adopted integer-alignment assertions and original-grid coefficient reuse; removed all alternate-grid requirements. | User instruction and review amendment V3-A1. | None for supported aligned inputs. |
 | V3-A2 | Accepted and resolved | Implementation Variants; Aligned Table Requirements | Required bandwidth and table-overflow drops to come from loop bounds, branchless validity factors, or equivalent exact mechanisms rather than padding-only reads. | Review amendment V3-A2. | None. |
