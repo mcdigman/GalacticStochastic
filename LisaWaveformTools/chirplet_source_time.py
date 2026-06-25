@@ -2,8 +2,6 @@
 
 from typing import override
 
-import numpy as np
-
 from LisaWaveformTools.lisa_config import LISAConstants
 from LisaWaveformTools.source_params import ExtrinsicParams, SourceParams
 from LisaWaveformTools.stationary_time_source import StationarySourceWaveformTime
@@ -55,7 +53,7 @@ class LinearChirpletWaveletTaylorTime(BinaryWaveletTaylorTime[LinearChirpletIntr
         response_mode: int = 0,
         table_cache_mode: str = 'check',
         table_output_mode: str = 'skip',
-        t_phase_ref: np.float64 = 0.0,
+        t_phase_ref: float = 0.0,
     ) -> None:
         """Construct a binary wavelet object."""
         # get the intrinsic_waveform
@@ -90,7 +88,7 @@ class LinearChirpletWaveletSparseTime(BinaryWaveletSparseTime[LinearChirpletIntr
         nt_lim_waveform: PixelGenericRange,
         *,
         response_mode: int = 0,
-        t_phase_ref: np.float64 = 0.0,
+        t_phase_ref: float = 0.0,
     ) -> None:
         """Construct a binary wavelet object."""
         self._nt_lim_grid: PixelGenericRange = get_sparse_source_t_grid(wc, lc.t0)

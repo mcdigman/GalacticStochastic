@@ -259,6 +259,8 @@ def wavemaket(
                             mult2 = 0.0
                             z2 = 0.0
                             y2 = 0.0
+                            dy1df = 0.0
+                            dz1df = 0.0
                         else:
                             # y1, z1, y2, z2 = get_taylor_time_pixel_direct_order2(fa, waveform.FTd[itrc, j], k, taylor_table.wavelet_norm, wc)
                             y1, z1, dy1df, dz1df = get_taylor_time_pixel_direct_order2(fa, waveform.FTd[itrc, j], k, taylor_table.wavelet_norm, wc)
@@ -407,8 +409,8 @@ def wavemaket_direct(
                 if amplitude_order == 0:
                     y1, z1 = get_taylor_time_pixel_direct(fa, waveform.FTd[itrc, j], k, wavelet_norm, wc)
                     mult2 = 0.0
-                    #y2 = 0.0
-                    #z2 = 0.0
+                    # y2 = 0.0
+                    # z2 = 0.0
                     dy1df = 0.0
                     dz1df = 0.0
 

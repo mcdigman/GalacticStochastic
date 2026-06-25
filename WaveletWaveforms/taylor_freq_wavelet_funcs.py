@@ -181,7 +181,7 @@ def wavemakef_direct(
         wc: WDMWaveletConstants,
         taylor_table: WaveletTaylorFreqCoeffs,
         *,
-        amplitude_order: int=1,
+        amplitude_order: int = 1,
 ) -> None:
     """Calculate expansion using taylor frequency method choosing only selected F indices"""
     # TODO handle t0 or remove it

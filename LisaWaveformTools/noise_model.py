@@ -337,8 +337,6 @@ class DenseNoiseModel(ABC):
         for key in self._wc._fields:
             hf_wc.attrs[key] = getattr(self._wc, key)
 
-        if self._storage_mode == 0:
-            pass
         if self._storage_mode == 1:
             _ = hf_noise.create_dataset('S', data=self.get_S(), compression='gzip')
 

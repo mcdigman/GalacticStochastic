@@ -786,7 +786,7 @@ def rigid_adiabatic_antenna(
     A_psi: DetectorAmplitudePhaseCombinations = get_detector_amplitude_phase_combinations(params_extrinsic)
 
     # Main Loop
-    for n in prange(nx_lim.nx_min, nx_lim.nx_max):
+    for n in prange(nx_lim.nx_min, nx_lim.nx_max):  # type: ignore[not-iterable]
         # get the spacecraft response for the current time step
 
         get_sc_scalar_pos(lc, T[n], sc_phasing, sc_pos)
@@ -957,9 +957,9 @@ def phase_wrap_helper_implicit_freq(
             # Isolate just the perturbation to the intrinsic phase
             p: float = (tdi_PF[itrc, n])
             delta_implicit = -2 * np.pi * nf_lim.dx * (tdi_TF[itrc, n] - TF[n]) - np.pi * nf_lim.dx**2 * (tdi_TFp[itrc, n] - TFp[n])
-            #if n < nf_lim.nx_max - 1:
+            # if n < nf_lim.nx_max - 1:
             #    delta_implicit_alt = -np.pi * nf_lim.dx * (tdi_TF[itrc, n] - TF[n] + tdi_TF[itrc, n + 1] - TF[n + 1])
-            #else:
+            # else:
             #    delta_implicit_alt = 0.0
 
             # delta = delta_implicit

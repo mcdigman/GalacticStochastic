@@ -193,7 +193,7 @@ def get_taylor_table_time_helper(
             z_mult: float = z_add + z_pre * (1 - Nfsam[jj] + 2 * i)
             evc: float = 0.0
             evs: float = 0.0
-            for k in prange(0, wc.K):
+            for k in prange(0, wc.K):  # type: ignore[not-iterable]
                 z: float = z_mult * (k - wc.K // 2) + z_quads[k]
                 evc += wavelet_norm[k] * np.cos(z)
                 evs += wavelet_norm[k] * np.sin(z)
@@ -294,7 +294,7 @@ def get_taylor_time_pixel_direct(
     evc_mid: float = 0.0
     evs_mid: float = 0.0
 
-    for k in prange(wc.K):
+    for k in prange(wc.K):  # type: ignore[not-iterable]
         z_mid: float = z_mult * (k - wc.K // 2) + z_quads_mid[k]
         evc_mid += wavelet_norm[k] * np.cos(z_mid)
         evs_mid += wavelet_norm[k] * np.sin(z_mid)
@@ -372,7 +372,7 @@ def get_taylor_time_pixel_direct_order2(
     # plt.xlabel(str(k_in)+" "+str(fa)+" "+str(fda))
     # plt.show()
 
-    for k in prange(wc.K):
+    for k in prange(wc.K):  # type: ignore[not-iterable]
         z_mid: float = z_mult * (k - wc.K // 2) + z_quads_mid[k]
         evc_mid += wavelet_norm[k] * np.cos(z_mid)
         evs_mid += wavelet_norm[k] * np.sin(z_mid)

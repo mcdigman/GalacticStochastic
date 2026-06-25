@@ -318,7 +318,7 @@ def AmpPhaseSeriesInsAnsatz(waveform: StationaryWaveformFreq, imr_params: IMRPhe
 
     dm = 1 / (2 * np.pi)
 
-    for itrf in prange(nf_lim.nx_min, nf_lim.nx_max):
+    for itrf in prange(nf_lim.nx_min, nf_lim.nx_max):  # type: ignore[not-iterable]
         f: float = waveform.F[itrf]
         fv: float = np.cbrt(f)
         logfv: float = 1 / 3 * np.log(params.mass_total_detector_sec) + 1 / 3 * np.log(f) + 1 / 3 * np.log(np.pi)
@@ -394,7 +394,7 @@ def PhiSeriesInsAnsatz(waveform: StationaryWaveformFreq, imr_params: IMRPhenomDP
     params = imr_params.params
     phi_prefactors = PhiInsPrefactorsMt(params)
     dm: float = 1 / (2 * np.pi)
-    for itrf in prange(nf_lim.nx_min, nf_lim.nx_max):
+    for itrf in prange(nf_lim.nx_min, nf_lim.nx_max):  # type: ignore[not-iterable]
         floc: float = waveform.F[itrf]
 
         fv: float = np.cbrt(floc)

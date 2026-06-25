@@ -50,7 +50,7 @@ def gradient_uniform_inplace(ys: NDArray[np.floating], result: NDArray[np.floati
         result[itrc, nx_max - 1] = (ys[itrc, nx_max - 1] - ys[itrc, nx_max - 2]) / dx
 
     # main loop to handle the rest to second order
-    for i in prange(nx_min + 1, nx_max - 1):
+    for i in prange(nx_min + 1, nx_max - 1):  # type: ignore[not-iterable]
         for itrc in range(nc_loc):
             result[itrc, i] = (ys[itrc, i + 1] - ys[itrc, i - 1]) / (2 * dx)
 
@@ -123,7 +123,7 @@ def stabilized_gradient_uniform_inplace(
             y[itrc, nx_max - 1] - y[itrc, nx_max - 2] - x[nx_max - 1] + x[nx_max - 2]
         ) / dt + dxdt[nx_max - 1]
 
-    for n in prange(nx_min + 1, nx_max - 1):
+    for n in prange(nx_min + 1, nx_max - 1):  # type: ignore[not-iterable]
         x_shift = -x[n + 1] + x[n - 1]
         dxdt_shift = dxdt[n]
         for itrc in range(nc_channel):
