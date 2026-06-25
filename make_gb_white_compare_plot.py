@@ -1,11 +1,10 @@
 """make plot comparing galactic background noise spectra with and without cyclostationary model"""
 
 import matplotlib as mpl
+import matplotlib.axes
 import matplotlib.image
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy.ndimage
-import scipy.special
 import scipy.stats
 from numpy.testing import assert_array_equal
 from numpy.typing import NDArray
@@ -63,7 +62,7 @@ def result_normality_battery(nf_min_in: int, nf_max_in: int, signal_in: NDArray[
     return signal_white_out
 
 
-def white_plot_ax(ax_in: plt.Axes, title: str, data: NDArray[np.floating], extent_in: tuple[float, float, float, float]) -> matplotlib.image.AxesImage:
+def white_plot_ax(ax_in: matplotlib.axes.Axes, title: str, data: NDArray[np.floating], extent_in: tuple[float, float, float, float]) -> matplotlib.image.AxesImage:
     im_out = ax_in.imshow(np.rot90(data), extent=extent_in, cmap='YlOrRd', vmin=0, vmax=4, aspect='auto')
 
     ax_in.set_title(title, fontsize=14)

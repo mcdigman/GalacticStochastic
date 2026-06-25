@@ -479,7 +479,7 @@ def test_gradient_uniform_inplace_known(t_scaling: str, DT: float, t0: float, nt
 
     if channel_t_scale is None:
         return
-
+    assert channel_dxdt_scale is not None
     ys = np.outer(channel_scale_mult, channel_t_scale)
     dydts = np.outer(channel_scale_mult, channel_dxdt_scale)
 
@@ -513,7 +513,7 @@ def test_gradient_uniform_inplace_known(t_scaling: str, DT: float, t0: float, nt
     assert_allclose(result, gradient_exp, atol=1.0e-14, rtol=1.0e-14)
     assert_array_equal(result, gradient_exp)
 
-    assert_allclose(dydts[:, 1:nt_loc - 1], gradient_exp[:, 1:nt_loc - 1], atol=1.0e-12, rtol=1.0e-12)
+    assert_allclose(dydts[:, 1:nt_loc - 1], gradient_exp[:, 1:nt_loc - 1], atol=1.0e-12, rtol=1.0e-12)  # pyright: ignore[reportCallIssue, reportArgumentType]
 
     assert_allclose(result[:, 1:nt_loc - 1], dydts[:, 1:nt_loc - 1], atol=1.0e-12, rtol=1.0e-12)
 
@@ -717,14 +717,14 @@ def test_stabilized_gradient_uniform_inplace(
         if mask_ind.size > 0:
             # check both components separately
             assert_allclose(
-                result[itrc, mask_ind] - gradient_perturber[itrc, mask_ind],
+                result[itrc, mask_ind] - gradient_perturber[itrc, mask_ind],  # pyright: ignore[reportCallIssue, reportArgumentType]
                 dydt_unperturbed[itrc, mask_ind],
                 atol=max(float(np.abs(result[itrc, mask_ind]).max()) * 1.0e-11, 1.0e-14),
                 rtol=1.0e-12,
             )
             assert_allclose(
                 result[itrc, mask_ind] - dydt_unperturbed[itrc, mask_ind],
-                gradient_perturber[itrc, mask_ind],
+                gradient_perturber[itrc, mask_ind],  # pyright: ignore[reportCallIssue, reportArgumentType]
                 atol=max(float(np.abs(result[itrc, mask_ind]).max()) * 1.0e-11, 1.0e-14),
                 rtol=1.0e-12,
             )

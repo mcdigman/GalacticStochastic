@@ -45,6 +45,7 @@ class TaylorF2WaveformFreq(StationarySourceWaveformFreq[BinaryIntrinsicParams, E
         freeze_limits: int,
         t_obs: float,
         n_pad_F: int = 10,
+        response_mode: int = 0,
         *,
         mf_taylor_anchor: float = 1.0e-5,
         model_select: str = 'taylorf2_aligned',
@@ -58,7 +59,7 @@ class TaylorF2WaveformFreq(StationarySourceWaveformFreq[BinaryIntrinsicParams, E
         self.amplitude_pn_mode = amplitude_pn_mode
         self.include_pn_ss3 = include_pn_ss3
         self.tc_mode = tc_mode
-        super().__init__(params, lc, nf_lim_absolute, freeze_limits, t_obs, n_pad_F=n_pad_F)
+        super().__init__(params, lc, nf_lim_absolute, freeze_limits, t_obs, n_pad_F=n_pad_F, response_mode=response_mode)
 
     @override
     def _update_intrinsic(self) -> None:

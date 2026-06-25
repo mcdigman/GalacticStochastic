@@ -1,9 +1,8 @@
-# type shouldn't be needed after atropy 7.2.0
 """A series of small helper functions to load cosmic data from HDF5 files."""
 
-import astropy.constants as const
 import astropy.units as u
 import numpy as np
+from astropy.constants import G, c  # pyright: ignore[reportAttributeAccessIssue]
 from astropy.coordinates import ICRS, Galactocentric, GeocentricTrueEcliptic
 from numpy.typing import NDArray
 from pandas import DataFrame, HDFStore
@@ -27,9 +26,9 @@ def get_amplitude(dat: DataFrame) -> NDArray[np.floating]:
     f_gw: NDArray[np.float64] = dat.f_gw.to_numpy().astype(np.float64)
 
     mc = (mass_1 * mass_2)**(3 / 5) / (mass_1 + mass_2)**(1 / 5) * u.Msun
-    term1 = 64 / 5 * (const.G * mc)**(10 / 3)
-    term2 = (np.pi * f_gw * u.s**(-1))**(4 / 3)
-    denom1 = const.c**8 * (dat.dist_sun.to_numpy() * u.kpc)**2
+    term1 = 64 / 5 * (G * mc)**(10 / 3)
+    term2 = (np.pi * f_gw * u.s**(-1))**(4 / 3)  # pyright: ignore[reportOperatorIssue]
+    denom1 = c**8 * (dat.dist_sun.to_numpy() * u.kpc)**2
     amplitude = np.sqrt(term1.to(u.m**10 / u.s**(20 / 3)) * term2 / denom1.to(u.m**10 / u.s**8)).value
     return amplitude
 
@@ -72,8 +71,8 @@ def get_chirp(dat: DataFrame) -> NDArray[np.floating]:
     mass_2 = dat.mass_2.to_numpy().astype(np.float64)
     mc = (mass_1 * mass_2)**(3 / 5) / (mass_1 + mass_2)**(1 / 5) * u.Msun
     fgw = dat.f_gw.to_numpy().astype(np.float64) * u.s**(-1)
-    term1 = (const.G * mc)**(5 / 3) / (const.c)**5
-    term2 = (np.pi * fgw)**(11 / 3)
+    term1 = (G * mc)**(5 / 3) / c**5
+    term2 = (np.pi * fgw)**(11 / 3)  # pyright: ignore[reportOperatorIssue]
     chirp = 96 / (5 * np.pi) * term1 * term2
     return chirp.to(u.s**(-2)).value
 
