@@ -50,12 +50,16 @@ jobs:
 
       # Unlike the mypy job (which uses --ignore-missing-imports), pyright
       # resolves types from the installed environment, so install the project
-      # with its typed extras. PyIMRPhenomD is not on PyPI and is handled via
-      # reportMissingImports = "none" in [tool.pyright] (see pyproject.toml).
+      # with its typed extras into a venv (the runner's system Python is
+      # externally managed, so --system installs are rejected). PyIMRPhenomD is
+      # not on PyPI and is handled via reportMissingImports = "none" in
+      # [tool.pyright] (see pyproject.toml).
       - name: Install project with typed extras
-        run: uv pip install --system ".[dev,plots,cosmic]"
+        run: |
+          uv venv
+          uv pip install ".[dev,plots,cosmic]"
 
       - name: Run pyright
         run: >
           uvx pyright@${{ env.PYRIGHT_VERSION }}
-          --pythonpath "$(uv python find)"
+          --pythonpath .venv/bin/python

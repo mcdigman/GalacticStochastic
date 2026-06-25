@@ -388,7 +388,7 @@ def wavemaket_direct(
             # not sure the - 1 is strictly necessary
             half_bandwidth: float = (min(Nfsam1_loc, Nfsam2_loc) - 1) * wc.df_bw / 2
 
-            knearest = int(np.round(fa / wc.DF))
+            #knearest = int(np.round(fa / wc.DF))
             # kbelow = int(np.floor(fa / wc.DF))
             #kmin = knearest
             # kmax = knearest
