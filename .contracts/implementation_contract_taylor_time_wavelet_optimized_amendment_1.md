@@ -8,7 +8,7 @@ final contract file to apply this amendment. All requirements in the final
 contract remain authoritative except where this addendum explicitly supersedes a
 specific aligned-path requirement.
 
-This amendment is not final approval for implementation.
+This is the final approved version.
 
 Authoritative decisions supplied for this revision:
 
