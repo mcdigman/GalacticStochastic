@@ -385,20 +385,30 @@ def wavemaket_stripe_dense_aligned(
 
     This reproduces the ``force_nulls=0``, ``amplitude_order=0`` behavior of
     :func:`WaveletWaveforms.taylor_time_wavelet_funcs.wavemaket` over the stripe
-    window ``[nf_start, nf_start + stripe_height)`` using a fixed-``k`` inner
-    loop and the zero-padded, integer-aligned
-    :class:`WaveletTaylorTimeCoeffsAligned` table. When the input grid is integer
-    aligned, ``wc.DF / wc.df_bw`` equals the integer stride ``R``, so the table
-    index advances by the constant stride ``R`` per frequency layer, and the
-    two-sided zero padding keeps those constant-stride reads in bounds.
+    window ``[nf_start, nf_start + stripe_height)`` using the zero-padded,
+    integer-aligned :class:`WaveletTaylorTimeCoeffsAligned` table. The
+    interpolation midpoint ``zmid`` uses the mandatory integer stride
+    ``R = taylor_table_aligned.R`` (which equals ``wc.DF / wc.df_bw`` for an
+    integer-aligned grid); ``(wc.DF / wc.df_bw) * k`` and any equivalent
+    floating-ratio product are never formed inside the per-``k`` loop.
 
-    The bandwidth and table-overflow drops are reproduced by the same per-pixel
-    bandwidth bounds and ``jj1``/``jj2`` overflow guard as ``wavemaket``, so
-    dropped cells contribute exactly zero rather than relying on zero padding to
-    blend away non-negligible edge coefficients. The drop arithmetic mirrors
-    ``wavemaket`` exactly so the table-overflow drop decision is reproduced
-    bit-for-bit under ``fastmath``. Contributions are accumulated in place with
-    ``+=``.
+    The per-``k`` work is split into two reflection regimes about
+    ``k_high_start = floor(za / R) + 1`` (low regime ``k < k_high_start`` where
+    ``R * k <= za``; high regime otherwise). Within each regime the interpolation
+    floor base indices and ``dx`` are computed once at regime entry; the base
+    indices then advance by ``+R``/``-R`` per layer while ``dx`` stays constant.
+    The reflection, bandwidth, and table-overflow keep/drop decisions are
+    reproduced by per-regime loop bounds, and the alternating ``(j_ind + k) % 2``
+    sign flip is handled by per-parity sub-loops whose sign coefficients are
+    chosen once outside the per-``k`` loop, so the per-``k`` loop body carries no
+    keep/drop, reflection, or parity branch.
+
+    Because the integer stride uses ``R * k`` rather than the oracle's compiled
+    ``fastmath`` ``(wc.DF / wc.df_bw) * k``, the two paths can disagree on a
+    table-overflow keep/drop decision at rare ULP-boundary cells. Per Contract
+    Amendment 1 those aligned keep/drop boundary cells are exempt from the oracle
+    tolerance and instead take the integer-stride value (``0.0`` when dropped).
+    Contributions are accumulated in place with ``+=``.
 
     Parameters
     ----------
@@ -438,11 +448,11 @@ def wavemaket_stripe_dense_aligned(
     assert nt_lim_waveform.nx_max <= wc.Nt
     assert nt_lim_waveform.nx_min <= nt_lim_waveform.nx_max
 
-    # integer-alignment preconditions. The ratio bound abs(wc.DF / wc.df_bw - r_stride)
-    # <= 1e-15 * max(1.0, abs(r_stride)) is asserted in the algebraically identical
-    # cross-multiplied form (wc.df_bw > 0). Writing wc.DF / wc.df_bw here would let
-    # fastmath common-subexpression-eliminate it with the loop's (wc.DF / wc.df_bw) * k,
-    # shifting zmid by one ULP and flipping the oracle's table-overflow drop decision.
+    # integer-alignment preconditions (Contract Amendment 1, AM1-R7). The ratio
+    # check uses the mandated cross-multiplied form abs(wc.DF - r_stride * wc.df_bw)
+    # <= tol * wc.df_bw (algebraically identical for wc.df_bw > 0). The superseded
+    # division form abs(wc.DF / wc.df_bw - r_stride) <= tol must not appear in this
+    # @njit(fastmath=True) body, as it would reintroduce a wc.DF / wc.df_bw value.
     assert 2 * wc.Nsf % 3 == 0
     r_stride: int = 2 * wc.Nsf // 3
     assert abs(wc.DF - r_stride * wc.df_bw) <= 1e-15 * max(1.0, abs(r_stride)) * wc.df_bw
@@ -457,6 +467,7 @@ def wavemaket_stripe_dense_aligned(
     assert taylor_table_aligned.evc.shape[1] >= taylor_table_aligned.pad + int(np.max(taylor_table_aligned.Nfsam)) + 1
 
     nc_waveform: int = wavelet_stripe.shape[2]
+    nf_top: int = nf_start + stripe_height - 1
     pad: int = taylor_table_aligned.pad
 
     for itrc in range(nc_waveform):
@@ -467,6 +478,7 @@ def wavemaket_stripe_dense_aligned(
             ny: int = int(np.floor(y0))
             n_ind: int = ny + wc.Nfd_negative
 
+            # derivative-index guard (per-time-pixel, outside the per-k loop)
             if 0 <= n_ind < wc.Nfd - 1:
                 cval: float = np.cos(waveform.PT[itrc, j])
                 sval: float = np.sin(waveform.PT[itrc, j])
@@ -477,50 +489,100 @@ def wavemaket_stripe_dense_aligned(
 
                 nfsam1_loc: int = int(taylor_table_aligned.Nfsam[n_ind])
                 nfsam2_loc: int = int(taylor_table_aligned.Nfsam[n_ind + 1])
+                nfsam1_half: int = nfsam1_loc // 2
+                nfsam2_half: int = nfsam2_loc // 2
                 half_bandwidth: float = (min(nfsam1_loc, nfsam2_loc) - 1) * wc.df_bw / 2
 
-                kmin: int = max(nf_start, int(np.ceil((fa - half_bandwidth) / wc.DF)))
-                kmax: int = min(nf_start + stripe_height - 1, int(np.floor((fa + half_bandwidth) / wc.DF)))
+                # per-time-pixel bandwidth bounds, intersected with the stripe window
+                k_band_lo: int = max(nf_start, int(np.ceil((fa - half_bandwidth) / wc.DF)))
+                k_band_hi: int = min(nf_top, int(np.floor((fa + half_bandwidth) / wc.DF)))
+
+                # integer-stride lift-out: per-regime interpolation floor and dx are
+                # computed once here and never recomputed inside the per-k loop. In the
+                # low regime kk = kk_below - r_stride * k; in the high (reflected) regime
+                # kk = kk_above + r_stride * k. dx is constant within each regime.
+                kk_below: int = int(np.floor(za - 0.5))
+                dx_below: float = (za - 0.5) - kk_below
+                kk_above: int = int(np.floor(-za - 0.5))
+                dx_above: float = (-za - 0.5) - kk_above
+
+                # reflection split: R * k <= za (low regime, no reflection) for
+                # k < k_high_start; R * k > za (high regime) for k >= k_high_start.
+                # R * k == za belongs to the low regime.
+                k_high_start: int = int(np.floor(za / r_stride)) + 1
 
                 mult1: float = waveform.AT[itrc, j]
 
-                for k in range(nf_start, nf_start + stripe_height):
-                    # For an integer-aligned grid wc.DF / wc.df_bw == r_stride, so this
-                    # quantity advances by the integer stride r_stride per layer and jj1
-                    # reads at a constant stride r_stride from the padded layout. The ratio
-                    # is evaluated exactly as in wavemaket (not as the integer r_stride * k)
-                    # because wavemaket runs under fastmath=True, where reassociation puts
-                    # the product up to one ULP from r_stride * k; matching the expression
-                    # and the per-pixel bandwidth bounds reproduces the bandwidth and
-                    # table-overflow drop decisions bit-for-bit.
-                    zmid: float = (wc.DF / wc.df_bw) * k
+                for regime in range(2):
+                    # per-regime setup (outside the per-k loop). The base index and dx
+                    # are computed once; jj1/jj2 advance by +/- r_stride per layer.
+                    if regime == 0:
+                        # low regime: jj = base - r_stride * k
+                        base1: int = kk_below + nfsam1_half
+                        base2: int = kk_below + nfsam2_half
+                        dx: float = dx_below
+                        kstep: int = -r_stride
+                        # table-overflow keep range for jj1, jj2 (0 <= jj <= N - 2),
+                        # intersected with bandwidth and the low-regime ceiling.
+                        regime_lo: int = max(
+                            k_band_lo,
+                            -((nfsam1_loc - 2 - base1) // r_stride),
+                            -((nfsam2_loc - 2 - base2) // r_stride),
+                        )
+                        regime_hi: int = min(
+                            k_band_hi,
+                            k_high_start - 1,
+                            base1 // r_stride,
+                            base2 // r_stride,
+                        )
+                    else:
+                        # high regime: jj = base + r_stride * k
+                        base1 = kk_above + nfsam1_half
+                        base2 = kk_above + nfsam2_half
+                        dx = dx_above
+                        kstep = r_stride
+                        regime_lo = max(
+                            k_band_lo,
+                            k_high_start,
+                            -(base1 // r_stride),
+                            -(base2 // r_stride),
+                        )
+                        regime_hi = min(
+                            k_band_hi,
+                            (nfsam1_loc - 2 - base1) // r_stride,
+                            (nfsam2_loc - 2 - base2) // r_stride,
+                        )
 
-                    if za < zmid:
-                        zmid = za - np.abs(za - zmid)
-
-                    kk_float: float = np.floor(za - zmid - 0.5)
-                    zsam: float = zmid + kk_float + 0.5
-                    kk: int = int(kk_float)
-                    dx: float = za - zsam
-
-                    jj1: int = kk + nfsam1_loc // 2
-                    jj2: int = kk + nfsam2_loc // 2
-
-                    if (kmin <= k <= kmax) and (0 <= jj1 < nfsam1_loc - 1) and (0 <= jj2 < nfsam2_loc - 1):
-                        idx1: int = jj1 + pad
-                        idx2: int = jj2 + pad
-
-                        y: float = (1.0 - dx) * taylor_table_aligned.evc[n_ind, idx1] + dx * taylor_table_aligned.evc[n_ind, idx1 + 1]
-                        yy: float = (1.0 - dx) * taylor_table_aligned.evc[n_ind + 1, idx2] + dx * taylor_table_aligned.evc[n_ind + 1, idx2 + 1]
-                        z: float = (1.0 - dx) * taylor_table_aligned.evs[n_ind, idx1] + dx * taylor_table_aligned.evs[n_ind, idx1 + 1]
-                        zz: float = (1.0 - dx) * taylor_table_aligned.evs[n_ind + 1, idx2] + dx * taylor_table_aligned.evs[n_ind + 1, idx2 + 1]
-
-                        y1: float = ((1.0 - dy) * y + dy * yy) * mult1
-                        z1: float = ((1.0 - dy) * z + dy * zz) * mult1
-
-                        if (j_ind + k) % 2:
-                            value: float = -(cval * z1 + sval * y1)
+                    for parity in range(2):
+                        # parity selects the sign coefficients once, outside the per-k
+                        # loop, so the loop body carries no (j_ind + k) % 2 branch.
+                        # parity == 0 -> even formula cval * y1 - sval * z1;
+                        # parity == 1 -> odd formula -(cval * z1 + sval * y1).
+                        if parity == 0:
+                            coef_y: float = cval
+                            coef_z: float = -sval
                         else:
-                            value = cval * y1 - sval * z1
+                            coef_y = -sval
+                            coef_z = -cval
 
-                        wavelet_stripe[j, k - nf_start, itrc] += value
+                        # first layer in this regime with (j_ind + k) % 2 == parity
+                        k_start: int = regime_lo + ((j_ind + regime_lo + parity) & 1)
+                        jj1: int = base1 + kstep * k_start
+                        jj2: int = base2 + kstep * k_start
+
+                        for k in range(k_start, regime_hi + 1, 2):
+                            idx1: int = jj1 + pad
+                            idx2: int = jj2 + pad
+
+                            y: float = (1.0 - dx) * taylor_table_aligned.evc[n_ind, idx1] + dx * taylor_table_aligned.evc[n_ind, idx1 + 1]
+                            yy: float = (1.0 - dx) * taylor_table_aligned.evc[n_ind + 1, idx2] + dx * taylor_table_aligned.evc[n_ind + 1, idx2 + 1]
+                            z: float = (1.0 - dx) * taylor_table_aligned.evs[n_ind, idx1] + dx * taylor_table_aligned.evs[n_ind, idx1 + 1]
+                            zz: float = (1.0 - dx) * taylor_table_aligned.evs[n_ind + 1, idx2] + dx * taylor_table_aligned.evs[n_ind + 1, idx2 + 1]
+
+                            y1: float = ((1.0 - dy) * y + dy * yy) * mult1
+                            z1: float = ((1.0 - dy) * z + dy * zz) * mult1
+
+                            wavelet_stripe[j, k - nf_start, itrc] += coef_y * y1 + coef_z * z1
+
+                            jj1 += 2 * kstep
+                            jj2 += 2 * kstep
