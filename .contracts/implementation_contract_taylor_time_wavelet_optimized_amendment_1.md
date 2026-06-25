@@ -18,6 +18,8 @@ Authoritative decisions supplied for this revision:
    project compiler is not expected to lower it to a control-flow branch.
 4. Only this addendum may be edited; the existing final contract must remain
    unchanged.
+5. The alternating sign-flip logic must also be implemented without branching
+   control flow inside the aligned per-`k` loop.
 
 This amendment addresses these issues discovered during review of PR #41:
 
@@ -36,6 +38,14 @@ This amendment addresses these issues discovered during review of PR #41:
   division-form bullets in the final contract.
 - The inner-loop branch prohibition targeted one syntax shape rather than the
   underlying keep/drop control-flow requirement.
+- Boundary-exercising tests must not fail merely because a future compiler
+  environment produces no fastmath keep/drop boundary cells.
+- Compiled-code evidence for branchless masks is environment-pinned and must be
+  treated as a portability risk.
+- Source inspection must enumerate common floating-ratio rewrites, not only the
+  exact `(wc.DF / wc.df_bw) * k` spelling.
+- The alternating sign-flip calculation must be covered by the no-branching
+  aligned-loop requirement.
 
 ---
 
@@ -176,6 +186,10 @@ in its entirety by the following.
   optional.
 - Keep `(wc.DF / wc.df_bw) * k`, equivalent floating-ratio products, and
   per-iteration recomputation of `floor(...)` out of the aligned per-`k` loop.
+  Prohibited floating-ratio products include, at minimum,
+  `(wc.DF / wc.df_bw) * k`, `k * (wc.DF / wc.df_bw)`,
+  `wc.DF * k / wc.df_bw`, `wc.DF * (k * (1.0 / wc.df_bw))`, and any expression
+  whose value is a floating-point function of `k` and `wc.DF / wc.df_bw`.
   An implementation that computes
   `zmid = (wc.DF / wc.df_bw) * k` per `k` inside
   `wavemaket_stripe_dense_aligned`, including the implementation shape reviewed
@@ -212,6 +226,13 @@ in its entirety by the following.
   as the only protection against unsafe memory access. Table reads must remain in
   bounds through loop bounds, the required padded aligned layout, or another
   separately verified in-bounds mechanism.
+- Implement the alternating sign flip associated with `(j_ind + k) % 2` without
+  branching control flow inside the aligned per-`k` loop. This sign flip is not a
+  keep/drop decision, but it is still part of the aligned hot-loop branch-removal
+  requirement. Compliant mechanisms include an arithmetic sign factor, a
+  branchless parity-to-sign transform, or an observably equivalent mechanism with
+  compiled-code evidence that the compiler did not lower the parity decision to a
+  conditional branch.
 - Accumulate into `wavelet_stripe` in place with `+=`.
 - Match the oracle stripe slice within the final contract's faithful float64
   tolerance, except for aligned keep/drop boundary cells as defined in this
@@ -233,15 +254,21 @@ following additional verification is required.
   and must not require the superseded division-form assertion.
 - A source inspection must verify that the aligned implementation uses mandatory
   integer-stride `zmid` and contains no per-iteration aligned-loop computation of
-  `(wc.DF / wc.df_bw) * k` or an equivalent floating-ratio product.
+  `(wc.DF / wc.df_bw) * k` or an equivalent floating-ratio product, including the
+  representative prohibited forms listed in the Implementation Variants section.
 - A source inspection must verify that `dx` is initialized at regime entry and is
   constant within each regime, while base indices advance by `+R` or `-R`.
 - A boundary test must exercise at least one aligned keep/drop boundary cell for
   an aligned configuration before the exception is used in acceptance. The test
   must identify the boundary by comparing the compiled oracle-decision helper's
   observed keep/drop booleans with an independent integer-stride aligned
-  reference. A non-empty boundary set is required for the test case that uses the
-  exception.
+  reference. If the compiled project environment produces one or more aligned
+  keep/drop boundary cells for the selected configuration, the test case that uses
+  the exception must include at least one such cell. If the compiled project
+  environment produces no aligned keep/drop boundary cells for the selected
+  configuration, the exception is not exercised; the non-empty-boundary
+  requirement is vacuously satisfied, and the test must pass by verifying the
+  standard `atol`/`rtol` path for all cells rather than by skipping.
 - The boundary test must verify that all non-boundary cells satisfy the standard
   `atol`/`rtol` oracle comparison.
 - The boundary test must verify that boundary-cell aligned outputs are either
@@ -265,6 +292,10 @@ following additional verification is required.
   table-overflow keep/drop conditions. LLVM `select`, comparison-to-numeric-mask,
   and arithmetic masking are acceptable evidence when they do not introduce such
   a branch.
+- If an arithmetic or parity-based sign-flip mechanism is used, compiled-code
+  inspection in the project compiler environment must show no conditional branch
+  inside the aligned per-`k` loop whose predicate is derived from `(j_ind + k) % 2`
+  or an equivalent parity expression.
 
 These tests must provide evidence independent of the aligned implementation logic
 where required above. In particular, the boundary-cell oracle/reference
@@ -319,7 +350,7 @@ this contract.
 | Finding | Disposition | Contract section affected | Exact revision made | Reasoning or authority | Remaining uncertainty |
 |---|---|---|---|---|---|
 | Latest-review F001 | Accepted and resolved | Numerical Tolerances; Implementation Variants; Verification | Removed the float-expression path and made integer-stride `zmid` mandatory. Removed the verification waiver for float-expression implementations. | Human decision 1 says integer-stride `zmid` is required. The review marked this resolved by that decision. | None for this addendum. |
-| Latest-review F002 | Accepted and resolved | Numerical Tolerances; Verification | Required boundary classification by a compiled oracle-decision helper plus an independent integer-stride aligned reference. Explicitly rejected Python-formula-only boundary classification and required a non-empty boundary set when the exception is used. | Review showed the Python formula can yield an empty set even when compiled `wavemaket` exhibits a fastmath keep/drop flip. | Exact helper implementation remains implementation freedom subject to the observable classifier requirements. |
+| Latest-review F002 | Accepted and resolved | Numerical Tolerances; Verification | Required boundary classification by a compiled oracle-decision helper plus an independent integer-stride aligned reference. Explicitly rejected Python-formula-only boundary classification. | Review showed the Python formula can yield an empty set even when compiled `wavemaket` exhibits a fastmath keep/drop flip. | Exact helper implementation remains implementation freedom subject to the observable classifier requirements. |
 | Latest-review F003 | Accepted and resolved | Numerical Tolerances; Verification | Limited the exception to binary table-overflow keep/drop differences; required boundary values to be `0.0` for integer-stride drops or the independent integer-stride contribution for integer-stride keeps. | Human decision 2 says the exception only applies to keep/drop decisions. The review marked this resolved by that decision. | None. |
 | Latest-review F004 | Accepted and resolved | Pairwise Variant Comparison; Verification | Extended the aligned keep/drop boundary exception to pairwise comparisons involving `wavemaket_stripe_dense_aligned`, while preserving full pairwise comparison for sparse-vs-dense and all non-boundary cells. | Review showed the final contract's pairwise comparison would otherwise fail at the same keep/drop boundary cells. | None. |
 | Latest-review F005 | Accepted and resolved | Implementation Variants | Stated that an aligned implementation computing per-`k` float-expression `zmid`, including the PR #40 implementation shape, is non-compliant under this amendment. | Human decision 1 requires integer-stride `zmid`; review identified the existing implementation consequence that must be explicit. | None. |
@@ -332,6 +363,10 @@ this contract.
 | AM1-2 | Accepted and resolved by this revision | Implementation Variants | Removed the float-expression exemption, corrected `dx`, defined reflection boundaries, and expanded the branch-control-flow requirement. | Latest review found the prior AM1-2 only partially resolved. | None. |
 | AM1-3 | Accepted and resolved by this revision | Runtime Validation and Aligned Table Preconditions | Added explicit supersession of the final contract division-form bullets. | Latest review found the prior AM1-3 internally inconsistent with retained final-contract text. | None. |
 | AM1-4 | Accepted and resolved by this revision | Verification | Removed the waiver for float-expression implementations and required observed-oracle plus independent-reference boundary testing. | Latest review found the prior AM1-4 test was waived for the loophole path and not independently pinned. | None. |
+| Preservation-check F001 | Accepted and resolved | Verification | Changed the boundary-exercising requirement so a non-empty boundary set is required only when the compiled project environment produces one for the selected configuration; otherwise the test must pass by verifying the standard-tolerance path for all cells. | Review showed the fastmath flip is environment-dependent. If no boundary exists, the exception is unused and cannot be exercised. | Whether a particular environment produces boundary cells remains environment-dependent. |
+| Preservation-check F002 | Accepted and resolved | Implementation Variants; Verification; Unresolved Blockers | Added an unresolved portability risk for compiled-code mask and sign-flip inspection; stated per-regime loop bounds are immune to this codegen risk. | Review showed compiled-code branch evidence is pinned to the inspected numba/LLVM environment. | Future compiler changes may require reinspection. |
+| Preservation-check F003 | Accepted and resolved | Implementation Variants; Verification | Enumerated common prohibited floating-ratio rewrites and required source inspection to check representative forms. | Review showed exact-spelling prohibition made inspection easier to evade. | Source inspection still requires judgment for algebraically equivalent rewrites not listed. |
+| Preservation-check F004 | Accepted and resolved with human clarification | Implementation Variants; Verification | Required the `(j_ind + k) % 2` sign flip to be implemented without branching control flow and added compiled-code verification for parity-derived branches. | User clarification says the sign-flip branch issue must be implemented without branching control flow as well. | Compiled-code inspection depends on the project compiler environment. |
 
 ---
 
@@ -354,6 +389,10 @@ this contract.
 | AM1-R13: QA suppressions, skips, checker/config changes, warning filters, coverage exclusions, CI/pre-commit changes, broad public typing, and generated-code designations are not authorized by this amendment. | Standing repository and QA policy from prompt. | QA and Repository Policy | Diff review of source, tests, and configuration files. | Future approval must be explicit. |
 | AM1-R14: Pairwise comparisons involving `wavemaket_stripe_dense_aligned` use the same aligned keep/drop boundary exception as oracle comparisons. | Latest-review F004; necessary consequence of mandatory integer-stride aligned behavior. | Pairwise Variant Comparison | Pairwise tests apply the boundary classifier only to aligned-vs-sparse/dense comparisons and retain full comparison elsewhere. | None. |
 | AM1-R15: A per-`k` float-expression aligned implementation is non-compliant even if it matched the older oracle tests. | Human decision 1; latest-review F005. | Implementation Variants | Source inspection rejects per-`k` `zmid = (wc.DF / wc.df_bw) * k` in `wavemaket_stripe_dense_aligned`. | None. |
+| AM1-R16: Boundary-exercising tests must not fail solely because the compiled environment produces no aligned keep/drop boundary cells. | Preservation-check F001. | Verification | Test reports zero boundary cells, applies no exception, and verifies standard `atol`/`rtol` for all cells. | Environment-dependent fastmath behavior. |
+| AM1-R17: Floating-ratio source inspection must cover representative rewrites, not only exact spelling. | Preservation-check F003; necessary consequence of mandatory integer-stride `zmid`. | Implementation Variants; Verification | Source inspection checks listed forms and equivalent floating-point functions of `k` and `wc.DF / wc.df_bw`. | Algebraically equivalent rewrites may require reviewer judgment. |
+| AM1-R18: The alternating sign flip must be implemented without branching control flow in the aligned per-`k` loop. | Human decision 5. | Implementation Variants; Verification | Source inspection plus compiled-code inspection rejects parity-derived conditional branches inside the aligned per-`k` loop. | Compiler inspection depends on project environment. |
+| AM1-R19: Compiled-code evidence for branchless masks and sign flips is environment-pinned. | Preservation-check F002. | Unresolved Blockers; Verification | Record inspected compiler environment for such evidence; reinspection is required after compiler changes. | Future numba/LLVM behavior may change. |
 
 ---
 
@@ -362,8 +401,16 @@ this contract.
 - Inherited unresolved items from the final contract remain unchanged, including
   CI execution policy, objective performance thresholds, exact non-float64
   numerical tolerances, and cross-machine benchmark reproducibility policy.
+- Compiled-code evidence that multiplicative masks or parity-based sign flips are
+  not lowered to conditional branches is valid only for the inspected project
+  compiler environment. A future numba/LLVM/codegen change may require
+  reinspection. Per-regime loop bounds that exclude dropped cells before the
+  aligned per-`k` loop are not subject to this particular codegen portability
+  risk.
 - No unresolved blocker remains for the latest PR #41 findings F001 through F007
-  after applying the four human decisions listed in this addendum.
+  after applying the applicable human decisions listed in this addendum.
+- No unresolved blocker remains for preservation-check findings F001 through F004
+  after applying the sign-flip clarification listed in this addendum.
 
 ---
 
@@ -384,12 +431,17 @@ this contract.
   requirement.
 - Stated the implementation consequence that per-`k` float-expression aligned
   code is non-compliant.
+- Clarified that a zero-boundary compiled environment exercises no exception and
+  must verify the standard-tolerance path rather than fail or skip.
+- Enumerated representative prohibited floating-ratio rewrites.
+- Required the alternating sign flip to be branchless in control-flow terms.
 
 ### Newly Authorized Requirements
 
 - Integer-stride `zmid` is mandatory for `wavemaket_stripe_dense_aligned`.
 - Multiplicative numeric masks are allowed when source and compiler evidence show
   they do not become keep/drop control-flow branches.
+- Sign-flip handling must be branchless in aligned-loop control flow.
 
 ### Removed or Narrowed Requirements
 
@@ -406,7 +458,9 @@ this contract.
 - Added explicit disclosure and separate-approval requirements for suppressions,
   skips, checker/config changes, warning filters, coverage exclusions,
   CI/pre-commit changes, broad typing/dynamic access, and generated-code labels.
-- Added compiled-code verification when branchless masking is used.
+- Added compiled-code verification when branchless masking or branchless sign-flip
+  arithmetic is used.
+- Added an explicit compiler-portability risk for compiled-code branch evidence.
 
 ### Out-of-Scope Recommendations
 
