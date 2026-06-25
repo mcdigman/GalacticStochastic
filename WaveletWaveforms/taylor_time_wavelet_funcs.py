@@ -390,10 +390,10 @@ def wavemaket_direct(
 
             knearest = int(np.round(fa / wc.DF))
             # kbelow = int(np.floor(fa / wc.DF))
-            kmin = knearest
+            #kmin = knearest
             # kmax = knearest
             # lowest frequency layer
-            kmin: int = int(np.ceil((fa - half_bandwidth) / wc.DF))
+            kmin = int(np.ceil((fa - half_bandwidth) / wc.DF))
             kmin = max(nf_min, kmin)
             kmin = min(nf_max, kmin)
 
