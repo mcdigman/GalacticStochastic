@@ -1,15 +1,16 @@
-# Implementation Contract v3: Dense-Stripe Taylor-Time Wavelet Coaddition
+# Implementation Contract v4: Dense-Stripe Taylor-Time Wavelet Coaddition
 
 ## Status And Scope
 
 This is a revised implementation contract for adding numba-compiled dense-stripe alternatives to `wavemaket`.
 
-This contract is not an implementation approval. It resolves the review findings in `adversarial_review_taylor_time_wavelet_optimized.md` and `adversarial_review_taylor_time_wavelet_optimized_v2.md` using:
+This contract is not an implementation approval. It resolves the review findings in `adversarial_review_taylor_time_wavelet_optimized.md`, `adversarial_review_taylor_time_wavelet_optimized_v2.md`, and `adversarial_review_taylor_time_wavelet_optimized_v3.md` using:
 
 - The original contract in `implementation_contract_taylor_time_wavelet_optimized.md`.
 - Existing repository behavior of `wavemaket`, `wavelet_sparse_to_dense`, `SparseWaveletWaveform`, `PixelGenericRange`, `StationaryWaveformTime`, `WaveletTaylorTimeCoeffs`, and `WDMWaveletConstants`.
 - The adversarial re-review in `adversarial_review_taylor_time_wavelet_optimized_v2.md`.
-- The human decisions supplied for v2 and v3.
+- The adversarial re-review in `adversarial_review_taylor_time_wavelet_optimized_v3.md`.
+- The human decisions supplied for v2, v3, and v4.
 
 The implementation must add direct dense-stripe coaddition for one waveform over a narrow frequency stripe. It only needs to support:
 
@@ -84,7 +85,7 @@ wavemaket_stripe_dense_aligned(
 
 All three functions are supported APIs, not throwaway benchmark-only variants. The name `nf_start` replaces the original contract's `nf_min` parameter to avoid collision with `wavemaket`'s local full-band lower-edge variable.
 
-The implementation must define `WaveletTaylorTimeCoeffsAligned` as a numba-compatible table type. It may be a NamedTuple, dataclass-like numba-compatible object, or other numba-compatible representation, but it must implement the zero-padded and resampled representation defined in "Aligned Table Requirements." The implementation may add a helper to construct this table from `WaveletTaylorTimeCoeffs`; if the helper is public, it must have narrow annotations and a NumPy-style docstring.
+The implementation must define `WaveletTaylorTimeCoeffsAligned` as a numba-compatible table type. It may be a NamedTuple, dataclass-like numba-compatible object, or other numba-compatible representation, but it must implement the zero-padded, integer-aligned representation defined in "Aligned Table Requirements." The implementation may add a helper to construct this table from `WaveletTaylorTimeCoeffs`; if the helper is public, it must have narrow annotations and a NumPy-style docstring.
 
 ## Dense Stripe Shape And Indexing
 
@@ -146,6 +147,12 @@ Each public function must assert at least:
 - `nt_lim_waveform.nx_min >= 0`.
 - `nt_lim_waveform.nx_max <= wc.Nt`.
 - `nt_lim_waveform.nx_min <= nt_lim_waveform.nx_max`.
+
+`wavemaket_stripe_dense_aligned` must additionally assert:
+
+- `2 * wc.Nsf % 3 == 0`.
+- With `R = 2 * wc.Nsf // 3`, `abs((wc.DF / wc.df_bw) - R) <= 1e-12 * max(1.0, abs(R))`.
+- The aligned table's stored `R`, valid-region metadata, row count, and channel-independent coefficient-array dimensions are consistent with `wc`, `taylor_table_aligned`, and the supported stripe-height domain.
 
 Assertions may include messages, but message wording is not part of the contract.
 
@@ -248,8 +255,9 @@ This function must:
 This function must:
 
 - Use a fixed-`k` inner loop over the stripe window.
-- Use the zero-padded, resampled aligned table representation defined in this contract.
-- Add zero for `k` values that would fail any oracle drop guard. For the interpolation-table range guard, the aligned implementation must obtain zero from padded table entries rather than from a hot-loop branch that restricts reads to the original valid coefficient range.
+- Use the zero-padded, integer-aligned table representation defined in this contract.
+- Assert the integer-alignment input preconditions before using the aligned-table path.
+- Add zero for `k` values that would fail any oracle drop guard. Bandwidth and table-overflow drops must be reproduced exactly by per-time-pixel loop bounds, per-regime loop bounds, a branchless `0.0`/`1.0` validity factor derived from the oracle guards, or an observably equivalent mechanism.
 - Prioritize minimizing conditional branches in the hot loop without changing observable behavior.
 - Accumulate into `wavelet_stripe` in place.
 - Match the oracle stripe slice within the faithful float64 numerical tolerance.
@@ -258,39 +266,50 @@ This third function is required by human decision. It is not an experimental low
 
 ## Aligned Table Requirements
 
-The aligned table representation used by `wavemaket_stripe_dense_aligned` must differ structurally from `WaveletTaylorTimeCoeffs`. An identity wrapper around `WaveletTaylorTimeCoeffs` is noncompliant.
+The aligned-table path is supported only when the original input configuration is already integer-aligned. It must use the original coefficient grid and must not numerically alter the original `WaveletTaylorTimeCoeffs` coefficient values.
 
-The aligned representation has two required purposes:
+The required input precondition is:
 
-- Zero padding: readable table rows must include zero padding on both sides of the coefficient range that is valid for that row, so fixed-index reads that correspond to the original table-overflow region return `0.0` without a hot-loop branch that first checks whether `jj1` or `jj2` is inside the original valid interval.
-- Re-alignment by resampling: the aligned coefficient grid must use `df_bw_prime = wc.DF / R`, where `R = int(round(2 * wc.Nsf / 3))`, so that `wc.DF / df_bw_prime == R` is an integer and the per-`k` offset `za - (wc.DF / df_bw_prime) * k` does not have a different fractional part for every integer `k`.
+```text
+2 * wc.Nsf % 3 == 0
+R = 2 * wc.Nsf // 3
+abs((wc.DF / wc.df_bw) - R) <= 1e-12 * max(1.0, abs(R))
+```
 
-The aligned table may store metadata needed to map from the fixed-`k` loop to padded table indices, including row starts, valid-region starts, valid-region stops, padding widths, `R`, and `df_bw_prime`.
+When this precondition holds, the original `df_bw` grid is already aligned with full-band frequency-layer spacing. The useful aligned-path property is not a new coefficient grid; it is that the fixed-`k` loop can use integer stride `R` and compute the interpolation floor and `dx` values at a per-time-pixel or per-regime boundary instead of recomputing those quantities independently for every `k`.
 
-The aligned table must:
+The aligned table representation used by `wavemaket_stripe_dense_aligned` must differ structurally from a plain identity wrapper around `WaveletTaylorTimeCoeffs`. The structural difference is layout and metadata, not coefficient values.
 
-- Contain finite floating coefficient arrays for cosine and sine components.
-- Preserve `Nfd`, `Nfd_negative`, and the frequency-derivative grid used by the original table.
-- Use zero-valued padding on both sides of every readable row for entries corresponding to out-of-valid-range reads.
+The aligned representation must:
+
+- Reuse coefficient values from the original `WaveletTaylorTimeCoeffs` on the original `wc.df_bw` grid.
+- Preserve `Nfd`, `Nfd_negative`, `Nfsam`, `wc.df_bw`, `wc.DF`, `wc.Nf`, `wc.Nt`, `wc.dfd`, and the original frequency-derivative grid.
+- Store `R` or equivalent metadata proving the integer stride used by the aligned path.
+- Provide readable coefficient rows with zero padding on both sides of each row's original valid coefficient range.
+- Store explicit valid-region metadata or an equivalent observable convention that distinguishes original valid coefficients from left and right padding.
 - Make the padded readable row width large enough that all table indices generated by `wavemaket_stripe_dense_aligned` for the supported stripe heights and supported waveform domain are in bounds.
-- Keep padding semantically distinct from valid coefficient data, through explicit valid-region metadata or an equivalent observable convention.
+- Support constant-stride reads by `R` in the aligned fixed-`k` loop.
 - Match the oracle stripe slice within the faithful float64 tolerance.
 
-The aligned table must not:
+The aligned representation may reuse the original coefficient values exactly, including bitwise-equal values, after moving them into a different padded layout. It may also use copied arrays whose valid-region values are exactly equal to the originals. An identity wrapper that merely exposes the original table without the required input-alignment metadata, two-sided padding convention, valid-region metadata, and constant-stride layout support is noncompliant.
 
-- Change `wc.DF`, `wc.Nf`, `wc.Nt`, `wc.Nfd`, `wc.Nfd_negative`, `wc.dfd`, or the source waveform.
-- Treat padding as valid coefficient data where the oracle would have dropped the cell.
-- Use any relaxed float64 correctness tolerance.
-- Reuse the original `WaveletTaylorTimeCoeffs.evc` and `WaveletTaylorTimeCoeffs.evs` arrays unchanged as the aligned coefficient arrays.
+The aligned implementation must not use zero padding as the sole mechanism for reproducing bandwidth or table-overflow drops at valid-range edges. Edge coefficients can be non-negligible, and the oracle drops those cells exactly. Bandwidth and overflow drops must therefore come from one of:
 
-Because re-alignment is defined as resampling to `df_bw_prime`, aligned coefficient values are not required to be bitwise equal to the original `evc` and `evs` arrays. The correctness oracle remains the full-stripe `wavemaket(force_nulls=0, amplitude_order=0)` comparison, not equality to the original table entries.
+- Per-time-pixel loop bounds that admit only `k` values passing all oracle guards.
+- Per-regime loop bounds, for example below and above the reflection center `k_star = fa / wc.DF`, that admit only `k` values passing all oracle guards.
+- A branchless `0.0`/`1.0` validity factor derived from the same bandwidth and `jj1`/`jj2` conditions as `wavemaket`.
+- An observably equivalent mechanism that gives exactly zero contribution for cells the oracle drops.
+
+Zero padding may be relied on to keep aligned-table reads in bounds and to return `0.0` only for reads whose contribution has already been excluded by loop bounds or validity factors, or for cases where the dropped contribution is proven within `atol` of zero. It must not replace the oracle's table-overflow guard at the lower or upper valid-range edge.
 
 Required verification for the aligned table:
 
-- A structural test must verify `R == int(round(2 * wc.Nsf / 3))`, `df_bw_prime == wc.DF / R`, and `wc.DF / df_bw_prime` is integer-valued.
-- A structural test must verify that the aligned coefficient arrays are not the unchanged original `evc` and `evs` arrays and that an identity wrapper would fail the aligned-table tests.
-- A padding test must verify that representative reads immediately below and above each original valid row region return `0.0` from the aligned table.
-- A padding test must verify that padded entries cannot create nonzero contributions in cells where the original oracle table-overflow guard would drop the cell.
+- A structural test must verify the aligned-path precondition: `2 * wc.Nsf % 3 == 0`, `R == 2 * wc.Nsf // 3`, and `abs((wc.DF / wc.df_bw) - R) <= 1e-12 * max(1.0, abs(R))`.
+- A structural test must verify that aligned tests and benchmarks use a configuration satisfying the precondition; the repository `Nsf = 150` configuration qualifies with `R = 100`.
+- A structural test must verify that the aligned representation exposes two-sided padding and valid-region metadata or an equivalent observable convention.
+- A structural test must verify that an identity wrapper around `WaveletTaylorTimeCoeffs` without aligned metadata and two-sided padding fails the aligned-table structural tests.
+- A padding test must verify that representative reads in left and right padding return `0.0`.
+- A drop-behavior test must verify that table-overflow edge cells dropped by the oracle remain zero in `wavemaket_stripe_dense_aligned`; the test must not pass merely because padded reads blend nonzero edge coefficients with zero padding.
 - A differential correctness test must compare `wavemaket_stripe_dense_aligned` against the oracle over the full stripe slice for the same float64 cases required of the other two functions.
 
 ## Forbidden Shortcuts And Memory Constraints
@@ -337,6 +356,7 @@ Tests must:
 - Verify additive coaddition by pre-filling `wavelet_stripe` with known nonzero values `B`, calling each function, and asserting the result equals `B + oracle_slice`, not merely `oracle_slice`.
 - Verify that cells dropped by the oracle remain unchanged except for the pre-existing `B` value in additive tests.
 - Verify required assertions for invalid shape, invalid `stripe_height`, invalid `nf_start`, mismatched `Nc`, and invalid time range.
+- Verify the additional aligned-path assertions for a configuration that does not satisfy `2 * wc.Nsf % 3 == 0` or the `wc.DF / wc.df_bw` ratio requirement.
 - Avoid shape-only, nonzero-only, smoke-only, or placeholder-friendly assertions.
 - Use an independent oracle construction based on existing `wavemaket` plus `wavelet_sparse_to_dense`, not on the new implementation's helper logic.
 - Keep all new tests active. No `@pytest.mark.skip` or `xfail` may be added to the new test file unless specifically authorized outside this contract.
@@ -432,7 +452,7 @@ Running the full repository test suite is explicitly outside the required accept
 | QA risk 4 | Accepted and resolved | QA And Repository Policy | Prohibited suppressions unless separately approved. | Review A8, strengthened per user decision A7 no inline comments for those additions because they may not be added at all. | None. |
 | QA risk 5 | Accepted and resolved | Required Files; QA And Repository Policy | Prohibited QA config edits, exclusions, warning filters, and `conftest.py`-style collection changes. | Original allowed-diff policy and review A8. | None. |
 | QA risk 6 | Deferred as explicitly out of scope | QA And Repository Policy | Did not require a `fastmath` setting; correctness tolerance is observable requirement. | Review marked as minor and not correctness risk. | Reproducibility across numba versions remains residual. |
-| QA risk 7 | Accepted and resolved, revised in v3 | Numerical Tolerances; Aligned Table Requirements | Removed looser distorted-table tolerance and banned relaxed float64 tolerance. v3 authorizes resampling for the aligned table but keeps float64 oracle tolerance. | Human v2 decision removed loose tolerance; human v3 decision defines realignment as resampling. | Non-float64 tolerance unresolved. |
+| QA risk 7 | Accepted and resolved, revised again in v4 | Numerical Tolerances; Aligned Table Requirements | Removed looser distorted-table tolerance and banned relaxed float64 tolerance. v4 removes the v3 alternate-grid requirement and instead requires integer-aligned input assertions plus oracle-matching layout changes. | Human v2 decision removed loose tolerance; v3 review showed the alternate-grid approach was not scientifically supportable. | Non-float64 tolerance unresolved. |
 | MC1 | Accepted and resolved | Forbidden Shortcuts And Memory Constraints | Explicitly forbids wrapper over `wavemaket` and full-band materialization. | Original memory motivation; B4. | Source inspection required. |
 | MC2 | Accepted and resolved | Dense Stripe Shape And Indexing; Required Coverage Cases | Requires realistic full-band `wc.Nf` distinct from stripe height and odd/even stripe heights as window widths. | B1 and human decision 2. | Exact fixture values left to implementation. |
 | MC4 | Accepted and resolved | Scientific And Mathematical Basis; Test Requirements | Banned nonzero-mask oracle comparisons. | B3 and A6. | None. |
@@ -446,20 +466,29 @@ Running the full repository test suite is explicitly outside the required accept
 | A8 | Accepted and partially resolved | QA And Repository Policy; Test Requirements | Incorporated no skips, no suppressions, no config drift. Did not require captured pytest output or CI run. | Human decision says CI test running will be added later and existing tests fail/are slow. | CI execution remains unresolved. |
 | A9 | Accepted and resolved | Required Coverage Cases | Incorporated offsets and slopes, adding `+/-1e-10`. | Human decision. | None. |
 | V2-1 | Accepted and resolved by human decision | Public API; Dense Stripe Shape And Indexing; Runtime Validation; Test Requirements | Removed required float64 dtype assertion from the numba body, changed `wavelet_stripe` annotation to `NDArray[np.floating]`, removed invalid non-float64 dtype test requirement, and limited faithful numerical acceptance tests to float64. | Human v3 decision: no dtype assertion is required, dtype need not be float64, and `np.floating` is the intended type. | Exact numerical acceptance tolerance for float32 or other floating dtypes is unresolved. |
-| V2-2 | Accepted and resolved with revised authority | Aligned Table Requirements; Implementation Variants; Test Requirements | Replaced the v2 lossless-alteration requirement with required zero padding on both sides of readable rows and required resampling to `df_bw_prime = wc.DF / R`, `R = int(round(2 * wc.Nsf / 3))`; identity wrappers are explicitly noncompliant. | Human v3 decision clarifying zero padding and realignment semantics. | Exact resampling algorithm remains implementation freedom subject to oracle tolerance. |
+| V2-2 | Accepted and resolved with revised authority, superseded in v4 | Aligned Table Requirements; Implementation Variants; Test Requirements | Replaced the v2 hollow aligned-table requirement with required two-sided padding, valid-region metadata, constant-stride support, and integer-alignment input assertions. Removed the v3 alternate-grid requirement. | Human v4 instruction that the alternate-grid wording is dropped and replaced with assertions about inputs; v3 review V3-1. | Exact aligned layout remains implementation freedom subject to oracle tolerance. |
 | V2-3 | Accepted and partially resolved | Required Coverage Cases; Finding Disposition Ledger | Derivative-index drop coverage may use an out-of-supported-domain targeted test with zero-contribution expectation, or source inspection confirming the guard exists in all three functions. | Review showed the guard may be unreachable in the supported linear drift domain; oracle behavior remains authority. | If source inspection is used, behavioral exercise of that guard remains absent. |
 | V2-4 | Accepted and resolved | Runtime Validation | Added that validation assertions occur before the per-pixel hot loop and tolerance/closeness assertions must not appear inside required numba functions. | Review confirmation and existing `wavemaket` behavior. | None. |
 | V2-5 | Accepted and resolved | Numerical Tolerances | Required numerical-correctness cases to use non-empty ranges and `amplitude_source > 0`. | Review showed all-zero amplitudes make the test trivial. | None. |
 | V2-6 | Accepted and resolved | Test Requirements | Replaced counterfactual overwrite-test wording with observable requirement: prefill with nonzero `B` and assert `result == B + oracle_slice`, not merely `oracle_slice`. | Review V2-A5. | None. |
 | V2-7 | Deferred as informational | Benchmark/Demo Requirements; Test Requirements | No additional contract language added for layout opt-out or pairwise-comparison tautology beyond existing oracle requirements. | Review marked these as minor/carried-over and acceptable. | Pairwise comparison remains secondary to oracle. |
-| MC-v2-A | Accepted and resolved | Aligned Table Requirements | Explicitly forbids identity wrapper and requires structural tests for resampled grid and unchanged-array rejection. | Human v3 realignment decision. | None. |
+| MC-v2-A | Accepted and resolved | Aligned Table Requirements | Explicitly forbids identity wrapper that lacks aligned metadata, two-sided padding, valid-region metadata, and constant-stride layout support. | Human v4 instruction and v3 review V3-A1. | None. |
 | MC-v2-B | Accepted and partially resolved | Required Coverage Cases | Derivative-index guard must be present by source inspection or exercised with a targeted out-of-domain zero-contribution test. | Review V2-3. | Behavioral in-domain tests may not exercise the guard. |
 | MC-v2-C | Accepted and resolved by human decision | Runtime Validation; Test Requirements | Removed dtype assertion and invalid dtype failure test requirement rather than prescribing a fragile numba dtype-check spelling. | Human v3 dtype decision. | Non-floating dtype behavior is not required beyond type annotations. |
 | V2-A1 | Rejected with evidence from human decision | Runtime Validation | Did not require the suggested `isinstance(wavelet_stripe[0,0,0], np.float64)` assertion or Python validation wrapper. | Human v3 decision says to drop the dtype assertion requirement and non-float64 failure test. | None. |
-| V2-A2 | Accepted with revised wording | Aligned Table Requirements | Required structural distinction by zero padding and resampling rather than only an integer-slide lossless wrapper. | Human v3 decision defines realignment as resampling to `df_bw_prime`. | Exact resampling construction remains implementation freedom. |
+| V2-A2 | Accepted with revised wording, superseded in v4 | Aligned Table Requirements | Required structural distinction by two-sided padding, valid-region metadata, constant-stride support, and input assertions rather than a changed coefficient grid. | Human v4 instruction; v3 review rejected the changed-grid approach. | Exact aligned layout remains implementation freedom. |
 | V2-A3 | Accepted and resolved | Required Coverage Cases | Added out-of-domain guard test option or source-inspection option for derivative-index drop. | Review V2-3. | See V2-3. |
 | V2-A4 | Accepted and resolved | Runtime Validation | Added no tolerance/closeness assertions inside required numba functions. | Review V2-4. | None. |
 | V2-A5 | Accepted and resolved | Numerical Tolerances; Test Requirements | Added `amplitude_source > 0` and reworded pre-filled test around observable `B + oracle_slice`. | Review V2-5 and V2-6. | None. |
+| V3-1 | Accepted and resolved | Runtime Validation; Aligned Table Requirements; Requirement Traceability Table | Removed the v3 alternate-grid requirement; required aligned input assertions `2 * wc.Nsf % 3 == 0` and `abs((wc.DF / wc.df_bw) - R) <= 1e-12 * max(1.0, abs(R))`; aligned table reuses original `wc.df_bw` grid coefficient values. | Adversarial review v3 showed the alternate-grid approach is unnecessary when alignment holds and oracle-breaking when it does not; user instructed that it be replaced with assertions about inputs. | Aligned path is unsupported for non-integer-aligned configurations until a future authority defines behavior. |
+| V3-2 | Accepted and resolved | Implementation Variants; Aligned Table Requirements; Test Requirements | Removed requirement that padding alone reproduce table-overflow drops. Required exact drop reproduction through loop bounds, per-regime bounds, branchless validity factor, or equivalent mechanism; padding is only for bounded reads or already-excluded/proven-negligible contributions. | Adversarial review v3 showed edge coefficients are non-negligible and padding-only drops cannot meet tolerance. | Exact mechanism remains implementation freedom subject to full-stripe oracle tests. |
+| V3-A1 | Accepted and resolved with user modification | Runtime Validation; Aligned Table Requirements | Adopted integer-alignment assertions and original-grid coefficient reuse; removed all alternate-grid requirements. | User instruction and review amendment V3-A1. | None for supported aligned inputs. |
+| V3-A2 | Accepted and resolved | Implementation Variants; Aligned Table Requirements | Required bandwidth and table-overflow drops to come from loop bounds, branchless validity factors, or equivalent exact mechanisms rather than padding-only reads. | Review amendment V3-A2. | None. |
+| V3-A3 | Accepted and partially resolved | Aligned Table Requirements; Benchmark/Demo Requirements; Unresolved Blockers | Stated the observable distinction of the aligned API as two-sided padded layout, valid-region metadata, and constant-stride support; retained no performance threshold. | Review amendment V3-A3 and standing human decision rejecting performance thresholds. | Whether aligned layout is measurably faster remains a human review decision after benchmark data. |
+| V3 minor/carried-over | Deferred as informational | Test Requirements; Benchmark/Demo Requirements | No further changes for pairwise-comparison tautology or measured layout opt-out. | Review marked these as informational/acceptable. | Pairwise comparison remains secondary to oracle. |
+| V3 residual risk 1 | Requires human or repository-owner resolution | Unresolved Blockers | Listed aligned performance benefit as unresolved because no speed threshold or branch metric is authorized. | Review v3 residual risk and prior human decision. | Needs future human judgment after benchmark data. |
+| V3 residual risk 2 | Requires human or repository-owner resolution | Unresolved Blockers | CI execution remains unresolved. | Review v3 residual risk and prior human decision. | Needs future CI policy. |
+| V3 residual risk 3 | Deferred as explicitly out of scope | Numerical Tolerances; Unresolved Blockers | Retained float64 oracle tolerance and did not specify numba/LLVM fastmath reproducibility policy. | No authority supplied for environment-pinned tolerance policy. | Empirical adequacy remains implementation-dependent. |
 | Residual risk 1 | Requires human or repository-owner resolution | Unresolved Blockers | Listed as unresolved CI decision. | Human decision defers CI. | Needs future CI policy. |
 | Residual risk 2 | Accepted and partially resolved | Required Coverage Cases; Unresolved Blockers | Required bandwidth and table-overflow guard tests; derivative-index guard may be tested out of domain or confirmed by source inspection. | Review V2-3 and oracle authority. | Behavioral in-domain exercise of derivative-index drop remains unresolved. |
 | Residual risk 3 | Deferred as explicitly out of scope | Runtime Validation; Unresolved Blockers | Stated stripped-assert invalid behavior is undefined; did not require bounds-checked numba run. | Original validation policy uses assertions only. | Debug bounds-check policy unresolved. |
@@ -483,7 +512,7 @@ Running the full repository test suite is explicitly outside the required accept
 | TR11: Define `amplitude_source` as max abs amplitude over selected channels/time and require it to be positive in numerical tests. | A6 accepted; V2-5 accepted. | Numerical Tolerances | Test helper/source inspection. | None. |
 | TR12: Accumulate with `+=`, not overwrite. | Original "coadd" intent; A5 accepted. | Scientific And Mathematical Basis; Test Requirements | Pre-filled-stripe test. | None. |
 | TR13: Forbid `wavemaket` wrapper and full-band intermediates in required functions. | Original memory motivation; B4 accepted. | Forbidden Shortcuts And Memory Constraints | Source inspection and possible monkeypatch/adversarial tests. | Source inspection required for helper indirection. |
-| TR14: Require aligned table with two-sided zero padding and resampling to `df_bw_prime = wc.DF / int(round(2 * wc.Nsf / 3))`. | Human v3 decision. | Aligned Table Requirements | Structural grid tests, padding tests, identity-wrapper rejection, and oracle differential tests. | Exact resampling algorithm remains implementation freedom subject to float64 oracle tolerance. |
+| TR14: Require aligned table with integer-alignment input assertions, two-sided zero padding, valid-region metadata, and constant-stride layout support. | Human v4 instruction; adversarial review v3 V3-1/V3-2. | Runtime Validation; Aligned Table Requirements | Input-assertion tests, structural layout tests, padding tests, identity-wrapper rejection, drop-behavior tests, and oracle differential tests. | Exact aligned storage layout remains implementation freedom; non-integer-aligned inputs are unsupported for the aligned path. |
 | TR15: Require concrete slope and frequency-offset coverage including `+/-1e-10`. | Original boundary coverage; human decision A9. | Required Coverage Cases | Parametrized tests. | Reduced matrix allowed if each requirement covered. |
 | TR16: Require `stripe_height` 2 through 5, odd/even `nf_start`, `Nc == 3`, representative `wc.Nt == 2048`. | Original boundary cases; B1 fix. | Required Coverage Cases; Benchmark/Demo Requirements | Tests or benchmark/demo setup. | None. |
 | TR17: Runtime validation by required assertions only, excluding dtype assertion. | Original validation policy; human v3 dtype decision. | Runtime Validation | Invalid-input assertion tests for shape/range/channel/time constraints. | Invalid behavior under stripped assertions undefined; non-floating runtime behavior not specified. |
@@ -494,15 +523,19 @@ Running the full repository test suite is explicitly outside the required accept
 | TR22: Full repository test suite and CI changes are not required by this contract. | Human decision. | Test Requirements; Verification Methods | Confirm no CI/config diffs required. | Future CI policy unresolved. |
 | TR23: Public stripe dtype is `NDArray[np.floating]`; implementation must not reject floating dtypes solely because they are not float64. | Human v3 decision. | Public API; Dense Stripe Shape And Indexing; Runtime Validation | Signature inspection and absence of non-float64 failure tests. | Exact non-float64 numerical tolerance unresolved. |
 | TR24: Tolerance/closeness checks must stay out of required numba functions. | V2-4 accepted; existing `wavemaket` behavior. | Runtime Validation; QA And Repository Policy | Source inspection. | None. |
+| TR25: Aligned path must use the original coefficient grid and values. | Human v4 instruction; adversarial review v3 V3-1. | Aligned Table Requirements | Source and structural test inspection confirming original `wc.df_bw` grid use and exact original coefficient-value reuse in valid regions. | None for supported aligned inputs. |
+| TR26: Aligned path must not use zero padding as the sole mechanism for table-overflow or bandwidth drops at valid-range edges. | Adversarial review v3 V3-2. | Implementation Variants; Aligned Table Requirements; Test Requirements | Drop-behavior test for overflow edge cells plus source inspection for loop bounds, branchless validity factor, or equivalent exact mechanism. | Exact mechanism is implementation freedom. |
 
 ## Unresolved Blockers
 
-- CI execution for the new tests is unresolved. Human decision says CI test running will be added later, so this v3 does not require CI or full-suite execution.
+- CI execution for the new tests is unresolved. Human decision says CI test running will be added later, so this v4 does not require CI or full-suite execution.
 - No objective performance threshold is authorized. The benchmark/demo must provide evidence, but acceptance of speed results requires future human review.
-- Exact aligned table storage type, constructor name, and resampling algorithm are not fixed. The contract defines observable zero-padding, resampled-grid, identity-wrapper rejection, and oracle-matching behavior, leaving storage layout and construction algorithm to implementation.
+- Exact aligned table storage type, constructor name, and layout algorithm are not fixed. The contract defines observable input assertions, two-sided zero padding, valid-region metadata, constant-stride support, identity-wrapper rejection, and oracle-matching behavior, leaving storage layout and construction algorithm to implementation.
+- Non-integer-aligned configurations for `wavemaket_stripe_dense_aligned` are unsupported until a future authority defines behavior; the function must assert and reject them.
 - Exact numerical tolerances for non-float64 floating outputs are unresolved. Float64 remains the required dtype for faithful numerical acceptance tests.
 - Exact waveform fixture parameters that hit bandwidth and table-overflow drop guards are not specified. The implementation must provide tests demonstrating those guards are exercised.
 - Behavioral in-domain exercise of the derivative-index drop is unresolved; this contract allows either an out-of-supported-domain guard test or source inspection.
+- Whether the aligned layout is measurably faster than `wavemaket_stripe_dense` is unresolved because no performance threshold or branch metric is authorized.
 - Numba bounds-check or debug-build policy for catching out-of-bounds writes is unresolved and outside this contract.
 - Cross-machine benchmark reproducibility policy is unresolved.
 
@@ -523,13 +556,14 @@ Running the full repository test suite is explicitly outside the required accept
 - Required concrete coverage for frequency offsets, slopes, stripe heights, parity, and edge windows.
 - Clarified that derivative-index drop coverage may be out-of-domain or source-inspected.
 - Clarified that tolerance comparisons belong in tests and benchmark/demo checks, not inside required numba functions.
+- Clarified that the aligned path is supported only for integer-aligned input configurations satisfying `2 * wc.Nsf % 3 == 0` and `wc.DF / wc.df_bw == 2 * wc.Nsf // 3` within the stated tolerance.
+- Clarified that zero padding is not a substitute for exact oracle bandwidth or table-overflow drops at valid-range edges.
 
 ### Newly Authorized Requirements
 
 - Added `wavemaket_stripe_dense_aligned` as a third supported function version.
 - Required an aligned table representation with two-sided zero padding for readable row regions.
-- Required re-alignment by resampling to `df_bw_prime = wc.DF / R`, with `R = int(round(2 * wc.Nsf / 3))`.
-- Required aligned-table structural tests, padding tests, and identity-wrapper rejection.
+- Required aligned-path input assertions, constant-stride metadata/support, structural tests, padding tests, drop-behavior tests, and identity-wrapper rejection.
 - Required the benchmark/demo to include the aligned-table function and to verify correctness before timing.
 
 ### Removed Or Narrowed Requirements
@@ -538,7 +572,9 @@ Running the full repository test suite is explicitly outside the required accept
 - Removed any benchmark-only distorted-table acceptance path.
 - Removed the v2 requirement that `wavelet_stripe` be float64 or that the numba function body assert float64 dtype.
 - Removed the v2 requirement that tests verify failure for non-float64 dtype.
-- Removed the v2 requirement that aligned-table coefficient values be lossless or bitwise equal to original table entries; v3 authorizes resampling while retaining float64 oracle tolerance.
+- Removed the v2 requirement that aligned-table coefficient values be lossless or bitwise equal to original table entries, then removed v3's alternate-grid authorization in v4; v4 requires original-grid coefficient reuse for supported aligned inputs.
+- Removed the v3 alternate-grid requirement; v4 reuses the original coefficient grid and asserts the aligned-input precondition instead.
+- Removed the v3 requirement that table-overflow drops be obtained from padding alone.
 - Did not add A7's proposed performance threshold or experimental labeling requirement because the supplied human decision rejected those additions.
 - Did not require full repository test-suite execution or CI changes.
 
