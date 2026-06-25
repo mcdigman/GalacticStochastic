@@ -1,173 +1,359 @@
-# Contract Amendment 1: Aligned-Path R-Stride Arithmetic and Structural Requirements
+# Contract Amendment 1: Aligned-Path Integer-Stride Arithmetic and Structural Requirements
 
 ## Status and Scope
 
-This document amends
-`implementation_contract_taylor_time_wavelet_optimized_final.md` (the final
-approved contract) with respect to two interrelated issues discovered during
-review of PR #40:
+This document amends `implementation_contract_taylor_time_wavelet_optimized_final.md`
+for `wavemaket_stripe_dense_aligned` only. It is an addendum: do not edit the
+final contract file to apply this amendment. All requirements in the final
+contract remain authoritative except where this addendum explicitly supersedes a
+specific aligned-path requirement.
 
-1. The numerical-tolerance section did not carve out cells where wavemaket's
-   fastmath arithmetic and integer-stride arithmetic produce different drop
-   decisions. This silently forced any compliant implementation to mirror the
-   exact fastmath expression in the loop body, making it impossible to lift
-   computations out of the loop while still passing tests.
-2. The implementation-variants requirement for `wavemaket_stripe_dense_aligned`
-   used vague "prioritize minimizing conditional branches" language that could be
-   satisfied by keeping all original branches while adding a single dense outer
-   loop, defeating the design intent.
+This amendment is not final approval for implementation.
 
-This amendment does not change any other section of the final contract. All
-finding-disposition and traceability entries from the final contract remain
-authoritative except where explicitly superseded below.
+Authoritative decisions supplied for this revision:
+
+1. Integer-stride `zmid` is required behavior for `wavemaket_stripe_dense_aligned`.
+2. The numerical exception applies only to keep/drop decisions.
+3. A multiplicative numerical mask is allowed only when implemented so that the
+   project compiler is not expected to lower it to a control-flow branch.
+4. Only this addendum may be edited; the existing final contract must remain
+   unchanged.
+
+This amendment addresses these issues discovered during review of PR #41:
+
+- The prior addendum still allowed a float-expression path that could preserve
+  per-`k` recomputation.
+- The prior ULP-boundary exception applied to too many floor-index disagreements.
+- Boundary detection was not pinned to observed oracle keep/drop behavior.
+- `dx` was incorrectly described as advancing by `R`.
+- The reflection split had an equality-boundary ambiguity.
+- The cross-multiplied precondition did not clearly supersede retained
+  division-form bullets in the final contract.
+- The inner-loop branch prohibition targeted one syntax shape rather than the
+  underlying keep/drop control-flow requirement.
 
 ---
 
 ## Root-Cause Analysis
 
-`wavemaket` is compiled with `@njit(fastmath=True)`. Under fastmath, LLVM is
-permitted to reassociate floating-point operations. The inner-loop expression
-`(wc.DF / wc.df_bw) * k` is subject to such reassociation: for the repository's
-`Nsf = 150` configuration where `wc.DF / wc.df_bw == 100.0` exactly, the
-product `(wc.DF / wc.df_bw) * 254` can evaluate to `25399.999999999996` rather
-than `25400.0`. The integer-stride expression `R * k = 100 * 254 = 25400` gives
-a different floating-point value.
+`wavemaket` is compiled with `@njit(fastmath=True)`. Under fastmath, LLVM may
+reassociate floating-point operations. The inner-loop expression
+`(wc.DF / wc.df_bw) * k` can therefore produce a value that differs by roughly
+one ULP from the mathematically equivalent integer-stride value `R * k`, where
+`R = taylor_table_aligned.R`.
 
-At a table-overflow boundary, this 1-ULP difference shifts `kk =
-floor(za - zmid - 0.5)` by 1, flipping the keep-or-drop decision for a cell
-whose coefficient contribution is of order `amplitude_source` — far outside the
-`atol = 1e-10 * amplitude_source` tolerance. Because the final contract's
-tolerance section defines the oracle as wavemaket's fastmath output with no
-exception for such cells, any implementation that used integer-stride arithmetic
-`R * k` instead of the floating-point expression would fail the oracle
-comparison. The only way to pass the tests was to reproduce the fastmath
-expression-for-expression, which in turn prevented lifting `zmid`, `kk`, and
-`dx` out of the per-k loop body.
+At a table-overflow boundary, that ULP-level difference can shift an interpolation
+floor index by one and flip a keep/drop decision. The purpose of this amendment is
+to preserve the design intent that `wavemaket_stripe_dense_aligned` lifts
+`zmid`, interpolation floor, and interpolation-weight work out of the per-`k`
+loop while allowing the limited numerical difference that follows from mandatory
+integer-stride arithmetic.
 
-A secondary issue: computing `wc.DF / wc.df_bw` a second time within the same
-`@njit(fastmath=True)` function body (e.g. in a precondition assertion) creates
-a common-subexpression-elimination opportunity that can perturb the loop result.
-This forced the cross-multiplied assertion form already present in the
-implementation and codified below.
+The exception is not a general tolerance relaxation. It applies only when the
+compiled oracle path and the independent integer-stride aligned reference differ
+in a table-overflow keep/drop decision. It does not apply to interior cells where
+both paths keep the contribution.
 
 ---
 
 ## Amended Section: Numerical Tolerances
 
-The existing tolerance paragraph is retained unchanged. The following paragraph
-is added immediately after it.
+The final contract's existing float64 tolerance remains:
 
-> **Aligned-path ULP-boundary exception.** `wavemaket_stripe_dense_aligned` is
-> explicitly permitted to compute `zmid` using integer-stride arithmetic
-> `R * k` (or its incrementally advanced form `zmid_0 + R * (k - nf_start)`)
-> rather than the floating-point expression `(wc.DF / wc.df_bw) * k`.
+```text
+atol = 1e-10 * amplitude_source
+rtol = 1e-9
+```
+
+The following paragraph is added immediately after that tolerance definition and
+supersedes any contrary implication that `wavemaket_stripe_dense_aligned` must
+match `wavemaket` expression-for-expression at fastmath table-overflow
+boundaries.
+
+> **Aligned-path keep/drop boundary exception.**
+> `wavemaket_stripe_dense_aligned` must compute `zmid` with integer-stride
+> arithmetic using `R = taylor_table_aligned.R`. Acceptable forms include `R * k`
+> or an incrementally advanced value initialized at a per-time-pixel or per-regime
+> boundary. The aligned implementation must not recompute
+> `(wc.DF / wc.df_bw) * k` or an equivalent floating ratio product inside the
+> per-`k` loop.
 >
-> When integer-stride arithmetic is used, a cell `(j, k, c)` is a
-> **ULP-boundary cell** if
+> A cell `(j, k, c)` is an **aligned keep/drop boundary cell** only when all of
+> the following are true:
 >
-> ```text
-> int(floor(za - R * k - 0.5)) != int(floor(za - (wc.DF / wc.df_bw) * k - 0.5))
-> ```
+> - The compiled `wavemaket` oracle and an independent integer-stride aligned
+>   reference agree on the derivative-index guard, the bandwidth guard, and the
+>   stripe-window membership for `(j, k, c)`.
+> - The two paths differ in the table-overflow keep/drop decision for `(j, k, c)`.
+> - The table-overflow decision difference is caused solely by the floor-index
+>   change induced by using integer-stride `zmid` instead of the oracle's compiled
+>   fastmath `zmid` behavior.
 >
-> where `za = waveform.FT[itrc, j] / wc.df_bw` and `R =
-> taylor_table_aligned.R`. ULP-boundary cells are exempt from the `atol`/`rtol`
-> oracle comparison. For a ULP-boundary cell, the implementation may contribute
-> either `0.0` or the interpolated value based on the R-stride arithmetic;
-> tests must not fail solely because ULP-boundary cells differ from the wavemaket
-> output. For all non-ULP-boundary cells the standard
-> `atol = 1e-10 * amplitude_source, rtol = 1e-9` requirement applies in full.
+> For aligned keep/drop boundary cells only, the aligned implementation is exempt
+> from the standard `atol`/`rtol` comparison to the oracle. The aligned value must
+> equal either `0.0`, when the integer-stride aligned reference drops the cell, or
+> the independent integer-stride aligned reference contribution, when that
+> reference keeps the cell. Arbitrary values, padding-only artifacts, stale
+> prefill values, and values from unrelated cells are noncompliant.
 >
-> An implementation that instead uses `(wc.DF / wc.df_bw) * k` to reproduce
-> wavemaket's fastmath drop decisions at ULP boundaries is also permitted, but is
-> not required.
+> For every other cell, including cells where both the oracle and integer-stride
+> reference keep the contribution, the standard `atol`/`rtol` oracle comparison
+> applies in full.
+
+Boundary-cell classification must be based on observed compiled oracle keep/drop
+behavior plus an independent integer-stride aligned reference. A test or helper
+must not classify exempt cells solely by comparing two Python-side formulas such
+as `floor(za - R * k - 0.5)` and
+`floor(za - (wc.DF / wc.df_bw) * k - 0.5)`.
 
 ---
 
-## Amended Section: Implementation Variants — `wavemaket_stripe_dense_aligned`
+## Amended Section: Runtime Validation and Aligned Table Preconditions
 
-The existing bullet list for this function is replaced in its entirety by the
-following.
+The final contract's division-form aligned precondition bullets are superseded
+for `wavemaket_stripe_dense_aligned` and for aligned-table structural tests.
+
+The mathematical precondition is unchanged:
+
+```text
+2 * wc.Nsf % 3 == 0
+R = 2 * wc.Nsf // 3
+wc.DF / wc.df_bw ~= R
+```
+
+The required assertion and structural-test form is changed to the
+cross-multiplied expression:
+
+```text
+abs(wc.DF - R * wc.df_bw) <= 1e-15 * max(1.0, abs(R)) * wc.df_bw
+```
+
+The aligned implementation must not use this superseded division-form assertion
+inside the same `@njit(fastmath=True)` function body:
+
+```text
+abs((wc.DF / wc.df_bw) - R) <= 1e-15 * max(1.0, abs(R))
+```
+
+This supersession preserves the same intended ratio check while avoiding a second
+evaluation of `wc.DF / wc.df_bw` in the compiled aligned function body.
+
+---
+
+## Amended Section: Implementation Variants - `wavemaket_stripe_dense_aligned`
+
+The final contract's bullet list for `wavemaket_stripe_dense_aligned` is replaced
+in its entirety by the following.
 
 `wavemaket_stripe_dense_aligned` must:
 
 - Use a fixed-`k` inner loop over the stripe window.
-- Use the zero-padded, integer-aligned table representation defined in this
+- Use the zero-padded, integer-aligned table representation defined in the final
   contract.
-- Assert the integer-alignment input preconditions before using the aligned-table
-  path. The precondition assertion for the ratio `wc.DF / wc.df_bw ≈ R` **must**
-  use the cross-multiplied form
-  `abs(wc.DF - R * wc.df_bw) <= 1e-15 * max(1.0, abs(R)) * wc.df_bw` rather
-  than `abs(wc.DF / wc.df_bw - R) <= 1e-15 * max(1.0, abs(R))`. Under
-  `fastmath=True`, evaluating `wc.DF / wc.df_bw` a second time in the same
-  `njit` function body is subject to common-subexpression elimination that can
-  perturb the loop's `(DF/df_bw)*k` products; the cross-multiplied form avoids
-  this regardless of which `zmid` arithmetic is chosen.
-- Compute `zmid` at a per-time-pixel or per-regime boundary and advance it by
-  the integer stride `R` per frequency layer. The inner k-loop body must not
-  recompute `(wc.DF / wc.df_bw) * k` independently for each iteration.
-- Eliminate the per-k `if za < zmid:` reflection branch from the inner loop
-  body by splitting the stripe into at most two contiguous k-regimes: a
-  **low-k regime** where `zmid <= za` (no reflection required) and a **high-k
-  regime** where `zmid > za` (reflection active). The regime boundary
-  `k_star = ceil(za * wc.df_bw / wc.DF)`, or an equivalent expression using
-  integer stride `R`, separates the two ranges. Each regime is a contiguous
-  sub-range of `[nf_start, nf_start + stripe_height)`; the function may iterate
-  over each sub-range with a separate loop containing no reflection conditional.
-- Within each regime, compute `kk` and `dx` once at the regime entry point and
-  advance them by the constant stride `R` (or `-R`) per layer, rather than
-  recomputing `floor(za - zmid - 0.5)` for every `k`.
-- Implement bandwidth and table-overflow guards as per-regime loop bounds.
-  Specifically, clamp each regime's start and end to the intersection of the
-  regime's k-range with `[kmin, kmax]` (the per-pixel bandwidth window) and
-  with the range of `k` values for which `jj1` and `jj2` remain in bounds. The
-  inner loop body within each clamped regime must contain no
-  `if (kmin <= k <= kmax) and (0 <= jj1 ...) and (0 <= jj2 ...)` conditional.
+- Assert the aligned input preconditions before using the aligned path, using the
+  cross-multiplied ratio form defined in this addendum.
+- Compute `zmid` at a per-time-pixel or per-regime boundary and advance it by the
+  integer stride `R` per frequency layer. Integer-stride `zmid` is required, not
+  optional.
+- Keep `(wc.DF / wc.df_bw) * k`, equivalent floating-ratio products, and
+  per-iteration recomputation of `floor(...)` out of the aligned per-`k` loop.
+- Split each stripe/time/channel work range into at most two reflection regimes:
+  a low-`k` regime where `R * k <= za` and reflection is not active, and a high-`k`
+  regime where `R * k > za` and reflection is active. With integer stride, the
+  first high-regime index is:
+
+  ```text
+  k_high_start = floor(za / R) + 1
+  ```
+
+  The low regime is restricted to `k < k_high_start`; the high regime is
+  restricted to `k >= k_high_start`. If `R * k == za`, that layer belongs to the
+  low regime.
+- Within each regime, compute the starting interpolation base index or indices
+  and `dx` once at the regime entry point. The base index or indices, including
+  `kk`, `jj1`, and `jj2` or equivalent values, advance by `+R` or `-R` per layer
+  as appropriate for the regime. `dx` is constant within a regime because `R` is
+  an integer stride; it must not be advanced by `R`.
+- Implement reflection, bandwidth, and table-overflow keep/drop decisions without
+  a control-flow branch, `continue`, early return, or helper-call gate inside the
+  aligned per-`k` loop. Compliant mechanisms are:
+  - Per-regime loop bounds that admit only kept cells.
+  - A multiplicative numeric validity mask, provided source and compiled-code
+    verification show that the mask is not lowered to a conditional branch whose
+    predicate depends on reflection, bandwidth, or table-overflow keep/drop
+    conditions.
+  - An observably equivalent branchless mechanism with the same verification
+    evidence.
+- Ensure any branchless mask multiplies the contribution value and does not serve
+  as the only protection against unsafe memory access. Table reads must remain in
+  bounds through loop bounds, the required padded aligned layout, or another
+  separately verified in-bounds mechanism.
 - Accumulate into `wavelet_stripe` in place with `+=`.
-- Match the oracle stripe slice within the faithful float64 tolerance as defined
-  by the amended "Numerical Tolerances" section (ULP-boundary cells exempted
-  when integer-stride arithmetic is used).
+- Match the oracle stripe slice within the final contract's faithful float64
+  tolerance, except for aligned keep/drop boundary cells as defined in this
+  addendum.
 
-The previous wording "prioritize minimizing conditional branches in the hot loop
-without changing observable behavior" is superseded. The phrase "without changing
-observable behavior" implicitly required matching wavemaket's fastmath drop
-decisions at ULP boundaries, which precluded integer-stride lift-out; it is
-removed.
+The final contract phrase "prioritize minimizing conditional branches in the hot
+loop without changing observable behavior" is superseded for
+`wavemaket_stripe_dense_aligned`.
 
 ---
 
-## Amended Section: Required Verification for the Aligned Table — Additional Test Requirement
+## Amended Section: Required Verification for the Aligned Table
 
-The existing verification bullet list for the aligned table is retained unchanged.
-The following bullet is added:
+The final contract's aligned-table verification requirements remain in force
+except where this addendum supersedes the ratio-precondition expression. The
+following additional verification is required.
 
-- A **ULP-boundary detection test** must verify that when the aligned
-  implementation uses integer-stride arithmetic `R * k` for `zmid`, the test
-  harness can identify and exclude ULP-boundary cells from the oracle comparison.
-  The test must confirm that all non-ULP-boundary cells satisfy the standard
-  `atol`/`rtol` tolerance and that ULP-boundary cells contain either `0.0` or
-  the locally interpolated value (not an arbitrary value). This test is waived
-  if the implementation uses `(wc.DF / wc.df_bw) * k` for `zmid` instead of
-  integer-stride arithmetic.
+- A precondition verification must check the cross-multiplied aligned ratio form
+  and must not require the superseded division-form assertion.
+- A source inspection must verify that the aligned implementation uses mandatory
+  integer-stride `zmid` and contains no per-iteration aligned-loop computation of
+  `(wc.DF / wc.df_bw) * k` or an equivalent floating-ratio product.
+- A source inspection must verify that `dx` is initialized at regime entry and is
+  constant within each regime, while base indices advance by `+R` or `-R`.
+- A boundary test must exercise at least one aligned keep/drop boundary cell for
+  an aligned configuration before the exception is used in acceptance. The test
+  must identify the boundary by comparing observed compiled oracle keep/drop
+  behavior with an independent integer-stride aligned reference.
+- The boundary test must verify that all non-boundary cells satisfy the standard
+  `atol`/`rtol` oracle comparison.
+- The boundary test must verify that boundary-cell aligned outputs are either
+  `0.0` when the independent integer-stride reference drops the cell, or the
+  independent integer-stride reference contribution when that reference keeps the
+  cell.
+- A negative or edge-case verification must ensure the exception is not applied
+  to a cell where both the compiled oracle and integer-stride reference keep the
+  contribution. Such cells remain subject to the standard oracle comparison.
+- A structural or source inspection must verify the reflection split's equality
+  convention: `R * k == za` is low-regime, and the first high-regime index is
+  `floor(za / R) + 1`.
+- Source inspection must reject direct or indirect per-`k` keep/drop control-flow
+  gates inside the aligned loop, including split `if` statements, `continue`
+  statements, conditional expressions, early returns, and helper calls whose
+  purpose is to branch on reflection, bandwidth, or table-overflow keep/drop
+  conditions.
+- If a multiplicative numeric validity mask is used, compiled-code inspection in
+  the project compiler environment must show no conditional branch inside the
+  aligned per-`k` loop whose predicate is derived from reflection, bandwidth, or
+  table-overflow keep/drop conditions. LLVM `select`, comparison-to-numeric-mask,
+  and arithmetic masking are acceptable evidence when they do not introduce such
+  a branch.
+
+These tests must provide evidence independent of the aligned implementation logic
+where required above. In particular, the boundary-cell oracle/reference
+classification must not call into `wavemaket_stripe_dense_aligned` or reuse its
+private helper as the sole oracle.
 
 ---
 
-## Finding Disposition Ledger Additions
+## QA and Repository Policy for This Amendment
+
+This addendum does not authorize implementation changes to:
+
+- Inline linter or type-checker suppressions.
+- Checker configuration.
+- File exclusions.
+- Test skips or expected failures.
+- Warning filters.
+- Coverage exclusions.
+- CI or pre-commit configuration.
+- Broad public types, casts, protocols, or dynamic access.
+- Generated-code designations.
+
+Any such change must be disclosed and separately approved before it can satisfy
+this contract.
+
+---
+
+## Finding Disposition Ledger
 
 | Finding | Disposition | Contract section affected | Exact revision made | Reasoning or authority | Remaining uncertainty |
 |---|---|---|---|---|---|
-| AM1-1 | Accepted and resolved | Numerical Tolerances | Added ULP-boundary cell exception permitting `R*k` arithmetic for `zmid` in the aligned path; excluded ULP-boundary cells from `atol`/`rtol` oracle comparison. | PR #40 review: tight tolerance forced expression-for-expression fastmath mirroring, defeating lift-out intent. | Exact count of ULP-boundary cells per test case depends on wavelet configuration and source frequency. |
-| AM1-2 | Accepted and resolved | Implementation Variants — `wavemaket_stripe_dense_aligned` | Replaced vague "prioritize minimizing conditional branches without changing observable behavior" with explicit structural requirements: regime splitting, per-regime `kk`/`dx` computation, per-regime loop bounds replacing per-k conditionals, prohibition on per-k `(DF/df_bw)*k` recomputation. | PR #40 review: original language allowed full per-k recomputation with a single dense outer loop as compliant. | Exact regime-split threshold expression is implementation freedom subject to the structural requirements. |
-| AM1-3 | Accepted and resolved | Implementation Variants — `wavemaket_stripe_dense_aligned`; Aligned Table Requirements | Required cross-multiplied form `abs(wc.DF - R*wc.df_bw) <= tol*wc.df_bw` for the precondition assertion; prohibited `abs(wc.DF/wc.df_bw - R) <= tol` form inside the same `njit` function. | fastmath CSE perturbs loop products when `wc.DF/wc.df_bw` is evaluated twice; already present in PR #40 implementation but not previously mandated by contract. | Moot when integer-stride arithmetic is used for `zmid`, but required regardless. |
-| AM1-4 | Accepted and resolved | Required Verification for the Aligned Table | Added ULP-boundary detection test requirement (waived if implementation uses float `zmid`). | Necessary companion to AM1-1: the tolerance exemption is meaningless without a test that verifies non-boundary cells still satisfy the standard tolerance. | None. |
+| F001 | Accepted and resolved | Numerical Tolerances; Implementation Variants; Verification | Removed the float-expression path and made integer-stride `zmid` mandatory. Removed the verification waiver for float-expression implementations. | Human decision 1 says integer-stride `zmid` is required. PR #41 review showed the float path preserved the original loophole. | None for this addendum. |
+| F002 | Accepted and resolved | Numerical Tolerances; Verification | Replaced broad "ULP-boundary cell" language with "aligned keep/drop boundary cell" limited to table-overflow keep/drop decision differences. Required standard oracle tolerance for all other cells, including both-keep cells. | Human decision 2 says the exception only applies to keep/drop decisions. | Exact fixture construction remains implementation work. |
+| F003 | Accepted and resolved | Numerical Tolerances; Verification | Required boundary classification from observed compiled oracle keep/drop behavior plus an independent integer-stride aligned reference. Prohibited Python formula comparison as the sole classifier and required at least one exercised boundary cell before using the exception. | Review finding showed formula-only detection was compiler/context dependent. | The independent reference helper's implementation details are not fixed. |
+| F004 | Accepted and resolved | Implementation Variants; Verification | Stated that `dx` is computed once at regime entry and remains constant within the regime; base indices advance by `+R` or `-R`. | Review finding correctly identified `dx += R` as wrong. Integer stride makes the fractional interpolation offset constant within a regime. | None. |
+| F005 | Accepted and resolved | Implementation Variants; Verification | Defined `k_high_start = floor(za / R) + 1`, low regime `k < k_high_start`, high regime `k >= k_high_start`, and equality in the low regime. | Review finding identified half-open ambiguity. This formula preserves `R * k <= za` in the low regime. | None. |
+| F006 | Accepted and resolved | Runtime Validation and Aligned Table Preconditions; Verification | Explicitly superseded the final contract's division-form aligned precondition bullets with the cross-multiplied form for aligned implementation assertions and aligned structural tests. | Review finding showed an internal inconsistency. Prior amendment AM1-3 and PR #40 context require the cross-multiplied form. | None. |
+| F007 | Accepted and resolved with authorized clarification | Implementation Variants; Verification | Replaced syntax-specific branch prohibition with a semantic ban on direct or indirect per-`k` keep/drop control-flow gates. Allowed multiplicative numeric masks only with source and compiled-code evidence that the mask is not lowered to a keep/drop branch. | Human decision 3 authorizes multiplicative numerical masks under a no-compiler-branch condition. Review finding showed the prior text only patched one conditional shape. | Compiled-code inspection depends on the project compiler environment. |
+| AM1-1 | Accepted and resolved by this revision | Numerical Tolerances | Narrowed the prior ULP exception to table-overflow keep/drop boundary cells and tied it to mandatory integer-stride behavior. | Latest review found the prior AM1-1 only partially resolved. Human decisions 1 and 2 resolve the ambiguity. | None. |
+| AM1-2 | Accepted and resolved by this revision | Implementation Variants | Removed the float-expression exemption, corrected `dx`, defined reflection boundaries, and expanded the branch-control-flow requirement. | Latest review found the prior AM1-2 only partially resolved. | None. |
+| AM1-3 | Accepted and resolved by this revision | Runtime Validation and Aligned Table Preconditions | Added explicit supersession of the final contract division-form bullets. | Latest review found the prior AM1-3 internally inconsistent with retained final-contract text. | None. |
+| AM1-4 | Accepted and resolved by this revision | Verification | Removed the waiver for float-expression implementations and required observed-oracle plus independent-reference boundary testing. | Latest review found the prior AM1-4 test was waived for the loophole path and not independently pinned. | None. |
+| PR40-F001 | Deferred as explicitly out of scope for this addendum | None | No new language added. | Latest review states this was superseded by an authoritative owner decision in the last PR #40 comment. | None for PR #41 amendment. |
+| PR40-F002 | Requires human or authoritative resolution if still in scope | Unresolved Blockers | No language added because the latest review says PR #41 did not address it but does not supply the underlying finding detail in this revision request. | The revision agent cannot resolve an unspecified prior finding without the finding text or an authority decision. | Exact PR #40 F002 content and intended scope are unknown from the supplied material. |
 
 ---
 
-## Requirement Traceability Additions
+## Requirement Traceability Table
 
 | Requirement | Source of authority | Contract section | Verification method | Dependencies or unresolved questions |
 |---|---|---|---|---|
-| TR27: Aligned path must not recompute `(wc.DF / wc.df_bw) * k` per loop iteration; `zmid` must be advanced by stride `R` from a per-regime starting value. | Amendment AM1-2. | Implementation Variants — `wavemaket_stripe_dense_aligned` | Source inspection: no `(DF/df_bw)*k` expression inside the k-loop body. | Applies only when integer-stride arithmetic is chosen; float-expression path exempt. |
-| TR28: Aligned path must split the stripe into at most two k-regimes separated by the reflection boundary and must contain no per-k `if za < zmid:` branch in the inner loop. | Amendment AM1-2. | Implementation Variants — `wavemaket_stripe_dense_aligned` | Source inspection: two regime loops or equivalent, no inner reflection conditional. | Regime-split threshold expression is implementation freedom. |
-| TR29: Within each regime, bandwidth and table-overflow guards must be loop bounds, not per-k conditionals inside the hot loop body. | Amendment AM1-2. | Implementation Variants — `wavemaket_stripe_dense_aligned` | Source inspection: no `if (kmin <= k <= kmax) and ...` inside the k-loop body. | Clamped regime bounds must provably exclude all out-of-bounds `jj1`/`jj2` accesses. |
-| TR30: ULP-boundary cells are exempt from `atol`/`rtol` oracle comparison for the aligned path when integer-stride `zmid` is used; standard tolerance applies to all other cells. | Amendment AM1-1. | Numerical Tolerances | ULP-boundary detection test and non-boundary tolerance assertions. | Wavelet configurations where no ULP-boundary cells exist in the tested domain trivially satisfy this requirement. |
-| TR31: The precondition assertion for `wc.DF / wc.df_bw ≈ R` inside `wavemaket_stripe_dense_aligned` must use the cross-multiplied form to avoid fastmath CSE perturbation of the loop result. | Amendment AM1-3. | Implementation Variants; Aligned Table Requirements | Source inspection: assertion uses `abs(wc.DF - R*wc.df_bw) <= tol*wc.df_bw`, not `abs(wc.DF/wc.df_bw - R) <= tol`. | None. |
+| AM1-R1: This file is an addendum only; the final contract file must not be edited. | Human decision 4. | Status and Scope | `git diff --name-only` shows only addendum changes for this revision. | None. |
+| AM1-R2: `wavemaket_stripe_dense_aligned` must use integer-stride `zmid`. | Human decision 1; original aligned-path lift-out intent. | Numerical Tolerances; Implementation Variants | Source inspection for integer-stride initialization/advancement and absence of per-`k` floating-ratio product. | None. |
+| AM1-R3: The numerical exception applies only to table-overflow keep/drop decision differences. | Human decision 2; F002. | Numerical Tolerances | Boundary test classifies derivative, bandwidth, stripe, and table-overflow decisions separately. | Independent reference helper required. |
+| AM1-R4: Boundary classification must use observed compiled oracle keep/drop behavior plus an independent integer-stride reference. | F003; necessary consequence of fastmath compiler dependence. | Numerical Tolerances; Verification | Boundary test must not rely solely on Python-side formula comparisons or aligned implementation helpers. | Independent reference details remain implementation freedom. |
+| AM1-R5: Non-boundary cells, including both-keep floor-index disagreements, must satisfy standard oracle tolerance. | Human decision 2; final contract tolerance. | Numerical Tolerances; Verification | Full-stripe comparison with boundary mask excluded only for aligned keep/drop boundary cells. | None. |
+| AM1-R6: Aligned boundary outputs are limited to `0.0` for integer-stride drops or the independent integer-stride reference contribution for integer-stride keeps. | F002; acceptance-criterion requirement. | Numerical Tolerances; Verification | Boundary-cell assertions compare to the independent reference keep/drop result. | None. |
+| AM1-R7: The aligned ratio precondition must use the cross-multiplied assertion form. | PR #40 context; AM1-3; F006. | Runtime Validation and Aligned Table Preconditions | Source and structural-test inspection for `abs(wc.DF - R * wc.df_bw) <= ... * wc.df_bw`; absence of superseded division-form assertion in the aligned compiled function. | None. |
+| AM1-R8: Reflection regimes must use `k_high_start = floor(za / R) + 1`, with equality in the low regime. | F005; necessary consequence of `R * k <= za` low-regime definition. | Implementation Variants; Verification | Boundary/equality test or source inspection showing low/high half-open ranges. | None. |
+| AM1-R9: `dx` is constant within a regime; base indices advance by `+R` or `-R`. | F004; integer-stride interpolation property. | Implementation Variants; Verification | Source inspection and, where feasible, helper-level unit test over consecutive `k` values. | None. |
+| AM1-R10: Inner aligned per-`k` loops must not contain direct or indirect keep/drop control-flow branches. | Original aligned-path lift-out/branch-elimination intent; F007. | Implementation Variants; Verification | Source inspection including helper calls; compiled-code inspection when a mask or equivalent branchless mechanism is used. | Compiler inspection depends on project environment. |
+| AM1-R11: Multiplicative numeric masks are allowed only when not lowered to keep/drop control-flow branches. | Human decision 3. | Implementation Variants; Verification | Source inspection plus compiled LLVM or equivalent compiler-output evidence for relevant signature. | Exact inspection tooling remains implementation work. |
+| AM1-R12: Branchless masks must not be the only protection against unsafe memory access. | Final contract aligned-padding policy; necessary memory-safety consequence. | Implementation Variants; Verification | Source inspection for in-bounds reads via loop bounds, padded layout, or equivalent mechanism. | None. |
+| AM1-R13: QA suppressions, skips, checker/config changes, warning filters, coverage exclusions, CI/pre-commit changes, broad public typing, and generated-code designations are not authorized by this amendment. | Standing repository and QA policy from prompt. | QA and Repository Policy | Diff review of source, tests, and configuration files. | Future approval must be explicit. |
+
+---
+
+## Unresolved Blockers
+
+- PR40-F002 remains unresolved for this addendum because the latest review states
+  it was not addressed by PR #41 but does not provide the underlying finding text
+  or a human decision.
+- Inherited unresolved items from the final contract remain unchanged, including
+  CI execution policy, objective performance thresholds, exact non-float64
+  numerical tolerances, and cross-machine benchmark reproducibility policy.
+- No unresolved blocker remains for latest PR #41 findings F001 through F007 after
+  applying the four human decisions listed in this addendum.
+
+---
+
+## Change Summary
+
+### Clarifications That Preserve Intent
+
+- Made the addendum explicitly supersede only aligned-path sections and specific
+  precondition wording.
+- Replaced vague ULP-boundary wording with observable keep/drop boundary behavior.
+- Defined low/high reflection regimes and the equality case.
+- Clarified that `dx` is constant within a regime while base indices advance.
+- Replaced syntax-specific branch wording with a semantic keep/drop control-flow
+  requirement.
+
+### Newly Authorized Requirements
+
+- Integer-stride `zmid` is mandatory for `wavemaket_stripe_dense_aligned`.
+- Multiplicative numeric masks are allowed when source and compiler evidence show
+  they do not become keep/drop control-flow branches.
+
+### Removed or Narrowed Requirements
+
+- Removed the prior permission for a float-expression `zmid` path.
+- Removed the waiver of boundary testing for float-expression implementations.
+- Narrowed the numerical exception from any floor-index disagreement to
+  table-overflow keep/drop decision differences only.
+- Superseded the retained division-form aligned ratio assertion with the
+  cross-multiplied form for the aligned implementation and aligned tests.
+
+### QA-Enforcement Changes
+
+- Added explicit disclosure and separate-approval requirements for suppressions,
+  skips, checker/config changes, warning filters, coverage exclusions,
+  CI/pre-commit changes, broad typing/dynamic access, and generated-code labels.
+- Added compiled-code verification when branchless masking is used.
+
+### Out-of-Scope Recommendations
+
+- None added. Performance thresholds, CI policy, and non-float64 tolerances remain
+  inherited unresolved items from the final contract unless separately authorized.
