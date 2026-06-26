@@ -32,7 +32,9 @@
               "phantom_requirement",
               "intent_defeat",
               "pre_existing_issue",
-              "nonblocking_clarification"
+              "nonblocking_clarification",
+              "steering_content",
+              "verbosity_or_redundancy"
             ],
             "type": "string"
           },

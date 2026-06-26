@@ -31,6 +31,8 @@ classifications; do not invent synonyms.
 | `intent_defeat` | Intent defeat (letter-over-spirit) | The implementation is technically compliant but defeats the requirement's purpose. ALWAYS escalated to the human; never auto-resolved. |
 | `pre_existing_issue` | Pre-existing issue | Predates the implementation and was not materially worsened by it. |
 | `nonblocking_clarification` | Nonblocking clarification | An improvement that reduces risk but is not required before proceeding. |
+| `steering_content` | Steering content | Contract language whose primary effect is to anchor or bias future reviewers, revisers, or implementers toward a particular interpretation, design choice, or evaluation outcome — beyond what is justified by its value as implementation guidance. Includes LLM-asserted authority without traceable human or scientific source, historical framing that anchors to prior decisions, and language that frames how to evaluate compliance rather than what behavior is required. |
+| `verbosity_or_redundancy` | Verbosity or redundancy | Excessive length, repetition, or DRY violations that dilute the signal-to-noise ratio of substantive requirements for downstream agents, without commensurate informational value. Distinct from technical precision, which is never verbosity. |
 
 Severity tokens: `critical`, `high`, `medium`, `low`, `informational`.
 Confidence tokens: `high`, `medium`, `low`.
@@ -52,6 +54,10 @@ others and produces a recommendation.
 
 | Role | May emit |
 |---|---|
+| contract-steering | `steering_content`, `possible_contract_defect`, `nonblocking_clarification` |
+| contract-verbosity | `verbosity_or_redundancy`, `nonblocking_clarification` |
+| contract-clean-consolidation | consolidates findings from contract-steering and contract-verbosity; re-emits their classifications with human-escalation decisions applied; emits no new finding classifications of its own |
+| contract-cleaner | no finding classifications — dispositions consolidated findings and produces the revised contract; emits a recommendation with `human_signoff: pending` |
 | contract-adversary, contract-design-adversary, contract-approver | `blocking_ambiguity`, `compliance_loophole`, `missing_acceptance_criterion`, `missing_interface_detail`, `phantom_requirement`, `possible_contract_defect`, `nonblocking_clarification` |
 | impl-builder, impl-repair (only when STOPPING on a blocker) | `blocking_ambiguity`, `possible_contract_defect`, `phantom_requirement`, `intent_defeat` (purpose-conflict blocker) |
 | impl-reviewer | `contract_noncompliance`, `implementation_defect`, `qa_evasion`, `test_or_verification_deficiency`, `integration_or_regression_defect`, `possible_contract_defect`, `intent_defeat` (if noticed — escalate), `pre_existing_issue`, `nonblocking_clarification` |
