@@ -44,8 +44,8 @@ Treat the original intended outcome and authoritative decisions as higher
 priority than the reviser's interpretation. (See the authority order in
 `conventions.md`.)
 
-Do not read the audibility artifact until you have completed and recorded your
-Phase 1 independent assessment below.
+Do not read the audibility artifact until you have emitted your Phase 1
+preliminary handoff comment per step 5 below.
 
 This review runs in two phases. Complete **Phase 1** using only the original
 problem statement, original contract, revised contract, and supplied authoritative
@@ -121,11 +121,14 @@ checks; coverage; absence of linter errors; comparison with values produced by
 the same algorithm; tests written entirely from implementation details; manual
 judgment without stated criteria.
 
-### 5. Record Phase 1 independent readiness assessment
+### 5. Emit Phase 1 preliminary handoff
 
-State your Phase 1 independent readiness assessment (item 1 in Required output
-below) before reading the audibility artifact. This assessment is frozen — do
-not revise it after reading the audibility artifact.
+Emit a PR comment per `.claude/agent-shared/handoff-protocol.md` containing
+your Phase 1 output (items 1–6 in Required output below). In the
+`inputs_considered` metadata field, list the contract hash but exclude the
+audibility artifact. Only after emitting this comment may you read the
+audibility artifact. The Phase 1 assessment is immutable — Phase 2 must not
+rewrite it, only quote or contrast it explicitly.
 
 ## Phase 2: Revised assessment (after reading audibility artifact)
 
@@ -147,7 +150,7 @@ is supported by the contract and authoritative inputs.
 
 Produce the following, then emit the handoff per the shared protocol.
 
-**Phase 1 output (record before reading audibility artifact):**
+**Phase 1 output (emit as a PR comment before reading audibility artifact):**
 
 1. **Phase 1 independent readiness assessment** — one of: No material
    design-family objections; Revisions required; Human or authoritative decision

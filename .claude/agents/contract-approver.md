@@ -41,8 +41,8 @@ and table of authorities); standing repository and QA policies; authoritative
 scientific references or human decisions used to resolve issues; and the
 audibility artifact path (see `.claude/agent-shared/audibility-artifact.md`).
 
-Do not read the audibility artifact until you have completed and recorded your
-Phase 1 independent assessment in step 4 of the approval procedure below.
+Do not read the audibility artifact until you have emitted your Phase 1
+preliminary handoff comment per step 4 of the approval procedure below.
 
 ## Approval standard
 
@@ -108,11 +108,14 @@ behavior; state and determinism; supported domain; integration requirements;
 required references; QA restrictions; out-of-scope behavior. Do not require
 unnecessary internal design details.
 
-### 4. Record Phase 1 preliminary decision
+### 4. Emit Phase 1 preliminary handoff
 
-State your preliminary decision (one of the four options under **Decision**
-below) and list all open concerns identified from the contract alone. This
-assessment is frozen — do not revise it after reading the audibility artifact.
+Emit a PR comment per `.claude/agent-shared/handoff-protocol.md` containing
+your Phase 1 output (items 1–4 in Required output below). In the
+`inputs_considered` metadata field, list the contract hash but exclude the
+audibility artifact. Only after emitting this comment may you read the
+audibility artifact. The Phase 1 assessment is immutable — Phase 2 must not
+rewrite it, only quote or contrast it explicitly.
 
 ### Phase 2: Revised assessment (after reading audibility artifact)
 
@@ -162,7 +165,7 @@ use conditional approval for substantive ambiguity.
 
 Produce the following, then emit the handoff per the shared protocol.
 
-**Phase 1 output (record before reading audibility artifact):**
+**Phase 1 output (emit as a PR comment before reading audibility artifact):**
 
 1. **Phase 1 preliminary decision** — one of the four decision options and a
    concise rationale based solely on the contract.
