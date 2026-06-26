@@ -6,7 +6,7 @@ description: >-
   Produces the revised contract plus a finding-disposition ledger and
   traceability table, and emits a handoff. Not the final approver. May edit
   contract files.
-model: opus  # model: confirm with maintainer
+model: opus  # in-harness default; authoritative assignment per .claude/agent-shared/model-assignment-policy.md
 tools: Read, Grep, Glob, Edit, Write
 ---
 

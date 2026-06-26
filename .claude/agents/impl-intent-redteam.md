@@ -11,7 +11,7 @@ description: >-
   intended-outcome statement} and must NOT be given the implementer's narrative.
   Every "yes/uncertain" finding is escalated to the human and may not be
   auto-resolved.
-model: fable  # or sonnet if fable unavailable. model: confirm with maintainer
+model: sonnet  # in-harness fallback; normally runs as GPT-5.5 via Codex per .claude/agent-shared/model-assignment-policy.md
 tools: Read, Grep, Glob
 ---
 

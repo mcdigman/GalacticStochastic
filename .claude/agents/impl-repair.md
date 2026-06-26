@@ -7,7 +7,7 @@ description: >-
   would defeat a requirement's purpose. Produces a repair report (including an
   intent-compliance note) and emits a handoff. Does not close findings itself.
   May edit code.
-model: opus  # model: confirm with maintainer
+model: opus  # in-harness default; authoritative assignment per .claude/agent-shared/model-assignment-policy.md
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 

@@ -6,14 +6,14 @@ used across the contract-driven pipeline. Where an individual agent role adds a
 disposition or routing concept beyond finding classification (e.g. the
 adjudicator's repair-owner routing), that lives in the agent file; the
 **finding `classification` field** values are canonicalized here so the visible
-Markdown and the `chirp-agent-report:v1` JSON never drift.
+report and the `chirp-agent-report:v2` metadata block never drift.
 
 ## Canonical finding-classification enum
 
 Use these exact snake_case tokens as the `classification` value in the
-`chirp-agent-report:v1` JSON. In visible Markdown, use the human-readable label
-shown next to each token. These are the only finding classifications; do not
-invent synonyms.
+`chirp-agent-report:v2` metadata block. In the visible report, use the
+human-readable label shown next to each token. These are the only finding
+classifications; do not invent synonyms.
 
 | JSON token | Human-readable label | Meaning |
 |---|---|---|
@@ -38,6 +38,26 @@ Confidence tokens: `high`, `medium`, `low`.
 `possible_contract_defect` and `intent_defeat` may NEVER be emitted as merely
 informational and may NEVER be auto-approved or auto-resolved; both force a
 blocking decision routed to a human.
+
+## Which roles may emit which classifications
+
+A role emits only the classifications relevant to its mandate. `intent_defeat` is
+reserved to the implementation phase — the intent red-team is its primary source,
+and the literal reviewer (or a producer filing a purpose-conflict blocker) MAY
+also raise it (better to over-flag a purpose defeat than miss one); all such
+emissions escalate to the human. Contract-phase roles express the analogous
+concern as `compliance_loophole` or `possible_contract_defect`. The adjudicator
+emits no finding classifications — it dispositions/routes findings raised by
+others and produces a recommendation.
+
+| Role | May emit |
+|---|---|
+| contract-adversary, contract-design-adversary, contract-approver | `blocking_ambiguity`, `compliance_loophole`, `missing_acceptance_criterion`, `missing_interface_detail`, `phantom_requirement`, `possible_contract_defect`, `nonblocking_clarification` |
+| impl-builder, impl-repair (only when STOPPING on a blocker) | `blocking_ambiguity`, `possible_contract_defect`, `phantom_requirement`, `intent_defeat` (purpose-conflict blocker) |
+| impl-reviewer | `contract_noncompliance`, `implementation_defect`, `qa_evasion`, `test_or_verification_deficiency`, `integration_or_regression_defect`, `possible_contract_defect`, `intent_defeat` (if noticed — escalate), `pre_existing_issue`, `nonblocking_clarification` |
+| impl-intent-redteam | `intent_defeat` (primary), `possible_contract_defect`, `nonblocking_clarification` |
+| impl-repair-verifier | `contract_noncompliance`, `implementation_defect`, `integration_or_regression_defect`, `test_or_verification_deficiency` (closure/regression scope only) |
+| impl-adjudicator | none — dispositions/routes others' findings; emits a recommendation with `human_signoff: pending` |
 
 ## Canonical QA-suppression list
 

@@ -95,20 +95,28 @@ implementer.
    runs.
 4. The **human** performs freeze and adjudication; agents only assist.
 
-## Current run (contract v6)
+## Per-run manifest (run-specific state lives elsewhere)
 
-Contract v6 was **Claude-drafted**, so use the **Claude-drafted** contract
-column: **GPT-5.5** as 1st and 2nd contract-adversary, **Claude Opus** as
-reviser, **human** freeze with a **Sonnet** structural assist. Because
-cross-family contract judging is single-model here, the **human is the
-load-bearing second judge** at freeze. Implementer is Claude Opus → standard
-implementation table. (Going forward, drafting the next contract with
-GPT/human restores Claude's diversified contract judging.)
+This file holds only the **stable routing rules**. The concrete role→model
+assignment for a specific run is run-specific state and lives in a **per-run
+manifest** (`.claude/agent-shared/run-manifest.template.yaml`), not here, so this
+policy never goes stale. For each run, fill a manifest with the drafter and
+implementer families; the orientation and resolved per-role assignments follow
+from the tables above. The launcher reads the manifest, resolves it against this
+policy, and **fails closed** if any resolved model/family conflicts with the
+policy or with an agent's frontmatter default.
+
+Worked example — contract v6 is **Claude-drafted**, so its manifest selects the
+Claude-drafted column (GPT-5.5 contract-adversaries, Claude Opus reviser, human
+freeze with a Sonnet assist; the human is the load-bearing second judge because
+cross-family contract judging is single-model). Implementer is Claude Opus →
+standard implementation table.
 
 ## Relationship to agent `model:` frontmatter
 
 Each `.claude/agents/*.md` carries a `model:` used **only** when that role runs
 as an in-harness Claude subagent. **This policy overrides the frontmatter per
 run.** Roles routed to GPT-5.5 run via Codex and ignore the frontmatter model
-entirely. Per-file frontmatter reconciliation to this policy (including removing
-the unavailable `fable` default on `impl-intent-redteam`) is a pending cleanup.
+entirely. The launcher resolves each role to its policy model and **fails closed**
+on any mismatch with the frontmatter default, so the in-harness `model:` can never
+silently override the policy.

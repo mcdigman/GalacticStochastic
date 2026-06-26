@@ -7,7 +7,7 @@ description: >-
   satisfying a requirement literally would defeat its purpose. Produces an
   implementation report (including an intent-compliance note) and emits a
   handoff. May edit code.
-model: opus  # model: confirm with maintainer
+model: opus  # in-harness default; authoritative assignment per .claude/agent-shared/model-assignment-policy.md
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 

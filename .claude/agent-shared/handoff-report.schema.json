@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "chirp-agent-report:v2",
+  "title": "Agent PR handoff metadata (chirp-agent-report:v2)",
+  "description": "Metadata-only index for a pipeline handoff. Substantive findings live in the visible human-readable report; this block must not carry content outside these fields (additionalProperties:false enforces no covert channel).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "pr", "agent_role", "status", "human_signoff", "findings"],
+  "properties": {
+    "schema": { "const": "chirp-agent-report:v2" },
+    "pr": { "type": "integer" },
+    "base_sha": { "type": "string" },
+    "head_sha": { "type": "string" },
+    "agent_role": { "type": "string" },
+    "resolved_model": { "type": "string" },
+    "orientation": {
+      "type": "string",
+      "enum": ["claude-drafted", "gpt-drafted", "human-drafted"]
+    },
+    "inputs_considered": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "contract_sha256": { "type": "string" },
+        "diff_sha256": { "type": "string" }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["recommend_approve", "recommend_changes", "blocked_pending_human"]
+    },
+    "human_signoff": {
+      "type": "string",
+      "enum": ["pending", "approved", "rejected"]
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "classification", "severity", "confidence", "blocking"],
+        "properties": {
+          "id": { "type": "string" },
+          "classification": {
+            "type": "string",
+            "enum": [
+              "blocking_ambiguity",
+              "compliance_loophole",
+              "missing_acceptance_criterion",
+              "missing_interface_detail",
+              "contract_noncompliance",
+              "implementation_defect",
+              "qa_evasion",
+              "test_or_verification_deficiency",
+              "integration_or_regression_defect",
+              "possible_contract_defect",
+              "phantom_requirement",
+              "intent_defeat",
+              "pre_existing_issue",
+              "nonblocking_clarification"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low", "informational"]
+          },
+          "confidence": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "blocking": { "type": "boolean" }
+        }
+      }
+    },
+    "verification": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["tool", "result"],
+        "properties": {
+          "tool": { "type": "string" },
+          "result": { "type": "string" }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

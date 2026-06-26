@@ -1,0 +1,42 @@
+# Per-run manifest for the contract->implementation agent pipeline.
+#
+# Stable routing RULES live in model-assignment-policy.md; this file is the
+# run-specific STATE. Copy it per run, fill it in, and pass it to the launcher.
+# The launcher resolves it against the policy and FAILS CLOSED if any resolved
+# model/family conflicts with the policy or with an agent's frontmatter default.
+
+run_id: ""                       # e.g. "pr43-2026-06-25"
+pr: 0
+
+contract:
+  drafter_family: ""             # claude | gpt | human  -> selects the contract-phase column
+  sha256: ""                     # hash of the frozen contract under review
+
+implementation:
+  implementer_family: claude     # fixed by current setup (impl-builder = Claude Opus)
+  diff_sha256: ""                # hash of the materialized diff under review
+
+# Derived from contract.drafter_family per the policy's contract table:
+#   claude-drafted -> contract judges = gpt (single model; human is 2nd judge)
+#   gpt-drafted | human-drafted -> contract judges = claude (Opus + Sonnet)
+orientation: ""                  # claude-drafted | gpt-drafted | human-drafted
+
+# Resolved role -> {family, model, run_via}. The launcher validates every entry
+# against the policy tables and fails closed on mismatch.
+#   run_via: harness  = Claude Code subagent (.claude/agents/<role>.md)
+#            codex     = GPT-5.5 via the Codex orchestrator (frontmatter model ignored)
+# decision_owner: human marks roles whose output is a recommendation only.
+roles:
+  # Contract phase — leave blank; fill from the policy column for this orientation.
+  contract-adversary:        { family: "", model: "", run_via: "" }
+  contract-reviser:          { family: "", model: "", run_via: "" }
+  contract-design-adversary: { family: "", model: "", run_via: "" }
+  contract-approver:         { family: "", model: "", run_via: "", decision_owner: human }
+
+  # Implementation phase — fixed while the implementer is Claude Opus.
+  impl-builder:              { family: claude, model: opus,   run_via: harness }
+  impl-repair:               { family: claude, model: opus,   run_via: harness }
+  impl-reviewer:             { family: claude, model: sonnet, run_via: harness }
+  impl-intent-redteam:       { family: gpt,    model: gpt-5.5, run_via: codex }
+  impl-repair-verifier:      { family: gpt,    model: gpt-5.5, run_via: codex }
+  impl-adjudicator:          { family: "",     model: "",      run_via: "", decision_owner: human }
