@@ -69,6 +69,8 @@ repos:
       - scipy-stubs
       - h5py-stubs
       - pandas-stubs
+      - types-PyYAML
+      - jsonschema
 
 - repo: https://github.com/rhysd/actionlint
   rev: v1.7.12

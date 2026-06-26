@@ -1,0 +1,155 @@
+{
+  "$id": "chirp-agent-report:v2",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Metadata-only index for a pipeline handoff. Substantive findings live in the visible human-readable report; this block must not carry content outside these fields (additionalProperties:false enforces no covert channel).",
+  "properties": {
+    "agent_role": {
+      "type": "string"
+    },
+    "base_sha": {
+      "type": "string"
+    },
+    "findings": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "blocking": {
+            "type": "boolean"
+          },
+          "classification": {
+            "enum": [
+              "blocking_ambiguity",
+              "compliance_loophole",
+              "missing_acceptance_criterion",
+              "missing_interface_detail",
+              "contract_noncompliance",
+              "implementation_defect",
+              "qa_evasion",
+              "test_or_verification_deficiency",
+              "integration_or_regression_defect",
+              "possible_contract_defect",
+              "phantom_requirement",
+              "intent_defeat",
+              "pre_existing_issue",
+              "nonblocking_clarification"
+            ],
+            "type": "string"
+          },
+          "confidence": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low",
+              "informational"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "classification",
+          "severity",
+          "confidence",
+          "blocking"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "head_sha": {
+      "type": "string"
+    },
+    "human_signoff": {
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "type": "string"
+    },
+    "inputs_considered": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_sha256": {
+          "type": "string"
+        },
+        "diff_sha256": {
+          "type": "string"
+        },
+        "intended_outcome_sha256": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "orientation": {
+      "enum": [
+        "claude-drafted",
+        "gpt-drafted",
+        "human-drafted"
+      ],
+      "type": "string"
+    },
+    "pr": {
+      "type": "integer"
+    },
+    "resolved_model": {
+      "type": "string"
+    },
+    "schema": {
+      "const": "chirp-agent-report:v2"
+    },
+    "status": {
+      "enum": [
+        "recommend_approve",
+        "recommend_changes",
+        "blocked_pending_human"
+      ],
+      "type": "string"
+    },
+    "verification": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "result": {
+            "description": "Terse status summary (e.g. '85 passed'), not free narrative.",
+            "maxLength": 80,
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool",
+          "result"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema",
+    "pr",
+    "agent_role",
+    "status",
+    "human_signoff",
+    "findings"
+  ],
+  "title": "Agent PR handoff metadata (chirp-agent-report:v2)",
+  "type": "object"
+}
