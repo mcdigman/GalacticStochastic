@@ -89,7 +89,8 @@ implementer.
 1. Identify who **drafted the contract** → pick the contract-phase column.
 2. Implementer is Claude Opus → use the implementation-phase table as-is.
 3. For **GPT-5.5** roles, run via the **Codex orchestrator**. The intent
-   red-team runs in a **no-network sandbox** with the orchestrator relaying PR
+   red-team runs under the Codex read-only sandbox (network denied by the sandbox
+   config, recorded as `assumed_by_sandbox`) with the orchestrator relaying PR
    I/O (it never reads the PR thread or the implementer's narrative; the
    orchestrator posts its findings). Frontmatter `model:` is ignored for Codex
    runs.

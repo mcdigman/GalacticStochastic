@@ -20,9 +20,11 @@ routes blocking findings to the human.
   silently override the policy and an unavailable model can't slip through.
 - **F3 — attested red-team isolation.** The intent red-team runs in an
   inputs-only directory holding only `{contract, diff, intended-outcome}`, under
-  `codex exec -s read-only` (no writes, no network). An attestation manifest
-  records the resolved model, sandbox mode, network state, input hashes, and
-  `no_pr_thread_context`. Isolation is enforced, not aspirational.
+  `codex exec -s read-only` (no writes; network denied by the Codex read-only
+  sandbox). An attestation manifest records the resolved model, sandbox mode,
+  network state, input hashes, and `no_pr_thread_context`. Isolation is enforced
+  by tool + sandbox configuration; network-off is provided by the Codex sandbox
+  and recorded as `assumed_by_sandbox`, not runtime-probed.
 - **F5 — handoff validation.** The visible `chirp-agent-report:v2` block is
   validated against `handoff-report.schema.json` (reject-unknown-fields). Any
   blocking finding, `intent_defeat`, `possible_contract_defect`, or
@@ -55,8 +57,8 @@ CODEX_MODEL=<your-gpt-5.5-id> PIPELINE_PYTHON='mamba run -n gstoch-dev python' \
 
 | Role kind | cwd | sandbox | network |
 |---|---|---|---|
-| `impl-intent-redteam` | inputs-only (`contract`,`diff`,`intended-outcome`) | `codex -s read-only` | none |
-| other Codex roles | disposable git worktree | `codex -s workspace-write` | off |
+| `impl-intent-redteam` | inputs-only (`contract`,`diff`,`intended-outcome`) | `codex -s read-only` | assumed (sandbox) |
+| other Codex roles | disposable git worktree | `codex -s workspace-write` | assumed (sandbox) |
 | harness (Claude) roles | disposable git worktree | run via Agent tool (`isolation: worktree`, `tools:`) | — |
 
 GitHub I/O is the orchestrator's job — agents never read or post PR comments.

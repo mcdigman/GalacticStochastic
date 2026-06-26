@@ -125,7 +125,8 @@
         "additionalProperties": false,
         "properties": {
           "result": {
-            "maxLength": 200,
+            "description": "Terse status summary (e.g. '85 passed'), not free narrative.",
+            "maxLength": 80,
             "type": "string"
           },
           "tool": {
