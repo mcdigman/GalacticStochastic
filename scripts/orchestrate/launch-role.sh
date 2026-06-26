@@ -9,10 +9,11 @@
 # Isolation:
 #   - impl-intent-redteam (Codex/GPT): runs in a clean inputs-only directory holding
 #     ONLY {contract, diff, intended-outcome}, under `codex exec -s read-only`
-#     (no writes, no network). It cannot reach the repo, the PR thread, or the
-#     implementer's narrative.
-#   - other Codex roles: run in a disposable git worktree under `codex exec
-#     -s workspace-write` (network off), so they can re-run pytest/pyrefly/ruff
+#     with --ignore-user-config --ignore-rules --ephemeral. Network-off is provided
+#     by the Codex read-only sandbox (recorded as assumed_by_sandbox, not probed).
+#     It cannot reach the repo, the PR thread, or the implementer's narrative.
+#   - other Codex roles: run in a disposable git worktree under
+#     `codex exec -s workspace-write`, so they can re-run pytest/pyrefly/ruff
 #     without touching the submitted branch.
 #   - harness (Claude) roles: this script resolves + sets up the worktree and prints
 #     the run parameters; you launch the subagent via the Claude Code Agent tool.
@@ -29,10 +30,10 @@ Usage: launch-role.sh --role <role> --manifest <manifest.yaml> [options]
   --pr N                      PR number (for the report + attestation)
   --contract FILE             frozen contract (curated input + hashed)
   --diff FILE                 materialized diff (curated input + hashed)
-  --intended-outcome FILE     intended-outcome statement (red-team input)
+  --intended-outcome FILE     intended-outcome statement (red-team input + hashed)
   --post                      post the captured report to the PR (default: print the gh command)
 
-Env: CODEX_MODEL (your codex model id for GPT-5.5), PIPELINE_PYTHON (interpreter with PyYAML).
+Env: CODEX_MODEL (your codex model id for GPT-5.5), PIPELINE_PYTHON (interpreter with PyYAML + jsonschema).
 EOF
 }
 
@@ -75,12 +76,15 @@ WT=""
 cleanup() { [[ -n "$WT" ]] && git worktree remove --force "$WT" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 
-# 2. Curate inputs + hashes.
-sha() { if [[ -f "$1" ]]; then shasum -a 256 "$1" | awk '{print $1}'; else echo ""; fi; }
-CONTRACT_SHA=""; DIFF_SHA=""
+# 2. Curate inputs + hashes (portable: macOS shasum, Linux sha256sum).
+sha() {
+  [[ -f "$1" ]] || { echo ""; return 0; }
+  { shasum -a 256 "$1" 2>/dev/null || sha256sum "$1"; } | awk '{print $1}'
+}
+CONTRACT_SHA=""; DIFF_SHA=""; INTENDED_SHA=""
 [[ -n "$CONTRACT" ]] && { cp "$CONTRACT" "$INPUTS/contract.md"; CONTRACT_SHA="$(sha "$CONTRACT")"; }
 [[ -n "$DIFF" ]] && { cp "$DIFF" "$INPUTS/diff.patch"; DIFF_SHA="$(sha "$DIFF")"; }
-[[ -n "$INTENDED" ]] && cp "$INTENDED" "$INPUTS/intended-outcome.md"
+[[ -n "$INTENDED" ]] && { cp "$INTENDED" "$INPUTS/intended-outcome.md"; INTENDED_SHA="$(sha "$INTENDED")"; }
 
 # 3. Build the role prompt: strip YAML frontmatter, substitute run parameters, prepend input note.
 ROLE_FILE="$AGENTS_DIR/$ROLE.md"
@@ -97,20 +101,31 @@ PROMPT_FILE="$RUN_DIR/prompt.md"
         -e "s|{{run_orientation}}|$ORIENT|g" > "$PROMPT_FILE"
 
 REPORT="$RUN_DIR/report.md"
+CODEX_VERSION="$(codex --version 2>/dev/null | head -1 || echo unknown)"
 NPRT=false
+NET="host-not-guaranteed"
+CODEX_INVOCATION=""
 
-# 4. Run with role-appropriate isolation.
+# 4. Run with role-appropriate isolation. Codex writes its final message to $REPORT.
 if [[ "$RUN_VIA" == "codex" ]]; then
   if [[ "$ROLE" == "impl-intent-redteam" ]]; then
     NPRT=true
-    echo ">> codex (ISOLATED): cwd=inputs-only, sandbox=read-only, no network, model=$CODEX_MODEL"
-    ( cd "$INPUTS" && codex exec -m "$CODEX_MODEL" -s read-only - < "$PROMPT_FILE" ) | tee "$REPORT"
+    CODEX_CMD=(codex exec -m "$CODEX_MODEL" -s read-only
+      --ignore-user-config --ignore-rules --ephemeral --skip-git-repo-check
+      -C "$INPUTS" -o "$REPORT" -)
+    NET="assumed_by_sandbox:read-only"
+    echo ">> codex (ISOLATED): cwd=inputs-only, sandbox=read-only, model=$CODEX_MODEL"
   else
     WT="$RUN_DIR/wt"; git worktree add --detach --quiet "$WT" HEAD
     cp -R "$INPUTS" "$WT/.pipeline-inputs"
+    CODEX_CMD=(codex exec -m "$CODEX_MODEL" -s "${SANDBOX:-workspace-write}"
+      --ignore-user-config --ignore-rules --ephemeral
+      -C "$WT" -o "$REPORT" -)
+    NET="assumed_by_sandbox:${SANDBOX:-workspace-write}"
     echo ">> codex: cwd=worktree, sandbox=${SANDBOX:-workspace-write}, model=$CODEX_MODEL"
-    ( cd "$WT" && codex exec -m "$CODEX_MODEL" -s "${SANDBOX:-workspace-write}" - < "$PROMPT_FILE" ) | tee "$REPORT"
   fi
+  CODEX_INVOCATION="${CODEX_CMD[*]}"
+  "${CODEX_CMD[@]}" < "$PROMPT_FILE"
 else
   WT="$RUN_DIR/wt"; git worktree add --detach --quiet "$WT" HEAD
   cp -R "$INPUTS" "$WT/.pipeline-inputs"
@@ -122,9 +137,10 @@ else
   echo "     then save its handoff comment text to: $REPORT  and re-run validate-handoff on it."
 fi
 
-# 5. Attestation manifest.
+# 5. Attestation manifest. network is recorded as assumed_by_sandbox (the Codex
+# sandbox mode), not a runtime probe.
 ATTEST="$RUN_DIR/attestation.json"
-NET="$([[ "$RUN_VIA" == "codex" ]] && echo denied || echo host-not-guaranteed)"
+CODEX_VER_FIELD="$([[ "$RUN_VIA" == "codex" ]] && printf '%s' "$CODEX_VERSION" || printf '')"
 cat > "$ATTEST" <<EOF
 {
   "run_id": "$RUN_ID",
@@ -133,7 +149,9 @@ cat > "$ATTEST" <<EOF
   "resolved": {"family": "$FAMILY", "model": "$MODEL", "run_via": "$RUN_VIA", "sandbox_mode": "${SANDBOX:-}"},
   "network": "$NET",
   "no_pr_thread_context": $NPRT,
-  "inputs_considered": {"contract_sha256": "$CONTRACT_SHA", "diff_sha256": "$DIFF_SHA"},
+  "inputs_considered": {"contract_sha256": "$CONTRACT_SHA", "diff_sha256": "$DIFF_SHA", "intended_outcome_sha256": "$INTENDED_SHA"},
+  "codex_version": "$CODEX_VER_FIELD",
+  "codex_invocation": "$(printf '%s' "$CODEX_INVOCATION" | sed 's/\\/\\\\/g; s/"/\\"/g')",
   "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
 EOF

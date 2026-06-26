@@ -65,7 +65,7 @@ GitHub I/O is the orchestrator's job — agents never read or post PR comments.
 ## Seams to verify on your install
 
 - `CODEX_MODEL` — set to your codex model id for GPT-5.5.
-- `PIPELINE_PYTHON` — must have PyYAML (the `gstoch-dev` env does).
+- `PIPELINE_PYTHON` — must have PyYAML and jsonschema (the `gstoch-dev` env does).
 - **Codex network-off default** — `read-only` / `workspace-write` sandboxes block
   network by default; confirm on your codex version (`codex exec --help`) and, if
   needed, pin it via `-c` config.

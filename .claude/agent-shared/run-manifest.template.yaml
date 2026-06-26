@@ -39,4 +39,4 @@ roles:
   impl-reviewer:             { family: claude, model: sonnet, run_via: harness }
   impl-intent-redteam:       { family: gpt,    model: gpt-5.5, run_via: codex }
   impl-repair-verifier:      { family: gpt,    model: gpt-5.5, run_via: codex }
-  impl-adjudicator:          { family: "",     model: "",      run_via: "", decision_owner: human }
+  impl-adjudicator:          { family: claude, model: opus,   run_via: harness, decision_owner: human }

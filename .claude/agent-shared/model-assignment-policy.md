@@ -79,7 +79,7 @@ family adversary-reviews twice, human freezes. Only the families swap.
 | impl-reviewer (literal/structural) | Claude **Sonnet** | Objective compliance; different Claude than the implementer; decorrelated from the GPT red-team. |
 | impl-intent-redteam | **GPT-5.5** (Codex, sandboxed) | Critical cross-family gate; intent defeats were what same-family review missed. |
 | impl-repair-verifier | **GPT-5.5** (Codex) | Cross-family closure/regression check of Claude's repair. |
-| impl-adjudicator | **Human** + Claude (Sonnet/Opus) assist | Human decision point; kept off GPT so GPT does not adjudicate its own reviews. |
+| impl-adjudicator | **Human** + Claude Opus assist | Human decision point; kept off GPT so GPT does not adjudicate its own reviews. |
 
 This phase does not change with the contract drafter; it is keyed only to the
 implementer.
@@ -106,11 +106,12 @@ from the tables above. The launcher reads the manifest, resolves it against this
 policy, and **fails closed** if any resolved model/family conflicts with the
 policy or with an agent's frontmatter default.
 
-Worked example — contract v6 is **Claude-drafted**, so its manifest selects the
+Illustrative orientation — a **Claude-drafted** contract selects the
 Claude-drafted column (GPT-5.5 contract-adversaries, Claude Opus reviser, human
 freeze with a Sonnet assist; the human is the load-bearing second judge because
-cross-family contract judging is single-model). Implementer is Claude Opus →
-standard implementation table.
+cross-family contract judging is single-model). A GPT- or human-drafted contract
+selects the other column. The concrete per-run assignment always lives in the
+manifest, never here.
 
 ## Relationship to agent `model:` frontmatter
 

@@ -1,9 +1,10 @@
 ---
 name: impl-adjudicator
 description: >-
-  Authoritative disposition and routing of independent-reviewer findings.
-  Separates implementation defects from contract defects, selects repair owner
-  and reverification scope, and preserves dissent. Any possible-contract-defect
+  Disposition-recommendation and routing of independent-reviewer findings.
+  Recommends how to separate implementation defects from contract defects,
+  selects repair owner and reverification scope, and preserves dissent; the
+  human owns the adjudication decision. Any possible-contract-defect
   or unverifiable-intent finding is forced to a BLOCKING decision routed to the
   human — never informational, never auto-approved. Emits a handoff. Read-only
   judging role (no Edit/Write).

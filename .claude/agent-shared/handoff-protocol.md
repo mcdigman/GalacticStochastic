@@ -47,14 +47,13 @@ Fields (all metadata; see the schema for exact types):
 - `schema`, `pr`, `base_sha`, `head_sha`
 - `agent_role`, `resolved_model`, `orientation`
 - `inputs_considered`: hashes of the artifacts judged (e.g. `contract_sha256`,
-  `diff_sha256`) — supports the launcher's input attestation
+  `diff_sha256`, `intended_outcome_sha256`) — supports the launcher's input attestation
 - `status`: a RECOMMENDATION (`recommend_changes` / `recommend_approve` /
   `blocked_pending_human`) — never a binding decision
 - `human_signoff`: `pending` | `approved` | `rejected`. Agents always emit
   `pending`; only a human sets `approved`/`rejected`
 - `findings`: list of `{id, classification, severity, confidence, blocking}`
-- `verification`: list of `{tool, result}`
-- `limitations`: optional short list of strings
+- `verification`: list of `{tool, result}` (`result` kept to a terse status)
 
 Example comment body:
 
@@ -79,7 +78,6 @@ findings:
   - {id: F001, classification: intent_defeat, severity: high, confidence: high, blocking: true}
 verification:
   - {tool: pytest, result: "85 passed"}
-limitations: []
 ```
 </details>
 ````

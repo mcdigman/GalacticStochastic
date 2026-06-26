@@ -88,15 +88,12 @@
         },
         "diff_sha256": {
           "type": "string"
+        },
+        "intended_outcome_sha256": {
+          "type": "string"
         }
       },
       "type": "object"
-    },
-    "limitations": {
-      "items": {
-        "type": "string"
-      },
-      "type": "array"
     },
     "orientation": {
       "enum": [
@@ -128,6 +125,7 @@
         "additionalProperties": false,
         "properties": {
           "result": {
+            "maxLength": 200,
             "type": "string"
           },
           "tool": {

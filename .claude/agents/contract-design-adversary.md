@@ -1,7 +1,8 @@
 ---
 name: contract-design-adversary
 description: >-
-  Independent same-design-family adversarial reviewer of a REVISED contract.
+  Independent adversarial reviewer of a REVISED contract (the producer/judge
+  model-family relationship is set per run by the launcher).
   Checks for design-family blind spots, lost original intent, internal
   inconsistencies, unverifiable requirements, phantom/over-specified
   requirements, and revisions that appear to close a loophole without closing
