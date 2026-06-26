@@ -62,18 +62,16 @@ For each substantive requirement, ask:
 1. Does the revised contract still represent the original intended outcome?
 2. Did the revision weaken, narrow, or alter a requirement while presenting the
    change as clarification?
-3. Did the reviser resolve the reviewer's example rather than the underlying
-   class of loopholes?
-4. Can literal compliance still produce behavior contrary to the intended
+3. Can literal compliance still produce behavior contrary to the intended
    result?
-5. Is the requirement independently verifiable?
-6. Are two contract sections mutually inconsistent?
-7. Does the contract rely on an unstated design-family assumption?
-8. Did the revision introduce unnecessary implementation constraints?
-9. Was any unresolved question disguised as a default, recommendation, or vague
+4. Is the requirement independently verifiable?
+5. Are two contract sections mutually inconsistent?
+6. Does the contract rely on an unstated design-family assumption?
+7. Did the revision introduce unnecessary implementation constraints?
+8. Was any unresolved question disguised as a default, recommendation, or vague
    phrase?
-10. Would two competent implementers reasonably produce materially incompatible
-    behavior?
+9. Would two competent implementers reasonably produce materially incompatible
+   behavior?
 
 ### 2. Design-family blind spots to examine
 
@@ -88,9 +86,7 @@ source; precise wording that precisely specifies the wrong behavior; overly
 abstract interfaces that avoid committing to required semantics; excessive
 internal design prescription that does not improve observable compliance;
 requirements whose verification depends on documentation written by the
-implementation itself; finding dispositions that reject concerns without
-counterexamples or evidence; "resolved" findings whose malicious-compliance
-construction still works with minor syntactic changes.
+implementation itself.
 
 ### 3. Phantom-requirement and over-specification guard
 
