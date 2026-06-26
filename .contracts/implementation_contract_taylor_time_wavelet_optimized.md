@@ -1,5 +1,16 @@
 # Implementation Contract v6 (Consolidated): Dense-Stripe Taylor-Time Wavelet Coaddition
 
+> **Revision r2 (PR #42 review + human decision HD-1).** r1 resolved findings
+> F001–F008 from the PR #42 contract-adversary review (dispositions in "PR #42
+> contract-adversary dispositions"; new requirements TR37–TR44). **r2 applies
+> authorized human decision HD-1:** LLVM IR inspection is now a **required**
+> divergence-free verification (TR45), superseding the LLM-drafted "no fragile
+> compiled-code inspection" phrasing that the cross-family adversary correctly
+> flagged as F002; F002 is now fully resolved, not routed to the human. See
+> "Authoritative Human Decisions." This revision does not change any frozen Design
+> Intent. **Not yet re-approved — a design-adversary and the human approver still
+> own the freeze decision.**
+
 ## Status And Scope
 
 This contract **supersedes and replaces** both of the following as the single
@@ -40,6 +51,25 @@ a narrow frequency stripe, supporting only:
 - Linearly evolving intrinsic source frequency over the supported test domain.
 
 It does not need full `wavemaket` feature parity.
+
+---
+
+## Authoritative Human Decisions
+
+These are explicit decisions made by the human maintainer. They are the
+**highest-authority** inputs (above Design Intent and above any LLM-drafted
+contract wording); where any other text in this document conflicts with a
+decision here, the decision here governs. Each is dated and traceable.
+
+| ID | Date | Decision | Supersedes / resolves | Sections |
+|---|---|---|---|---|
+| HD-1 | 2026-06-26 | The aligned function's divergence-free property **must** be verified at the **LLVM IR** level (via numba's `inspect_llvm()` or equivalent), in addition to source/AST inspection, at the repository-pinned python/numba/LLVM versions. LLVM IR is machine- and language-independent and is harder to adversarially evade than Python source/AST. The genuinely fragile, **excluded** target is the **final machine-dependent compiled output** (native assembly / PTX / object bytecode), which is machine-specific and is **not** required. | Supersedes the LLM-drafted TR35 phrasing "no reliance on fragile compiled-code inspection," which was a same-model-family drafting blind spot (correctly flagged by the cross-family adversary as F002), not a human decision. Resolves F002. | Test Requirements (TR45); Operative Definitions; Verification Methods; Unresolved Blockers |
+| HD-2 | Step-0 | Derivative-domain drop is handled **in-kernel** via clamp-and-mask folded into the amplitude prefactor; no control-flow guard. | — | Implementation Variants — aligned (TR33) |
+| HD-3 | Step-0 | The CPU performance floor is a **soft, flagged** aligned-vs-dense median-ratio trigger (intended ≤1.10×), independently re-measured, escalated to human — not an auto-fail. | — | Benchmark/Demo Requirements (TR34/DI-3); strengthened by F003/TR40 (a ratio above the floor blocks auto-approval) |
+
+(The PR #40 maintainer findings CD-A and CD-B that motivated the v6 consolidation
+also originate from human review; they are recorded in the Finding Disposition
+Ledger below.)
 
 ---
 
@@ -142,7 +172,10 @@ normative.
   shape constants (over `Nc`, over `stripe_height`); `min`/`max`/clamp used to
   keep a *read index* in bounds (these lower to branchless selects and do not
   change trip counts); arithmetic ternaries the compiler lowers to a select that
-  do not alter control flow or trip count.
+  do not alter control flow or trip count. Under HD-1, "lowers to a branchless
+  select" is not merely asserted — it is **verified at the LLVM IR level** (TR45):
+  such constructs must appear in the IR as `select`/arithmetic, and only the
+  data-independent fixed-trip loop control may appear as a conditional branch.
 
 - **Oracle.** `wavemaket(force_nulls=0, amplitude_order=0)` decoded to dense via
   `wavelet_sparse_to_dense` and sliced to the stripe window (see Scientific And
@@ -231,6 +264,13 @@ allowed; if public it must have narrow annotations and a NumPy-style docstring.
 - `Nc == wavelet_stripe.shape[2] == waveform.AT.shape[0]`.
 - `wavelet_stripe.dtype` is a NumPy floating dtype.
 - `wavelet_stripe` is C-contiguous or F-contiguous.
+- `wavelet_stripe` is a **writable** NumPy `ndarray` usable in numba nopython
+  mode (F008). Passing a read-only array, or a non-`ndarray` array-like, is
+  undefined behavior; public docstrings must state this. The functions must not
+  copy `wavelet_stripe` internally — accumulation is into the caller's array
+  (verified by the in-place mutation test). Consistent with the assertions-only,
+  no-defensive-branch policy, tests are not required to cover read-only or
+  array-like inputs (a read-only negative case is permitted but optional).
 
 `wc.Nf` is the full number of wavelet frequency layers (e.g. 256), distinct from
 `stripe_height`. The stripe is the contiguous global frequency-layer window
@@ -342,6 +382,17 @@ Unsupported: non-`force_nulls=0` null handling, higher-order amplitude,
 arbitrary nonlinear frequency evolution, performance guarantees outside the
 linear-frequency domain, and any TDI changes.
 
+**Behavior outside the supported waveform domain (F005).** For inputs outside the
+supported waveform domain (nonlinear `waveform.FT`, total drift exceeding two
+full-band pixels, or any other unsupported regime listed above), numerical
+behavior is **undefined**, and required acceptance tests need not cover it.
+Consistent with the assertions-only, no-defensive-branch policy, the functions are
+**not** required to detect, assert, or reject nonlinearity or drift bounds. Public
+docstrings must state that results outside the supported waveform domain are
+undefined. This is distinct from the **in-domain** derivative-table drop, which is
+a specified contribute-`0.0` behavior handled by clamp-and-mask (TR33), not
+undefined behavior.
+
 ---
 
 ## Numerical Tolerances
@@ -389,8 +440,12 @@ divergence-free (the CD-A failure).
 
 ### `wavemaket_stripe_sparse`
 
-- Preserve the current variable-`k` inner-loop structure as closely as practical
-  while writing directly to `wavelet_stripe`.
+- Write directly into `wavelet_stripe` with no full-band
+  (`O(wc.Nf)`-frequency-extent) materialization. A variable-`k` inner loop is
+  permitted for this variant (unlike the aligned variant); no specific prior loop
+  structure is required to be preserved. (F007: the unobservable "preserve the
+  current variable-`k` inner-loop structure as closely as practical" mechanism
+  prescription was removed in favor of the observable outcomes below.)
 - Use full-band `wc.Nf` for full-band wavelet calculations.
 - Restrict writes to global layers in `[nf_start, nf_start + stripe_height)`.
 - Accumulate in place; match the oracle within the faithful float64 tolerance.
@@ -526,6 +581,19 @@ None of the required functions may:
 
 Per-call frequency-dimension scratch is limited to `O(stripe_height)`.
 
+**Bounded aligned-table construction / no waveform-dependent full-band precompute
+(F006).** No component introduced for this work — including the
+`WaveletTaylorTimeCoeffsAligned` constructor and any cache or lookup structure,
+whether or not it is allocated inside the three required functions — may
+materialize a waveform-dependent full-band or `O(wc.Nf)`-frequency-extent
+structure, nor a per-`nf_start` / per-frequency-layer lookup keyed across the full
+band, as a way to avoid doing the intended stripe arithmetic at call time. The
+aligned **coefficient table** itself is explicitly permitted: it is
+waveform-independent (derived once from `WaveletTaylorTimeCoeffs` / `wc`), and its
+size is bounded by the coefficient grid (`wc.Nfd` rows) plus the two-sided zero
+padding required for predication-safe reads (see Aligned Table Requirements) — it
+is **not** an `O(wc.Nf)` full-band structure and is not waveform-dependent.
+
 **Anti-relocation clause (CD-A′).** `wavemaket_stripe_dense_aligned` may not
 satisfy the divergence-free requirement by *relocating* data-dependent control
 flow — e.g. converting a per-`k` branch into a data-dependent loop bound,
@@ -593,17 +661,70 @@ Tests must:
 
 Aligned-specific tests must additionally:
 
-- **Divergence-free structural test (TR35).** By source/AST inspection of
-  `wavemaket_stripe_dense_aligned`, verify: the per-`k` loop bound is the
+- **Divergence-free structural test (TR35).** By source/AST inspection, verify
+  that `wavemaket_stripe_dense_aligned` **and every project-defined helper it
+  calls, transitively, that executes inside the per-`(itrc, j, k)` accumulation
+  path** are free of data-dependent control flow: the per-`k` loop bound is the
   data-independent stripe window; there is no data-dependent loop bound, regime
-  sub-range, per-parity sub-loop, or per-element `if`/`break`/`continue`; and
-  reflection, parity, keep/drop, and the derivative-domain decision are arithmetic
-  masks/selects. This must be inspectable from Python source (no reliance on
-  fragile compiled-code inspection).
-- **ULP-boundary detection test** (Amendment 1 AM1-4): identify and exclude
-  ULP-boundary cells; confirm all non-boundary cells satisfy the standard
-  tolerance and ULP-boundary cells contain either `0.0` or the integer-stride
-  interpolated value.
+  sub-range, per-parity sub-loop, or per-element `if`/`break`/`continue` anywhere
+  in that call graph; and reflection, parity, keep/drop, and the
+  derivative-domain decision are arithmetic masks/selects. (F001: inspecting only
+  the named public function would let a fixed-loop wrapper delegate divergent
+  control flow to a private `_aligned_inner(...)`-style helper and still pass; the
+  test now covers the whole hot-path call graph.) Helpers excluded from this
+  inspection are limited to pure validation and table-construction helpers **not**
+  executed inside the per-`(itrc, j, k)` accumulation path; any such exclusion
+  must be explicitly disclosed in the implementation handoff, naming the helper
+  and why it is outside the accumulation path.
+- **LLVM IR divergence-free inspection (TR45; authorized human decision HD-1).**
+  In addition to the source/AST test above, the aligned function's divergence-free
+  property **must** be verified at the **LLVM IR** level. Using numba's stable
+  IR-extraction API (`wavemaket_stripe_dense_aligned.inspect_llvm()`, or an
+  equivalent documented numba mechanism) for the signature(s) the tests exercise,
+  compiled with bounds-checking disabled at the repository-pinned
+  python/numba/LLVM versions, the test must verify that the LLVM IR of the aligned
+  accumulation path contains **no conditional branch whose predicate depends on
+  per-element runtime data** — waveform values, `k` keep/drop (bandwidth or
+  table-overflow), reflection side, parity, or derivative-domain membership.
+  Equivalently, those decisions must appear in the IR as **data flow**
+  (`select`/arithmetic), not as control flow. The only conditional branches
+  permitted in that IR are those implementing the **data-independent fixed-trip
+  loop control** (uniform bounds over `Nc` and `stripe_height`, whose trip counts
+  do not depend on runtime data). This is required precisely because it is harder
+  to adversarially evade than source/AST inspection: a helper whose name resembles
+  arithmetic but whose body branches on data will surface as a data-dependent
+  branch in the IR.
+  - **Scope of the "compiled-code" exclusion (supersedes the prior TR35 phrasing
+    under HD-1).** LLVM IR is machine- and language-independent and is a required
+    inspection target at frozen toolchain versions. What remains excluded as
+    genuinely fragile is inspection of the **final machine-dependent compiled
+    output** (native assembly, PTX, or object bytecode), which is machine-specific
+    and is **not** required. The earlier wording that the structural test "is not
+    required to inspect numba/LLVM/PTX lowered IR" is **superseded for LLVM IR** by
+    HD-1; PTX/native machine code remain excluded.
+  - **Toolchain pinning and unavailability.** The criterion is evaluated at the
+    repository-pinned python/numba/LLVM versions. If a future toolchain change
+    prevents IR extraction, or alters the IR so the test cannot run, the
+    implementation must be marked **pending human structural review** rather than
+    silently passing, and the toolchain dependency re-confirmed. This is the
+    bounded, acknowledged fragility of IR inspection (a version dependency); it does
+    not reach the machine-dependent fragility of compiled-bytecode inspection.
+  - The contract therefore **does** assert divergence-free structure at the LLVM IR
+    level for the pinned toolchain. Whether the eventual hand-written GPU/PTX kernel
+    is divergence-free is separate future-work review (Non-Goals), since no GPU
+    kernel is in scope here.
+- **ULP-boundary detection test** (Amendment 1 AM1-4; strengthened per F004): the
+  ULP-boundary mask must be computed **directly from the contract formula** in
+  "Aligned-path ULP-boundary exception" (using `R`, `wc.DF`, `wc.df_bw`, and
+  `waveform.FT`), **without calling any implementation helper of the aligned
+  path**, so the exemption set is an independent oracle rather than implementation
+  output. The test must: confirm all non-boundary cells satisfy the standard
+  tolerance; confirm ULP-boundary cells contain either `0.0` or the integer-stride
+  interpolated value; **assert that the exempt set is not the entire comparison
+  domain** (not all cells are exempt) and that **at least one non-boundary cell is
+  exercised** for each tested case; and **report the exempt-cell count**. (F004:
+  prevents an implementation-coupled mask from marking all differing — or all —
+  cells as ULP-boundary, which would make the oracle comparison vacuous.)
 - **Clamp-and-mask test (TR33/TR36):** out-of-domain derivative input → exactly
   `0.0`, no `NaN`/`inf`, and no fault with bounds-checking disabled; in-domain
   results unchanged within tolerance versus a control-flow-guarded reference.
@@ -632,12 +753,16 @@ Required at `speed_tests/taylor_time_wavelet_optimized_speed_demo.py`. It must:
 per `stripe_height ∈ {2,3,4,5}` at the `Nsf = 150` config, the ratio of
 `wavemaket_stripe_dense_aligned` median time to `wavemaket_stripe_dense` median
 time. The intended floor is **≤ 1.10×** (aligned no more than ~10% slower than
-dense). This is **not** an auto-fail: a measured ratio above the floor does not
-by itself fail acceptance, but the benchmark must emit it and the implementation
-review handoff must **explicitly surface it for human review**. There is no hard
-speed threshold — the hard performance gate lives on the future GPU
-implementation (DI-2/DI-3). The reviewer must re-measure this ratio
-independently rather than restate the implementer's claim.
+dense). This is **not** an auto-fail and **not** auto-acceptance either (F003): a
+measured ratio above the floor does not by itself fail acceptance, but it also may
+not be self-accepted by reporting the number alone. If the independently
+re-measured aligned/dense median ratio exceeds **1.10×** for any required
+`stripe_height`, the implementation is **not automatically acceptable**: the
+review handoff must set status `blocked_pending_human` and obtain **explicit human
+acceptance of the measured regression** before proceeding. The benchmark must emit
+the ratio regardless. There is no hard speed threshold — the hard performance gate
+lives on the future GPU implementation (DI-2/DI-3). The reviewer must re-measure
+this ratio independently rather than restate the implementer's claim.
 
 ---
 
@@ -748,8 +873,14 @@ Defects" blocks auto-approval and routes to the human maintainer.
   arithmetic masks/selects; clamp-and-mask derivative handling; cross-multiplied
   precondition; integer-stride `R*k`).
 - Test inspection confirms tests are active, full-stripe, oracle-based, include
-  required coverage, and include the divergence-free structural test, the
-  ULP-boundary detection test, and the clamp-and-mask test.
+  required coverage, and include the source/AST divergence-free structural test,
+  the **LLVM IR divergence-free inspection (TR45/HD-1)**, the ULP-boundary
+  detection test, and the clamp-and-mask test.
+- LLVM IR inspection (via numba `inspect_llvm()` at the pinned toolchain, bounds-
+  checking disabled) confirms the aligned accumulation path has no data-dependent
+  conditional branch (keep/drop, reflection, parity, derivative-domain decisions
+  appear as `select`/arithmetic, not control flow); final machine-dependent
+  compiled output (native/PTX) is out of scope.
 - Benchmark inspection or execution confirms all four variants, correctness
   validation before timing, and the reported aligned-vs-dense median ratio;
   reviewer re-measures the ratio independently.
@@ -774,6 +905,35 @@ carried forward **except** as changed below.
 | DI-3 floor | Resolved | Benchmark/Demo Requirements; TR34 | Added the soft, flagged aligned-vs-dense median-ratio floor (≤1.10×), independently re-measured, escalated not auto-failed. | Maintainer Step-0 clarification (soft flagged floor). | Exact ratio threshold is a review heuristic. |
 | TR33 | Resolved | Implementation Variants — aligned; Required Coverage; Test Requirements | Derivative-domain drop handled by in-kernel clamp-and-mask folded into the amplitude prefactor; control-flow guard removed; no-NaN/no-fault tests required. | Maintainer Step-0 decision (clamp-and-mask). | Caller-side compaction deferred (Non-Goals). |
 
+### PR #42 contract-adversary dispositions (revision r1)
+
+These resolve the eight findings from the PR #42 contract-adversary review of this
+file (contract sha256 `de2a2a3f…`). They do not change any frozen Design Intent;
+they close loopholes and pin interface details.
+
+| Finding | Class | Disposition | Section affected | Authority |
+|---|---|---|---|---|
+| F001 | Compliance loophole | Accepted, resolved | Test Requirements (TR35/TR37) | DI-2; PR #42 review |
+| F002 | Missing acceptance criterion | Accepted, **resolved** (authorized human decision HD-1) | Test Requirements (TR45); Operative Definitions; Verification Methods | Authorized human decision HD-1 (LLVM IR inspection now required); DI-2 |
+| F003 | Blocking ambiguity | Accepted, resolved | Benchmark/Demo (TR34/TR40) | Maintainer Step-0; handoff human-authority |
+| F004 | Missing acceptance criterion | Accepted, resolved | Test Requirements (TR39) | DI-4; formula already in contract |
+| F005 | Missing interface detail | Accepted, resolved | Supported Waveform Domain (TR41) | Non-Goals; assertions-only policy |
+| F006 | Compliance loophole | Accepted, resolved | Forbidden Shortcuts (TR42) | DI-1 |
+| F007 | Phantom requirement | Accepted, resolved | Implementation Variants — sparse (TR43) | DI-1; removes unauthorized mechanism |
+| F008 | Missing interface detail | Accepted, resolved | Dense Stripe Shape And Indexing (TR44) | numba nopython QA policy; in-place mutation |
+
+F002 is now **fully resolved by authorized human decision HD-1**. The helper-
+internal-branch hole it shares with F001 is closed by TR37; source/AST inspection
+(TR35) is retained; and HD-1 **adds required LLVM IR inspection** (TR45) as a
+harder-to-evade verification of the same divergence-free property. The reviewer's
+proposed lowered-IR mandate was correct: the contrary phrasing "no reliance on
+fragile compiled-code inspection" was LLM-drafted in the v6 consolidation (a
+same-model-family blind spot the cross-family adversary correctly flagged), not a
+human decision, and HD-1 supersedes it. The genuinely fragile, still-excluded target
+is the final machine-dependent compiled output (native/PTX), not LLVM IR. The
+earlier "route the depth question to the human" disposition is closed: the human
+decided.
+
 ---
 
 ## Requirement Traceability Table (changed/added requirements)
@@ -795,6 +955,15 @@ superseded `final` contract. Changes and additions:
 | TR34 (new) | Maintainer Step-0; DI-3 | Benchmark/Demo Requirements | Reported and independently re-measured aligned/dense median ratio. | Soft, flagged floor ≤1.10×; escalated, not auto-failed. |
 | TR35 (new) | This consolidation | Test Requirements; Verification Methods | Python-source/AST inspection. | The divergence-free structural test itself. |
 | TR36 (new) | This consolidation | Test Requirements | No-NaN/no-inf and bounds-check-disabled no-fault assertions on out-of-domain input. | Finiteness invariant for mask-after-compute. |
+| TR37 (new) | PR #42 review F001; DI-2 | Test Requirements (TR35); Verification Methods | Source/AST inspection of the public aligned function **plus all hot-path helpers** transitively reachable from the per-`(itrc,j,k)` path; disclosed exclusions limited to validation/table-construction helpers off that path. | Closes the wrapper-delegates-to-branching-helper loophole. |
+| TR38 (superseded by TR45/HD-1) | PR #42 review F002; DI-2 | Test Requirements | Was: "source-level only; IR not required." **Superseded** — the human (HD-1) decided LLVM IR inspection is required. | Retained only as the source/AST half of the now-two-level check (TR35 + TR45). |
+| TR45 (new) | **Authorized human decision HD-1**; PR #42 review F002; DI-2 | Test Requirements; Operative Definitions; Verification Methods | LLVM IR inspection via numba `inspect_llvm()` at pinned toolchain, bounds-check disabled: no data-dependent conditional branch in the aligned accumulation path; keep/drop, reflection, parity, derivative-domain decisions appear as `select`/arithmetic. Final machine-dependent compiled output (native/PTX) excluded; IR-extraction unavailability ⇒ pending human review. | Adopts the F002 reviewer proposal under human authority; supersedes the LLM-drafted "no fragile compiled-code inspection" wording. |
+| TR39 (new) | PR #42 review F004; DI-4 | Test Requirements | ULP-boundary mask computed from the contract formula without implementation helpers; assert not-all-exempt, ≥1 non-boundary cell exercised, report exempt count. | Prevents a vacuous exemption set. |
+| TR40 (new) | PR #42 review F003; maintainer Step-0; handoff human-authority | Benchmark/Demo Requirements (TR34) | Re-measured aligned/dense ratio > 1.10× ⇒ status `blocked_pending_human` + explicit human acceptance; reporting the number alone is not acceptance. | Soft floor stays soft (human decides) but is enforceable. |
+| TR41 (new) | PR #42 review F005; Supported Waveform Domain; Non-Goals | Supported Waveform Domain | Out-of-supported-domain behavior undefined and untested; no detection/assertion required; docstring discloses it. | Distinct from the in-domain derivative-table drop (TR33). |
+| TR42 (new) | PR #42 review F006; DI-1 | Forbidden Shortcuts | No waveform-dependent full-band / `O(wc.Nf)` precompute or per-layer lookup in any component incl. the aligned-table constructor; waveform-independent aligned coefficient table permitted. | Extends narrow-stripe memory intent to constructors/caches. |
+| TR43 (new) | PR #42 review F007; DI-1 | Implementation Variants — sparse | Removed the "preserve variable-`k` structure as practical" mechanism prescription; replaced with stripe-only writes, in-place accumulate, no full-band materialization, oracle tolerance. | Phantom/mechanism requirement removed; variable-`k` loop still permitted. |
+| TR44 (new) | PR #42 review F008; numba nopython QA policy; in-place mutation requirement | Dense Stripe Shape And Indexing | `wavelet_stripe` must be a writable `ndarray` usable in nopython mode; read-only/array-like undefined and docstring-disclosed; no internal copy. | Pins the array interface contract. |
 
 ---
 
@@ -811,3 +980,11 @@ superseded `final` contract. Changes and additions:
 - CI execution for the new tests remains deferred to a future CI policy.
 - Cross-machine benchmark reproducibility remains unresolved; the aligned/dense
   ratio is interpreted within a single benchmark environment.
+- **Verification depth of the divergence-free criterion (F002) — RESOLVED by
+  HD-1.** The human decided (HD-1) that **LLVM IR inspection is required** in
+  addition to source/AST inspection (TR45). This is no longer an open blocker. The
+  only acknowledged residuals are bounded: (a) IR inspection is pinned to the
+  repository toolchain versions and must be re-confirmed if python/numba/LLVM
+  change (IR-extraction unavailability ⇒ pending human review, not silent pass);
+  and (b) the eventual hand-written GPU/PTX kernel's divergence-freedom is separate
+  future-work review, since no GPU kernel is in scope here (Non-Goals).
