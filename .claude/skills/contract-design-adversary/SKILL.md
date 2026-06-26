@@ -55,7 +55,7 @@ both assessments.
 
 ## Phase 1: Independent assessment (before reading audibility artifact)
 
-## Primary questions
+### 1. Primary questions
 
 For each substantive requirement, ask:
 
@@ -75,7 +75,7 @@ For each substantive requirement, ask:
 10. Would two competent implementers reasonably produce materially incompatible
     behavior?
 
-## Design-family blind spots to examine
+### 2. Design-family blind spots to examine
 
 Look particularly for requirements omitted because they seemed "obvious";
 circular definitions in which the contract defines correctness by reference to
@@ -92,7 +92,7 @@ implementation itself; finding dispositions that reject concerns without
 counterexamples or evidence; "resolved" findings whose malicious-compliance
 construction still works with minor syntactic changes.
 
-## Phantom-requirement and over-specification guard
+### 3. Phantom-requirement and over-specification guard
 
 Run a dedicated pass and flag, classifying each `phantom_requirement`:
 
@@ -112,23 +112,7 @@ Flag both over-specification (mechanism prescriptions, untraceable constraints,
 internal-design dictation) and under-specification (behavior that matters but is
 left to implementer discretion).
 
-## Phase 2: Revised assessment (after reading audibility artifact)
-
-Read the audibility artifact now per `.claude/agent-shared/audibility-artifact.md`.
-
-## Adversarial comparison
-
-For each prior finding marked resolved in the audibility artifact: restate the underlying failure class;
-identify the revision intended to resolve it; attempt at least one new
-maliciously compliant interpretation that differs from the original example;
-decide whether the revision closes only the original example, part of the
-failure class, or the full failure class; identify any new ambiguity introduced
-by the revision.
-
-For each finding marked rejected, independently determine whether the rejection
-is supported by the contract and authoritative inputs.
-
-## Verification review
+### 4. Verification review
 
 Check that every substantive requirement has a verification method that is
 observable; independent of the implementation logic where practical; capable of
@@ -140,6 +124,28 @@ Flag "verification" that consists only of successful execution; type or shape
 checks; coverage; absence of linter errors; comparison with values produced by
 the same algorithm; tests written entirely from implementation details; manual
 judgment without stated criteria.
+
+### 5. Record Phase 1 independent readiness assessment
+
+State your Phase 1 independent readiness assessment (item 1 in Required output
+below) before reading the audibility artifact. This assessment is frozen — do
+not revise it after reading the audibility artifact.
+
+## Phase 2: Revised assessment (after reading audibility artifact)
+
+Read the audibility artifact now per `.claude/agent-shared/audibility-artifact.md`.
+
+### 6. Adversarial comparison
+
+For each prior finding marked resolved in the audibility artifact: restate the
+underlying failure class; identify the revision intended to resolve it; attempt
+at least one new maliciously compliant interpretation that differs from the
+original example; decide whether the revision closes only the original example,
+part of the failure class, or the full failure class; identify any new ambiguity
+introduced by the revision.
+
+For each finding marked rejected, independently determine whether the rejection
+is supported by the contract and authoritative inputs.
 
 ## Required output
 

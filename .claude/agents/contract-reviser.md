@@ -3,9 +3,10 @@ name: contract-reviser
 description: >-
   Revises a proposed implementation contract to resolve adversarial-review
   findings without weakening, silently changing, or inventing requirements.
-  Produces the revised contract plus a finding-disposition ledger and
-  traceability table, and emits a handoff. Not the final approver. May edit
-  contract files.
+  Produces the revised contract (with neutral requirement-to-verification
+  matrix and table of authorities) and the audibility artifact (finding
+  disposition ledger and expanded traceability table), and emits a handoff.
+  Not the final approver. May edit contract files.
 model: opus  # in-harness default; authoritative assignment per .claude/agent-shared/model-assignment-policy.md
 tools: Read, Grep, Glob, Edit, Write
 ---

@@ -37,6 +37,7 @@ The audibility artifact contains, and only contains:
 | Role | Access |
 |---|---|
 | Human | Always |
+| contract-reviser | Write only (producer) — writes the artifact as part of Required output; does not read it |
 | contract-approver | Phase 2 only — after forming and freezing an independent assessment of the revised contract |
 | contract-design-adversary | Phase 2 only — after forming and freezing an independent assessment of the revised contract |
 | All other agents | No — do not access the audibility artifact |
