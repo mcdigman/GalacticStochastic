@@ -19,7 +19,7 @@ requires-python = ">=3.12"
 
 [project.optional-dependencies]
 # Development / test tooling (pytest plus type stubs for the typed checks).
-dev = ["pytest>=9.0", "h5py-stubs", "scipy-stubs", "pandas-stubs"]
+dev = ["pytest>=9.0", "h5py-stubs", "scipy-stubs", "pandas-stubs", "PyYAML>=6.0", "types-PyYAML>=6.0"]
 # COSMIC compatibility mode: loading/processing COSMIC population HDF5 catalogs
 # (see GalacticStochastic/cosmic_data_helpers.py, imported behind an optional guard).
 # astropy >=7.2 per the note in cosmic_data_helpers.py; both support Python 3.12.

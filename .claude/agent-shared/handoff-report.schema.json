@@ -1,48 +1,23 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "chirp-agent-report:v2",
-  "title": "Agent PR handoff metadata (chirp-agent-report:v2)",
-  "description": "Metadata-only index for a pipeline handoff. Substantive findings live in the visible human-readable report; this block must not carry content outside these fields (additionalProperties:false enforces no covert channel).",
-  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "required": ["schema", "pr", "agent_role", "status", "human_signoff", "findings"],
+  "description": "Metadata-only index for a pipeline handoff. Substantive findings live in the visible human-readable report; this block must not carry content outside these fields (additionalProperties:false enforces no covert channel).",
   "properties": {
-    "schema": { "const": "chirp-agent-report:v2" },
-    "pr": { "type": "integer" },
-    "base_sha": { "type": "string" },
-    "head_sha": { "type": "string" },
-    "agent_role": { "type": "string" },
-    "resolved_model": { "type": "string" },
-    "orientation": {
-      "type": "string",
-      "enum": ["claude-drafted", "gpt-drafted", "human-drafted"]
+    "agent_role": {
+      "type": "string"
     },
-    "inputs_considered": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "contract_sha256": { "type": "string" },
-        "diff_sha256": { "type": "string" }
-      }
-    },
-    "status": {
-      "type": "string",
-      "enum": ["recommend_approve", "recommend_changes", "blocked_pending_human"]
-    },
-    "human_signoff": {
-      "type": "string",
-      "enum": ["pending", "approved", "rejected"]
+    "base_sha": {
+      "type": "string"
     },
     "findings": {
-      "type": "array",
       "items": {
-        "type": "object",
         "additionalProperties": false,
-        "required": ["id", "classification", "severity", "confidence", "blocking"],
         "properties": {
-          "id": { "type": "string" },
+          "blocking": {
+            "type": "boolean"
+          },
           "classification": {
-            "type": "string",
             "enum": [
               "blocking_ambiguity",
               "compliance_loophole",
@@ -58,35 +33,124 @@
               "intent_defeat",
               "pre_existing_issue",
               "nonblocking_clarification"
-            ]
-          },
-          "severity": {
-            "type": "string",
-            "enum": ["critical", "high", "medium", "low", "informational"]
+            ],
+            "type": "string"
           },
           "confidence": {
-            "type": "string",
-            "enum": ["high", "medium", "low"]
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "type": "string"
           },
-          "blocking": { "type": "boolean" }
-        }
-      }
+          "id": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low",
+              "informational"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "classification",
+          "severity",
+          "confidence",
+          "blocking"
+        ],
+        "type": "object"
+      },
+      "type": "array"
     },
-    "verification": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["tool", "result"],
-        "properties": {
-          "tool": { "type": "string" },
-          "result": { "type": "string" }
+    "head_sha": {
+      "type": "string"
+    },
+    "human_signoff": {
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "type": "string"
+    },
+    "inputs_considered": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_sha256": {
+          "type": "string"
+        },
+        "diff_sha256": {
+          "type": "string"
         }
-      }
+      },
+      "type": "object"
     },
     "limitations": {
-      "type": "array",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "orientation": {
+      "enum": [
+        "claude-drafted",
+        "gpt-drafted",
+        "human-drafted"
+      ],
+      "type": "string"
+    },
+    "pr": {
+      "type": "integer"
+    },
+    "resolved_model": {
+      "type": "string"
+    },
+    "schema": {
+      "const": "chirp-agent-report:v2"
+    },
+    "status": {
+      "enum": [
+        "recommend_approve",
+        "recommend_changes",
+        "blocked_pending_human"
+      ],
+      "type": "string"
+    },
+    "verification": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "result": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool",
+          "result"
+        ],
+        "type": "object"
+      },
+      "type": "array"
     }
-  }
+  },
+  "required": [
+    "schema",
+    "pr",
+    "agent_role",
+    "status",
+    "human_signoff",
+    "findings"
+  ],
+  "title": "Agent PR handoff metadata (chirp-agent-report:v2)",
+  "type": "object"
 }

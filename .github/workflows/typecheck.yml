@@ -31,7 +31,7 @@ jobs:
 
       - name: Run mypy
         run: >
-          uvx --from "mypy==${{ env.MYPY_VERSION }}" mypy
+          uvx --from "mypy==${{ env.MYPY_VERSION }}" --with types-PyYAML mypy
           --ignore-missing-imports
           --explicit-package-bases
           .
