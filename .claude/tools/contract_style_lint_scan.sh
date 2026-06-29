@@ -84,9 +84,35 @@ must[[:print:]]{0,60}should
 may[[:space:]]+rely[[:print:]]{0,80}not[[:space:]]+authoritative
 not[[:space:]]+authoritative[[:print:]]{0,80}may[[:space:]]+rely
 can[[:space:]]+be[[:space:]]+trusted
+can[[:space:]]+trust[[:print:]]{0,80}(authoritative|evidence|report)
+evidence[[:print:]]{0,80}necessary[[:print:]]{0,80}(author|saying|works)
+(current[[:space:]]+happy-path|happy-path[[:space:]]+example)[[:print:]]{0,80}passes
+default[[:space:]]+settings[[:print:]]{0,80}(deemed[[:space:]]+compliant|satisfy|pass)
 currently[[:space:]]+assumes?
 exists[[:space:]]+to[[:print:]]{0,80}(recurrence|failure|defect)
 historically
+historical[[:space:]]+behavior
+(xfail|skipped?[[:space:]]+tests?)[[:print:]]{0,80}(counts?[[:space:]]+as[[:space:]]+passing|marked[[:space:]]+`?met`?|acceptance)
+(counts?[[:space:]]+as[[:space:]]+passing|marked[[:space:]]+`?met`?|acceptance)[[:print:]]{0,80}(xfail|skipped?[[:space:]]+tests?)
+oracle[[:print:]]{0,80}(call|use|rely[[:space:]]+on)[[:print:]]{0,80}(production|helper|current[[:space:]]+fixtures?)
+oracle[[:print:]]{0,80}default[[:print:]]{0,80}(close[[:space:]]+enough|sufficient)
+(test|assertion)[[:print:]]{0,80}(only[[:space:]]+(shape|type)|non-crashing|does[[:space:]]+not[[:space:]]+raise)
+zero[[:space:]]+rows?[[:print:]]{0,80}(evidence|count)
+survivor-only[[:print:]]{0,80}sufficient
+toy[[:space:]]+fixture
+may[[:space:]]+add[[:space:]]+warning[[:space:]]+filters?[[:print:]]{0,80}(CI|green|checks?[[:space:]]+fail)
+(catch|ignore)[[:print:]]{0,80}(TypeError|Exception|error)[[:print:]]{0,80}instead[[:space:]]+of[[:space:]]+fixing
+source[[:space:]]+inspection[[:space:]]+alone
+(final|native|machine)[[:print:]]{0,40}assembly[[:print:]]{0,40}is[[:space:]]+required[[:print:]]{0,80}acceptance
+author[[:space:]]+discretion
+prefer[[:print:]]{0,80}intent[[:print:]]{0,80}(written|rule|requirement|text)
+best-effort
+follow-up[[:print:]]{0,80}(fail|edge|acceptance|requirement)
+(exempt[[:space:]]+from|may[[:space:]]+omit)[[:print:]]{0,40}(validation|tests?|coverage|assertions?)
+without[[:space:]]+documenting
+coverage[[:space:]]+is[[:space:]]+optional
+missing[[:space:]]+assertion[[:print:]]{0,80}reviewer[[:print:]]{0,80}believes
+advisory[[:print:]]{0,80}may[[:space:]]+not[[:space:]]+block
 PATTERNS
 
 grep -Ev '^[[:space:]]*($|#)' "$tmp_raw_patterns" >"$tmp_patterns"
