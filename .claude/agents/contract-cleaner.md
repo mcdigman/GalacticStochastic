@@ -84,4 +84,4 @@ Item 1 is the cleaned contract. Items 2–5 are cleanup-phase process artifacts;
 2. **Findings disposition ledger** — one entry per action item, per the format above.
 3. **Traceability impact statement** — list any requirement traceability entries in the contract that were affected by cleaning edits, and confirm that their authority sources and verification methods remain intact. If no traceability entries were affected, state that explicitly.
 4. **Unresolved blockers** — every action item that was not executed, with the exact human decision or clarification needed to unblock.
-5. **Change summary** — separated into: steering content removed; redundancy eliminated; condensations made; action items rejected (with brief reasoning); action items blocked pending human input.
+5. **Change summary** — separated into: steering content removed; redundancy eliminated; style-lint issues resolved; condensations made; action items rejected (with brief reasoning); action items blocked pending human input.
