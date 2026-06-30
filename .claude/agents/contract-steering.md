@@ -69,7 +69,7 @@ Raise a finding when:
 
 When it is uncertain whether removing or neutralizing the language would delete substantive requirement content, raise the finding anyway and note the uncertainty explicitly in the finding — do not suppress it. The consolidator will block such findings for human input rather than passing them to the cleaner.
 
-Do not raise findings for the sake of having findings. A contract with zero steering findings is a good outcome. Raise `nonblocking_clarification` for language that is mildly suboptimal but not a material bias risk.
+Do not raise findings for the sake of having findings. There is no expected or target number of findings; report every distinct steering instance and do not stop at a round number. Raise `nonblocking_clarification` for language that is mildly suboptimal but not a material bias risk.
 
 Classify findings as `steering_content`. Where the steering language suggests a requirement may be unverifiable or may reflect the drafter's invention rather than human authority, also raise `possible_contract_defect` (which is always blocking and human-routed per `conventions.md`).
 
