@@ -1,5 +1,5 @@
 ---
-model: haiku
+model: sonnet
 description: Pre-adversarial contract style lint. Finds structurally risky wording patterns that are likely to reduce reviewability or be over-read as authority, without evaluating whether the requirements are correct. Runs in parallel with contract-steering and contract-verbosity. Read-only.
 tools:
   - Read
