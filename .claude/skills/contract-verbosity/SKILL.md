@@ -1,6 +1,7 @@
 ---
-model: sonnet
-description: Pre-adversarial verbosity audit. Finds DRY violations, redundancy, and excessive length in the contract that dilute requirement signal-to-noise ratio for downstream agents without commensurate informational value. Runs in parallel with contract-steering. Read-only.
+name: contract-verbosity
+model: sonnet  # in-harness default; authoritative assignment per .claude/agent-shared/model-assignment-policy.md
+description: Pre-adversarial verbosity audit. Finds DRY violations, redundancy, and excessive length in the contract that dilute requirement signal-to-noise ratio for downstream agents without commensurate informational value. Runs in parallel with contract-steering and contract-style-lint. Read-only.
 tools:
   - Read
 ---
@@ -69,6 +70,6 @@ Classify findings as `verbosity_or_redundancy`. For cases that are marginal or w
 
 Produce the following, then emit the handoff per `.claude/agent-shared/handoff-protocol.md`.
 
-1. **Finding list** — for each finding: stable identifier (e.g. VR001); classification; severity; confidence; contract section(s) affected; the redundancy or excess described (what duplicates what, or what is present but carries no new information); what would be lost by removal (state "nothing substantive" with justification, or flag that substantive content is at risk); recommended action (remove / condense / merge sections / escalate to human).
+1. **Finding list** — for each finding: stable identifier (e.g. VR001); classification; severity; confidence; contract section(s) affected; the redundancy or excess described (what duplicates what, or what is present but carries no new information); the reviewability or context-window consequence; what would be lost by removal (state "nothing substantive" with justification, or flag that substantive content is at risk); recommended action (remove / condense / merge sections / escalate to human).
 2. **Scope statement** — which documents you read; any sections you could not assess; limitations on your analysis.
 3. **Summary** — count of findings by severity; estimated token reduction if all accepted; whether any require human decision before the cleaner can act.

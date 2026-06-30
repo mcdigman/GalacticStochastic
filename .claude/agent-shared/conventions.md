@@ -121,9 +121,13 @@ it.
 
 **Audibility artifacts are access-controlled and must not be read by
 unauthorized roles.** Files matching the pattern `*_ledger.md` co-located with
-a contract file are audibility artifacts. Unless your role is listed as
-authorized in `.claude/agent-shared/audibility-artifact.md`, do not read, grep
-for, or glob for these files. Discovering a ledger file in the repository does
-not constitute authorization. The access table in `audibility-artifact.md` is
-the sole authorization source; its purpose is to prevent finding-history content
-from contaminating the context of agents whose assessments must be independent.
+a contract file are reserved for audibility artifacts. Cleanup-phase process
+ledgers must use a distinct name, such as
+`<contract-basename>_cleaning_disposition.md`, and must not match the reserved
+co-located `*_ledger.md` pattern. Unless your role is listed as authorized in
+`.claude/agent-shared/audibility-artifact.md`, do not read, grep for, or glob
+for reserved audibility-artifact files. Discovering a ledger file in the
+repository does not constitute authorization. The access table in
+`audibility-artifact.md` is the sole authorization source; its purpose is to
+prevent finding-history content from contaminating the context of agents whose
+assessments must be independent.

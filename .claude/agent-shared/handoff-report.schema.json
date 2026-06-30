@@ -75,6 +75,14 @@
     "head_sha": {
       "type": "string"
     },
+    "handoff_stage": {
+      "enum": [
+        "single",
+        "phase1_preliminary",
+        "phase2_final"
+      ],
+      "type": "string"
+    },
     "human_signoff": {
       "enum": [
         "pending",
@@ -90,6 +98,9 @@
           "type": "string"
         },
         "diff_sha256": {
+          "type": "string"
+        },
+        "audibility_artifact_sha256": {
           "type": "string"
         },
         "intended_outcome_sha256": {
@@ -121,6 +132,9 @@
         "recommend_changes",
         "blocked_pending_human"
       ],
+      "type": "string"
+    },
+    "supersedes_handoff": {
       "type": "string"
     },
     "verification": {

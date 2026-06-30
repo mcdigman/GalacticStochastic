@@ -1,5 +1,6 @@
 ---
-model: sonnet
+name: contract-style-lint
+model: sonnet  # in-harness default; authoritative assignment per .claude/agent-shared/model-assignment-policy.md
 description: Pre-adversarial contract style lint. Finds structurally risky wording patterns that are likely to reduce reviewability or be over-read as authority, without evaluating whether the requirements are correct. Runs in parallel with contract-steering and contract-verbosity. Read-only.
 tools:
   - Read
@@ -99,6 +100,6 @@ Classify findings as `style_lint`. Where the lint issue suggests the contract is
 
 Produce the following, then emit the handoff per `.claude/agent-shared/handoff-protocol.md`.
 
-1. **Finding list** — for each finding: stable identifier (e.g. SL001); classification; severity; confidence; contract section; the style-lint pattern exhibited; why the issue affects reviewability rather than mere elegance; what substantive content may need to be preserved; recommended action (remove / replace with neutral phrasing / move to audibility artifact / cite authority / escalate to human).
+1. **Finding list** — for each finding: stable identifier (e.g. SL001); classification; severity; confidence; contract section; the style-lint pattern exhibited; the reviewability or context-contamination consequence; why the issue affects reviewability rather than mere elegance; what substantive content may need to be preserved; recommended action (remove / replace with neutral phrasing / move to audibility artifact / cite authority / escalate to human).
 2. **Scope statement** — which documents you read; any sections you could not assess; limitations on your analysis.
 3. **Summary** — count of findings by severity; whether any require human decision before the cleaner can act; overall style-lint risk assessment.

@@ -112,14 +112,19 @@ unnecessary internal design details.
 
 Emit a PR comment per `.claude/agent-shared/handoff-protocol.md` containing
 your Phase 1 output (items 1–4 in Required output below). In the
-`inputs_considered` metadata field, list the contract hash but exclude the
-audibility artifact. Only after emitting this comment may you read the
+metadata block, set `handoff_stage: phase1_preliminary`; in
+`inputs_considered`, list the contract hash but omit
+`audibility_artifact_sha256`. Only after emitting this comment may you read the
 audibility artifact. The Phase 1 assessment is immutable — Phase 2 must not
 rewrite it, only quote or contrast it explicitly.
 
 ### Phase 2: Revised assessment (after reading audibility artifact)
 
 Read the audibility artifact now per `.claude/agent-shared/audibility-artifact.md`.
+Your final handoff metadata must set `handoff_stage: phase2_final`, include
+`audibility_artifact_sha256` in `inputs_considered`, and set
+`supersedes_handoff` to the Phase 1 preliminary comment URL or stable
+identifier.
 
 ### 5. Verify finding closure
 

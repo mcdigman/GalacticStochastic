@@ -13,6 +13,11 @@ the contract file. For example, if the contract is
 `implementation_contract_foo.md`, the ledger is
 `implementation_contract_foo_ledger.md`.
 
+The co-located `*_ledger.md` naming pattern is reserved for this audibility
+artifact. Cleanup-phase process ledgers must use a distinct name, such as
+`<contract-basename>_cleaning_disposition.md`, so access-control checks do not
+confuse process ledgers with the audibility artifact.
+
 ## Contents
 
 The audibility artifact contains, and only contains:

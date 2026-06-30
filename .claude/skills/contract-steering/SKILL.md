@@ -1,6 +1,7 @@
 ---
-model: sonnet
-description: Pre-adversarial steering audit. Finds contract language whose primary effect is to bias future reviewers, revisers, or implementers toward the drafter's interpretation or design choices rather than to guide correct implementation. Runs in parallel with contract-verbosity. Read-only.
+name: contract-steering
+model: sonnet  # in-harness default; authoritative assignment per .claude/agent-shared/model-assignment-policy.md
+description: Pre-adversarial steering audit. Finds contract language whose primary effect is to bias future reviewers, revisers, or implementers toward the drafter's interpretation or design choices rather than to guide correct implementation. Runs in parallel with contract-verbosity and contract-style-lint. Read-only.
 tools:
   - Read
 ---
@@ -76,6 +77,6 @@ Classify findings as `steering_content`. Where the steering language suggests a 
 
 Produce the following, then emit the handoff per `.claude/agent-shared/handoff-protocol.md`.
 
-1. **Finding list** — for each finding: stable identifier (e.g. SC001); classification; severity; confidence; contract section; the steering pattern exhibited; why removal would not delete substantive requirement content; recommended action (remove / replace with neutral phrasing / escalate to human).
+1. **Finding list** — for each finding: stable identifier (e.g. SC001); classification; severity; confidence; contract section; the steering pattern exhibited; the reviewability or context-contamination consequence; why removal would not delete substantive requirement content; recommended action (remove / replace with neutral phrasing / escalate to human).
 2. **Scope statement** — which documents you read; any sections you could not assess; limitations on your analysis.
 3. **Summary** — count of findings by severity; whether any require human decision before the cleaner can act; overall steering risk assessment.
