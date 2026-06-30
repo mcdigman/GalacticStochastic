@@ -25,7 +25,7 @@ You will receive:
 
 ## Consolidation rules
 
-**Deduplication.** If multiple input passes flag the same contract section or passage, produce one consolidated action item referencing all source finding IDs. Do not produce separate action items for the same text.
+**Deduplication and span granularity.** Each action item should target one contiguous contract span and one cleanup operation. If multiple input passes flag the same contiguous text, produce one consolidated action item referencing all source finding IDs. If one finding bundles multiple phrases, sentences, bullets, or non-adjacent spans, split it into separate action items unless a single contiguous edit necessarily closes all of them. Do not bundle separate target spans merely because they are in the same section or share the same source finding ID.
 
 **Conflict resolution.** If the input passes recommend different actions on the same content (e.g., verbosity pass recommends condensing; steering pass recommends removing entirely), adopt the action with the smallest footprint with respect to preserving substance — prefer condensation over full removal. If you cannot determine that even the smaller-footprint action is safe, issue a `human_decision_required` item rather than resolving the conflict yourself. Document the conflict regardless of outcome.
 
@@ -50,9 +50,11 @@ Each action item in your consolidated list must include:
 
 - **Action ID** (e.g. CA001) and source finding IDs (e.g. SC003, VR007).
 - **Contract section** affected.
+- **Target span**: the smallest contiguous phrase, sentence, bullet, paragraph, or table cell the cleaner should edit, quoted or identified precisely enough to find without re-deriving the rationale.
 - **Action type**: `remove` | `condense` | `replace_with_neutral` | `human_decision_required`.
 - **Basis**: why this action is safe — specifically, what substantive content survives the edit and where it is preserved.
 - **Cleaner instruction**: precise enough that the cleaner can execute it without needing to re-derive the rationale.
+- **Expected postcondition**: what must be true after the edit, including any residual wording that must be absent and any required replacement text.
 
 For `human_decision_required` items: state exactly what decision is needed from the human, what the two possible outcomes are, and whether the required decision is **cleanup authorization only** (the human is authorizing or declining a removal as non-substantive; this does not constitute an authoritative contract design decision and must be labeled as such in the cleaner's ledger) or **authoritative contract decision required** (the human must make a substantive design call that carries authority weight in later review phases). If any `human_decision_required` item remains unresolved, the handoff `status` must be `blocked_pending_human`.
 
