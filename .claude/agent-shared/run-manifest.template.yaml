@@ -28,7 +28,9 @@ orientation: ""                  # claude-drafted | gpt-drafted | human-drafted
 # decision_owner: human marks roles whose output is a recommendation only.
 roles:
   # Pre-adversarial cleaning phase.
-  contract-steering:          { family: claude, model: sonnet,  run_via: harness }
+  # contract-steering is orientation-sensitive; this template shows the
+  # Claude-drafted default from model-assignment-policy.md.
+  contract-steering:          { family: gpt,    model: gpt-5.5, run_via: codex }
   contract-verbosity:         { family: claude, model: sonnet,  run_via: harness }
   contract-style-lint:        { family: claude, model: sonnet,  run_via: harness }
   contract-clean-consolidation: { family: claude, model: sonnet, run_via: harness }

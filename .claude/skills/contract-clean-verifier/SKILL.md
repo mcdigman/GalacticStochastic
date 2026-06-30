@@ -28,6 +28,11 @@ You will receive:
 7. `.claude/agent-shared/conventions.md` — classification vocabulary and authority order.
 8. `.claude/agent-shared/handoff-protocol.md` — output format.
 
+The orchestrator must provide either a preserved pre-clean contract file or a
+materialized pre-clean-to-cleaned diff. If neither is available, block with
+`blocked_pending_human`; do not infer the pre-clean state from comments,
+commit notes, or the cleaner's summary.
+
 Focus primarily on the consolidated action list and the cleaner's actual diff. Use the three source audit reports to verify source-finding coverage and to catch only obvious, high-impact consolidation omissions that you can independently replicate. Do not reopen medium/low cleaning disagreements that would cause iteration without convergence.
 
 ## Required checks
@@ -144,6 +149,16 @@ Your final readiness recommendation must be exactly one:
 4. **Not ready: human decision required** — cleanup would affect substantive requirements, authority, acceptance criteria, or contested scope.
 
 Do not recommend adversarial review while any blocking issue remains open.
+
+Map the recommendation to the handoff `status` as follows:
+
+- **Ready for adversarial review** → `recommend_approve`.
+- **Not ready: mechanical cleaner repair sufficient** → `recommend_changes`.
+- **Not ready: rerun pre-cleaning pipeline** → `recommend_changes`.
+- **Not ready: human decision required** → `blocked_pending_human`.
+
+Any `possible_contract_defect` finding that affects substance, authority,
+acceptance criteria, or verification method must force `blocked_pending_human`.
 
 ## Required output
 

@@ -72,14 +72,14 @@ family adversary-reviews twice, human freezes. Only the families swap.
 
 ### Pre-adversarial cleaning phase
 
-| Role | Family / model | Rationale |
-|---|---|---|
-| contract-steering | Claude **Sonnet** default unless overridden by run manifest | Lightweight pre-review bias audit; cross-family is useful when available but this pass is not the load-bearing adversarial judge. |
-| contract-verbosity | Claude **Sonnet** default unless overridden by run manifest | Lightweight redundancy audit. |
-| contract-style-lint | Claude **Sonnet** default unless overridden by run manifest | Lightweight structural wording audit with deterministic scanner support. |
-| contract-clean-consolidation | Claude **Sonnet** default unless overridden by run manifest | Read-only action-list consolidation; blocks on uncertainty. |
-| contract-cleaner | Claude **Opus** default unless overridden by run manifest | Producer of the cleaned contract. |
-| contract-clean-verifier | **GPT-5.5** (Codex) | Cross-family diff/readiness gate after the Claude cleaner; verifies authorized cleanup and blocks contamination before adversarial review. |
+| Role | **GPT/human-drafted** | **Claude-drafted** | Rationale |
+|---|---|---|---|
+| contract-steering | Claude **Sonnet** | **GPT-5.5** (Codex) | Blind-spot-sensitive bias audit; run cross-family from the contract drafter because steering language is the cleaning category most vulnerable to correlated model-family misses. |
+| contract-verbosity | Claude **Sonnet** default unless overridden by run manifest | Claude **Sonnet** default unless overridden by run manifest | Redundancy audit; may be A/B tested or overridden per run when deeper structural cuts are desired. |
+| contract-style-lint | Claude **Sonnet** default unless overridden by run manifest | Claude **Sonnet** default unless overridden by run manifest | Structural wording audit with deterministic scanner support; model choice may be overridden per run. |
+| contract-clean-consolidation | Claude **Sonnet** default unless overridden by run manifest | Claude **Sonnet** default unless overridden by run manifest | Read-only action-list consolidation; blocks on uncertainty. |
+| contract-cleaner | Claude **Opus** default unless overridden by run manifest | Claude **Opus** default unless overridden by run manifest | Producer of the cleaned contract. |
+| contract-clean-verifier | **GPT-5.5** (Codex) | **GPT-5.5** (Codex) | Cross-family diff/readiness gate after the Claude cleaner; verifies authorized cleanup and blocks contamination before adversarial review. |
 
 The cleaning verifier is deliberately cross-family from the cleaner because it is
 the last gate before blind-spot-sensitive adversarial reviewers see the cleaned
