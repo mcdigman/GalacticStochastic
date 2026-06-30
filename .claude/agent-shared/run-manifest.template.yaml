@@ -41,6 +41,7 @@ roles:
   # Contract phase — leave blank; fill from the policy column for this orientation.
   contract-adversary:        { family: "", model: "", run_via: "" }
   contract-reviser:          { family: "", model: "", run_via: "" }
+  contract-revision-verifier: { family: "", model: "", run_via: "" }
   contract-design-adversary: { family: "", model: "", run_via: "" }
   contract-approver:         { family: "", model: "", run_via: "", decision_owner: human }
 

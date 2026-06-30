@@ -63,12 +63,15 @@ contract table **flips with the drafter**.
 | draft | GPT-5.5 or pure human | Claude (e.g. Opus) |
 | contract-adversary (1st pass) | Claude **Opus** | **GPT-5.5** |
 | contract-reviser | GPT-5.5 / human (producer side) | Claude **Opus** (producer side) |
+| contract-revision-verifier | Claude **Sonnet** | **GPT-5.5** |
 | contract-design-adversary (2nd pass) | Claude **Sonnet** | **GPT-5.5** |
 | contract-approver (freeze) | **Human** + Opus assist | **Human** + Sonnet assist |
 | judge diversity | Opus **and** Sonnet (good) | single GPT model (human carries it) |
 
 Both columns are the same shape — producer family drafts + revises, the **other**
-family adversary-reviews twice, human freezes. Only the families swap.
+family verifies revision closure, adversary-reviews twice, and assists human
+freeze. Only the families swap. `contract-revision-verifier` runs after each
+`contract-reviser` pass and verifies only the latest review pass.
 
 ### Pre-adversarial cleaning phase
 
