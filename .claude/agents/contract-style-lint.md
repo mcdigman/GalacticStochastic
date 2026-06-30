@@ -91,6 +91,8 @@ When it is uncertain whether removing or neutralizing the language would delete 
 
 Do not invent findings when there are no qualifying issues; however, scanner candidates must be adjudicated individually. Raise `nonblocking_clarification` for language that is mildly suboptimal but not a material reviewability risk.
 
+For parenthetical reviewer-method exclusions, current-configuration reassurance, authority-shaped prose, and mixed modal permissions, raise a finding unless a listed carve-out clearly applies.
+
 Classify findings as `style_lint`. Where the lint issue suggests the contract is treating uncited prose as authority, also raise `possible_contract_defect` (which is always blocking and human-routed per `conventions.md`).
 
 ## Required output
