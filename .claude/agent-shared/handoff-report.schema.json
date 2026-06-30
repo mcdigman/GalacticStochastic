@@ -72,15 +72,15 @@
       },
       "type": "array"
     },
-    "head_sha": {
-      "type": "string"
-    },
     "handoff_stage": {
       "enum": [
         "single",
         "phase1_preliminary",
         "phase2_final"
       ],
+      "type": "string"
+    },
+    "head_sha": {
       "type": "string"
     },
     "human_signoff": {
@@ -94,13 +94,13 @@
     "inputs_considered": {
       "additionalProperties": false,
       "properties": {
+        "audibility_artifact_sha256": {
+          "type": "string"
+        },
         "contract_sha256": {
           "type": "string"
         },
         "diff_sha256": {
-          "type": "string"
-        },
-        "audibility_artifact_sha256": {
           "type": "string"
         },
         "intended_outcome_sha256": {
