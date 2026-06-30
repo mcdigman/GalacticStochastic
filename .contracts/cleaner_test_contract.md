@@ -760,3 +760,16 @@ Running the full repository test suite is outside required acceptance.
 
 ---
 
+## Unresolved Blockers
+
+- Hard performance acceptance lives on the future GPU implementation, not this
+  CPU reference; only the soft flagged floor (TR34) applies here.
+- Caller-side derivative-domain compaction is deferred to the GPU caller rewrite
+  (Non-Goals); this contract mandates in-kernel clamp-and-mask.
+- Non-integer-aligned configurations for the aligned path remain unsupported; the
+  function must assert and reject them.
+- Exact non-float64 floating tolerances remain unresolved; float64 is required
+  for faithful acceptance.
+- CI execution for the new tests remains deferred to a future CI policy.
+- Cross-machine benchmark reproducibility remains unresolved; the aligned/dense
+  ratio is interpreted within a single benchmark environment.
