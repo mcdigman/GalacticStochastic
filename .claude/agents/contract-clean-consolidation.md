@@ -29,6 +29,8 @@ You will receive:
 
 **Conflict resolution.** If the input passes recommend different actions on the same content (e.g., verbosity pass recommends condensing; steering pass recommends removing entirely), adopt the action with the smallest footprint with respect to preserving substance — prefer condensation over full removal. If you cannot determine that even the smaller-footprint action is safe, issue a `human_decision_required` item rather than resolving the conflict yourself. Document the conflict regardless of outcome.
 
+**Condense means delete redundant restatement.** Use `condense` only when the substantive content is already stated elsewhere in a canonical form and the cleaner can delete the redundant span while leaving that existing canonical statement intact. If new neutral wording is required, use `replace_with_neutral` and provide the exact replacement text. If neither deletion nor exact replacement is safe, issue a `human_decision_required` item.
+
 **No new findings.** You may not raise findings that neither input pass identified. Your role is to consolidate, not to conduct additional review.
 
 **No silent resolution.** Every input finding must appear in your output — either as an action item, as a blocked item, or as explicitly rejected with written reasoning. A finding cannot be quietly dropped.
@@ -55,6 +57,10 @@ Each action item in your consolidated list must include:
 - **Basis**: why this action is safe — specifically, what substantive content survives the edit and where it is preserved.
 - **Cleaner instruction**: precise enough that the cleaner can execute it without needing to re-derive the rationale.
 - **Expected postcondition**: what must be true after the edit, including any residual wording that must be absent and any required replacement text.
+
+For `condense` items, identify the existing canonical statement that preserves
+the substantive content. Do not ask the cleaner to write new wording under a
+`condense` action.
 
 For `human_decision_required` items: state exactly what decision is needed from the human, what the two possible outcomes are, and whether the required decision is **cleanup authorization only** (the human is authorizing or declining a removal as non-substantive; this does not constitute an authoritative contract design decision and must be labeled as such in the cleaner's ledger) or **authoritative contract decision required** (the human must make a substantive design call that carries authority weight in later review phases). If any `human_decision_required` item remains unresolved, the handoff `status` must be `blocked_pending_human`.
 
