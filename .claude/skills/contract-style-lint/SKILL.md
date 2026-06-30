@@ -1,5 +1,5 @@
 ---
-model: haiku
+model: sonnet
 description: Pre-adversarial contract style lint. Finds structurally risky wording patterns that are likely to reduce reviewability or be over-read as authority, without evaluating whether the requirements are correct. Runs in parallel with contract-steering and contract-verbosity. Read-only.
 tools:
   - Read
@@ -89,7 +89,9 @@ Raise a finding when:
 
 When it is uncertain whether removing or neutralizing the language would delete substantive requirement content, raise the finding anyway and note the uncertainty explicitly in the finding — do not suppress it. The consolidator will block such findings for human input rather than passing them to the cleaner.
 
-Do not invent findings when there are no qualifying issues; however, scanner candidates must be adjudicated individually. Raise `nonblocking_clarification` for language that is mildly suboptimal but not a material reviewability risk.
+Do not invent findings when there are no qualifying issues; however, scanner candidates must be adjudicated individually. There is no expected or target number of findings; report every distinct instance and do not stop at a round number. Raise `nonblocking_clarification` for language that is mildly suboptimal but not a material reviewability risk.
+
+For parenthetical reviewer-method exclusions, current-configuration reassurance, authority-shaped prose, and mixed modal permissions, raise a finding unless a listed carve-out clearly applies.
 
 Classify findings as `style_lint`. Where the lint issue suggests the contract is treating uncited prose as authority, also raise `possible_contract_defect` (which is always blocking and human-routed per `conventions.md`).
 
