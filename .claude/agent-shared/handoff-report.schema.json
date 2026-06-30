@@ -34,7 +34,8 @@
               "pre_existing_issue",
               "nonblocking_clarification",
               "steering_content",
-              "verbosity_or_redundancy"
+              "verbosity_or_redundancy",
+              "style_lint"
             ],
             "type": "string"
           },
