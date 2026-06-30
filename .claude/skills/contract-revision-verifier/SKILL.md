@@ -102,8 +102,10 @@ For each latest-pass finding:
 
 - confirm the audibility artifact or excerpt contains a disposition row;
 - compare the reviser's claimed disposition to the actual diff and Phase 1 assessment;
-- verify that "fixed" findings were actually fixed;
-- verify that "rejected," "not reproduced," "out of scope," "deferred," or "requires authority" findings are accurately described;
+- use the disposition labels defined in `contract-reviser.md`; do not invent synonyms;
+- verify that `Accepted and resolved` findings were actually fixed;
+- verify that `Accepted and partially resolved` findings were fixed to the claimed extent and clearly preserve remaining uncertainty;
+- verify that `Rejected with evidence`, `Duplicate of another finding`, `Requires human or authoritative resolution`, and `Deferred as explicitly out of scope` findings are accurately described and justified;
 - verify that any non-fix of a critical/high or high-confidence finding cites explicit authority when authority is needed;
 - verify that authority citations match the contract's Table of Authorities or supplied human/scientific/repository authority, rather than an in-contract assertion or the reviser's own rationale;
 - verify that affected requirement traceability rows remain neutral and do not contain finding history, revision rationale, or reviewer-anchoring prose.
@@ -124,7 +126,7 @@ Block the workflow if any of the following are present:
 
 - a latest-pass critical/high or high-confidence finding is not actually closed and lacks explicit authority for non-fix;
 - any latest-pass finding is missing from the reviser's disposition ledger;
-- the reviser claims a finding is fixed but the diff does not close the underlying mechanism;
+- the reviser marks a finding `Accepted and resolved` or `Accepted and partially resolved` but the diff does not close the underlying mechanism to the claimed extent;
 - the reviser rejects, defers, or scopes out a finding with a rationale that is not reproducible from the text, diff, or cited authority;
 - the revision introduces unauthorized substantive changes outside latest-pass finding closure;
 - the revision introduces high-leverage steering, style-lint, verbosity, QA-evasion, or formatting/readability regressions that would contaminate the next review pass;
