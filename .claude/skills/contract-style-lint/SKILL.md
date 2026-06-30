@@ -89,7 +89,7 @@ Raise a finding when:
 
 When it is uncertain whether removing or neutralizing the language would delete substantive requirement content, raise the finding anyway and note the uncertainty explicitly in the finding — do not suppress it. The consolidator will block such findings for human input rather than passing them to the cleaner.
 
-Do not raise findings for the sake of having findings. A contract with zero style-lint findings is a good outcome. Raise `nonblocking_clarification` for language that is mildly suboptimal but not a material reviewability risk.
+Do not invent findings when there are no qualifying issues; however, scanner candidates must be adjudicated individually. Raise `nonblocking_clarification` for language that is mildly suboptimal but not a material reviewability risk.
 
 Classify findings as `style_lint`. Where the lint issue suggests the contract is treating uncited prose as authority, also raise `possible_contract_defect` (which is always blocking and human-routed per `conventions.md`).
 
