@@ -62,7 +62,7 @@ Raise a finding when:
 
 When it is uncertain whether removing or condensing the flagged content would delete any requirement, acceptance criterion, authority source, or disambiguation, raise the finding anyway and note the uncertainty explicitly in the finding — do not suppress it. The consolidator will block such findings for human input rather than passing them to the cleaner.
 
-Do not raise findings for the sake of having findings. A contract with zero verbosity findings is a good outcome.
+Do not raise findings for the sake of having findings. There is no expected or target number of findings; report every distinct verbosity or DRY instance and do not stop at a round number.
 
 Classify findings as `verbosity_or_redundancy`. For cases that are marginal or where the benefit of removal is minor, use `nonblocking_clarification`.
 
