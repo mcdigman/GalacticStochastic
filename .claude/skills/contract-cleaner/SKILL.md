@@ -86,6 +86,8 @@ Produce the following, then emit the handoff per `.claude/agent-shared/handoff-p
 
 Item 1 is the cleaned contract. Items 2–5 are cleanup-phase process artifacts; they document the cleaning process but are not part of the contract's own traceability record.
 
+The cleaned contract is not ready for adversarial review until `contract-clean-verifier` has checked the pre-clean-to-clean diff, the cleaning disposition ledger, and remaining steering/verbosity/style-lint residue and has recommended readiness.
+
 1. **Revised contract** — the complete, updated contract file. Self-contained; do not require any other document to interpret the requirements.
 2. **Findings disposition ledger** — one entry per action item, per the format above.
 3. **Traceability impact statement** — list any requirement traceability entries in the contract that were affected by cleaning edits, and confirm that their authority sources and verification methods remain intact. If no traceability entries were affected, state that explicitly.

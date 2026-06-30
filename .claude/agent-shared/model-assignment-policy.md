@@ -70,6 +70,22 @@ contract table **flips with the drafter**.
 Both columns are the same shape — producer family drafts + revises, the **other**
 family adversary-reviews twice, human freezes. Only the families swap.
 
+### Pre-adversarial cleaning phase
+
+| Role | Family / model | Rationale |
+|---|---|---|
+| contract-steering | Claude **Sonnet** default unless overridden by run manifest | Lightweight pre-review bias audit; cross-family is useful when available but this pass is not the load-bearing adversarial judge. |
+| contract-verbosity | Claude **Sonnet** default unless overridden by run manifest | Lightweight redundancy audit. |
+| contract-style-lint | Claude **Sonnet** default unless overridden by run manifest | Lightweight structural wording audit with deterministic scanner support. |
+| contract-clean-consolidation | Claude **Sonnet** default unless overridden by run manifest | Read-only action-list consolidation; blocks on uncertainty. |
+| contract-cleaner | Claude **Opus** default unless overridden by run manifest | Producer of the cleaned contract. |
+| contract-clean-verifier | **GPT-5.5** (Codex) | Cross-family diff/readiness gate after the Claude cleaner; verifies authorized cleanup and blocks contamination before adversarial review. |
+
+The cleaning verifier is deliberately cross-family from the cleaner because it is
+the last gate before blind-spot-sensitive adversarial reviewers see the cleaned
+contract. It is read-only and verifies cleanup readiness; it does not perform
+the adversarial contract review itself.
+
 ### Implementation phase — keyed to the implementer (= Claude Opus)
 
 | Role | Family / model | Rationale |
