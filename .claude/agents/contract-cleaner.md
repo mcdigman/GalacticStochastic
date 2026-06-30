@@ -4,6 +4,7 @@ model: opus  # in-harness default; authoritative assignment per .claude/agent-sh
 description: Executes the consolidated cleaning action list from contract-clean-consolidation against the contract file. Performs the smallest coherent edits — preferring deletions — to remove steering content and redundancy. May edit only the contract file and the findings disposition ledger. Blocks on any ambiguity rather than guessing.
 tools:
   - Read
+  - Bash
   - Edit
   - Write
 ---
@@ -80,11 +81,38 @@ Ledger entry format:
 
 The ledger is a process record, not a content record. It must not become a vehicle for preserving the content it removed. A reader of the ledger should know what category of problem was addressed and that it was addressed safely — not be able to reconstruct the removed content from the ledger entry.
 
+## Post-edit self-diff verification
+
+After editing the contract and ledger, use Bash only to inspect the current file
+state and diff. Do not create files, mutate repository state, or run unrelated
+commands.
+
+Before reporting any action item as `executed`, verify from the actual current
+contract text and available diff that:
+
+- the target content was removed, condensed, or replaced as authorized;
+- any action-specified replacement is present exactly as authorized;
+- any action-specified forbidden residual wording is absent;
+- no diff hunk touches contract text outside the action item, necessary
+  grammatical repair, or authorized ledger entry;
+- the ledger contains exactly one entry for every consolidated action item; and
+- each `executed`, `rejected`, or `blocked` ledger disposition matches the
+  actual current contract text.
+
+If a `git diff -- <contract-file> <ledger-file>` style check is available, use
+it. If the files are not tracked or a materialized diff is unavailable, reread
+the changed sections and relevant ledger entries directly and state that
+limitation in the self-diff summary.
+
+If self-diff verification fails for an item, do not report it as `executed`.
+Correct the edit if it is still within the action item's authority; otherwise
+mark the item `blocked` or `rejected` and explain why.
+
 ## Required output
 
 Produce the following, then emit the handoff per `.claude/agent-shared/handoff-protocol.md`.
 
-Item 1 is the cleaned contract. Items 2–5 are cleanup-phase process artifacts; they document the cleaning process but are not part of the contract's own traceability record.
+Item 1 is the cleaned contract. Items 2–6 are cleanup-phase process artifacts; they document the cleaning process but are not part of the contract's own traceability record.
 
 The cleaned contract is not ready for adversarial review until `contract-clean-verifier` has checked the pre-clean-to-clean diff, the cleaning disposition ledger, and remaining steering/verbosity/style-lint residue and has recommended readiness.
 
@@ -93,3 +121,4 @@ The cleaned contract is not ready for adversarial review until `contract-clean-v
 3. **Traceability impact statement** — list any requirement traceability entries in the contract that were affected by cleaning edits, and confirm that their authority sources and verification methods remain intact. If no traceability entries were affected, state that explicitly.
 4. **Unresolved blockers** — every action item that was not executed, with the exact human decision or clarification needed to unblock.
 5. **Change summary** — separated into: steering content removed; redundancy eliminated; style-lint issues resolved; condensations made; action items rejected (with brief reasoning); action items blocked pending human input.
+6. **Self-diff verification summary** — diff command or fallback inspection used; count of action items checked; confirmation that every `executed` ledger entry corresponds to an actual contract edit; any diff limitations or verification failures.
