@@ -78,7 +78,7 @@ freeze. Only the families swap. `contract-revision-verifier` runs after each
 | Role | **GPT/human-drafted** | **Claude-drafted** | Rationale |
 |---|---|---|---|
 | contract-steering | Claude **Sonnet** | **GPT-5.5** (Codex) | Blind-spot-sensitive bias audit; run cross-family from the contract drafter because steering language is the cleaning category most vulnerable to correlated model-family misses. |
-| contract-verbosity | Claude **Sonnet** default unless overridden by run manifest | Claude **Sonnet** default unless overridden by run manifest | Redundancy audit; may be A/B tested or overridden per run when deeper structural cuts are desired. |
+| contract-verbosity | Claude **Sonnet** default unless overridden by run manifest | **GPT-5.5** (Codex) | Redundancy audit; GPT-5.5 is the default for Claude-drafted contracts when higher recall and deeper structural cuts are preferred. |
 | contract-style-lint | Claude **Sonnet** default unless overridden by run manifest | Claude **Sonnet** default unless overridden by run manifest | Structural wording audit with deterministic scanner support; model choice may be overridden per run. |
 | contract-clean-consolidation | Claude **Sonnet** default unless overridden by run manifest | Claude **Sonnet** default unless overridden by run manifest | Read-only action-list consolidation; blocks on uncertainty. |
 | contract-cleaner | Claude **Opus** default unless overridden by run manifest | Claude **Opus** default unless overridden by run manifest | Producer of the cleaned contract. |
@@ -107,7 +107,7 @@ implementer.
 
 1. Identify who **drafted the contract** → pick the contract-phase column and
    resolve any orientation-sensitive cleaning rows, including
-   `contract-steering`.
+   `contract-steering` and `contract-verbosity`.
 2. Implementer is Claude Opus → use the implementation-phase table as-is.
 3. For **GPT-5.5** roles, run via the **Codex orchestrator**. The intent
    red-team runs under the Codex read-only sandbox (network denied by the sandbox

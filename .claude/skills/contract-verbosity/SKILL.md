@@ -1,6 +1,6 @@
 ---
 name: contract-verbosity
-model: sonnet  # in-harness default; authoritative assignment per .claude/agent-shared/model-assignment-policy.md
+model: sonnet  # in-harness fallback for Claude-routed runs; authoritative assignment per .claude/agent-shared/model-assignment-policy.md
 description: Pre-adversarial verbosity audit. Finds DRY violations, redundancy, and excessive length in the contract that dilute requirement signal-to-noise ratio for downstream agents without commensurate informational value. Runs in parallel with contract-steering and contract-style-lint. Read-only.
 tools:
   - Read
