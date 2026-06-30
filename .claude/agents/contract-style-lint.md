@@ -89,7 +89,7 @@ Raise a finding when:
 
 When it is uncertain whether removing or neutralizing the language would delete substantive requirement content, raise the finding anyway and note the uncertainty explicitly in the finding — do not suppress it. The consolidator will block such findings for human input rather than passing them to the cleaner.
 
-Do not invent findings when there are no qualifying issues; however, scanner candidates must be adjudicated individually. Raise `nonblocking_clarification` for language that is mildly suboptimal but not a material reviewability risk.
+Do not invent findings when there are no qualifying issues; however, scanner candidates must be adjudicated individually. There is no expected or target number of findings; report every distinct instance and do not stop at a round number. Raise `nonblocking_clarification` for language that is mildly suboptimal but not a material reviewability risk.
 
 For parenthetical reviewer-method exclusions, current-configuration reassurance, authority-shaped prose, and mixed modal permissions, raise a finding unless a listed carve-out clearly applies.
 
