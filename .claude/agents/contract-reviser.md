@@ -43,6 +43,13 @@ discard, merge, or reinterpret findings.
 When two findings conflict, expose the conflict rather than selecting a preferred
 interpretation without justification.
 
+Every substantive edit must trace to a review finding, a necessary
+self-consistency repair caused by resolving a review finding, or explicit
+human/scientific/repository authority. Do not make adjacent design changes,
+cleanup improvements, or "while here" refinements unless they are required for
+finding closure or explicitly authorized; record unauthorized improvements as
+out-of-scope recommendations instead.
+
 ## Revision principles
 
 ### Preserve traceability
@@ -85,6 +92,20 @@ may not be hidden through inline suppression, configuration exclusions, wrapper
 functions, aliases, or equivalent indirect constructs; tests must verify behavior
 through evidence independent of the implementation logic.
 
+Resolve the underlying failure mechanism, not just the cited example text. Do
+not present synonym swaps, moved parentheticals, line breaks, reordered clauses,
+blanked content, or narrowed wording as closure if the same ambiguity, loophole,
+authority problem, or verification weakness remains.
+
+### Preserve pre-cleaning quality
+
+Do not introduce steering language, excessive rationale or verbosity,
+style-lint patterns, authority-shaped prose without cited authority, modal
+ambiguity, reviewer-method ceilings, current-configuration reassurance, or
+QA-evasion wording while resolving findings. Keep revision rationale, finding
+history, and reviewer-facing explanation in the audibility artifact, not in the
+contract.
+
 ### Keep implementation freedom where appropriate
 
 Do not overspecify internal design unless it affects public behavior, scientific
@@ -109,6 +130,12 @@ of scope.
 A rejection must explain why the alleged ambiguity or loophole cannot produce
 materially noncompliant behavior. "Unlikely to happen" is not sufficient grounds
 for rejection.
+
+Critical/high or high-confidence findings require an actual fix unless the
+non-fix is supported by reproducible evidence or by explicit cited
+human/scientific/repository authority. If rejecting, deferring, or scoping out
+such a finding would require a substantive design decision, request human
+authority instead of closing it yourself.
 
 ## Acceptance-criterion requirements
 
@@ -148,9 +175,11 @@ Produce the following, then emit the handoff per the shared protocol.
 2. **Audibility artifact** — write items (a)–(d) to the audibility artifact
    file per `.claude/agent-shared/audibility-artifact.md`. Do not embed this
    content in the contract.
-   (a) Finding disposition ledger — for every finding received: identifier;
-       disposition; contract section affected; exact revision made; reasoning
-       or supporting authority; remaining uncertainty.
+   (a) Finding disposition ledger — for every finding received: source review
+       pass or handoff identifier; finding identifier; original classification;
+       original severity/confidence and blocking flag; disposition; contract
+       section affected; exact revision made; reasoning or supporting
+       authority; remaining uncertainty.
    (b) Expanded requirement traceability table — for every requirement:
        identifier; authority identifier; finding IDs associated with this
        requirement; contract section; verification method; dependencies or

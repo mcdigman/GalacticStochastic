@@ -23,9 +23,10 @@ confuse process ledgers with the audibility artifact.
 The audibility artifact contains, and only contains:
 
 1. **Finding disposition ledger** — for every adversarial finding received by
-   the contract-reviser: finding identifier; disposition; contract section
-   affected; exact revision made; reasoning or supporting authority; remaining
-   uncertainty.
+   the contract-reviser: source review pass or handoff identifier; finding
+   identifier; original classification; original severity/confidence and
+   blocking flag; disposition; contract section affected; exact revision made;
+   reasoning or supporting authority; remaining uncertainty.
 2. **Expanded requirement traceability table** — for every substantive
    requirement: requirement identifier; authority identifier (e.g. HD001);
    specific finding IDs associated with this requirement; contract section;
@@ -43,6 +44,7 @@ The audibility artifact contains, and only contains:
 |---|---|
 | Human | Always |
 | contract-reviser | Write only (producer) — writes the artifact as part of Required output; does not read it |
+| contract-revision-verifier | Phase 2 only — after emitting and freezing an independent Phase 1 closure assessment |
 | contract-approver | Phase 2 only — after forming and freezing an independent assessment of the revised contract |
 | contract-design-adversary | Phase 2 only — after forming and freezing an independent assessment of the revised contract |
 | All other agents | No — do not access the audibility artifact |
