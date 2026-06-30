@@ -157,8 +157,7 @@ Map the recommendation to the handoff `status` as follows:
 - **Not ready: rerun pre-cleaning pipeline** → `recommend_changes`.
 - **Not ready: human decision required** → `blocked_pending_human`.
 
-Any `possible_contract_defect` finding that affects substance, authority,
-acceptance criteria, or verification method must force `blocked_pending_human`.
+Any `possible_contract_defect` finding must force `blocked_pending_human`.
 
 ## Required output
 
