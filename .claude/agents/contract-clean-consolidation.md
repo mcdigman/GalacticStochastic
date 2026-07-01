@@ -16,7 +16,7 @@ Your output is an action list, not a finding list. Every item the cleaner receiv
 
 You will receive:
 
-1. The contract text, including any requirement traceability content present in the document.
+1. The contract file (path provided by the orchestrator), including any requirement traceability content present in the document.
 2. The finding report from `contract-steering`.
 3. The finding report from `contract-verbosity`.
 4. The finding report from `contract-style-lint`.
@@ -54,7 +54,7 @@ Each action item in your consolidated list must include:
 - **Contract section and line(s)** affected. Line numbers are mandatory.
 - **Target span**: the smallest contiguous phrase, sentence, bullet, paragraph, or table cell the cleaner should edit, identified by exact excerpt and line number(s). Quote the smallest useful exact span, normally 5-60 words and no more than 2 physical lines unless a longer quote is necessary to identify the span. If the span is longer, quote the opening and closing fragments with `[...]`; do not replace the excerpt with a prose description.
 - **Action type**: `remove` | `condense` | `replace_with_neutral` | `human_decision_required`.
-- **Issue gist / preservation check**: one or two neutral sentences explaining the issue type and what substantive content, if any, must survive. This must be understandable without reading the source finding report.
+- **Issue gist / preservation check**: one or two neutral sentences explaining the issue type and what substantive content, if any, must survive and where it is preserved. This must be understandable without reading the source finding report.
 - **Cleaner operation**: precise enough that the cleaner can execute it without needing to re-derive the rationale.
 - **Expected postcondition**: what must be true after the edit, including any residual wording that must be absent and any required replacement text.
 

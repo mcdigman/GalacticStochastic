@@ -28,6 +28,11 @@ You will receive:
 4. `.claude/agent-shared/conventions.md` — classification vocabulary and authority order.
 5. `.claude/agent-shared/handoff-protocol.md` — output format.
 
+Treat action-list line numbers as pre-clean references. Because earlier edits
+can shift later line numbers, the exact excerpt is the authoritative anchor when
+an action item's line number and the current file position disagree. The ledger
+must report current line number(s) after your edits or blocker decision.
+
 ## Editing authority
 
 You may edit **only**:
