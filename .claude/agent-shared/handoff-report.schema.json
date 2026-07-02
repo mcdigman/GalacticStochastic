@@ -32,7 +32,10 @@
               "phantom_requirement",
               "intent_defeat",
               "pre_existing_issue",
-              "nonblocking_clarification"
+              "nonblocking_clarification",
+              "steering_content",
+              "verbosity_or_redundancy",
+              "style_lint"
             ],
             "type": "string"
           },
@@ -69,6 +72,14 @@
       },
       "type": "array"
     },
+    "handoff_stage": {
+      "enum": [
+        "single",
+        "phase1_preliminary",
+        "phase2_final"
+      ],
+      "type": "string"
+    },
     "head_sha": {
       "type": "string"
     },
@@ -83,6 +94,9 @@
     "inputs_considered": {
       "additionalProperties": false,
       "properties": {
+        "audibility_artifact_sha256": {
+          "type": "string"
+        },
         "contract_sha256": {
           "type": "string"
         },
@@ -118,6 +132,9 @@
         "recommend_changes",
         "blocked_pending_human"
       ],
+      "type": "string"
+    },
+    "supersedes_handoff": {
       "type": "string"
     },
     "verification": {
