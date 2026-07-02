@@ -79,11 +79,12 @@ Do not rely on bare references such as "per SC003" or "as VR002 explains." Sourc
 
 ## Output hygiene
 
-Before emitting the final report, finalize dispositions first and only then assign `CA###` action IDs. Number only final action items; IDs must be contiguous with no gaps. Do not emit withdrawn, superseded, subsumed, or corrected `CA###` items. If a source finding is merged into another action item, list it under that action item's source finding IDs rather than creating a separate withdrawn item.
-
-Structured fields must contain only final report content. Do not include process narration, self-corrections, "checking" notes, uncertainty scratchwork, or correction footnotes inside action items, target spans, issue gists, cleaner operations, conflict notes, summaries, or metadata. If you notice an inconsistency before final output, revise the affected field or table directly rather than appending a correction.
-
-Compute counts last from the final emitted action list, rejected findings, and blocked items. The prose summary and YAML metadata must agree with the final visible report.
+Before emitting the final report, do a second hygiene pass. You must verify the following; any changes should be made by revising the affected field or table directly, rather than appending corrections:
+1. Check all dispositions are finalized, and only then assign the traceable `CA###` action IDs. Number only final action items; you must verify IDs are contiguous with no gaps. Verify you are not emitting withdrawn, superseded, subsumed, or corrected `CA###` items. If a source finding was merged into another action item, verify it is listed under that action item's source finding IDs rather than creating a separate withdrawn item.
+2. Check all assigned `CA###` IDs are in the YAML metadata block, the metadata IDs/class/severity/confidence/blocking flags in the YAML metadata block are consistent with the final report, and that the YAML metadata block does not mention action IDs that are absent from the prose.
+3. Verify structured final report fields contain all required content and only required final report content. There must be no process narration, self-corrections, "checking" notes, uncertainty scratchwork, or correction footnotes inside action items, target spans, issue gists, cleaner operations, conflict notes, summaries, or metadata.
+4. Compute counts last after all final report verification is complete. Verify explicitly that the counts of findings and action dispositions in the status line, summary, and YAML metadata block mirror the final report and are consistent with each other.
+5. Append a brief 1 sentence note beginning `Output hygiene check:` as the last sentence outside all structured fields verifying you did each step of the required cleanup pass, and the reconciled counts computed in the last step.
 
 ## Required output
 
