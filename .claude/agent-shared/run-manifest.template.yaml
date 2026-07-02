@@ -31,10 +31,13 @@ roles:
   # contract-steering and contract-verbosity are orientation-sensitive:
   #   claude-drafted -> { family: gpt, model: gpt-5.5, run_via: codex }
   #   gpt-drafted | human-drafted -> { family: claude, model: sonnet, run_via: harness }
+  # contract-clean-consolidation is also orientation-sensitive:
+  #   claude-drafted -> { family: claude, model: opus, run_via: harness }
+  #   gpt-drafted | human-drafted -> { family: claude, model: sonnet, run_via: harness }
   contract-steering:          { family: "", model: "", run_via: "" }
   contract-verbosity:         { family: "", model: "", run_via: "" }
   contract-style-lint:        { family: claude, model: sonnet,  run_via: harness }
-  contract-clean-consolidation: { family: claude, model: sonnet, run_via: harness }
+  contract-clean-consolidation: { family: claude, model: opus,   run_via: harness }
   contract-cleaner:           { family: claude, model: opus,    run_via: harness }
   contract-clean-verifier:    { family: gpt,    model: gpt-5.5, run_via: codex }
 

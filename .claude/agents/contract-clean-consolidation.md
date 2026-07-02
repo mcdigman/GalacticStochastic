@@ -1,6 +1,6 @@
 ---
 name: contract-clean-consolidation
-model: sonnet  # in-harness default; authoritative assignment per .claude/agent-shared/model-assignment-policy.md
+model: opus  # in-harness default; authoritative assignment per .claude/agent-shared/model-assignment-policy.md
 description: Consolidates findings from the parallel contract-steering, contract-verbosity, and contract-style-lint passes into a single prioritized action list for the contract-cleaner. Blocks for human input whenever a finding's resolution is ambiguous or risks removing substantive content. Read-only.
 tools:
   - Read
