@@ -42,6 +42,9 @@ HERE="$REPO_ROOT/scripts/orchestrate"
 AGENTS_DIR="$REPO_ROOT/.claude/agents"
 SCHEMA="$REPO_ROOT/.claude/agent-shared/handoff-report.schema.json"
 PIPELINE_PYTHON="${PIPELINE_PYTHON:-python3}"
+# PIPELINE_PYTHON may be a multi-word command (e.g. 'mamba run -n gstoch-dev python');
+# split it into an array so each word is passed as a separate argv entry.
+read -r -a _PY <<<"$PIPELINE_PYTHON"
 CODEX_MODEL="${CODEX_MODEL:-gpt-5.5}"   # SEAM: set to your codex model id for GPT-5.5
 
 ROLE=""; MANIFEST=""; PR=""; CONTRACT=""; DIFF=""; INTENDED=""; POST=0
@@ -61,9 +64,9 @@ done
 [[ -n "$ROLE" && -n "$MANIFEST" ]] || { usage; exit 1; }
 
 # 1. Resolve role against the policy. Exits non-zero (fail closed) on any mismatch.
-RESOLVED="$("$PIPELINE_PYTHON" "$HERE/pipeline_lib.py" resolve \
+RESOLVED="$("${_PY[@]}" "$HERE/pipeline_lib.py" resolve \
   --role "$ROLE" --manifest "$MANIFEST" --agents-dir "$AGENTS_DIR")"
-get() { printf '%s' "$RESOLVED" | "$PIPELINE_PYTHON" -c "import sys,json;print(json.load(sys.stdin).get('$1') or '')"; }
+get() { printf '%s' "$RESOLVED" | "${_PY[@]}" -c "import sys,json;print(json.load(sys.stdin).get('$1') or '')"; }
 FAMILY="$(get family)"; MODEL="$(get model)"; RUN_VIA="$(get run_via)"; SANDBOX="$(get sandbox_mode)"
 PRODUCER="$(get producer_family)"; JUDGE="$(get judge_family)"
 ARTIFACT="$(get artifact_under_review)"; ORIENT="$(get orientation)"
@@ -161,7 +164,7 @@ echo ">> attestation: $ATTEST"; cat "$ATTEST"
 if [[ -s "$REPORT" ]]; then
   echo ">> validating handoff against $SCHEMA"
   set +e
-  ROUTE="$("$PIPELINE_PYTHON" "$HERE/pipeline_lib.py" validate-handoff --report "$REPORT" --schema "$SCHEMA")"
+  ROUTE="$("${_PY[@]}" "$HERE/pipeline_lib.py" validate-handoff --report "$REPORT" --schema "$SCHEMA")"
   RC=$?
   set -e
   echo "$ROUTE"
