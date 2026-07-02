@@ -56,7 +56,8 @@ Each action item in your consolidated list must include:
 - **Contract section and line(s)** affected. Line numbers are mandatory.
 - **Target span**: the smallest contiguous phrase, sentence, bullet, paragraph, or table cell the cleaner should edit, identified by exact excerpt and line number(s). Quote the smallest useful exact span, normally 5-60 words and no more than 2 physical lines unless a longer quote is necessary to identify the span. If the span is longer, quote the opening and closing fragments with `[...]`; do not replace the excerpt with a prose description.
 - **Action type**: `remove` | `condense` | `replace_with_neutral` | `human_decision_required`.
-- **Issue gist / preservation check**: one or two neutral sentences explaining the issue type and what substantive content, if any, must survive and where it is preserved. This must be understandable without reading the source finding report.
+- **Issue gist**: one or two neutral sentences explaining the issue. This must be understandable without reading the source finding report.
+- **Preservation**: at most one short neutral sentence naming what substantive content, if any, must survive from the target span. Answer `None` if nothing from the target span must be preserved. It must be possible to understand the mandatory preserved content without reading the source finding report.
 - **Cleaner operation**: precise enough that the cleaner can execute it without needing to re-derive the rationale.
 - **Expected postcondition**: what must be true after the edit, including any residual wording that must be absent and any required replacement text.
 
@@ -92,5 +93,5 @@ Produce the following, then emit the handoff per `.claude/agent-shared/handoff-p
 1. **Consolidated action list** — every action item per the format above, sorted by severity (highest first within each type). Prefer a compact table when practical.
 2. **Rejected findings** — any input findings you are rejecting, with source ID, line number(s), exact excerpt, and terse written reasoning for each rejection.
 3. **Blocked items** — all `human_decision_required` items collected, with line number(s), exact excerpt, and the exact human decision required for each.
-4. **Conflict notes** — only bona fide conflicts, as terse pointers to action IDs/source IDs with one-line resolution or blocking rationale. Do not restate action-item content already present above.
+4. **Conflict notes** — only bonafide conflicts, as terse pointers to action IDs/source IDs with one-line resolution or blocking rationale. Do not restate action-item content already present above.
 5. **Summary** — final counts by action type and blocked items, computed from the emitted final lists; whether the cleaner may proceed on non-blocked items while blocked items await human input (it may, unless a blocked item affects the same contract section as a non-blocked item).
