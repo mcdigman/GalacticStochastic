@@ -92,5 +92,5 @@ Produce the following, then emit the handoff per `.claude/agent-shared/handoff-p
 1. **Consolidated action list** — every action item per the format above, sorted by severity (highest first within each type). Prefer a compact table when practical.
 2. **Rejected findings** — any input findings you are rejecting, with source ID, line number(s), exact excerpt, and terse written reasoning for each rejection.
 3. **Blocked items** — all `human_decision_required` items collected, with line number(s), exact excerpt, and the exact human decision required for each.
-4. **Conflict notes** — only bona fide conflicts, as terse pointers to action IDs/source IDs with one-line resolution or blocking rationale. Do not restate action-item content already present above.
+4. **Conflict notes** — only bonafide conflicts, as terse pointers to action IDs/source IDs with one-line resolution or blocking rationale. Do not restate action-item content already present above.
 5. **Summary** — final counts by action type and blocked items, computed from the emitted final lists; whether the cleaner may proceed on non-blocked items while blocked items await human input (it may, unless a blocked item affects the same contract section as a non-blocked item).
