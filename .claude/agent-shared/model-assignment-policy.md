@@ -80,7 +80,7 @@ freeze. Only the families swap. `contract-revision-verifier` runs after each
 | contract-steering | Claude **Sonnet** | **GPT-5.5** (Codex) | Blind-spot-sensitive bias audit; run cross-family from the contract drafter because steering language is the cleaning category most vulnerable to correlated model-family misses. |
 | contract-verbosity | Claude **Sonnet** default unless overridden by run manifest | **GPT-5.5** (Codex) | Redundancy audit; GPT-5.5 is the default for Claude-drafted contracts when higher recall and deeper structural cuts are preferred. |
 | contract-style-lint | Claude **Sonnet** default unless overridden by run manifest | Claude **Sonnet** default unless overridden by run manifest | Structural wording audit with deterministic scanner support; model choice may be overridden per run. |
-| contract-clean-consolidation | Claude **Sonnet** default unless overridden by run manifest | Claude **Sonnet** default unless overridden by run manifest | Read-only action-list consolidation; blocks on uncertainty. |
+| contract-clean-consolidation | Claude **Sonnet** default unless overridden by run manifest | Claude **Opus** default unless overridden by run manifest | Read-only action-list consolidation; blocks on uncertainty. Use Opus by default for Claude-drafted runs because the consolidation reasoning is now the cleanup weak link. |
 | contract-cleaner | Claude **Opus** default unless overridden by run manifest | Claude **Opus** default unless overridden by run manifest | Producer of the cleaned contract. |
 | contract-clean-verifier | **GPT-5.5** (Codex) | **GPT-5.5** (Codex) | Cross-family diff/readiness gate after the Claude cleaner; verifies authorized cleanup and blocks contamination before adversarial review. |
 
@@ -107,7 +107,8 @@ implementer.
 
 1. Identify who **drafted the contract** → pick the contract-phase column and
    resolve any orientation-sensitive cleaning rows, including
-   `contract-steering` and `contract-verbosity`.
+   `contract-steering`, `contract-verbosity`, and
+   `contract-clean-consolidation`.
 2. Implementer is Claude Opus → use the implementation-phase table as-is.
 3. For **GPT-5.5** roles, run via the **Codex orchestrator**. The intent
    red-team runs under the Codex read-only sandbox (network denied by the sandbox

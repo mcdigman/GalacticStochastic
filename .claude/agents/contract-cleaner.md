@@ -28,6 +28,11 @@ You will receive:
 4. `.claude/agent-shared/conventions.md` — classification vocabulary and authority order.
 5. `.claude/agent-shared/handoff-protocol.md` — output format.
 
+Treat action-list line numbers as pre-clean references. Because earlier edits
+can shift later line numbers, the exact excerpt is the authoritative anchor when
+an action item's line number and the current file position disagree. The ledger
+must report current line number(s) after your edits or blocker decision.
+
 ## Editing authority
 
 You may edit **only**:
@@ -75,9 +80,9 @@ Ledger entry format:
 - **Action ID** and source finding IDs.
 - **Disposition**: `executed` | `rejected` | `blocked`.
 - **Contract section** affected.
-- **For `executed`**: what was done, described in neutral paraphrase. Do not quote, reproduce, or closely paraphrase the removed steering content. Describe the category of removal (e.g., "removed historical context passage," "removed LLM-asserted authority phrase," "condensed repeated specification"). State what substantive content was preserved and where. If execution followed a human cleanup authorization, note that the authorization was cleanup-only — it is not an authoritative contract design decision.
-- **For `rejected`**: why the edit was not made; what risk the action would have introduced; which part of the action item's basis you found insufficient.
-- **For `blocked`**: the exact ambiguity or risk that prevented execution; the human decision required to unblock.
+- **For `executed`**: what was done, described in neutral paraphrase. Include current line number(s) and, where helpful, a very short non-sensitive excerpt to identify the edited area. Do not quote, reproduce, or closely paraphrase the removed steering content. Describe the category of removal (e.g., "removed historical context passage," "removed LLM-asserted authority phrase," "condensed repeated specification"). State what substantive content was preserved and where. If execution followed a human cleanup authorization, note that the authorization was cleanup-only — it is not an authoritative contract design decision.
+- **For `rejected`**: current line number(s), a short exact excerpt of the still-present target span, why the edit was not made, what risk the action would have introduced, and which part of the action item's issue gist / preservation check you found insufficient.
+- **For `blocked`**: current line number(s), a short exact excerpt of the still-present target span, the exact ambiguity or risk that prevented execution, and the human decision required to unblock.
 
 The ledger is a process record, not a content record. It must not become a vehicle for preserving the content it removed. A reader of the ledger should know what category of problem was addressed and that it was addressed safely — not be able to reconstruct the removed content from the ledger entry.
 
