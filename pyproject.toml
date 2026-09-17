@@ -48,8 +48,9 @@ run-galactic-stochastic-iterative = "GalacticStochastic.cli.run_iterative_proced
 # Packages with usable type info are omitted so their real types are checked:
 # numpy/matplotlib/pytest ship py.typed and scipy/h5py/pandas have stub packages,
 # all installed for the hook via additional_dependencies in .pre-commit-config.yaml.
-# The packages below stay ignored because no type info is installable in the
-# isolated hook environment: numba/astropy ship no py.typed.
+# The packages below stay ignored because their types cannot be resolved in the
+# isolated hook environment: astropy and WDMWaveletTransforms ship no py.typed,
+# and numba (which ships py.typed since 0.66) is not installed there.
 python-version = "3.12"
 ignore-missing-imports = [
     "numba", "numba.*",

@@ -151,6 +151,20 @@ def setup_test_helper(m1_solar: float, m2_solar: float, chi1: float, chi2: float
     assert_allclose(intrinsic.chi_s, (intrinsic.chi_1z + intrinsic.chi_2z) / 2., atol=1.e-14, rtol=1.e-14)
     assert_allclose(intrinsic.chi_a, (intrinsic.chi_1z - intrinsic.chi_2z) / 2., atol=1.e-14, rtol=1.e-14)
 
+    # round trip: the spins recovered from the packed chi_postnewtonian_norm must match the inputs.
+    # Recovering chi_s from chi_postnewtonian_norm multiplies chi_a by the manager's mass_delta,
+    # which for nearly equal masses is only known to ~1/delta * 1e-14 (see atoldelta above).
+    atolchi = max(2. * atoldelta, 1.e-14)
+    assert_allclose(intrinsic.chi_postnewtonian_norm, chi_postnewtonian_norm, atol=1.e-100, rtol=1.e-14)
+    assert_allclose(intrinsic.chi_postnewtonian, chi, atol=1.e-14, rtol=1.e-14)
+    assert_allclose(intrinsic.chi_a, chia, atol=1.e-100, rtol=1.e-14)
+    assert_allclose(intrinsic.chi_s, chis, atol=atolchi, rtol=1.e-14)
+    assert_allclose(intrinsic.chi_1z, chi1, atol=atolchi, rtol=1.e-14)
+    assert_allclose(intrinsic.chi_2z, chi2, atol=atolchi, rtol=1.e-14)
+    # chi_eff is the mass-weighted aligned spin; the manager always labels the heavier body as 1
+    assert_allclose(intrinsic.chi_eff, chis + np.abs(delta) * chia, atol=atolchi, rtol=1.e-14)
+    assert_allclose(intrinsic.chi_eff, (intrinsic.mass_1_detector_sec * chi1 + intrinsic.mass_2_detector_sec * chi2) / intrinsic.mass_total_detector_sec, atol=atolchi, rtol=1.e-14)
+
     return intrinsic
 
 
