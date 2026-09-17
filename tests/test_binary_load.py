@@ -1,16 +1,25 @@
-"""test the IMRPhenomD module C 2021 Matthew Digman"""
+"""test the binary intrinsic parameter manager C 2021 Matthew Digman"""
 
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
-from PyIMRPhenomD.IMRPhenomD_internals import chiPN
 
 from LisaWaveformTools.binary_params_manager import M_SUN_KG, M_SUN_SEC, PC_M, BinaryIntrinsicParams, BinaryIntrinsicParamsManager
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
+
+
+def chi_postnewtonian_reference(eta: float, chis: float, chia: float) -> float:
+    """PN reduced spin parameter, computed independently of the parameter manager.
+
+    See Eq 5.9 in https://arxiv.org/pdf/1107.1267v2.
+    Convention m1 >= m2 and chi1 is the spin on m1.
+    """
+    delta: float = float(np.sqrt(1 - 4 * eta)) if eta < 0.25 else 0.
+    return chis * (1 - 76 / 113 * eta) + delta * chia
 
 
 def setup_test_helper(m1_solar: float, m2_solar: float, chi1: float, chi2: float) -> BinaryIntrinsicParams:
@@ -32,7 +41,7 @@ def setup_test_helper(m1_solar: float, m2_solar: float, chi1: float, chi2: float
     chia: float = (chi1 - chi2) / 2
     phic: float = 2.848705 / 2
     FI: float = 3.4956509169372e-05
-    chi: float = chiPN(eta, chis, chia)
+    chi: float = chi_postnewtonian_reference(eta, chis, chia)
     chi_postnewtonian_norm: float = chi / (1. - 76. / 113. * eta)
     q = m2_solar / m1_solar
 

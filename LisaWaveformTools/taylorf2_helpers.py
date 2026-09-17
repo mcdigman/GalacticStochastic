@@ -660,7 +660,6 @@ def TaylorF2_ref_time_match(params_intrinsic: BinaryIntrinsicParams, include_pn_
 
     DOI: 10.1103/PhysRevD.80.084043
     """
-    # TODO need to use imrphenomd instead
     Mt = params_intrinsic.mass_total_detector_sec
     f_i = params_intrinsic.frequency_i_hz
     chis = params_intrinsic.chi_s
