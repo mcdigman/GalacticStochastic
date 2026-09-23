@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import numba
 import numpy as np
 import pytest
+from numba.core.errors import TypingError
 from numpy.testing import assert_allclose, assert_array_equal
 
 from LisaWaveformTools.algebra_tools import gradient_uniform_inplace, stabilized_gradient_uniform_inplace
@@ -74,7 +74,7 @@ def test_gradient_uniform_inplace_raise_bad_shape7() -> None:
     DT = 0.1
     x = np.zeros(100)
     y = np.zeros(100)
-    with pytest.raises((AssertionError, numba.errors.TypingError)):
+    with pytest.raises((AssertionError, TypingError)):
         gradient_uniform_inplace(x, y, DT)
 
 
@@ -83,7 +83,7 @@ def test_gradient_uniform_inplace_raise_bad_shape8() -> None:
     DT = 0.1
     x = np.zeros((3, 100, 1))
     y = np.zeros((3, 100, 1))
-    with pytest.raises((AssertionError, numba.errors.TypingError)):
+    with pytest.raises((AssertionError, TypingError)):
         gradient_uniform_inplace(x, y, DT)
 
 
@@ -92,7 +92,7 @@ def test_gradient_uniform_inplace_raise_bad_shape9() -> None:
     DT = 0.1
     x = np.zeros((3, 100, 1))
     y = np.zeros((3, 100))
-    with pytest.raises((AssertionError, numba.errors.TypingError)):
+    with pytest.raises((AssertionError, TypingError)):
         gradient_uniform_inplace(x, y, DT)
 
 
@@ -114,7 +114,7 @@ def test_stabilized_gradient_uniform_inplace_raise_bad_shape2() -> None:
     dxdt = np.zeros(100)
     y = np.zeros((3, 100))
     dydt = np.zeros((3, 100))
-    with pytest.raises((AssertionError, numba.errors.TypingError)):
+    with pytest.raises((AssertionError, TypingError)):
         stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
 
 
@@ -202,7 +202,7 @@ def test_stabilized_gradient_uniform_inplace_raise_bad_shape10() -> None:
     dxdt = np.zeros((100, 1))
     y = np.zeros((3, 100))
     dydt = np.zeros((3, 100))
-    with pytest.raises((AssertionError, numba.errors.TypingError)):
+    with pytest.raises((AssertionError, TypingError)):
         stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
 
 
@@ -213,7 +213,7 @@ def test_stabilized_gradient_uniform_inplace_raise_bad_shape11() -> None:
     dxdt = np.zeros(100)
     y = np.zeros((3, 100, 1))
     dydt = np.zeros((3, 100))
-    with pytest.raises((AssertionError, numba.errors.TypingError)):
+    with pytest.raises((AssertionError, TypingError)):
         stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
 
 
@@ -224,7 +224,7 @@ def test_stabilized_gradient_uniform_inplace_raise_bad_shape12() -> None:
     dxdt = np.zeros(100)
     y = np.zeros((3, 100, 1))
     dydt = np.zeros((3, 100, 1))
-    with pytest.raises((AssertionError, numba.errors.TypingError)):
+    with pytest.raises((AssertionError, TypingError)):
         stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
 
 
@@ -235,7 +235,7 @@ def test_stabilized_gradient_uniform_inplace_raise_bad_shape13() -> None:
     dxdt = np.zeros(101)
     y = np.zeros((3, 100))
     dydt = np.zeros((3, 100))
-    with pytest.raises((AssertionError, numba.errors.TypingError)):
+    with pytest.raises((AssertionError, TypingError)):
         stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
 
 
@@ -246,7 +246,7 @@ def test_stabilized_gradient_uniform_inplace_raise_bad_shape14() -> None:
     dxdt = np.zeros(100)
     y = np.zeros(100)
     dydt = np.zeros(100)
-    with pytest.raises((AssertionError, numba.errors.TypingError)):
+    with pytest.raises((AssertionError, TypingError)):
         stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
 
 
@@ -257,7 +257,7 @@ def test_stabilized_gradient_uniform_inplace_raise_bad_shape15() -> None:
     dxdt = np.zeros((3, 100))
     y = np.zeros(100)
     dydt = np.zeros(100)
-    with pytest.raises((AssertionError, numba.errors.TypingError)):
+    with pytest.raises((AssertionError, TypingError)):
         stabilized_gradient_uniform_inplace(x, dxdt, y, dydt, DT)
 
 
