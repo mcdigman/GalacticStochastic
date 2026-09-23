@@ -59,7 +59,7 @@ repos:
     # pyrefly runs in an isolated environment, so the typed packages it must
     # resolve (those no longer in [tool.pyrefly].ignore-missing-imports) are
     # installed here: numpy/matplotlib/pytest ship py.typed, and scipy/h5py/pandas
-    # types come from their stub packages. numba/astropy/PyIMRPhenomD
+    # types come from their stub packages. numba/astropy
     # stay ignored in pyproject.toml (no installable type info). The dedicated
     # type-check CI (.github/workflows/typecheck.yml) still runs mypy.
     additional_dependencies:

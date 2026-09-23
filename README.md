@@ -51,11 +51,6 @@ pip install ".[plots]"   # matplotlib, for the make_gb_*_compare_plot.py scripts
 pip install ".[cosmic]"  # pandas + astropy, for loading COSMIC population catalogs
 ```
 
-There is also an `imrphenomd` extra for the `PyIMRPhenomD` waveform model, but it is **not
-installable as-is**: `PyIMRPhenomD` is not published on PyPI, so `pip install ".[imrphenomd]"`
-will fail to resolve it. Install `PyIMRPhenomD` from its own source first; the extra only
-becomes usable once `PyIMRPhenomD` is available to pip.
-
 ---
 
 ## Running the pipeline

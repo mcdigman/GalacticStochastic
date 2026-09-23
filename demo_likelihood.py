@@ -17,7 +17,7 @@ from WaveletWaveforms.wavelet_detector_waveforms import BinaryWaveletTaylorFreq
 from WaveletWaveforms.wdm_config import get_wavelet_model
 
 if __name__ == '__main__':
-    model1 = 'imrphenomd'
+    model1 = 'taylorf2_aligned'
     toml_filename = 'likelihood_demo_parameters.toml'
 
     with Path(toml_filename).open('rb') as f:
