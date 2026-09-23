@@ -27,9 +27,21 @@ orientation: ""                  # claude-drafted | gpt-drafted | human-drafted
 #            codex     = GPT-5.5 via the Codex orchestrator (frontmatter model ignored)
 # decision_owner: human marks roles whose output is a recommendation only.
 roles:
+  # Pre-adversarial cleaning phase.
+  # contract-steering is orientation-sensitive:
+  #   claude-drafted -> { family: gpt, model: gpt-5.5, run_via: codex }
+  #   gpt-drafted | human-drafted -> { family: claude, model: sonnet, run_via: harness }
+  contract-steering:          { family: "", model: "", run_via: "" }
+  contract-verbosity:         { family: claude, model: sonnet,  run_via: harness }
+  contract-style-lint:        { family: claude, model: sonnet,  run_via: harness }
+  contract-clean-consolidation: { family: claude, model: sonnet, run_via: harness }
+  contract-cleaner:           { family: claude, model: opus,    run_via: harness }
+  contract-clean-verifier:    { family: gpt,    model: gpt-5.5, run_via: codex }
+
   # Contract phase — leave blank; fill from the policy column for this orientation.
   contract-adversary:        { family: "", model: "", run_via: "" }
   contract-reviser:          { family: "", model: "", run_via: "" }
+  contract-revision-verifier: { family: "", model: "", run_via: "" }
   contract-design-adversary: { family: "", model: "", run_via: "" }
   contract-approver:         { family: "", model: "", run_via: "", decision_owner: human }
 

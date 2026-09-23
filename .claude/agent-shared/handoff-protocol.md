@@ -46,14 +46,18 @@ Fields (all metadata; see the schema for exact types):
 
 - `schema`, `pr`, `base_sha`, `head_sha`
 - `agent_role`, `resolved_model`, `orientation`
+- `handoff_stage`: `single` | `phase1_preliminary` | `phase2_final`
 - `inputs_considered`: hashes of the artifacts judged (e.g. `contract_sha256`,
-  `diff_sha256`, `intended_outcome_sha256`) — supports the launcher's input attestation
+  `diff_sha256`, `audibility_artifact_sha256`, `intended_outcome_sha256`) —
+  supports the launcher's input attestation
 - `status`: a RECOMMENDATION (`recommend_changes` / `recommend_approve` /
   `blocked_pending_human`) — never a binding decision
 - `human_signoff`: `pending` | `approved` | `rejected`. Agents always emit
   `pending`; only a human sets `approved`/`rejected`
 - `findings`: list of `{id, classification, severity, confidence, blocking}`
 - `verification`: list of `{tool, result}` (`result` kept to a terse status)
+- `supersedes_handoff`: optional identifier or URL for a prior handoff comment
+  superseded by this one
 
 Example comment body:
 
@@ -69,6 +73,7 @@ head_sha: 91e7f50...
 agent_role: impl-reviewer
 resolved_model: gpt-5.5
 orientation: claude-drafted
+handoff_stage: single
 inputs_considered:
   contract_sha256: "…"
   diff_sha256: "…"
@@ -82,6 +87,28 @@ verification:
 </details>
 ````
 
+## Two-phase handoffs
+
+Most roles emit a single handoff and set `handoff_stage: single`. Roles that
+must form an independent assessment before reading an audibility artifact emit
+two handoff comments:
+
+1. **Phase 1 preliminary handoff** — set `handoff_stage:
+   phase1_preliminary`. The `status` field is the agent's preliminary
+   recommendation based only on the Phase 1 inputs. In `inputs_considered`,
+   include the contract/diff/intended-outcome hashes that were actually read and
+   omit `audibility_artifact_sha256`.
+2. **Phase 2 final handoff** — set `handoff_stage: phase2_final`. The `status`
+   field is the agent's final recommendation after reading the audibility
+   artifact. Include `audibility_artifact_sha256` in `inputs_considered` and set
+   `supersedes_handoff` to the Phase 1 comment URL or stable identifier.
+
+The Phase 2 report supersedes the Phase 1 recommendation for routing, but it
+must not rewrite or erase the Phase 1 assessment. It may quote, contrast, or
+explain changes from the Phase 1 assessment in visible prose. Metadata
+`findings` in each handoff index only the findings that appear in that same
+visible report.
+
 ## Human authority
 
 `status` and `findings` are RECOMMENDATIONS. Contract freeze (approver) and
@@ -94,4 +121,7 @@ blocked_pending_human` and must also be surfaced in the visible prose.
 
 An agent receiving a handoff validates the YAML against the schema and confirms
 the metadata is consistent with the visible report (every YAML `findings[].id`
-appears in the report). It must not act on anything present only in the YAML.
+appears in the report). For two-phase roles, prefer the `phase2_final` handoff
+for routing once present and use `supersedes_handoff` to identify the earlier
+`phase1_preliminary` comment. It must not act on anything present only in the
+YAML.

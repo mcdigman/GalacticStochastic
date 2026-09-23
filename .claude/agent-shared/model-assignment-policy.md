@@ -63,12 +63,31 @@ contract table **flips with the drafter**.
 | draft | GPT-5.5 or pure human | Claude (e.g. Opus) |
 | contract-adversary (1st pass) | Claude **Opus** | **GPT-5.5** |
 | contract-reviser | GPT-5.5 / human (producer side) | Claude **Opus** (producer side) |
+| contract-revision-verifier | Claude **Sonnet** | **GPT-5.5** |
 | contract-design-adversary (2nd pass) | Claude **Sonnet** | **GPT-5.5** |
 | contract-approver (freeze) | **Human** + Opus assist | **Human** + Sonnet assist |
 | judge diversity | Opus **and** Sonnet (good) | single GPT model (human carries it) |
 
 Both columns are the same shape — producer family drafts + revises, the **other**
-family adversary-reviews twice, human freezes. Only the families swap.
+family verifies revision closure, adversary-reviews twice, and assists human
+freeze. Only the families swap. `contract-revision-verifier` runs after each
+`contract-reviser` pass and verifies only the latest review pass.
+
+### Pre-adversarial cleaning phase
+
+| Role | **GPT/human-drafted** | **Claude-drafted** | Rationale |
+|---|---|---|---|
+| contract-steering | Claude **Sonnet** | **GPT-5.5** (Codex) | Blind-spot-sensitive bias audit; run cross-family from the contract drafter because steering language is the cleaning category most vulnerable to correlated model-family misses. |
+| contract-verbosity | Claude **Sonnet** default unless overridden by run manifest | Claude **Sonnet** default unless overridden by run manifest | Redundancy audit; may be A/B tested or overridden per run when deeper structural cuts are desired. |
+| contract-style-lint | Claude **Sonnet** default unless overridden by run manifest | Claude **Sonnet** default unless overridden by run manifest | Structural wording audit with deterministic scanner support; model choice may be overridden per run. |
+| contract-clean-consolidation | Claude **Sonnet** default unless overridden by run manifest | Claude **Sonnet** default unless overridden by run manifest | Read-only action-list consolidation; blocks on uncertainty. |
+| contract-cleaner | Claude **Opus** default unless overridden by run manifest | Claude **Opus** default unless overridden by run manifest | Producer of the cleaned contract. |
+| contract-clean-verifier | **GPT-5.5** (Codex) | **GPT-5.5** (Codex) | Cross-family diff/readiness gate after the Claude cleaner; verifies authorized cleanup and blocks contamination before adversarial review. |
+
+The cleaning verifier is deliberately cross-family from the cleaner because it is
+the last gate before blind-spot-sensitive adversarial reviewers see the cleaned
+contract. It is read-only and verifies cleanup readiness; it does not perform
+the adversarial contract review itself.
 
 ### Implementation phase — keyed to the implementer (= Claude Opus)
 
@@ -86,7 +105,9 @@ implementer.
 
 ## Per-run procedure
 
-1. Identify who **drafted the contract** → pick the contract-phase column.
+1. Identify who **drafted the contract** → pick the contract-phase column and
+   resolve any orientation-sensitive cleaning rows, including
+   `contract-steering`.
 2. Implementer is Claude Opus → use the implementation-phase table as-is.
 3. For **GPT-5.5** roles, run via the **Codex orchestrator**. The intent
    red-team runs under the Codex read-only sandbox (network denied by the sandbox
