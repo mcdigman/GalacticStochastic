@@ -58,13 +58,13 @@ repos:
   - id: pyrefly-check
     # pyrefly runs in an isolated environment, so the typed packages it must
     # resolve (those no longer in [tool.pyrefly].ignore-missing-imports) are
-    # installed here: numpy/matplotlib/pytest ship py.typed, and scipy/h5py/pandas
-    # types come from their stub packages. numba/astropy/WDMWaveletTransforms
-    # stay ignored in pyproject.toml (astropy and WDMWaveletTransforms ship no
-    # py.typed; numba does since 0.66 but is not installed here). The dedicated
-    # type-check CI (.github/workflows/typecheck.yml) still runs mypy.
+    # installed here: numpy/matplotlib/pytest/numba ship py.typed (numba since
+    # 0.66), and scipy/h5py/pandas types come from their stub packages.
+    # astropy/WDMWaveletTransforms stay ignored in pyproject.toml (no py.typed).
+    # The dedicated type-check CI (.github/workflows/typecheck.yml) still runs mypy.
     additional_dependencies:
       - numpy>=2.2
+      - numba>=0.66
       - matplotlib>=3.8
       - pytest>=9.0
       - scipy-stubs
