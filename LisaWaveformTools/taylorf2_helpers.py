@@ -786,8 +786,8 @@ def TaylorF2_aligned_inplace(intrinsic_waveform: StationaryWaveformFreq, params_
                 + (1614569 / 64512 - 1873643 / 16128 * eta + 2167 / 42 * eta**2) * chia**2 + (31 / 12 * np.pi - 7 / 3 * np.pi * eta) * chis
                 + (1614569 / 64512 - 61391 / 1344 * eta + 57451 / 4032 * eta**2) * chis**2 + delta * chia * (31 / 12 * np.pi + (1614569 / 32256 - 165961 / 2688 * eta) * chis))
     if amplitude_pn_mode == 2:
-        # PN reduced spin  See Eq 5.9 in http://arxiv.org/pdf/1107.1267v2.pdf
-        chi_pn = chis * (1. - 76 / 113 * eta) + delta * chia
+        # PN reduced spin (Eq 5.9 in http://arxiv.org/pdf/1107.1267v2.pdf), as computed by the parameter manager
+        chi_pn = params_intrinsic.chi_postnewtonian
         xi = -1 + chi_pn
         # coefficients a6-a8 are rhos to match phenomenological model from Table 5 in arXiv:1508.07253
         rho1 = 3931.8979897196696 - 17395.758706812805 * eta \

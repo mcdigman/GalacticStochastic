@@ -76,7 +76,7 @@ def get_taylor_table_freq_helper(wavelet_norm: NDArray[np.floating], wc: WDMWave
 
     for k in range(wc.Ntd):
         z_quads = (k - wc.Ntd_negative) * zzq
-        for j in prange(0, 2 * Nfsam[k] + 1):  # type: ignore[not-iterable]
+        for j in prange(0, 2 * Nfsam[k] + 1):  # pyrefly: ignore[not-iterable]
             zs = (j - Nfsam[k]) * z_mult + z_quads
             evcs[k, j] = np.dot(np.cos(zs), wavelet_norm)
             evss[k, j] = np.dot(np.sin(zs), wavelet_norm)

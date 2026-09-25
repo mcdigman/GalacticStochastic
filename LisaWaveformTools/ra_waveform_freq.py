@@ -786,7 +786,7 @@ def rigid_adiabatic_antenna(
     A_psi: DetectorAmplitudePhaseCombinations = get_detector_amplitude_phase_combinations(params_extrinsic)
 
     # Main Loop
-    for n in prange(nx_lim.nx_min, nx_lim.nx_max):  # type: ignore[not-iterable]
+    for n in prange(nx_lim.nx_min, nx_lim.nx_max):  # pyrefly: ignore[not-iterable]
         # get the spacecraft response for the current time step
 
         get_sc_scalar_pos(lc, T[n], sc_phasing, sc_pos)

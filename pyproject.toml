@@ -46,13 +46,12 @@ run-galactic-stochastic-iterative = "GalacticStochastic.cli.run_iterative_proced
 # (The standalone type-check CI still runs mypy.)
 #
 # Packages with usable type info are omitted so their real types are checked:
-# numpy/matplotlib/pytest ship py.typed and scipy/h5py/pandas have stub packages,
-# all installed for the hook via additional_dependencies in .pre-commit-config.yaml.
-# The packages below stay ignored because no type info is installable in the
-# isolated hook environment: numba/astropy ship no py.typed.
+# numpy/matplotlib/pytest/numba ship py.typed (numba since 0.66) and
+# scipy/h5py/pandas have stub packages, all installed for the hook via
+# additional_dependencies in .pre-commit-config.yaml. The packages below stay
+# ignored because astropy and WDMWaveletTransforms ship no py.typed.
 python-version = "3.12"
 ignore-missing-imports = [
-    "numba", "numba.*",
     "astropy", "astropy.*",
     "WDMWaveletTransforms", "WDMWaveletTransforms.*",
 ]
@@ -61,8 +60,8 @@ ignore-missing-imports = [
 # Settings for the pyright job in .github/workflows/typecheck.yml. Unlike the
 # mypy job (which uses --ignore-missing-imports), pyright resolves types from an
 # installed environment, so the CI job installs the project's typed extras
-# (.[dev,plots,cosmic]) and numpy/scipy/matplotlib/astropy/pandas are checked for
-# real. Every import the project makes resolves in that environment, so
+# (.[dev,plots,cosmic]) and numpy/scipy/numba/matplotlib/astropy/pandas are
+# checked for real. Every import the project makes resolves in that environment, so
 # missing-import reporting is left at its default. The few astropy (untyped)
 # and numpy stub friction points are handled by inline `# pyright: ignore[...]`
 # comments.
